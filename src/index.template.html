@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<!-- ===========================================================
+     Guitar Studio
+     Version: 1.12.0  (2026-06-15)
+     Changelog:
+       1.12.0 — alternate voicings + playable cards (chord/triad parity).
+               Chord diagrams now show the canonical voicing set per chord —
+               open (where one exists) plus the E-shape (root on string 6) and
+               A-shape (root on string 5) barre forms — deduped so an open
+               shape that equals a barre-at-fret-0 isn't drawn twice. Cards are
+               selectable: tap one and the single context-aware Listen/Loop play
+               THAT voicing in its real register (open C rings low; the A-shape
+               C at fret 3 sits higher), so the ear matches the eye. Card dots
+               are now honest — click one to hear that string — and coloured by
+               chord function. Triads gain the matching anatomy: a shape card per
+               inversion, Listen plays the displayed inversion/string-set voicing
+               (not a fixed root-position block), and Loop is no longer hidden in
+               the triads view — it loops the shown triad as a backing, with the
+               bass following the triad's true fifth (♭5 dim / ♯5 aug). Strums
+               now sweep low→high with slight top-string emphasis instead of
+               stacking. Extended jazz chords keep their single computed voicing
+               (there is no canonical CAGED set for a 13). No new dependencies.
+       1.11.0 — release hardening (Phase C+) + playback-control clarity.
+               Playback UX: the per-chord Listen and Loop now sit together in
+               the timing bar (the transport), so "hear it once" (▶ Listen,
+               green) and "keep it going as a backing" (↻ Loop, blue) are one
+               obvious pair; the progression Play/Cycle stays with its strip.
+               Loop is shown only where it applies (chord-tones view); the
+               transport chip is still the cross-tab Stop. Responsive fretboard:
+               fret-cell width is now derived from the available viewport with a
+               readable floor, so a windowed range fits a phone with no sideways
+               scroll (only the wide "All frets" view keeps the scroller); the
+               board re-fits on rotation. Robustness: previously-silent error
+               swallows now log a dev warning, and a browser without Web Audio
+               degrades gracefully (controls disabled with a hint, not dead
+               buttons). Ships with a committed jsdom test harness (npm test).
+       1.10.0 — backing realism (Phase C). The loop and progression sequencer
+               become a jam-along band: a synthesized bass (root on beat 1, the
+               chord's true fifth on beat 3 — perfect, ♭5 for dim/m7♭5, ♯5 for
+               aug) and an optional filtered-noise groove (kick on 1 & 3, 8th-
+               note hi-hats with a downbeat accent) on their own dry buses that
+               skip the guitar body + room. The guitar comp is humanized
+               (per-note velocity variation + micro-timing jitter) with a softer
+               push on beat 3 whenever the band is on. Two timing-bar toggles —
+               Bass and Drums — both persisted. All scheduled per-bar from inside
+               the existing strum, so it stays sample-accurate on Phase B's clock.
+               No new dependencies.
+       1.9.0 — audio engine foundation (Phase B). The metronome, single-chord
+               loop and progression sequencer were moved off setInterval onto a
+               lookahead scheduler ("two clocks"): a 25 ms timer queues audio
+               events ~100 ms ahead on the sample-accurate audio clock, so the
+               rhythmic grid no longer drifts (worst on mobile / background tabs)
+               and the tempo slider now glides instead of restarting. Dot-lighting
+               for the loop and sequencer rides the same scheduled times via a
+               requestAnimationFrame queue, so the lit notes stay locked to the
+               sound. The audio path was split into named buses — backing (guitar
+               voice), leadTarget (reserved for practice target tones) and cue (UI
+               clicks; the metronome now runs here) — and short synthesized
+               correct / wrong / count-in cues were added on the cue bus as
+               foundation for the upcoming practice modes. No new dependencies.
+               (One-shot Play animations stay on their existing timers — being
+               brief and non-repeating, they don't accumulate drift.)
+       1.8.0 — tone realism (Phase A). Karplus-Strong voice reworked to sound
+               more like a guitar: a body-resonance peaking EQ (air ~100 Hz,
+               top ~200 Hz, mid ~430 Hz) colours every note like a real box;
+               a pick-position comb shapes the excitation; a fractional-delay
+               allpass in the string loop fixes upper-register tuning (integer
+               delay alone ran ~10-20 cents flat); plucks now respond to
+               velocity (louder + brighter when harder, with slight
+               humanization); and low/wound vs high/plain strings get distinct
+               brightness and sustain by register. No new dependencies.
+       1.7.0 — chord vocabulary expanded from 7 to 21 qualities (sus2/sus4,
+               6/m6, m7♭5, dim7, add9, 9/maj9/m9, 11, 13, 7♭9, 7♯9). New
+               per-quality label/degree arrays fix the interval-ambiguity
+               problem; colour is now label-derived (labClass) with a new
+               violet --ext for extensions. Chord diagrams gain a generalized
+               interval-based voicing generator so every quality gets a shape
+               (no more "no simple shape"). Fretboard dots are now keyboard-
+               focusable and play on Enter/Space. Phones get narrower frets
+               and default to a 5-fret window. Full state persistence: chord
+               quality, scale + position, triad set/inversion, circle
+               selection, highlighted note, and the built progression now
+               survive a reload.
+       1.6.0 — header decluttered: subtitle tagline removed. UI/UX polish:
+               keyboard focus rings on all controls, reduced-motion support,
+               tab hover affordance, and tabs now scroll horizontally on
+               phones instead of wrapping to a second row.
+       1.5.0 — UI refactor: Chord tones and Triads merged into one
+               "Chords / triads" tab with a view toggle (5 tabs → 4).
+               Root and Notes/Intervals are now a single shared context
+               bar across Harmony & Scales (no more per-tab duplicates).
+               One context-aware Play in the timing bar replaces the
+               four per-panel Listen/Cadence buttons.
+       1.4.0 — playback persists across tabs: the single-chord loop and
+               the progression sequencer no longer stop when you switch
+               tabs (backing-track behaviour). A global transport chip in
+               the timing bar shows what's playing and offers Stop from
+               any tab. Added an in-app changelog (tap the version badge).
+       1.3.0 — tempo relocated: tempo + metronome now live in an
+               always-visible timing bar; Settings toolbar is now
+               instrument-only (tuning, handedness, fret range)
+       1.2.0 — chord progression sequencer (presets, per-chord bars,
+               board follows the active chord, cycle/once playback)
+       1.1.0 — single-chord background loop
+       1.0.0 — base: chord tones, triads, scales/modes, circle, notes
+     Single source of truth for the version is APP_VERSION in the script.
+     ============================================================ -->
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="version" content="1.12.0">
+<title>Гітарна студія — гами, моди, акорди</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>@@STYLES@@</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <h1 data-i18n="brand">Гітарна студія</h1>
+      <button class="ver" id="app-ver" aria-haspopup="dialog"></button>
+      <div class="lang" id="lang-switch">
+        <button class="langbtn active" data-lang="uk">UK</button>
+        <button class="langbtn" data-lang="en">EN</button>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-panel="harmony" data-i18n="tab_harmony">Акорди / тріади</button>
+      <button class="tab" data-panel="scales" data-i18n="tab_scales">Гами / моди</button>
+      <button class="tab" data-panel="circle" data-i18n="tab_circle">Коло квінт</button>
+      <button class="tab" data-panel="notes" data-i18n="tab_notes">Ноти на грифі</button>
+    </nav>
+    <div class="tb-bar">
+      <div class="tb-group">
+        <span class="tb-label" data-i18n="tb_tempo">Темп</span>
+        <input type="range" id="tb-tempo" min="40" max="200" step="2" value="90" aria-label="Tempo">
+        <span class="bpm-val" id="tb-bpm">90 BPM</span>
+      </div>
+      <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
+      <button class="btn band" id="tb-bass" aria-pressed="false"></button>
+      <button class="btn band" id="tb-drums" aria-pressed="false"></button>
+      <button class="btn play" id="g-play"></button>
+      <button class="btn play loop" id="g-loop"></button>
+      <div class="tb-transport" id="tb-transport" hidden>
+        <span class="tb-transport-dot"></span>
+        <span class="tb-transport-label" id="tb-transport-label"></span>
+        <button class="btn" id="tb-stop"></button>
+      </div>
+      <button class="tb-toggle" id="tb-toggle" aria-expanded="false" aria-controls="toolbar"><span data-i18n="tb_settings">Налаштування</span> <span class="chev">▾</span></button>
+    </div>
+    <div class="toolbar collapsed" id="toolbar">
+      <div class="tb-group">
+        <span class="tb-label" data-i18n="tb_tuning">Стрій</span>
+        <select id="tb-tuning"></select>
+      </div>
+      <button class="btn" id="tb-lefty" aria-pressed="false" data-i18n="tb_lefty">Ліворукий</button>
+      <div class="tb-group">
+        <span class="tb-label" data-i18n="tb_frets">Лади</span>
+        <select id="tb-frets"></select>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+<div class="layout">
+<div class="main">
+
+  <div class="context-bar" id="context-bar">
+    <div class="ctx-group"><span class="ctrl-label" data-i18n="lbl_root">Тоніка</span><div class="group" id="g-roots"></div></div>
+    <div class="divider"></div>
+    <button class="btn active" id="g-names" data-i18n="b_notes">Ноти</button>
+    <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
+  </div>
+
+  <section class="panel active" id="panel-harmony">
+    <div class="panel-head">
+      <h2 id="harmony-h">Тони акорду на грифі</h2>
+      <p id="harmony-p">Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу.</p>
+    </div>
+    <div class="row">
+      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
+      <div class="group">
+        <button class="btn active" id="hv-chords" data-i18n="view_chords">Тони акорду</button>
+        <button class="btn" id="hv-triads" data-i18n="view_triads">Форми тріад</button>
+      </div>
+    </div>
+
+    <div id="sub-chords">
+      <div class="row">
+        <span class="ctrl-label" data-i18n="lbl_chord">Акорд</span><div class="group" id="ch-quals"></div>
+      </div>
+      <div class="info" id="ch-info"></div>
+      <div class="cd-head"><span class="cd-h" data-i18n="cd_voicings">Форми акорду</span><span class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</span></div>
+      <div class="chorddia" id="ch-diagram"></div>
+      <div class="seq" id="ch-seq">
+        <div class="seq-head">
+          <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
+          <button class="btn" id="seq-add" data-i18n="seq_add">Додати акорд</button>
+          <div class="divider"></div>
+          <span class="ctrl-label" data-i18n="seq_presets">Пресети</span>
+          <div class="seq-presets" id="seq-presets"></div>
+          <div class="divider"></div>
+          <button class="btn play" id="seq-play"></button>
+          <button class="btn" id="seq-loopbtn"></button>
+          <button class="btn" id="seq-clear" data-i18n="seq_clear">Очистити</button>
+        </div>
+        <div class="seq-strip" id="seq-strip"></div>
+      </div>
+      <div class="scroll"><div class="board"><div class="fretboard" id="ch-board"></div></div><div class="fretnums" id="ch-nums"></div></div>
+      <div class="legend">
+        <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_root">Тоніка (1)</span></div>
+        <div class="leg"><span class="leg-dot" style="background:var(--third)"></span><span data-i18n="leg_third">Терція (3 / ♭3)</span></div>
+        <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="leg_fifth">Квінта (5)</span></div>
+        <div class="leg"><span class="leg-dot" style="background:var(--seventh)"></span><span data-i18n="leg_seventh">Септима (7 / ♭7)</span></div>
+        <div class="leg"><span class="leg-dot" style="background:var(--ext)"></span><span data-i18n="leg_ext">Розширення (6 · 9 · 11 · 13)</span></div>
+      </div>
+      <div class="hint" data-i18n="ch_hint">Грай гаму вільно, а на зміні акорду влучай у підсвічені ноти — вони звучать найстабільніше.</div>
+    </div>
+
+    <div id="sub-triads" hidden>
+      <div class="row"><span class="ctrl-label" data-i18n="lbl_chord">Акорд</span><div class="group" id="tr-quals"></div></div>
+      <div class="row"><span class="ctrl-label" data-i18n="lbl_set">Набір струн</span><div class="group" id="tr-sets"></div></div>
+      <div class="row"><span class="ctrl-label" data-i18n="lbl_inv">Обернення</span><div class="group" id="tr-invs"></div></div>
+      <div class="info" id="tr-info"></div>
+      <div class="cd-head"><span class="cd-h" data-i18n="tr_shapes">Форми тризвуку</span></div>
+      <div class="chorddia" id="tr-diagram"></div>
+      <div class="scroll"><div class="board"><div class="fretboard" id="tr-board"></div></div><div class="fretnums" id="tr-nums"></div></div>
+      <div class="legend">
+        <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_root">Тоніка (1)</span></div>
+        <div class="leg"><span class="leg-dot" style="background:var(--third)"></span><span data-i18n="leg_third">Терція (3 / ♭3)</span></div>
+        <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="leg_fifth">Квінта (5)</span></div>
+      </div>
+      <div class="hint" data-i18n="tr_hint">Тризвук на трьох сусідніх струнах — рухомий блок: кожне обернення повторюється вгору по грифу через 12 ладів. Вивчиш одну форму на одному наборі струн — отримаєш увесь гриф.</div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-scales">
+    <div class="panel-head">
+      <h2 data-i18n="sc_h">Гами і моди</h2>
+      <p data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
+    </div>
+    <div class="row"><span class="ctrl-label" data-i18n="lbl_scale">Гама</span><select id="sc-select"></select></div>
+    <div class="row"><span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="sc-pos"></div></div>
+    <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="sc-diatonic"></div></div>
+    <div class="info" id="sc-info"></div>
+    <div class="scroll"><div class="board"><div class="fretboard" id="sc-board"></div></div><div class="fretnums" id="sc-nums"></div></div>
+    <div class="legend" id="sc-legend"></div>
+  </section>
+
+  <section class="panel" id="panel-circle">
+    <div class="panel-head">
+      <h2 data-i18n="cof_h">Коло квінт</h2>
+      <p data-i18n="cof_p">Тональності розташовані по квінтах. Сусіди — найближчі споріднені тональності: ліворуч субдомінанта (IV), праворуч домінанта (V). Натисни тональність, щоб побачити ключові знаки, паралель і акорди тональності.</p>
+    </div>
+    <div class="cof-layout">
+      <div class="cof-wrap"><svg id="cof-svg" viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="cof-side">
+        <div class="info" id="cof-info"></div>
+        <div class="row" style="margin-top:14px">
+          <button class="btn" id="cof-open"></button>
+        </div>
+        <div class="legend" style="margin-top:18px">
+          <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_tonic">Тоніка</span></div>
+          <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="leg_subdom">Субдомінанта (IV)</span></div>
+          <div class="leg"><span class="leg-dot" style="background:var(--third)"></span><span data-i18n="leg_dom">Домінанта (V)</span></div>
+          <div class="leg"><span class="leg-dot" style="background:var(--seventh)"></span><span data-i18n="leg_rel">Паралель</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-notes">
+    <div class="panel-head">
+      <h2 data-i18n="nt_h">Всі ноти на грифі</h2>
+      <p data-i18n="nt_p">Довідник усіх нот. Натисни ноту в керуванні, щоб підсвітити її скрізь, або клікни по ноті на грифі, щоб почути.</p>
+    </div>
+    <div class="row">
+      <span class="ctrl-label" data-i18n="lbl_show">Показати</span>
+      <button class="btn active" id="nt-all" data-i18n="b_allnotes">Всі ноти</button>
+      <button class="btn" id="nt-nat" data-i18n="b_natonly">Тільки натуральні</button>
+    </div>
+    <div class="row">
+      <span class="ctrl-label" data-i18n="lbl_nat">Натуральні</span><div class="group" id="nt-natural"></div>
+      <div class="divider"></div>
+      <span class="ctrl-label" data-i18n="lbl_sharp">Дієзи</span><div class="group" id="nt-sharp"></div>
+      <div class="divider"></div>
+      <span class="ctrl-label" data-i18n="lbl_flat">Бемолі</span><div class="group" id="nt-flat"></div>
+      <div class="divider"></div>
+      <button class="btn" id="nt-reset" data-i18n="b_reset">скинути</button>
+    </div>
+    <div class="scroll"><div class="board"><div class="fretboard" id="nt-board"></div></div><div class="fretnums" id="nt-nums"></div></div>
+    <div class="legend">
+      <div class="leg"><span class="leg-dot" style="background:var(--natural)"></span><span data-i18n="leg_nat">Натуральна нота</span></div>
+      <div class="leg"><span class="leg-dot" style="background:var(--sharp)"></span><span data-i18n="leg_sharpflat">Дієз / бемоль</span></div>
+      <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_highlight">Виділена нота</span></div>
+    </div>
+  </section>
+
+</div>
+
+<aside class="aside">
+  <div class="aside-card">
+    <div class="aside-head"><span data-i18n="side_title">Довідник акордів</span><button class="aside-toggle" id="aside-toggle">−</button></div>
+    <div id="aside-body">
+      <div class="mini-title" data-i18n="side_major">Мажорні (1 · 3 · 5)</div>
+      <table class="mini"><tbody id="mini-major"></tbody></table>
+      <div class="mini-title" data-i18n="side_minor">Мінорні (1 · ♭3 · 5)</div>
+      <table class="mini"><tbody id="mini-minor"></tbody></table>
+      <div class="aside-leg">
+        <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="side_root">Тоніка</span></div>
+        <div class="leg"><span class="leg-dot" style="background:var(--third)"></span><span data-i18n="side_third">Терція</span></div>
+        <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="side_fifth">Квінта</span></div>
+      </div>
+    </div>
+  </div>
+</aside>
+</div>
+
+  <footer data-i18n="footer">Гітарна студія · стандартний стрій (E A D G B e) · працює офлайн</footer>
+</main>
+
+<div class="cl-overlay" id="cl-overlay" role="dialog" aria-modal="true" aria-labelledby="cl-title" hidden>
+  <div class="cl-modal">
+    <div class="cl-head">
+      <h2 id="cl-title" data-i18n="cl_title">Що нового</h2>
+      <button class="cl-close" id="cl-close" aria-label="close">✕</button>
+    </div>
+    <div class="cl-body" id="cl-body"></div>
+  </div>
+</div>
+
+<script>@@SCRIPT@@</script>
+</body>
+</html>

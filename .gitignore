@@ -1,6 +1,10 @@
 # dev-only test deps — reinstalled from package-lock.json in CI
 tests/node_modules/
 
+# generated versioned build copies — built on demand from src/ (index.html is the
+# committed, GitHub Pages-served artifact; dist/ copies are not published)
+dist/
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db

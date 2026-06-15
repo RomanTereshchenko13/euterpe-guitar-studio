@@ -1,8 +1,11 @@
 # Guitar Studio — Roadmap
 
 Sound realism and a practice/training mode, planned as dependency-ordered phases.
-Single-file, zero-dependency HTML/JS/CSS remains a hard constraint throughout: every
-item below is achievable with the Web Audio API and vanilla JS, no libraries, no build step.
+Zero-dependency, single-file *output* remains a hard constraint throughout: every
+item below is achievable with the Web Audio API and vanilla JS, no libraries. As of
+v1.12.x the app is authored as small modules under `src/` and assembled into the shipped
+`index.html` by a pure-string `build.js` (concatenation only — no bundler, no transpile,
+no runtime dependency added). New phases add their code as new `src/js/NN-*.js` modules.
 
 _Last updated: 2026-06-15 · current shipping version: v1.12.0_
 
@@ -10,9 +13,10 @@ _Last updated: 2026-06-15 · current shipping version: v1.12.0_
 
 ## Guiding principles
 
-- **Stay single-file, zero-dependency.** No DSP rewrite, no sample libraries. Body
-  filters, comb excitation, allpass tuning, scheduler, onset detection — all small
-  additions, not a new engine.
+- **Stay zero-dependency; ship single-file.** No DSP rewrite, no sample libraries, no
+  runtime deps. Body filters, comb excitation, allpass tuning, scheduler, onset
+  detection — all small additions, not a new engine. Code lives in `src/` modules and
+  is concatenated into one `index.html` by `build.js`; the build adds no dependency.
 - **Validate musically, not just syntactically.** Each phase ships with checks in the
   jsdom harness (spectral/tuning checks for tone, grid-timing checks for the scheduler,
   drill-logic and scoring-window checks for practice).
