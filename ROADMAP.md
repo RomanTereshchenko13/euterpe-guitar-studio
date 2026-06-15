@@ -4,7 +4,7 @@ Sound realism and a practice/training mode, planned as dependency-ordered phases
 Single-file, zero-dependency HTML/JS/CSS remains a hard constraint throughout: every
 item below is achievable with the Web Audio API and vanilla JS, no libraries, no build step.
 
-_Last updated: 2026-06-15 · current shipping version: v1.11.0_
+_Last updated: 2026-06-15 · current shipping version: v1.12.0_
 
 ---
 
@@ -120,6 +120,28 @@ stays with its strip._
 **Validation:** headless render at 360 / 390 / 414 px asserts no horizontal overflow in
 windowed fret ranges, with intact open-string column + dot alignment; `npm test` green as
 the release gate; audio-unavailable path degrades without throwing.
+
+---
+
+## v1.12.0 — Voicing parity polish  (pre-D consistency pass) → ✅ shipped v1.12.0
+
+A focused cleanup before Phase D, closing the chord/triad anatomy gap surfaced in review.
+The chord diagram now shows the canonical voicing set per chord — open (where one exists)
+plus the E-shape (root on string 6) and A-shape (root on string 5) barre forms, deduped by
+resolved fret array. Cards are selectable: the single context-aware Listen / Loop play the
+selected voicing in its real register (so an open chord and its barre form actually sound
+different), and card dots are live (click a string) and coloured by chord function. Triads
+gained the matching anatomy — a shape card per inversion (normalized to a fully-fretted
+movable block), Listen plays the displayed inversion / string set, and **Loop is now shown
+in the triads view too**, looping the shown triad as a backing with the bass following its
+true fifth (♭5 dim / ♯5 aug). Strums sweep low→high instead of stacking. Extended jazz
+chords keep their single computed voicing — there is no canonical CAGED set for a 13.
+
+**Validation:** smoke suite 193/193 (added voicing-correctness + triad-loop coverage; flipped
+the old "Loop hidden on triads" assertion); an independent exhaustive check confirms across
+all 12 roots × every quality (240 combinations) that every sounded note is a real chord tone,
+no two cards share a fret array, and barre roots land on the correct string. Still
+zero-dependency at runtime.
 
 ---
 

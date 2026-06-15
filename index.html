@@ -1,8 +1,25 @@
 <!DOCTYPE html>
 <!-- ===========================================================
      Guitar Studio
-     Version: 1.11.0  (2026-06-15)
+     Version: 1.12.0  (2026-06-15)
      Changelog:
+       1.12.0 — alternate voicings + playable cards (chord/triad parity).
+               Chord diagrams now show the canonical voicing set per chord —
+               open (where one exists) plus the E-shape (root on string 6) and
+               A-shape (root on string 5) barre forms — deduped so an open
+               shape that equals a barre-at-fret-0 isn't drawn twice. Cards are
+               selectable: tap one and the single context-aware Listen/Loop play
+               THAT voicing in its real register (open C rings low; the A-shape
+               C at fret 3 sits higher), so the ear matches the eye. Card dots
+               are now honest — click one to hear that string — and coloured by
+               chord function. Triads gain the matching anatomy: a shape card per
+               inversion, Listen plays the displayed inversion/string-set voicing
+               (not a fixed root-position block), and Loop is no longer hidden in
+               the triads view — it loops the shown triad as a backing, with the
+               bass following the triad's true fifth (♭5 dim / ♯5 aug). Strums
+               now sweep low→high with slight top-string emphasis instead of
+               stacking. Extended jazz chords keep their single computed voicing
+               (there is no canonical CAGED set for a 13). No new dependencies.
        1.11.0 — release hardening (Phase C+) + playback-control clarity.
                Playback UX: the per-chord Listen and Loop now sit together in
                the timing bar (the transport), so "hear it once" (▶ Listen,
@@ -92,7 +109,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="version" content="1.11.0">
+<meta name="version" content="1.12.0">
 <title>Гітарна студія — гами, моди, акорди</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -287,15 +304,28 @@
 
   /* ---- chord diagrams ---- */
   .chorddia { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 18px; align-items: flex-start; }
-  .chordbox { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px 10px; }
+  .cd-head { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 9px; flex-wrap: wrap; }
+  .cd-head .cd-h { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .cd-head .cd-hint { font-size: 11px; color: var(--text-faint); font-style: italic; }
+  .chordbox { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px 10px; font-family: inherit; text-align: left; transition: border-color 0.12s, box-shadow 0.12s, background 0.12s; }
+  button.chordbox { cursor: pointer; color: var(--text); }
+  button.chordbox:hover { border-color: var(--text-faint); background: var(--bg-panel-2); }
+  button.chordbox:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .chordbox.sel { border-color: var(--root); box-shadow: 0 0 0 2px rgba(107,165,58,0.32); }
+  .chordbox.tri { cursor: default; }
   .chordbox .cb-name { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; margin-bottom: 8px; color: var(--text); }
   .chordbox svg { display: block; }
-  .chordbox .cb-cap { font-size: 11px; color: var(--text-faint); margin-top: 7px; max-width: 150px; }
+  .chordbox .cb-cap { font-size: 11px; color: var(--text-faint); margin-top: 7px; max-width: 160px; }
   .cd-string { stroke: var(--line-string); stroke-width: 1.3; }
   .cd-fret { stroke: var(--line-fret); stroke-width: 1.3; }
   .cd-nut { stroke: #d8cba8; stroke-width: 4; }
-  .cd-dot { fill: var(--fifth); }
-  .cd-dot.root { fill: var(--root); }
+  .cd-dot { fill: var(--fifth); cursor: pointer; }
+  .cd-dot:hover { stroke: #fff; stroke-width: 1.5; }
+  .cd-dot.root, .cd-dot.d-root { fill: var(--root); }
+  .cd-dot.d-third { fill: var(--third); }
+  .cd-dot.d-fifth { fill: var(--fifth); }
+  .cd-dot.d-sev { fill: var(--seventh); }
+  .cd-dot.d-ext { fill: var(--ext); }
   .cd-mark { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; fill: var(--text-dim); }
   .cd-pos { font-family: 'JetBrains Mono', monospace; font-size: 10px; fill: var(--text-faint); }
 
@@ -418,6 +448,7 @@
         <span class="ctrl-label" data-i18n="lbl_chord">Акорд</span><div class="group" id="ch-quals"></div>
       </div>
       <div class="info" id="ch-info"></div>
+      <div class="cd-head"><span class="cd-h" data-i18n="cd_voicings">Форми акорду</span><span class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</span></div>
       <div class="chorddia" id="ch-diagram"></div>
       <div class="seq" id="ch-seq">
         <div class="seq-head">
@@ -449,6 +480,8 @@
       <div class="row"><span class="ctrl-label" data-i18n="lbl_set">Набір струн</span><div class="group" id="tr-sets"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="lbl_inv">Обернення</span><div class="group" id="tr-invs"></div></div>
       <div class="info" id="tr-info"></div>
+      <div class="cd-head"><span class="cd-h" data-i18n="tr_shapes">Форми тризвуку</span></div>
+      <div class="chorddia" id="tr-diagram"></div>
       <div class="scroll"><div class="board"><div class="fretboard" id="tr-board"></div></div><div class="fretnums" id="tr-nums"></div></div>
       <div class="legend">
         <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_root">Тоніка (1)</span></div>
@@ -557,10 +590,23 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '1.11.0';
+const APP_VERSION = '1.12.0';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.12.0', date:'2026-06-15',
+    en:['Chord diagrams now show every common way to play the chord — the open shape plus the E-shape and A-shape barre forms — instead of just one.',
+        'Tap a voicing card to select it: Listen and Loop then play that exact shape in its real register, so an open chord and its barre version actually sound different.',
+        'Chord-card dots are now live — click one to hear that string — and are coloured by their role in the chord (root, third, fifth…).',
+        'Triads now have shape cards too, one per inversion, matching the chord view.',
+        'You can finally loop a triad as a backing track, and Listen plays the inversion and string set you are actually looking at — with the bass following the triad\u2019s correct fifth.',
+        'Strums now sweep across the strings instead of sounding all at once.'],
+    uk:['Діаграми акордів тепер показують усі звичні способи зіграти акорд — відкриту форму та барре у формі E і A — а не лише одну.',
+        'Натисни картку аплікатури, щоб обрати її: «Прослухати» і «Луп» зіграють саме цю форму у її реальному регістрі, тож відкритий акорд і барре справді звучать по-різному.',
+        'Крапки на картці акорду тепер активні — натисни, щоб почути цю струну — і пофарбовані за роллю в акорді (тоніка, терція, квінта…).',
+        'Тріади тепер теж мають картки форм — по одній на кожне обернення, як у виді акордів.',
+        'Нарешті можна зациклити тріаду як супровід, а «Прослухати» грає те обернення й набір струн, які ти бачиш — із басом за правильною квінтою тризвуку.',
+        'Бій тепер «прокочується» по струнах, а не звучить усіма нотами одночасно.'] },
   { v:'1.11.0', date:'2026-06-15',
     en:['Playback controls are clearer: Listen and Loop now sit together in the timing bar, so hearing the current chord once (Listen) and looping it as a backing (Loop) are one obvious pair.',
         'Loop now appears only on the chord-tones view where it applies; the transport chip is still there to stop playback from any tab.',
@@ -705,7 +751,10 @@ const I18N = {
     cl_title:'Що нового', cl_current:'зараз',
     frets_all:'Усі', cd_title:'Як зіграти', cd_open:'відкритий акорд',
     cd_barre:'барре, лад', cd_std:'аплікатура для стандартного строю',
-    cd_na:'немає простої форми', cd_calc:'обчислена аплікатура'
+    cd_na:'немає простої форми', cd_calc:'обчислена аплікатура',
+    cd_voicings:'Форми акорду', cd_eshape:'барре у формі E', cd_ashape:'барре у формі A',
+    cd_fret:'лад', cd_pick_hint:'Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»',
+    tr_shapes:'Форми тризвуку'
   },
   en: {
     brand:'Guitar Studio',
@@ -760,7 +809,10 @@ const I18N = {
     cl_title:'What\'s new', cl_current:'current',
     frets_all:'All', cd_title:'How to play', cd_open:'open chord',
     cd_barre:'barre, fret', cd_std:'fingering for standard tuning',
-    cd_na:'no simple shape', cd_calc:'computed voicing'
+    cd_na:'no simple shape', cd_calc:'computed voicing',
+    cd_voicings:'Chord shapes', cd_eshape:'E-shape barre', cd_ashape:'A-shape barre',
+    cd_fret:'fret', cd_pick_hint:'Tap a card to choose the shape for Listen / Loop',
+    tr_shapes:'Triad shapes'
   }
 };
 let lang = 'uk';
@@ -1017,17 +1069,34 @@ function playCue(kind, when){
 }
 
 /* chord/triad: roll up, each note lights and stays lit so the shape builds, then clears */
-function animArp(boardEl, base, ivs){
-  clearPlayHighlights();
-  const step=beat()/2;
-  ivs.forEach((iv,i)=>{ pluck(base+iv, i*step, 1.7); flashAt(boardEl, mod(base+iv,12), i*step*1000); });
-  playTimers.push(setTimeout(clearPlayHighlights, ((ivs.length-1)*step + 1.7)*1000));
-}
-/* scale: even run, a single moving highlight that hands off note to note */
+/* arpeggio + scale animations share the visual timer pool */
 function animRun(boardEl, base, ivs){
   clearPlayHighlights();
   const step=beat()/2, dur=Math.min(0.5, step*1.1);
   ivs.forEach((iv,i)=>{ pluck(base+iv, i*step, dur); pulseAt(boardEl, mod(base+iv,12), i*step*1000, step*1000*0.96); });
+}
+/* Listen for an explicit voicing: arpeggiate the real MIDI notes (low->high) and
+   flash their pitch classes on the given board. Used by the selectable chord
+   cards and by the triad view, so Listen matches the shape on screen. */
+function animArpMidi(boardEl, midis){
+  clearPlayHighlights();
+  const step=beat()/2;
+  midis.forEach((m,i)=>{ pluck(m, i*step, 1.7); if(boardEl) flashAt(boardEl, mod(m,12), i*step*1000); });
+  playTimers.push(setTimeout(clearPlayHighlights, ((Math.max(1,midis.length)-1)*step + 1.7)*1000));
+}
+/* directional strum of explicit MIDI notes: sweeps low->high (down) or high->low
+   (up) with a small inter-string delay, micro-timing jitter and a touch of
+   top-string emphasis on downstrokes, so a strum reads as a sweep, not a stack. */
+function strumMidi(midis, when, vel, spread, dir){
+  if(!midis.length) return;
+  const order = dir<0 ? midis.slice().reverse() : midis.slice();
+  const barSec=beat()*4, n=order.length;
+  order.forEach((m,i)=>{
+    const tt=when + i*spread + (Math.random()*0.005-0.0025);
+    let v=vel*(0.9+Math.random()*0.14) - i*0.012;
+    if(dir>=0 && i>=n-2) v+=0.05;                 // brighten the top of a downstroke
+    pluckAt(m, tt, Math.min(barSec+0.4,2.4), Math.max(0.4, v));
+  });
 }
 
 /* ===================== BACKING BAND (Phase C) =====================
@@ -1155,28 +1224,36 @@ function bassToggle(){ audio(); bassOn=!bassOn; setBandLabels(); saveState(); }
 function drumsToggle(){ audio(); grooveOn=!grooveOn; setBandLabels(); saveState(); }
 function retempo(){}  /* no-op: the metro clock reads beat() live, so tempo glides without a restart */
 
-/* ---- single-chord loop: re-strums the *current* chord at the top of every bar.
-   Reads gRoot/chQual live, so changing root or quality mid-loop just follows along.
-   Now a scheduler clock: bar interval read live; dots ride the audio-clock queue. */
-let loopClock=null;
+/* ---- single-chord / single-triad loop: re-strums the current voicing at the top
+   of every bar. loopMode is captured at start (chord vs triad) but the voicing is
+   read live, so changing root, quality, the selected card, or the triad
+   inversion/string set mid-loop follows along. Bar interval read live; dots ride
+   the audio-clock queue. The strum sweeps low->high rather than stacking. */
+let loopClock=null, loopMode='chord';
 function loopStrum(when){
   const ctx=audio(); if(!ctx) return;
-  const base=48+gRoot, ivs=QUALITIES[chQual].iv;
   const barSec=beat()*4;
-  compStrum(base, ivs, when, 0.9, 0.028);                 // humanized downbeat strum
-  if(bandActive()) compStrum(base, ivs, when+2*beat(), 0.55, 0.022);   // softer push on beat 3
-  scheduleBand(gRoot, chQual, when);                      // bass + groove bed (no-op if both off)
-  const pcs=ivs.map(iv=>mod(base+iv,12));
-  enqueueVisual(when, ()=>{ const b=document.getElementById('ch-board'); pcs.forEach(pc=>setDotPlaying(b, pc, true)); updateGlobalTransport(); });
-  // brief clear before the next downbeat so the re-strum reads as a pulse
-  enqueueVisual(when+barSec*0.85, ()=>{ const b=document.getElementById('ch-board'); pcs.forEach(pc=>setDotPlaying(b, pc, false)); });
+  let midis, pcs, boardId, pc, qi;
+  if(loopMode==='triad'){
+    const v=currentTriadVoicing();
+    midis=v.midis; pcs=v.pcs; boardId='tr-board'; pc=gRoot; qi=TRI_TO_QUAL[trQual];
+  } else {
+    const v=currentChordVoicing();
+    midis=v.midis; pcs=v.pcs; boardId='ch-board'; pc=gRoot; qi=chQual;
+  }
+  strumMidi(midis, when, 0.9, 0.026, +1);                 // humanized downstrum
+  if(bandActive()) strumMidi(midis, when+2*beat(), 0.55, 0.02, +1);   // softer push on beat 3
+  scheduleBand(pc, qi, when);                             // bass + groove bed (no-op if both off)
+  enqueueVisual(when, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, true)); updateGlobalTransport(); });
+  enqueueVisual(when+barSec*0.85, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, false)); });
 }
-function stopLoopVisual(){ document.querySelectorAll('#ch-board .dot.playing').forEach(d=>d.classList.remove('playing')); }
+function stopLoopVisual(){ document.querySelectorAll('#ch-board .dot.playing, #tr-board .dot.playing').forEach(d=>d.classList.remove('playing')); }
 function loopToggle(){
   const btn=document.getElementById('g-loop');
   if(loopClock){ removeClock(loopClock); loopClock=null; clearVisualQ(); stopLoopVisual();
     btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); setLoopLabel(); return; }
   if(typeof seqStop==='function') seqStop();
+  loopMode = (currentTab==='harmony' && hView==='triads') ? 'triad' : 'chord';
   audio();
   loopClock={ interval:()=>beat()*4, tick:(time)=>loopStrum(time) };
   addClock(loopClock);
@@ -1188,17 +1265,17 @@ function reloopTempo(){}  /* no-op: the loop clock reads beat() live, so tempo g
 function setLoopLabel(){ const b=document.getElementById('g-loop'); if(!b) return; b.innerHTML=(loopClock?'&#9632; ':'&#8635; ')+t('b_loop'); b.setAttribute('aria-label', t(loopClock?'b_loop_stop_tip':'b_loop_tip')); b.title=t(loopClock?'b_loop_stop_tip':'b_loop_tip'); updateGlobalTransport(); }
 
 /* ---- global transport chip (timing bar) ----
-   Mirrors whatever is currently sounding (single-chord loop or progression)
+   Mirrors whatever is currently sounding (single-chord/triad loop or progression)
    so it can be read and stopped from any tab. The Listen/Loop controls now
    live together in the timing bar; the progression Play stays with its strip. */
+function loopChordLabel(){ return loopMode==='triad' ? gRootLbl+TRIADS[trQual].short : gRootLbl+QUALITIES[chQual].short; }
 function updateGlobalTransport(){
   const wrap=document.getElementById('tb-transport'); if(!wrap) return;
   const label=document.getElementById('tb-transport-label');
   const stop=document.getElementById('tb-stop');
   stop.innerHTML='&#9632; '+t('tb_stop'); stop.setAttribute('aria-label', t('tb_stop'));
-  const cur=gRootLbl+QUALITIES[chQual].short;
-  if(seqClock){ label.textContent=t('tb_now_seq')+' · '+cur; wrap.hidden=false; }
-  else if(loopClock){ label.textContent=t('tb_now_loop')+' · '+cur; wrap.hidden=false; }
+  if(seqClock){ label.textContent=t('tb_now_seq')+' · '+gRootLbl+QUALITIES[chQual].short; wrap.hidden=false; }
+  else if(loopClock){ label.textContent=t('tb_now_loop')+' · '+loopChordLabel(); wrap.hidden=false; }
   else { wrap.hidden=true; }
 }
 
@@ -1424,12 +1501,13 @@ function labClass(lab){
 /* shared musical context — one root + one display mode across Harmony & Scales */
 let gRoot=9, gRootLbl='A', gMode='names';
 let chQual=1;
+let chVoicing=0;   // index of the selected voicing card (open / E-barre / A-barre / computed)
 function chDegClass(iv){ if(iv===0)return'd-root'; if(iv===3||iv===4)return'd-third'; if([6,7,8].includes(iv))return'd-fifth'; return'd-sev'; }
 function buildChQuals(){
   const c=document.getElementById('ch-quals'); c.innerHTML='';
   QUALITIES.forEach((q,i)=>{ const b=document.createElement('button'); b.className='btn'+(i===chQual?' active':'');
     b.textContent=q.short||'maj'; b.title=qName(q); b.setAttribute('aria-label', qName(q)); b.setAttribute('aria-pressed', i===chQual);
-    b.onclick=()=>{ chQual=i; buildChQuals(); renderChords(); saveState(); }; c.appendChild(b); });
+    b.onclick=()=>{ chQual=i; chVoicing=0; buildChQuals(); renderChords(); saveState(); }; c.appendChild(b); });
 }
 function renderChords(){
   const q=QUALITIES[chQual];
@@ -1469,18 +1547,49 @@ const OPEN_OVERRIDES = {
   '0_maj7':[null,3,2,0,0,0], '9_maj7':[null,0,2,1,2,0], '2_maj7':[null,null,0,2,2,2], '4_maj7':[0,2,1,1,0,0], '5_maj7':[null,null,3,2,1,0], '7_maj7':[3,2,0,0,0,2],
   '9_m7':[null,0,2,0,1,0], '2_m7':[null,null,0,2,1,1], '4_m7':[0,2,0,0,0,0],
 };
-function buildChordVoicing(rootPc, short){
+/* MIDI of each string at fret 0, string6 -> string1 (standard tuning). The chord
+   diagrams are an explicit standard-tuning reference, so card playback is voiced
+   from here regardless of the board's current (possibly alternate) tuning. */
+const STD_LOW6_MIDI = [40,45,50,55,59,64];   // E2 A2 D3 G3 B3 E4
+function voicingMidi(v){ const out=[]; v.frets.forEach((fr,s)=>{ if(fr!=null) out.push(STD_LOW6_MIDI[s]+fr); }); return out; }  // low -> high
+
+/* Canonical voicing set for a chord: the open shape (where one exists) plus the
+   E-shape (root on string 6) and A-shape (root on string 5) barre forms, deduped
+   by their resolved fret array so an open shape that equals a barre-at-fret-0
+   isn't drawn twice. Extended qualities with no template fall back to one
+   computed voicing. Ordered open-first, then by ascending barre fret. The render
+   and the Listen/Loop playback both read THIS list, so they always agree. */
+function chordVoicings(rootPc, short, ivs){
+  const out=[], seen={};
+  const add=(frets, barre, shape, generated)=>{
+    if(!frets) return;
+    const key=frets.map(f=>f==null?'x':f).join(',');
+    if(seen[key]) return; seen[key]=1;
+    out.push({frets:frets.slice(), barre, shape, generated:!!generated});
+  };
   const ov=OPEN_OVERRIDES[rootPc+'_'+short];
-  if(ov) return {frets:ov.slice(), barre:0};
-  const tmpl=CHORD_SHAPES[short]; if(!tmpl) return null;
-  const opts=[];
-  if(tmpl.E) opts.push({barre:mod(rootPc-4,12), off:tmpl.E});   // root on low E
-  if(tmpl.A) opts.push({barre:mod(rootPc-9,12), off:tmpl.A});   // root on A string
-  // prefer open (barre 0), then lowest barre
-  opts.sort((a,b)=>(a.barre===0?-1:b.barre===0?1:a.barre-b.barre));
-  const pick=opts[0];
-  const frets=pick.off.map(o=> o===null ? null : pick.barre+o );  // low6 -> high1
-  return {frets, barre:pick.barre};
+  if(ov) add(ov, 0, 'open', false);
+  const tmpl=CHORD_SHAPES[short];
+  if(tmpl){
+    if(tmpl.E){ const barre=mod(rootPc-4,12); add(tmpl.E.map(o=>o==null?null:barre+o), barre, barre===0?'open':'E', false); }
+    if(tmpl.A){ const barre=mod(rootPc-9,12); add(tmpl.A.map(o=>o==null?null:barre+o), barre, barre===0?'open':'A', false); }
+  }
+  if(out.length===0){ const g=genVoicing(rootPc, ivs); if(g) add(g.frets, g.barre, 'computed', true); }
+  out.sort((a,b)=> (a.shape==='open'?-1:b.shape==='open'?1:0) || (a.barre-b.barre) );
+  return out;
+}
+/* The voicing the transport should sound: the selected card (clamped). Returns
+   real MIDI (low->high) plus the pitch classes to light on the board. */
+function currentChordVoicing(){
+  const q=QUALITIES[chQual];
+  const list=chordVoicings(gRoot, q.short, q.iv);
+  if(!list.length){                                   // safety net: stacked from the root
+    const base=48+gRoot, midis=q.iv.map(iv=>base+iv);
+    return {midis, pcs:[...new Set(midis.map(m=>mod(m,12)))], list, idx:0};
+  }
+  const idx=Math.max(0, Math.min(chVoicing, list.length-1));
+  const midis=voicingMidi(list[idx]);
+  return {midis, pcs:[...new Set(midis.map(m=>mod(m,12)))], list, idx};
 }
 /* Generalized voicing generator — removes the need to hand-curate a shape for
    every quality. Given the chord's pitch classes, it scans 4-fret windows up
@@ -1515,51 +1624,55 @@ function genVoicing(rootPc, ivs){
   const played=best.frets.filter(x=>x!=null&&x>0);
   return {frets:best.frets, barre:played.length?Math.min(...played):0, generated:true};
 }
-function renderChordDiagram(){
-  const cont=document.getElementById('ch-diagram');
-  const short=QUALITIES[chQual].short;
-  let v=buildChordVoicing(gRoot, short);
-  if(!v) v=genVoicing(gRoot, QUALITIES[chQual].iv);   // fall back to a computed shape
-  if(!v){ cont.innerHTML=`<div class="chordbox"><div class="cb-name">${gRootLbl}${short}</div><div class="cb-cap">${t('cd_na')}</div></div>`; return; }
+/* Draw one chord-box SVG. funcMap: pitch-class -> d-* class, so card dots are
+   coloured by their role in the chord (root/third/fifth/seventh/extension),
+   matching the fretboard. Each dot carries data-midi so a click sounds it. */
+function chordBoxSVG(v, funcMap){
   const frets=v.frets;                      // low6 .. high1
   const played=frets.filter(x=>x!==null && x>0);
   const minF=played.length?Math.min(...played):0;
   const maxF=played.length?Math.max(...played):0;
-  const baseFret = (maxF<=4 ? 1 : minF);    // start at nut if shape fits, else shift up
-  const span=4;                             // show 4 frets
-  // geometry
-  const W=120, H=140, padX=16, padTop=26, padBot=18;
+  const baseFret = (maxF<=4 ? 1 : minF);
+  const span=4, W=120, H=140, padX=16, padTop=26, padBot=18;
   const cols=6, rows=span;
   const gw=(W-padX*2)/(cols-1), gh=(H-padTop-padBot)/rows;
-  const x=i=>padX+i*gw;                     // i: 0=low6 ... 5=high1
-  const y=r=>padTop+r*gh;                   // r: 0..span
+  const x=i=>padX+i*gw, y=r=>padTop+r*gh;
   let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
-  // frets (horizontal)
-  for(let r=0;r<=rows;r++){ const isNut=(baseFret===1 && v.barre===0 && r===0); s+=`<line class="${isNut?'cd-nut':'cd-fret'}" x1="${x(0)}" y1="${y(r)}" x2="${x(5)}" y2="${y(r)}"/>`; }
-  // strings (vertical)
+  for(let r=0;r<=rows;r++){ const isNut=(baseFret===1 && r===0); s+=`<line class="${isNut?'cd-nut':'cd-fret'}" x1="${x(0)}" y1="${y(r)}" x2="${x(5)}" y2="${y(r)}"/>`; }
   for(let i=0;i<6;i++){ s+=`<line class="cd-string" x1="${x(i)}" y1="${y(0)}" x2="${x(i)}" y2="${y(rows)}"/>`; }
-  // position label when not at the nut
   if(baseFret>1){ s+=`<text class="cd-pos" x="${x(0)-9}" y="${y(0)+gh*0.7}" text-anchor="end">${baseFret}fr</text>`; }
-  // root pitch classes of the chord, to colour root dots
-  const rootClass = pc => pc===gRoot;
-  // markers above nut (O = open, X = muted) and dots
   frets.forEach((fr,li)=>{
-    const i=li;                              // li 0=low6 -> column 0 (board draws high on top, but a chord box is conventionally low E on left)
-    const col=i;                             // low E at left
-    const sx=x(col);
-    const stringPc = mod(STD_LOW6[li],12);
+    const sx=x(li);                          // low E at left
+    const stringPc=mod(STD_LOW6[li],12);
     if(fr===null){ s+=`<text class="cd-mark" x="${sx}" y="${padTop-9}" text-anchor="middle">×</text>`; return; }
     if(fr===0){ s+=`<text class="cd-mark" x="${sx}" y="${padTop-9}" text-anchor="middle">○</text>`; return; }
-    const r=fr-baseFret;                     // row index 0..span-1
-    if(r<0||r>=rows) return;
+    const r=fr-baseFret; if(r<0||r>=rows) return;
     const cy=y(r)+gh/2;
     const notePc=mod(stringPc+fr,12);
-    s+=`<circle class="cd-dot ${rootClass(notePc)?'root':''}" cx="${sx}" cy="${cy}" r="6.5"/>`;
+    const cls=funcMap[notePc] || 'd-fifth';
+    const midi=STD_LOW6_MIDI[li]+fr;
+    s+=`<circle class="cd-dot ${cls}" data-midi="${midi}" cx="${sx}" cy="${cy}" r="6.5"/>`;
   });
-  s+=`</svg>`;
-  const cap = v.generated ? (v.barre>0 ? `${t('cd_calc')} · ${t('cd_barre')} ${v.barre}` : t('cd_calc'))
-            : v.barre===0 ? t('cd_open') : (lefty||tuningIdx!==0 ? t('cd_std') : `${t('cd_barre')} ${v.barre}`);
-  cont.innerHTML=`<div class="chordbox"><div class="cb-name">${gRootLbl}${short}</div>${s}<div class="cb-cap">${cap}</div></div>`;
+  s+=`</svg>`; return s;
+}
+function voicingCaption(v){
+  if(v.generated) return v.barre>0 ? `${t('cd_calc')} · ${t('cd_barre')} ${v.barre}` : t('cd_calc');
+  if(v.shape==='open') return t('cd_open');
+  const name = v.shape==='E' ? t('cd_eshape') : v.shape==='A' ? t('cd_ashape') : t('cd_barre');
+  const tail = tuningIdx!==0 ? ` · ${t('cd_std')}` : '';
+  return `${name} · ${v.barre}${t('cd_fret')}${tail}`;
+}
+function renderChordDiagram(){
+  const cont=document.getElementById('ch-diagram');
+  const q=QUALITIES[chQual], short=q.short;
+  const funcMap={}; q.iv.forEach((iv,i)=>{ funcMap[mod(gRoot+iv,12)]=labClass(q.lab[i]); });
+  const list=chordVoicings(gRoot, short, q.iv);
+  if(!list.length){ cont.innerHTML=`<div class="chordbox"><div class="cb-name">${gRootLbl}${short}</div><div class="cb-cap">${t('cd_na')}</div></div>`; return; }
+  if(chVoicing>list.length-1) chVoicing=0;             // clamp after a quality change
+  cont.innerHTML = list.map((v,i)=>
+    `<button type="button" class="chordbox${i===chVoicing?' sel':''}" data-v="${i}" aria-pressed="${i===chVoicing}">`+
+    `<div class="cb-name">${gRootLbl}${short}</div>${chordBoxSVG(v, funcMap)}`+
+    `<div class="cb-cap">${voicingCaption(v)}</div></button>`).join('');
 }
 
 /* ===================== TRIADS ===================== */
@@ -1588,7 +1701,7 @@ function triadCells(){
   const tri=TRIADS[trQual], iv=tri.iv, set=STRING_SETS[trSet];
   const invs = trInv===0 ? [0,1,2] : [trInv-1];
   const [low,mid,high]=set.idx;
-  const cells={};
+  const cells={}, pats=[];
   invs.forEach(inv=>{
     const order=ROT[inv].map(i=>iv[i]);              // intervals bottom -> top
     const pcs=order.map(o=>mod(gRoot+o,12));
@@ -1596,11 +1709,64 @@ function triadCells(){
     const mf=nearestFret(OPEN[mid],pcs[1],lf);
     const hf=nearestFret(OPEN[high],pcs[2],mf);
     const pat=[[low,lf,order[0]],[mid,mf,order[1]],[high,hf,order[2]]];
+    pats.push({inv, notes:pat.map(([si,fr,o])=>({si,fr,o}))});
     const mn=Math.min(lf,mf,hf), mx=Math.max(lf,mf,hf);
     for(let k=-2;k<=3;k++){ const sh=12*k; if(mn+sh<0||mx+sh>FRETS) continue;
       pat.forEach(([si,fr,o])=>{ cells[si+'_'+(fr+sh)]=o; }); }
   });
-  return {cells, iv};
+  return {cells, iv, pats};
+}
+/* shift a triad pattern up by octaves until it is a fully-fretted movable block
+   (every fret >= 1). This drops open strings — matching the "movable shape"
+   teaching of the triad view — and keeps card display and playback identical. */
+function normalizeTriPat(notes){
+  let mn=Math.min(...notes.map(n=>n.fr)), sh=0;
+  while(mn+sh<1) sh+=12;
+  return notes.map(n=>({si:n.si, fr:n.fr+sh, o:n.o}));
+}
+const TRI_TO_QUAL=[0,1,10,12];   // triad index -> QUALITIES index (maj/m/dim/aug) for the bass's true fifth
+/* the triad voicing the transport should sound: the selected inversion (root
+   position when "all" is shown), in its real register on the current tuning. */
+function currentTriadVoicing(){
+  const {pats}=triadCells();
+  const p = (trInv===0) ? (pats.find(x=>x.inv===0)||pats[0]) : pats[0];
+  const notes=normalizeTriPat(p.notes);
+  const midis=notes.map(n=>OPEN_MIDI[n.si]+n.fr).sort((a,b)=>a-b);   // low -> high
+  return {midis, pcs:[...new Set(midis.map(m=>mod(m,12)))]};
+}
+/* one compact 3-string triad block. Dots carry data-midi so a click sounds the
+   note; colours follow the chord function (root/third/fifth). */
+function triadCardSVG(notes, iv){
+  const frets=notes.map(n=>n.fr);
+  const minF=Math.min(...frets), maxF=Math.max(...frets);
+  const baseFret=(maxF<=4?1:minF);
+  const span=Math.max(3, maxF-baseFret+1);
+  const W=82, H=120, padX=15, padTop=22, padBot=14;
+  const cols=3, rows=span;
+  const gw=(W-padX*2)/(cols-1), gh=(H-padTop-padBot)/rows;
+  const x=i=>padX+i*gw, y=r=>padTop+r*gh;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+  for(let r=0;r<=rows;r++){ const isNut=(baseFret===1 && r===0); s+=`<line class="${isNut?'cd-nut':'cd-fret'}" x1="${x(0)}" y1="${y(r)}" x2="${x(2)}" y2="${y(r)}"/>`; }
+  for(let i=0;i<3;i++){ s+=`<line class="cd-string" x1="${x(i)}" y1="${y(0)}" x2="${x(i)}" y2="${y(rows)}"/>`; }
+  if(baseFret>1){ s+=`<text class="cd-pos" x="${x(0)-8}" y="${y(0)+gh*0.7}" text-anchor="end">${baseFret}fr</text>`; }
+  notes.forEach((n,col)=>{                 // col 0 = lowest string of the set
+    const r=n.fr-baseFret; if(r<0||r>=rows) return;
+    const cy=y(r)+gh/2;
+    const cls=triFuncClass(n.o,iv);
+    const midi=OPEN_MIDI[n.si]+n.fr;
+    s+=`<circle class="cd-dot ${cls}" data-midi="${midi}" cx="${x(col)}" cy="${cy}" r="6.5"/>`;
+  });
+  s+=`</svg>`; return s;
+}
+function renderTriadCards(){
+  const cont=document.getElementById('tr-diagram'); if(!cont) return;
+  const {pats,iv}=triadCells(), tri=TRIADS[trQual], set=STRING_SETS[trSet];
+  const invName=[t('inv_root'),t('inv_1st'),t('inv_2nd')];
+  cont.innerHTML = pats.map(p=>{
+    const notes=normalizeTriPat(p.notes);
+    return `<div class="chordbox tri"><div class="cb-name">${gRootLbl}${tri.short} · ${invName[p.inv]}</div>`+
+           `${triadCardSVG(notes, iv)}<div class="cb-cap">${t('strings_word')} ${set.label}</div></div>`;
+  }).join('');
 }
 function buildTrQuals(){
   const c=document.getElementById('tr-quals'); c.innerHTML='';
@@ -1629,6 +1795,7 @@ function renderTriads(){
   const invDesc=[t('inv_all_desc'),t('inv_root_desc'),t('inv_1st_desc'),t('inv_2nd_desc')][trInv];
   document.getElementById('tr-info').innerHTML=
     `<div class="big">${gRootLbl}${tri.short} · ${qName(tri)} · ${t('strings_word')} ${set.label}: ${notes}</div><div class="sub">${invDesc}</div>`;
+  renderTriadCards();
 }
 
 /* ===================== SCALES ===================== */
@@ -1878,6 +2045,7 @@ function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
   lang, tab:currentTab, tuningIdx, fretRangeIdx, tempo, lefty, toolbarOpen,
   gRoot, gRootLbl, gMode, hView,
   chQual, scIdx, scPos, scOverlay,
+  chVoicing,
   trQual, trSet, trInv,
   cofSel, cofMinor,
   ntRoot, ntFilter,
@@ -1898,6 +2066,7 @@ function loadState(){ try{
   if(typeof s.tab==='string') currentTab = (s.tab==='chords'||s.tab==='triads') ? 'harmony' : s.tab;  // migrate merged tab
   // ---- working musical state (added in 1.6.1) ----
   if(Number.isInteger(s.chQual)&&QUALITIES[s.chQual]) chQual=s.chQual;
+  if(Number.isInteger(s.chVoicing)&&s.chVoicing>=0&&s.chVoicing<6) chVoicing=s.chVoicing;  // clamped again at render against the actual list length
   if(Number.isInteger(s.scIdx)&&SCALES[s.scIdx]) scIdx=s.scIdx;
   if(Number.isInteger(s.scPos)&&s.scPos>=0&&s.scPos<=5) scPos=s.scPos;
   if(s.scOverlay&&typeof s.scOverlay==='object'&&Number.isInteger(s.scOverlay.rootPc)&&Array.isArray(s.scOverlay.iv)&&typeof s.scOverlay.tag==='string')
@@ -1923,7 +2092,7 @@ function loadState(){ try{
 /* ---- shared root picker, display mode, sub-view toggle, global play ---- */
 function renderContextViews(){ renderChords(); renderTriads(); renderScales(); }
 function renderActiveContext(){ if(currentTab==='harmony'){ hView==='triads'?renderTriads():renderChords(); } else if(currentTab==='scales'){ renderScales(); } }
-buildRootBtns(document.getElementById('g-roots'), gRoot, (pc,r)=>{ gRoot=pc; gRootLbl=r; scOverlay=null; buildChQuals(); renderContextViews(); saveState(); });
+buildRootBtns(document.getElementById('g-roots'), gRoot, (pc,r)=>{ gRoot=pc; gRootLbl=r; chVoicing=0; scOverlay=null; buildChQuals(); renderContextViews(); saveState(); });
 
 function setGMode(m){ gMode=m;
   const on=document.getElementById(m==='names'?'g-names':'g-deg'), off=document.getElementById(m==='names'?'g-deg':'g-names');
@@ -1949,8 +2118,8 @@ document.getElementById('hv-triads').onclick=()=>setHView('triads');
 function applyContextBar(){ document.getElementById('context-bar').hidden = !(currentTab==='harmony' || currentTab==='scales'); }
 function globalPlay(){
   if(currentTab==='harmony'){
-    if(hView==='triads'){ const tri=TRIADS[trQual]; animArp(document.getElementById('tr-board'), 48+gRoot, tri.iv.concat([12])); }
-    else { const q=QUALITIES[chQual]; animArp(document.getElementById('ch-board'), 48+gRoot, q.iv.concat([12])); }
+    if(hView==='triads'){ const v=currentTriadVoicing(); animArpMidi(document.getElementById('tr-board'), v.midis); }
+    else { const v=currentChordVoicing(); animArpMidi(document.getElementById('ch-board'), v.midis); }
   } else if(currentTab==='scales'){ const s=SCALES[scIdx]; animRun(document.getElementById('sc-board'), 48+gRoot, s.iv.concat([12])); }
   else if(currentTab==='circle'){
     const c=COF[cofSel], pc=cofMinor?c.minPc:c.majPc, b=48+pc, iv=cofMinor?[0,3,7]:[0,4,7], bt=beat();
@@ -1968,9 +2137,10 @@ function updateGlobalPlay(){
   }
   const lp=document.getElementById('g-loop');
   if(lp){
-    // The single-chord Loop applies only to the chord-tones view; while a
-    // backing keeps playing on other tabs, the transport chip is the Stop.
-    lp.hidden = !(currentTab==='harmony' && hView==='chords');
+    // The single loop now applies to both harmony views: it loops the selected
+    // chord voicing (chord-tones view) or the shown triad (triads view) as a
+    // backing. It persists across tabs; the transport chip is the Stop.
+    lp.hidden = !(currentTab==='harmony');
     lp.classList.toggle('active', !!loopClock);
     lp.setAttribute('aria-pressed', loopClock?'true':'false');
     lp.innerHTML=(loopClock?'&#9632; ':'&#8635; ')+t('b_loop');
@@ -1996,8 +2166,23 @@ document.getElementById('seq-strip').addEventListener('click',e=>{
 });
 renderSeq(); setSeqTransport();
 wirePlay(document.getElementById('ch-board'));
+/* chord cards: a dot click sounds that string; clicking elsewhere on a card
+   selects that voicing (so Listen/Loop use it). Keyboard note-play stays on the
+   fretboard, which is the fully focusable surface. */
+document.getElementById('ch-diagram').addEventListener('click',e=>{
+  const dot=e.target.closest('.cd-dot');
+  if(dot && dot.dataset.midi!=null){ e.stopPropagation(); pluck(parseInt(dot.dataset.midi)); return; }
+  const card=e.target.closest('.chordbox'); if(!card || card.dataset.v==null) return;
+  chVoicing=+card.dataset.v; renderChordDiagram(); saveState();
+});
 
 wirePlay(document.getElementById('tr-board'));
+/* triad cards: a dot click sounds that string. Inversion/string-set buttons are
+   the selector here, so cards aren't separately selectable. */
+document.getElementById('tr-diagram').addEventListener('click',e=>{
+  const dot=e.target.closest('.cd-dot');
+  if(dot && dot.dataset.midi!=null){ pluck(parseInt(dot.dataset.midi)); }
+});
 
 document.getElementById('sc-select').onchange=function(){ scIdx=parseInt(this.value); scOverlay=null; renderScales(); saveState(); };
 document.getElementById('sc-diatonic').addEventListener('click',e=>{
@@ -2139,14 +2324,17 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
   window.__GS_TEST__ = {
     APP_VERSION, I18N, QUALITIES, TRIADS, SCALES, COF, FRET_RANGES, SEQ_PRESETS,
     fifthInterval, spellNote, rootParts, simpleName,
+    chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
     schedAdvance, clocks, beat,
     selectTab, setHView, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
     setFret:(i)=>{ fretRangeIdx=i; },
+    setChQual:(i)=>{ chQual=i; chVoicing=0; }, setChVoicing:(i)=>{ chVoicing=i; },
+    setTriad:(q,set,inv)=>{ trQual=q; trSet=set; trInv=inv; },
     initAudio:()=>audio(),
     setCtxNow:(t)=>{ if(actx) actx.currentTime=t; },
-    state:()=>({ gRoot, gRootLbl, chQual, currentTab, hView,
-                 loop:!!loopClock, seq:!!seqClock, fretRangeIdx, lang, tempo })
+    state:()=>({ gRoot, gRootLbl, chQual, chVoicing, currentTab, hView,
+                 loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo })
   };
 }
 </script>

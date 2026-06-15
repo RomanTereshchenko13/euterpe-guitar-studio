@@ -156,7 +156,8 @@ if (T) {
   const onlyEn = en.filter(k => !T.I18N.uk.hasOwnProperty(k));
   ok('i18n: no keys only in uk', onlyUk.length === 0, onlyUk.join(', '));
   ok('i18n: no keys only in en', onlyEn.length === 0, onlyEn.join(', '));
-  ['b_listen_tip','b_loop_tip','b_loop_stop_tip','audio_off'].forEach(k => {
+  ['b_listen_tip','b_loop_tip','b_loop_stop_tip','audio_off',
+   'cd_voicings','cd_eshape','cd_ashape','cd_fret','cd_pick_hint','tr_shapes'].forEach(k => {
     ok('i18n new key present (uk+en): ' + k,
        T.I18N.uk[k] !== undefined && T.I18N.en[k] !== undefined);
   });
@@ -288,13 +289,99 @@ if (T) {
     const lp = win.document.getElementById('g-loop');
     ok('Loop visible on chord-tones view', lp && lp.hidden === false);
     T.setHView('triads');
-    ok('Loop hidden on triads view', lp && lp.hidden === true);
+    ok('Loop now visible on triads view (v1.12.0)', lp && lp.hidden === false);
     T.setHView('chords');
     T.selectTab('scales');
     ok('Loop hidden on scales tab', lp && lp.hidden === true);
     T.selectTab('notes');
     const gp = win.document.getElementById('g-play');
     ok('Listen hidden on notes tab', gp && gp.hidden === true);
+    T.selectTab('harmony'); T.setHView('chords');
+  })();
+
+  /* ---- v1.12.0: alternate chord voicings (data + playback model) ---- */
+  (function voicings() {
+    const pcOf = m => ((m % 12) + 12) % 12;
+    const pcsOf = v => T.voicingMidi(v).map(pcOf);
+    const chordPcs = (root, iv) => new Set(iv.map(i => ((root + i) % 12 + 12) % 12));
+    // [label, root, short]
+    const cases = [
+      ['C',  0, ''], ['F', 5, ''], ['A', 9, ''], ['E', 4, ''],
+      ['G7', 7, '7'], ['Dm', 2, 'm'], ['Bdim', 11, 'dim'],
+    ];
+    cases.forEach(([lbl, root, short]) => {
+      const qi = byShort[short]; const iv = T.QUALITIES[qi].iv;
+      const list = T.chordVoicings(root, short, iv);
+      ok('voicings(' + lbl + ') non-empty', list.length >= 1, 'got ' + list.length);
+      const want = chordPcs(root, iv);
+      // every sounded note is a real chord tone
+      let allTones = true;
+      list.forEach(v => pcsOf(v).forEach(pc => { if (!want.has(pc)) allTones = false; }));
+      ok('voicings(' + lbl + ') sound only chord tones', allTones);
+      // dedupe: no two voicings share an identical fret array
+      const keys = list.map(v => v.frets.map(f => f == null ? 'x' : f).join(','));
+      ok('voicings(' + lbl + ') deduped', new Set(keys).size === keys.length);
+      // barre-shape roots land on the right string
+      list.forEach(v => {
+        if (v.shape === 'E') {
+          ok('voicings(' + lbl + ') E-shape root on string 6',
+             v.frets[0] != null && pcOf(T.STD_LOW6_MIDI[0] + v.frets[0]) === root);
+        }
+        if (v.shape === 'A') {
+          ok('voicings(' + lbl + ') A-shape root on string 5',
+             v.frets[0] == null && v.frets[1] != null && pcOf(T.STD_LOW6_MIDI[1] + v.frets[1]) === root);
+        }
+      });
+    });
+    // C major should offer the canonical CAGED-lite set: an open + both barres
+    const cMaj = T.chordVoicings(0, '', T.QUALITIES[byShort['']].iv);
+    ok('C major offers an open voicing', cMaj.some(v => v.shape === 'open'));
+    ok('C major offers an E-shape barre', cMaj.some(v => v.shape === 'E'));
+    ok('C major offers an A-shape barre', cMaj.some(v => v.shape === 'A'));
+    ok('C major voicings ≥ 3', cMaj.length >= 3, 'got ' + cMaj.length);
+    // extended chords keep a single computed voicing (no canonical CAGED set)
+    if (byShort['13'] !== undefined) {
+      const c13 = T.chordVoicings(0, '13', T.QUALITIES[byShort['13']].iv);
+      ok('extended chord (13) keeps one computed voicing',
+         c13.length === 1 && (c13[0].shape === 'computed' || c13[0].generated));
+    }
+    // selecting a card changes what Listen/Loop will sound
+    T.selectTab('harmony'); T.setHView('chords');
+    T.setChQual(byShort['']);            // C major-ish, 3 voicings
+    T.setChVoicing(0);
+    const v0 = T.currentChordVoicing();
+    ok('currentChordVoicing tracks selection idx 0', v0.idx === 0);
+    if (v0.list.length > 1) {
+      T.setChVoicing(1);
+      const v1 = T.currentChordVoicing();
+      ok('currentChordVoicing tracks selection idx 1', v1.idx === 1);
+      ok('selected voicings differ in register/notes',
+         v1.midis.join(',') !== v0.midis.join(','));
+    }
+    T.setChVoicing(0);
+  })();
+
+  /* ---- v1.12.0: triad shape playback + loop parity ---- */
+  (function triadParity() {
+    T.selectTab('harmony'); T.setHView('triads');
+    T.setTriad(0, 0, 1);                 // major, string set 1·2·3, root position
+    const tv = T.currentTriadVoicing();
+    ok('triad voicing has three notes', tv.midis.length === 3, 'got ' + tv.midis.length);
+    const triPcs = new Set([0, 4, 7].map(i => (T.state().gRoot + i) % 12));
+    ok('triad voicing sounds only triad tones',
+       tv.pcs.every(pc => triPcs.has(((pc % 12) + 12) % 12)));
+    // Loop in triads view starts in triad mode and is mutually exclusive with seq
+    ok('loop off before triad loop', T.state().loop === false);
+    T.loopToggle();
+    ok('triad-view loop starts', T.state().loop === true);
+    ok('triad-view loop runs in triad mode', T.state().loopMode === 'triad');
+    T.loopToggle();
+    ok('triad-view loop stops', T.state().loop === false);
+    // TRI_TO_QUAL maps each triad to the QUALITIES index with the matching fifth
+    const fifths = T.TRI_TO_QUAL.map(qi => T.fifthInterval(qi));
+    ok('triad→quality fifths are [perfect, perfect, ♭5, ♯5]',
+       fifths[0] === 7 && fifths[1] === 7 && fifths[2] === 6 && fifths[3] === 8,
+       fifths.join(','));
     T.selectTab('harmony'); T.setHView('chords');
   })();
 
