@@ -21,6 +21,7 @@ function isMajorFamily(i){ return SCALES[i].iv.includes(4); }
 const MODE_OFF={1:2,2:4,3:5,4:7,5:9,6:11};
 const BOX_OFFSETS=[0,3,5,7,10];
 let scIdx=5, scPos=0, scOverlay=null;
+let scView='scale';   // Scales-tab sub-view: 'scale' | 'notes' (folded-in Notes mode, 1b)
 let diaList=[];
 function scClass(iv){ if(iv===0)return'd-root'; if(iv===3||iv===4)return'd-third'; return'd-other'; }
 function boxWindow(pos){ if(!pos) return null; const anchor=(gRoot-4+12)%12; const start=anchor+BOX_OFFSETS[pos-1]; return [start, start+4]; }
@@ -43,35 +44,27 @@ function renderScales(){
   const seven = s.iv.length===7;
   const map={}, deg={}; s.iv.forEach((iv,di)=>{ const pc=(gRoot+iv)%12; map[pc]=iv; deg[pc]=di+1; });
   const scName = pc => seven ? spellNote(gRootLbl, pc, deg[pc]) : simpleName(pc, gRootLbl);
-  const win=boxWindow(scPos);
-  let ovMap=null; if(scOverlay){ ovMap={}; scOverlay.iv.forEach(iv=>ovMap[(scOverlay.rootPc+iv)%12]=iv); }
-  renderBoard(document.getElementById('sc-board'),(pc,si,f)=>{
-    if(map[pc]===undefined) return null;
-    if(win && (f<win[0]||f>win[1])) return null;
-    let cls;
-    if(ovMap){ cls = (ovMap[pc]!==undefined) ? chDegClass(ovMap[pc]) : 'd-dim'; }
-    else { cls = scClass(map[pc]); }
-    return makeDot(cls, gMode==='names'?scName(pc):SDEG[map[pc]], OPEN_MIDI[si]+f);
-  });
-  renderNums(document.getElementById('sc-nums'));
+  // panel content (info + diatonic)
   const notes=s.iv.map(iv=>scName((gRoot+iv)%12)).join(' – ');
   const degs=s.iv.map(iv=>SDEG[iv]).join(' ');
   let html=`<div class="big">${gRootLbl} ${sName(s)}: ${notes}</div><div class="sub">${t('degrees_word')}: ${degs}</div>`;
   if(MODE_OFF[scIdx]!==undefined){ const pr=noteName((gRoot-MODE_OFF[scIdx]+120)%12,flat); html+=`<div class="sub">${t('samenotes')} ${pr} ${t('major_word')} ${t('mode_tail')}</div>`; }
   if(scOverlay){ html+=`<div class="sub" style="color:var(--third)">${t('overlay_msg')}</div>`; }
   document.getElementById('sc-info').innerHTML=html;
-  const leg=document.getElementById('sc-legend');
-  if(scOverlay){ leg.innerHTML=
-    `<div class="leg"><span class="leg-dot" style="background:var(--root)"></span>${t('leg_root')}</div>`+
-    `<div class="leg"><span class="leg-dot" style="background:var(--third)"></span>${t('leg_third')}</div>`+
-    `<div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span>${t('leg_fifth')}</div>`+
-    `<div class="leg"><span class="leg-dot" style="background:var(--seventh)"></span>${t('leg_seventh')}</div>`+
-    `<div class="leg"><span class="leg-dot" style="background:rgba(220,200,160,0.4)"></span>${t('leg_sc_other')}</div>`; }
-  else { leg.innerHTML=
-    `<div class="leg"><span class="leg-dot" style="background:var(--root)"></span>${t('leg_root')}</div>`+
-    `<div class="leg"><span class="leg-dot" style="background:var(--third)"></span>${t('leg_third')}</div>`+
-    `<div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span>${t('leg_sc_other')}</div>`; }
   renderDiatonic();
+  // shared board: only when the Scale view is active
+  if(isBoardMode('scale')){
+    const win=boxWindow(scPos);
+    let ovMap=null; if(scOverlay){ ovMap={}; scOverlay.iv.forEach(iv=>ovMap[(scOverlay.rootPc+iv)%12]=iv); }
+    paintBoard((pc,si,f)=>{
+      if(map[pc]===undefined) return null;
+      if(win && (f<win[0]||f>win[1])) return null;
+      let cls;
+      if(ovMap){ cls = (ovMap[pc]!==undefined) ? chDegClass(ovMap[pc]) : 'd-dim'; }
+      else { cls = scClass(map[pc]); }
+      return makeDot(cls, gMode==='names'?scName(pc):SDEG[map[pc]], OPEN_MIDI[si]+f);
+    }, scaleLegendHTML(), '');
+  }
 }
 function buildScSelect(){
   const sel=document.getElementById('sc-select'); sel.innerHTML='';

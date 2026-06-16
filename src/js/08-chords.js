@@ -47,10 +47,11 @@ function labClass(lab){
    saveState()/loadState() with a bounds-checked restore. Current members:
      context   : gRoot, gRootLbl (root) + scIdx (mode)   (set via setKey)
      display   : gMode (note-names vs degrees)     (this block)
+     view      : hView (chords|triads), scView (scale|notes)  (sub-view per tab)
      chords    : chQual                            (this block)
      triads    : trQual, trSet, trInv              (~"TRIADS view")
      scales    : scPos, scOverlay                  (~"SCALES view")
-     notes     : ntFilter, ntRoot                  (~"NOTES view")
+     notes     : ntFilter, ntRoot                  (Notes sub-view of Scales, 1b)
      circle    : (derived from context; not persisted)
      transport : tempo, lefty, bassOn, grooveOn, seqLoopOn, seq[]
      ui        : lang, currentTab, tuningIdx, fretRangeIdx, toolbarOpen
@@ -77,16 +78,19 @@ function buildChQuals(){
 }
 function renderChords(){
   const q=QUALITIES[chQual];
-  const map={}; q.iv.forEach((iv,i)=>{ map[(gRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
-  renderBoard(document.getElementById('ch-board'),(pc,si,f)=>{
-    const m=map[pc]; if(m===undefined) return null;
-    return makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
-  });
-  renderNums(document.getElementById('ch-nums'));
+  // panel content (always current so a tab switch shows the latest)
   const notes=q.iv.map((iv,i)=>spellNote(gRootLbl,(gRoot+iv)%12,q.deg[i])).join(' – ');
   const degs=q.lab.join('  ');
   document.getElementById('ch-info').innerHTML=`<div class="big">${gRootLbl}${q.short} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
   renderChordDiagram();
+  // shared board: only when chord tones is the active mode
+  if(isBoardMode('chords')){
+    const map={}; q.iv.forEach((iv,i)=>{ map[(gRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
+    paintBoard((pc,si,f)=>{
+      const m=map[pc]; if(m===undefined) return null;
+      return makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
+    }, chordLegendHTML(), t('ch_hint'));
+  }
 }
 
 /* ---- Open / barre chord diagrams (standard-tuning reference) ----

@@ -152,13 +152,13 @@ let loopClock=null, loopMode='chord';
 function loopStrum(when){
   const ctx=audio(); if(!ctx) return;
   const barSec=beat()*4;
-  let midis, pcs, boardId, pc, qi;
+  let midis, pcs, boardId='board', pc, qi;     // one shared board (1b)
   if(loopMode==='triad'){
     const v=currentTriadVoicing();
-    midis=v.midis; pcs=v.pcs; boardId='tr-board'; pc=gRoot; qi=TRI_TO_QUAL[trQual];
+    midis=v.midis; pcs=v.pcs; pc=gRoot; qi=TRI_TO_QUAL[trQual];
   } else {
     const v=currentChordVoicing();
-    midis=v.midis; pcs=v.pcs; boardId='ch-board'; pc=gRoot; qi=chQual;
+    midis=v.midis; pcs=v.pcs; pc=gRoot; qi=chQual;
   }
   strumMidi(midis, when, 0.9, 0.026, +1);                 // humanized downstrum
   if(bandActive()) strumMidi(midis, when+2*beat(), 0.55, 0.02, +1);   // softer push on beat 3
@@ -166,7 +166,7 @@ function loopStrum(when){
   enqueueVisual(when, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, true)); updateGlobalTransport(); });
   enqueueVisual(when+barSec*0.85, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, false)); });
 }
-function stopLoopVisual(){ document.querySelectorAll('#ch-board .dot.playing, #tr-board .dot.playing').forEach(d=>d.classList.remove('playing')); }
+function stopLoopVisual(){ document.querySelectorAll('#board .dot.playing').forEach(d=>d.classList.remove('playing')); }
 function loopToggle(){
   const btn=document.getElementById('g-loop');
   if(loopClock){ removeClock(loopClock); loopClock=null; clearVisualQ(); stopLoopVisual();
@@ -241,9 +241,9 @@ function seqStrumStep(i, when){
   const pcs=ivs.map(iv=>mod(base+iv,12));
   enqueueVisual(when, ()=>{
     if(i!==seqStepIdx){ seqStepIdx=i; setChord(st.pc, st.lbl, st.qi); renderSeq(); updateGlobalTransport(); }  // chord changed → follow on board + chip
-    const b=document.getElementById('ch-board'); pcs.forEach(pc=>setDotPlaying(b, pc, true));
+    const b=document.getElementById('board'); pcs.forEach(pc=>setDotPlaying(b, pc, true));
   });
-  enqueueVisual(when+barSec*0.85, ()=>{ const b=document.getElementById('ch-board'); pcs.forEach(pc=>setDotPlaying(b, pc, false)); });
+  enqueueVisual(when+barSec*0.85, ()=>{ const b=document.getElementById('board'); pcs.forEach(pc=>setDotPlaying(b, pc, false)); });
 }
 function seqTick(when){
   if(!seqBarMap.length){ seqStop(); return; }

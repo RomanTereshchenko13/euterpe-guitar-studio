@@ -2,6 +2,12 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v1.16.0 — 2026-06-16
+
+- One fretboard instead of four: the chord-tones, triads, scale and notes views now share a single neck that just changes what it highlights, so switching views keeps the board steady in front of you.
+- Fewer tabs: "Notes on the neck" moved from its own tab into a Notes view inside Scales (next to Scale), the same way Chords and Triads sit together under one tab.
+- Tidier controls: the selectors above the neck were grouped into a more compact area.
+
 ## v1.15.0 — 2026-06-16
 
 - Pick your key once and the whole app follows: choosing a root — or a key on the circle of fifths — now switches the chords, scales, circle and notes views together, instead of each tab keeping its own separate key.

@@ -97,6 +97,35 @@ function wirePlay(boardEl){
   boardEl.addEventListener('click',e=>{ trigger(e.target.closest('.dot')); });
   boardEl.addEventListener('keydown',e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const d=e.target.closest('.dot'); if(d&&d.dataset.midi!=null){ e.preventDefault(); trigger(d); } });
 }
+/* ---- one shared board (1b) ----
+   Every board-bearing mode (chord tones / triads / scale / notes) paints into a
+   single #board. isBoardMode() tells each render function whether IT owns the
+   board right now (so the cross-view render passes only paint once); paintBoard()
+   does the actual board + numbers + legend + hint draw. Legends are mode-specific
+   text, generated here so the shared legend slot can switch with the mode. */
+function isBoardMode(mode){
+  if(mode==='chords') return currentTab==='harmony' && hView==='chords';
+  if(mode==='triads') return currentTab==='harmony' && hView==='triads';
+  if(mode==='scale')  return currentTab==='scales'  && scView==='scale';
+  if(mode==='notes')  return currentTab==='scales'  && scView==='notes';
+  return false;
+}
+function paintBoard(cellFn, legendHTML, hintHTML){
+  renderBoard(document.getElementById('board'), cellFn);
+  renderNums(document.getElementById('nums'));
+  document.getElementById('legend').innerHTML = legendHTML || '';
+  document.getElementById('hint').innerHTML = hintHTML || '';
+}
+function legChip(varName, key){ return `<div class="leg"><span class="leg-dot" style="background:var(${varName})"></span><span>${t(key)}</span></div>`; }
+function chordLegendHTML(){ return legChip('--root','leg_root')+legChip('--third','leg_third')+legChip('--fifth','leg_fifth')+legChip('--seventh','leg_seventh')+legChip('--ext','leg_ext'); }
+function triadLegendHTML(){ return legChip('--root','leg_root')+legChip('--third','leg_third')+legChip('--fifth','leg_fifth'); }
+function notesLegendHTML(){ return legChip('--natural','leg_nat')+legChip('--sharp','leg_sharpflat')+legChip('--root','leg_highlight'); }
+function scaleLegendHTML(){
+  if(scOverlay) return legChip('--root','leg_root')+legChip('--third','leg_third')+legChip('--fifth','leg_fifth')+legChip('--seventh','leg_seventh')+
+    `<div class="leg"><span class="leg-dot" style="background:rgba(220,200,160,0.4)"></span><span>${t('leg_sc_other')}</span></div>`;
+  return legChip('--root','leg_root')+legChip('--third','leg_third')+
+    `<div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span>${t('leg_sc_other')}</span></div>`;
+}
 function buildRootBtns(container, current, onPick){
   container.innerHTML='';
   ROOTS.forEach(r=>{

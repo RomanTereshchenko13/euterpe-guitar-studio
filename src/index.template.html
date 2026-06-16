@@ -1,8 +1,14 @@
 <!DOCTYPE html>
 <!-- ===========================================================
      Guitar Studio
-     Version: 1.15.0  (2026-06-16)
+     Version: 1.16.0  (2026-06-16)
      Changelog:
+       1.16.0 — one shared fretboard + fewer tabs (Phase 1b). The four separate
+               boards (chord tones / triads / scale / notes) collapsed into one
+               board that switches what it highlights. Notes folded from its own
+               tab into a "Notes" view inside Scales (4 tabs → 3), mirroring the
+               Chords/Triads toggle. Control rows were grouped and compacted. No
+               new dependencies.
        1.15.0 — one musical context + one diatonic source (Phase 1a). The key
                center and mode are now a single shared context: pick a root or
                key once and Harmony, Scales, the Circle of Fifths and Notes all
@@ -132,7 +138,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="version" content="1.15.0">
+<meta name="version" content="1.16.0">
 <title>Гітарна студія — гами, моди, акорди</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -154,7 +160,6 @@
       <button class="tab active" data-panel="harmony" data-i18n="tab_harmony">Акорди / тріади</button>
       <button class="tab" data-panel="scales" data-i18n="tab_scales">Гами / моди</button>
       <button class="tab" data-panel="circle" data-i18n="tab_circle">Коло квінт</button>
-      <button class="tab" data-panel="notes" data-i18n="tab_notes">Ноти на грифі</button>
     </nav>
     <div class="tb-bar">
       <div class="tb-group">
@@ -233,15 +238,6 @@
         </div>
         <div class="seq-strip" id="seq-strip"></div>
       </div>
-      <div class="scroll"><div class="board"><div class="fretboard" id="ch-board"></div></div><div class="fretnums" id="ch-nums"></div></div>
-      <div class="legend">
-        <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_root">Тоніка (1)</span></div>
-        <div class="leg"><span class="leg-dot" style="background:var(--third)"></span><span data-i18n="leg_third">Терція (3 / ♭3)</span></div>
-        <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="leg_fifth">Квінта (5)</span></div>
-        <div class="leg"><span class="leg-dot" style="background:var(--seventh)"></span><span data-i18n="leg_seventh">Септима (7 / ♭7)</span></div>
-        <div class="leg"><span class="leg-dot" style="background:var(--ext)"></span><span data-i18n="leg_ext">Розширення (6 · 9 · 11 · 13)</span></div>
-      </div>
-      <div class="hint" data-i18n="ch_hint">Грай гаму вільно, а на зміні акорду влучай у підсвічені ноти — вони звучать найстабільніше.</div>
     </div>
 
     <div id="sub-triads" hidden>
@@ -251,27 +247,48 @@
       <div class="info" id="tr-info"></div>
       <div class="cd-head"><span class="cd-h" data-i18n="tr_shapes">Форми тризвуку</span></div>
       <div class="chorddia" id="tr-diagram"></div>
-      <div class="scroll"><div class="board"><div class="fretboard" id="tr-board"></div></div><div class="fretnums" id="tr-nums"></div></div>
-      <div class="legend">
-        <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_root">Тоніка (1)</span></div>
-        <div class="leg"><span class="leg-dot" style="background:var(--third)"></span><span data-i18n="leg_third">Терція (3 / ♭3)</span></div>
-        <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="leg_fifth">Квінта (5)</span></div>
-      </div>
-      <div class="hint" data-i18n="tr_hint">Тризвук на трьох сусідніх струнах — рухомий блок: кожне обернення повторюється вгору по грифу через 12 ладів. Вивчиш одну форму на одному наборі струн — отримаєш увесь гриф.</div>
     </div>
   </section>
 
   <section class="panel" id="panel-scales">
     <div class="panel-head">
-      <h2 data-i18n="sc_h">Гами і моди</h2>
-      <p data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
+      <h2 id="scales-h" data-i18n="sc_h">Гами і моди</h2>
+      <p id="scales-p" data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
     </div>
-    <div class="row"><span class="ctrl-label" data-i18n="lbl_scale">Гама</span><select id="sc-select"></select></div>
-    <div class="row"><span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="sc-pos"></div></div>
-    <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="sc-diatonic"></div></div>
-    <div class="info" id="sc-info"></div>
-    <div class="scroll"><div class="board"><div class="fretboard" id="sc-board"></div></div><div class="fretnums" id="sc-nums"></div></div>
-    <div class="legend" id="sc-legend"></div>
+    <div class="row">
+      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
+      <div class="group">
+        <button class="btn active" id="sv-scale" data-i18n="view_scale">Гама</button>
+        <button class="btn" id="sv-notes" data-i18n="view_notes">Ноти</button>
+      </div>
+    </div>
+
+    <div id="sub-scale">
+      <div class="row">
+        <span class="ctrl-label" data-i18n="lbl_scale">Гама</span><select id="sc-select"></select>
+        <div class="divider"></div>
+        <span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="sc-pos"></div>
+      </div>
+      <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="sc-diatonic"></div></div>
+      <div class="info" id="sc-info"></div>
+    </div>
+
+    <div id="sub-notes" hidden>
+      <div class="row">
+        <span class="ctrl-label" data-i18n="lbl_show">Показати</span>
+        <button class="btn active" id="nt-all" data-i18n="b_allnotes">Всі ноти</button>
+        <button class="btn" id="nt-nat" data-i18n="b_natonly">Тільки натуральні</button>
+      </div>
+      <div class="row">
+        <span class="ctrl-label" data-i18n="lbl_nat">Натуральні</span><div class="group" id="nt-natural"></div>
+        <div class="divider"></div>
+        <span class="ctrl-label" data-i18n="lbl_sharp">Дієзи</span><div class="group" id="nt-sharp"></div>
+        <div class="divider"></div>
+        <span class="ctrl-label" data-i18n="lbl_flat">Бемолі</span><div class="group" id="nt-flat"></div>
+        <div class="divider"></div>
+        <button class="btn" id="nt-reset" data-i18n="b_reset">скинути</button>
+      </div>
+    </div>
   </section>
 
   <section class="panel" id="panel-circle">
@@ -296,32 +313,14 @@
     </div>
   </section>
 
-  <section class="panel" id="panel-notes">
-    <div class="panel-head">
-      <h2 data-i18n="nt_h">Всі ноти на грифі</h2>
-      <p data-i18n="nt_p">Довідник усіх нот. Натисни ноту в керуванні, щоб підсвітити її скрізь, або клікни по ноті на грифі, щоб почути.</p>
-    </div>
-    <div class="row">
-      <span class="ctrl-label" data-i18n="lbl_show">Показати</span>
-      <button class="btn active" id="nt-all" data-i18n="b_allnotes">Всі ноти</button>
-      <button class="btn" id="nt-nat" data-i18n="b_natonly">Тільки натуральні</button>
-    </div>
-    <div class="row">
-      <span class="ctrl-label" data-i18n="lbl_nat">Натуральні</span><div class="group" id="nt-natural"></div>
-      <div class="divider"></div>
-      <span class="ctrl-label" data-i18n="lbl_sharp">Дієзи</span><div class="group" id="nt-sharp"></div>
-      <div class="divider"></div>
-      <span class="ctrl-label" data-i18n="lbl_flat">Бемолі</span><div class="group" id="nt-flat"></div>
-      <div class="divider"></div>
-      <button class="btn" id="nt-reset" data-i18n="b_reset">скинути</button>
-    </div>
-    <div class="scroll"><div class="board"><div class="fretboard" id="nt-board"></div></div><div class="fretnums" id="nt-nums"></div></div>
-    <div class="legend">
-      <div class="leg"><span class="leg-dot" style="background:var(--natural)"></span><span data-i18n="leg_nat">Натуральна нота</span></div>
-      <div class="leg"><span class="leg-dot" style="background:var(--sharp)"></span><span data-i18n="leg_sharpflat">Дієз / бемоль</span></div>
-      <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_highlight">Виділена нота</span></div>
-    </div>
-  </section>
+  <!-- One shared fretboard (1b): every board-bearing mode (chord tones, triads,
+       scale, notes) renders into this single board; the legend + hint switch with
+       the active mode. Hidden on the Circle tab. -->
+  <div class="board-region" id="board-region">
+    <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
+    <div class="legend" id="legend"></div>
+    <div class="hint" id="hint"></div>
+  </div>
 
 </div>
 

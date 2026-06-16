@@ -1,6 +1,13 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.16.0', date:'2026-06-16',
+    en:['One fretboard instead of four: the chord-tones, triads, scale and notes views now share a single neck that just changes what it highlights, so switching views keeps the board steady in front of you.',
+        'Fewer tabs: "Notes on the neck" moved from its own tab into a Notes view inside Scales (next to Scale), the same way Chords and Triads sit together under one tab.',
+        'Tidier controls: the selectors above the neck were grouped into a more compact area.'],
+    uk:['Один гриф замість чотирьох: види «тони акорду», «тріади», «гама» та «ноти» тепер мають спільний гриф, який лише змінює підсвічування, тож перемикання видів не зрушує гриф перед тобою.',
+        'Менше вкладок: «Ноти на грифі» переїхали зі своєї вкладки у вид «Ноти» всередині «Гам» (поряд із «Гамою») — так само, як «Акорди» і «Тріади» живуть під однією вкладкою.',
+        'Охайніше керування: селектори над грифом згруповано в компактнішу зону.'] },
   { v:'1.15.0', date:'2026-06-16',
     en:['Pick your key once and the whole app follows: choosing a root — or a key on the circle of fifths — now switches the chords, scales, circle and notes views together, instead of each tab keeping its own separate key.',
         'The circle of fifths is now tied to your current key: it always highlights the key you are in and its closest neighbours, and tapping any key on it sets that key everywhere.'],

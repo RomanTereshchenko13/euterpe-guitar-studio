@@ -1,8 +1,14 @@
 <!DOCTYPE html>
 <!-- ===========================================================
      Guitar Studio
-     Version: 1.15.0  (2026-06-16)
+     Version: 1.16.0  (2026-06-16)
      Changelog:
+       1.16.0 — one shared fretboard + fewer tabs (Phase 1b). The four separate
+               boards (chord tones / triads / scale / notes) collapsed into one
+               board that switches what it highlights. Notes folded from its own
+               tab into a "Notes" view inside Scales (4 tabs → 3), mirroring the
+               Chords/Triads toggle. Control rows were grouped and compacted. No
+               new dependencies.
        1.15.0 — one musical context + one diatonic source (Phase 1a). The key
                center and mode are now a single shared context: pick a root or
                key once and Harmony, Scales, the Circle of Fifths and Notes all
@@ -132,7 +138,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="version" content="1.15.0">
+<meta name="version" content="1.16.0">
 <title>Гітарна студія — гами, моди, акорди</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -338,6 +344,10 @@
   .context-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 18px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
   .context-bar[hidden] { display: none; }
   .context-bar .ctx-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  /* one shared fretboard (1b): a single board region below the active panel's
+     controls, shown for Harmony + Scales, hidden on the Circle tab. */
+  .board-region { margin-top: 4px; }
+  .board-region[hidden] { display: none; }
 
   /* ---- chord diagrams ---- */
   .chorddia { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 18px; align-items: flex-start; }
@@ -428,7 +438,6 @@
       <button class="tab active" data-panel="harmony" data-i18n="tab_harmony">Акорди / тріади</button>
       <button class="tab" data-panel="scales" data-i18n="tab_scales">Гами / моди</button>
       <button class="tab" data-panel="circle" data-i18n="tab_circle">Коло квінт</button>
-      <button class="tab" data-panel="notes" data-i18n="tab_notes">Ноти на грифі</button>
     </nav>
     <div class="tb-bar">
       <div class="tb-group">
@@ -507,15 +516,6 @@
         </div>
         <div class="seq-strip" id="seq-strip"></div>
       </div>
-      <div class="scroll"><div class="board"><div class="fretboard" id="ch-board"></div></div><div class="fretnums" id="ch-nums"></div></div>
-      <div class="legend">
-        <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_root">Тоніка (1)</span></div>
-        <div class="leg"><span class="leg-dot" style="background:var(--third)"></span><span data-i18n="leg_third">Терція (3 / ♭3)</span></div>
-        <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="leg_fifth">Квінта (5)</span></div>
-        <div class="leg"><span class="leg-dot" style="background:var(--seventh)"></span><span data-i18n="leg_seventh">Септима (7 / ♭7)</span></div>
-        <div class="leg"><span class="leg-dot" style="background:var(--ext)"></span><span data-i18n="leg_ext">Розширення (6 · 9 · 11 · 13)</span></div>
-      </div>
-      <div class="hint" data-i18n="ch_hint">Грай гаму вільно, а на зміні акорду влучай у підсвічені ноти — вони звучать найстабільніше.</div>
     </div>
 
     <div id="sub-triads" hidden>
@@ -525,27 +525,48 @@
       <div class="info" id="tr-info"></div>
       <div class="cd-head"><span class="cd-h" data-i18n="tr_shapes">Форми тризвуку</span></div>
       <div class="chorddia" id="tr-diagram"></div>
-      <div class="scroll"><div class="board"><div class="fretboard" id="tr-board"></div></div><div class="fretnums" id="tr-nums"></div></div>
-      <div class="legend">
-        <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_root">Тоніка (1)</span></div>
-        <div class="leg"><span class="leg-dot" style="background:var(--third)"></span><span data-i18n="leg_third">Терція (3 / ♭3)</span></div>
-        <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="leg_fifth">Квінта (5)</span></div>
-      </div>
-      <div class="hint" data-i18n="tr_hint">Тризвук на трьох сусідніх струнах — рухомий блок: кожне обернення повторюється вгору по грифу через 12 ладів. Вивчиш одну форму на одному наборі струн — отримаєш увесь гриф.</div>
     </div>
   </section>
 
   <section class="panel" id="panel-scales">
     <div class="panel-head">
-      <h2 data-i18n="sc_h">Гами і моди</h2>
-      <p data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
+      <h2 id="scales-h" data-i18n="sc_h">Гами і моди</h2>
+      <p id="scales-p" data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
     </div>
-    <div class="row"><span class="ctrl-label" data-i18n="lbl_scale">Гама</span><select id="sc-select"></select></div>
-    <div class="row"><span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="sc-pos"></div></div>
-    <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="sc-diatonic"></div></div>
-    <div class="info" id="sc-info"></div>
-    <div class="scroll"><div class="board"><div class="fretboard" id="sc-board"></div></div><div class="fretnums" id="sc-nums"></div></div>
-    <div class="legend" id="sc-legend"></div>
+    <div class="row">
+      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
+      <div class="group">
+        <button class="btn active" id="sv-scale" data-i18n="view_scale">Гама</button>
+        <button class="btn" id="sv-notes" data-i18n="view_notes">Ноти</button>
+      </div>
+    </div>
+
+    <div id="sub-scale">
+      <div class="row">
+        <span class="ctrl-label" data-i18n="lbl_scale">Гама</span><select id="sc-select"></select>
+        <div class="divider"></div>
+        <span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="sc-pos"></div>
+      </div>
+      <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="sc-diatonic"></div></div>
+      <div class="info" id="sc-info"></div>
+    </div>
+
+    <div id="sub-notes" hidden>
+      <div class="row">
+        <span class="ctrl-label" data-i18n="lbl_show">Показати</span>
+        <button class="btn active" id="nt-all" data-i18n="b_allnotes">Всі ноти</button>
+        <button class="btn" id="nt-nat" data-i18n="b_natonly">Тільки натуральні</button>
+      </div>
+      <div class="row">
+        <span class="ctrl-label" data-i18n="lbl_nat">Натуральні</span><div class="group" id="nt-natural"></div>
+        <div class="divider"></div>
+        <span class="ctrl-label" data-i18n="lbl_sharp">Дієзи</span><div class="group" id="nt-sharp"></div>
+        <div class="divider"></div>
+        <span class="ctrl-label" data-i18n="lbl_flat">Бемолі</span><div class="group" id="nt-flat"></div>
+        <div class="divider"></div>
+        <button class="btn" id="nt-reset" data-i18n="b_reset">скинути</button>
+      </div>
+    </div>
   </section>
 
   <section class="panel" id="panel-circle">
@@ -570,32 +591,14 @@
     </div>
   </section>
 
-  <section class="panel" id="panel-notes">
-    <div class="panel-head">
-      <h2 data-i18n="nt_h">Всі ноти на грифі</h2>
-      <p data-i18n="nt_p">Довідник усіх нот. Натисни ноту в керуванні, щоб підсвітити її скрізь, або клікни по ноті на грифі, щоб почути.</p>
-    </div>
-    <div class="row">
-      <span class="ctrl-label" data-i18n="lbl_show">Показати</span>
-      <button class="btn active" id="nt-all" data-i18n="b_allnotes">Всі ноти</button>
-      <button class="btn" id="nt-nat" data-i18n="b_natonly">Тільки натуральні</button>
-    </div>
-    <div class="row">
-      <span class="ctrl-label" data-i18n="lbl_nat">Натуральні</span><div class="group" id="nt-natural"></div>
-      <div class="divider"></div>
-      <span class="ctrl-label" data-i18n="lbl_sharp">Дієзи</span><div class="group" id="nt-sharp"></div>
-      <div class="divider"></div>
-      <span class="ctrl-label" data-i18n="lbl_flat">Бемолі</span><div class="group" id="nt-flat"></div>
-      <div class="divider"></div>
-      <button class="btn" id="nt-reset" data-i18n="b_reset">скинути</button>
-    </div>
-    <div class="scroll"><div class="board"><div class="fretboard" id="nt-board"></div></div><div class="fretnums" id="nt-nums"></div></div>
-    <div class="legend">
-      <div class="leg"><span class="leg-dot" style="background:var(--natural)"></span><span data-i18n="leg_nat">Натуральна нота</span></div>
-      <div class="leg"><span class="leg-dot" style="background:var(--sharp)"></span><span data-i18n="leg_sharpflat">Дієз / бемоль</span></div>
-      <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_highlight">Виділена нота</span></div>
-    </div>
-  </section>
+  <!-- One shared fretboard (1b): every board-bearing mode (chord tones, triads,
+       scale, notes) renders into this single board; the legend + hint switch with
+       the active mode. Hidden on the Circle tab. -->
+  <div class="board-region" id="board-region">
+    <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
+    <div class="legend" id="legend"></div>
+    <div class="hint" id="hint"></div>
+  </div>
 
 </div>
 
@@ -633,10 +636,17 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '1.15.0';
+const APP_VERSION = '1.16.0';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.16.0', date:'2026-06-16',
+    en:['One fretboard instead of four: the chord-tones, triads, scale and notes views now share a single neck that just changes what it highlights, so switching views keeps the board steady in front of you.',
+        'Fewer tabs: "Notes on the neck" moved from its own tab into a Notes view inside Scales (next to Scale), the same way Chords and Triads sit together under one tab.',
+        'Tidier controls: the selectors above the neck were grouped into a more compact area.'],
+    uk:['Один гриф замість чотирьох: види «тони акорду», «тріади», «гама» та «ноти» тепер мають спільний гриф, який лише змінює підсвічування, тож перемикання видів не зрушує гриф перед тобою.',
+        'Менше вкладок: «Ноти на грифі» переїхали зі своєї вкладки у вид «Ноти» всередині «Гам» (поряд із «Гамою») — так само, як «Акорди» і «Тріади» живуть під однією вкладкою.',
+        'Охайніше керування: селектори над грифом згруповано в компактнішу зону.'] },
   { v:'1.15.0', date:'2026-06-16',
     en:['Pick your key once and the whole app follows: choosing a root — or a key on the circle of fifths — now switches the chords, scales, circle and notes views together, instead of each tab keeping its own separate key.',
         'The circle of fifths is now tied to your current key: it always highlights the key you are in and its closest neighbours, and tapping any key on it sets that key everywhere.'],
@@ -766,6 +776,7 @@ const I18N = {
     brand:'Гітарна студія',
     tab_chords:'Тони акорду', tab_triads:'Тріади', tab_scales:'Гами / моди', tab_circle:'Коло квінт', tab_notes:'Ноти на грифі',
     tab_harmony:'Акорди / тріади', lbl_view:'Вид', view_chords:'Тони акорду', view_triads:'Форми тріад',
+    view_scale:'Гама', view_notes:'Ноти',
     cof_h:'Коло квінт',
     cof_p:'Тональності розташовані по квінтах. Сусіди — найближчі споріднені тональності: ліворуч субдомінанта (IV), праворуч домінанта (V). Натисни тональність, щоб побачити ключові знаки, паралель і акорди тональності.',
     cof_sig:'Ключові знаки', cof_sig0:'без ключових знаків',
@@ -824,6 +835,7 @@ const I18N = {
     brand:'Guitar Studio',
     tab_chords:'Chord tones', tab_triads:'Triads', tab_scales:'Scales / modes', tab_circle:'Circle of fifths', tab_notes:'Notes on the neck',
     tab_harmony:'Chords / triads', lbl_view:'View', view_chords:'Chord tones', view_triads:'Triad shapes',
+    view_scale:'Scale', view_notes:'Notes',
     cof_h:'Circle of fifths',
     cof_p:'Keys are arranged by fifths. Neighbours are the closest related keys: subdominant (IV) on the left, dominant (V) on the right. Tap a key to see its key signature, relative key and diatonic chords.',
     cof_sig:'Key signature', cof_sig0:'no sharps or flats',
@@ -1345,13 +1357,13 @@ let loopClock=null, loopMode='chord';
 function loopStrum(when){
   const ctx=audio(); if(!ctx) return;
   const barSec=beat()*4;
-  let midis, pcs, boardId, pc, qi;
+  let midis, pcs, boardId='board', pc, qi;     // one shared board (1b)
   if(loopMode==='triad'){
     const v=currentTriadVoicing();
-    midis=v.midis; pcs=v.pcs; boardId='tr-board'; pc=gRoot; qi=TRI_TO_QUAL[trQual];
+    midis=v.midis; pcs=v.pcs; pc=gRoot; qi=TRI_TO_QUAL[trQual];
   } else {
     const v=currentChordVoicing();
-    midis=v.midis; pcs=v.pcs; boardId='ch-board'; pc=gRoot; qi=chQual;
+    midis=v.midis; pcs=v.pcs; pc=gRoot; qi=chQual;
   }
   strumMidi(midis, when, 0.9, 0.026, +1);                 // humanized downstrum
   if(bandActive()) strumMidi(midis, when+2*beat(), 0.55, 0.02, +1);   // softer push on beat 3
@@ -1359,7 +1371,7 @@ function loopStrum(when){
   enqueueVisual(when, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, true)); updateGlobalTransport(); });
   enqueueVisual(when+barSec*0.85, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, false)); });
 }
-function stopLoopVisual(){ document.querySelectorAll('#ch-board .dot.playing, #tr-board .dot.playing').forEach(d=>d.classList.remove('playing')); }
+function stopLoopVisual(){ document.querySelectorAll('#board .dot.playing').forEach(d=>d.classList.remove('playing')); }
 function loopToggle(){
   const btn=document.getElementById('g-loop');
   if(loopClock){ removeClock(loopClock); loopClock=null; clearVisualQ(); stopLoopVisual();
@@ -1434,9 +1446,9 @@ function seqStrumStep(i, when){
   const pcs=ivs.map(iv=>mod(base+iv,12));
   enqueueVisual(when, ()=>{
     if(i!==seqStepIdx){ seqStepIdx=i; setChord(st.pc, st.lbl, st.qi); renderSeq(); updateGlobalTransport(); }  // chord changed → follow on board + chip
-    const b=document.getElementById('ch-board'); pcs.forEach(pc=>setDotPlaying(b, pc, true));
+    const b=document.getElementById('board'); pcs.forEach(pc=>setDotPlaying(b, pc, true));
   });
-  enqueueVisual(when+barSec*0.85, ()=>{ const b=document.getElementById('ch-board'); pcs.forEach(pc=>setDotPlaying(b, pc, false)); });
+  enqueueVisual(when+barSec*0.85, ()=>{ const b=document.getElementById('board'); pcs.forEach(pc=>setDotPlaying(b, pc, false)); });
 }
 function seqTick(when){
   if(!seqBarMap.length){ seqStop(); return; }
@@ -1573,6 +1585,35 @@ function wirePlay(boardEl){
   boardEl.addEventListener('click',e=>{ trigger(e.target.closest('.dot')); });
   boardEl.addEventListener('keydown',e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const d=e.target.closest('.dot'); if(d&&d.dataset.midi!=null){ e.preventDefault(); trigger(d); } });
 }
+/* ---- one shared board (1b) ----
+   Every board-bearing mode (chord tones / triads / scale / notes) paints into a
+   single #board. isBoardMode() tells each render function whether IT owns the
+   board right now (so the cross-view render passes only paint once); paintBoard()
+   does the actual board + numbers + legend + hint draw. Legends are mode-specific
+   text, generated here so the shared legend slot can switch with the mode. */
+function isBoardMode(mode){
+  if(mode==='chords') return currentTab==='harmony' && hView==='chords';
+  if(mode==='triads') return currentTab==='harmony' && hView==='triads';
+  if(mode==='scale')  return currentTab==='scales'  && scView==='scale';
+  if(mode==='notes')  return currentTab==='scales'  && scView==='notes';
+  return false;
+}
+function paintBoard(cellFn, legendHTML, hintHTML){
+  renderBoard(document.getElementById('board'), cellFn);
+  renderNums(document.getElementById('nums'));
+  document.getElementById('legend').innerHTML = legendHTML || '';
+  document.getElementById('hint').innerHTML = hintHTML || '';
+}
+function legChip(varName, key){ return `<div class="leg"><span class="leg-dot" style="background:var(${varName})"></span><span>${t(key)}</span></div>`; }
+function chordLegendHTML(){ return legChip('--root','leg_root')+legChip('--third','leg_third')+legChip('--fifth','leg_fifth')+legChip('--seventh','leg_seventh')+legChip('--ext','leg_ext'); }
+function triadLegendHTML(){ return legChip('--root','leg_root')+legChip('--third','leg_third')+legChip('--fifth','leg_fifth'); }
+function notesLegendHTML(){ return legChip('--natural','leg_nat')+legChip('--sharp','leg_sharpflat')+legChip('--root','leg_highlight'); }
+function scaleLegendHTML(){
+  if(scOverlay) return legChip('--root','leg_root')+legChip('--third','leg_third')+legChip('--fifth','leg_fifth')+legChip('--seventh','leg_seventh')+
+    `<div class="leg"><span class="leg-dot" style="background:rgba(220,200,160,0.4)"></span><span>${t('leg_sc_other')}</span></div>`;
+  return legChip('--root','leg_root')+legChip('--third','leg_third')+
+    `<div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span>${t('leg_sc_other')}</span></div>`;
+}
 function buildRootBtns(container, current, onPick){
   container.innerHTML='';
   ROOTS.forEach(r=>{
@@ -1632,10 +1673,11 @@ function labClass(lab){
    saveState()/loadState() with a bounds-checked restore. Current members:
      context   : gRoot, gRootLbl (root) + scIdx (mode)   (set via setKey)
      display   : gMode (note-names vs degrees)     (this block)
+     view      : hView (chords|triads), scView (scale|notes)  (sub-view per tab)
      chords    : chQual                            (this block)
      triads    : trQual, trSet, trInv              (~"TRIADS view")
      scales    : scPos, scOverlay                  (~"SCALES view")
-     notes     : ntFilter, ntRoot                  (~"NOTES view")
+     notes     : ntFilter, ntRoot                  (Notes sub-view of Scales, 1b)
      circle    : (derived from context; not persisted)
      transport : tempo, lefty, bassOn, grooveOn, seqLoopOn, seq[]
      ui        : lang, currentTab, tuningIdx, fretRangeIdx, toolbarOpen
@@ -1662,16 +1704,19 @@ function buildChQuals(){
 }
 function renderChords(){
   const q=QUALITIES[chQual];
-  const map={}; q.iv.forEach((iv,i)=>{ map[(gRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
-  renderBoard(document.getElementById('ch-board'),(pc,si,f)=>{
-    const m=map[pc]; if(m===undefined) return null;
-    return makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
-  });
-  renderNums(document.getElementById('ch-nums'));
+  // panel content (always current so a tab switch shows the latest)
   const notes=q.iv.map((iv,i)=>spellNote(gRootLbl,(gRoot+iv)%12,q.deg[i])).join(' – ');
   const degs=q.lab.join('  ');
   document.getElementById('ch-info').innerHTML=`<div class="big">${gRootLbl}${q.short} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
   renderChordDiagram();
+  // shared board: only when chord tones is the active mode
+  if(isBoardMode('chords')){
+    const map={}; q.iv.forEach((iv,i)=>{ map[(gRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
+    paintBoard((pc,si,f)=>{
+      const m=map[pc]; if(m===undefined) return null;
+      return makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
+    }, chordLegendHTML(), t('ch_hint'));
+  }
 }
 
 /* ---- Open / barre chord diagrams (standard-tuning reference) ----
@@ -1941,16 +1986,19 @@ function buildTrInvs(){
 }
 function renderTriads(){
   const {cells,iv}=triadCells(), tri=TRIADS[trQual], set=STRING_SETS[trSet];
-  renderBoard(document.getElementById('tr-board'),(pc,si,f)=>{
-    const o=cells[si+'_'+f]; if(o===undefined) return null;
-    return makeDot(triFuncClass(o,iv), triLabel(o,iv,pc), OPEN_MIDI[si]+f);
-  });
-  renderNums(document.getElementById('tr-nums'));
+  // panel content
   const notes=iv.map(i=>spellNote(gRootLbl,mod(gRoot+i,12),DEG_OF[i])).join(' – ');
   const invDesc=[t('inv_all_desc'),t('inv_root_desc'),t('inv_1st_desc'),t('inv_2nd_desc')][trInv];
   document.getElementById('tr-info').innerHTML=
     `<div class="big">${gRootLbl}${tri.short} · ${qName(tri)} · ${t('strings_word')} ${set.label}: ${notes}</div><div class="sub">${invDesc}</div>`;
   renderTriadCards();
+  // shared board
+  if(isBoardMode('triads')){
+    paintBoard((pc,si,f)=>{
+      const o=cells[si+'_'+f]; if(o===undefined) return null;
+      return makeDot(triFuncClass(o,iv), triLabel(o,iv,pc), OPEN_MIDI[si]+f);
+    }, triadLegendHTML(), t('tr_hint'));
+  }
 }
 
 /* ===================== SCALES ===================== */
@@ -1976,6 +2024,7 @@ function isMajorFamily(i){ return SCALES[i].iv.includes(4); }
 const MODE_OFF={1:2,2:4,3:5,4:7,5:9,6:11};
 const BOX_OFFSETS=[0,3,5,7,10];
 let scIdx=5, scPos=0, scOverlay=null;
+let scView='scale';   // Scales-tab sub-view: 'scale' | 'notes' (folded-in Notes mode, 1b)
 let diaList=[];
 function scClass(iv){ if(iv===0)return'd-root'; if(iv===3||iv===4)return'd-third'; return'd-other'; }
 function boxWindow(pos){ if(!pos) return null; const anchor=(gRoot-4+12)%12; const start=anchor+BOX_OFFSETS[pos-1]; return [start, start+4]; }
@@ -1998,35 +2047,27 @@ function renderScales(){
   const seven = s.iv.length===7;
   const map={}, deg={}; s.iv.forEach((iv,di)=>{ const pc=(gRoot+iv)%12; map[pc]=iv; deg[pc]=di+1; });
   const scName = pc => seven ? spellNote(gRootLbl, pc, deg[pc]) : simpleName(pc, gRootLbl);
-  const win=boxWindow(scPos);
-  let ovMap=null; if(scOverlay){ ovMap={}; scOverlay.iv.forEach(iv=>ovMap[(scOverlay.rootPc+iv)%12]=iv); }
-  renderBoard(document.getElementById('sc-board'),(pc,si,f)=>{
-    if(map[pc]===undefined) return null;
-    if(win && (f<win[0]||f>win[1])) return null;
-    let cls;
-    if(ovMap){ cls = (ovMap[pc]!==undefined) ? chDegClass(ovMap[pc]) : 'd-dim'; }
-    else { cls = scClass(map[pc]); }
-    return makeDot(cls, gMode==='names'?scName(pc):SDEG[map[pc]], OPEN_MIDI[si]+f);
-  });
-  renderNums(document.getElementById('sc-nums'));
+  // panel content (info + diatonic)
   const notes=s.iv.map(iv=>scName((gRoot+iv)%12)).join(' – ');
   const degs=s.iv.map(iv=>SDEG[iv]).join(' ');
   let html=`<div class="big">${gRootLbl} ${sName(s)}: ${notes}</div><div class="sub">${t('degrees_word')}: ${degs}</div>`;
   if(MODE_OFF[scIdx]!==undefined){ const pr=noteName((gRoot-MODE_OFF[scIdx]+120)%12,flat); html+=`<div class="sub">${t('samenotes')} ${pr} ${t('major_word')} ${t('mode_tail')}</div>`; }
   if(scOverlay){ html+=`<div class="sub" style="color:var(--third)">${t('overlay_msg')}</div>`; }
   document.getElementById('sc-info').innerHTML=html;
-  const leg=document.getElementById('sc-legend');
-  if(scOverlay){ leg.innerHTML=
-    `<div class="leg"><span class="leg-dot" style="background:var(--root)"></span>${t('leg_root')}</div>`+
-    `<div class="leg"><span class="leg-dot" style="background:var(--third)"></span>${t('leg_third')}</div>`+
-    `<div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span>${t('leg_fifth')}</div>`+
-    `<div class="leg"><span class="leg-dot" style="background:var(--seventh)"></span>${t('leg_seventh')}</div>`+
-    `<div class="leg"><span class="leg-dot" style="background:rgba(220,200,160,0.4)"></span>${t('leg_sc_other')}</div>`; }
-  else { leg.innerHTML=
-    `<div class="leg"><span class="leg-dot" style="background:var(--root)"></span>${t('leg_root')}</div>`+
-    `<div class="leg"><span class="leg-dot" style="background:var(--third)"></span>${t('leg_third')}</div>`+
-    `<div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span>${t('leg_sc_other')}</div>`; }
   renderDiatonic();
+  // shared board: only when the Scale view is active
+  if(isBoardMode('scale')){
+    const win=boxWindow(scPos);
+    let ovMap=null; if(scOverlay){ ovMap={}; scOverlay.iv.forEach(iv=>ovMap[(scOverlay.rootPc+iv)%12]=iv); }
+    paintBoard((pc,si,f)=>{
+      if(map[pc]===undefined) return null;
+      if(win && (f<win[0]||f>win[1])) return null;
+      let cls;
+      if(ovMap){ cls = (ovMap[pc]!==undefined) ? chDegClass(ovMap[pc]) : 'd-dim'; }
+      else { cls = scClass(map[pc]); }
+      return makeDot(cls, gMode==='names'?scName(pc):SDEG[map[pc]], OPEN_MIDI[si]+f);
+    }, scaleLegendHTML(), '');
+  }
 }
 function buildScSelect(){
   const sel=document.getElementById('sc-select'); sel.innerHTML='';
@@ -2044,13 +2085,13 @@ const NAT=['C','D','E','F','G','A','B'], SHARP=['C#','D#','F#','G#','A#'], FLAT=
 let ntFilter='all', ntRoot='';
 function ntMatch(note){ if(!ntRoot) return false; if(note===ntRoot) return true; if(ENHARM[note]===ntRoot) return true; const rev=Object.entries(ENHARM).find(([k,v])=>v===ntRoot); return rev && rev[0]===note; }
 function renderNotes(){
-  renderBoard(document.getElementById('nt-board'),(pc,si,f)=>{
+  if(!isBoardMode('notes')) return;
+  paintBoard((pc,si,f)=>{
     const note=NOTES[pc], sharp=note.includes('#'), root=ntMatch(note);
     if(ntFilter==='nat' && sharp && !root) return null;
     let label=note; if(root && ENHARM[note] && FLAT.includes(ntRoot)) label=ENHARM[note];
     return makeDot(root?'d-root':(sharp?'d-sharp':'d-natural'), label, OPEN_MIDI[si]+f);
-  });
-  renderNums(document.getElementById('nt-nums'));
+  }, notesLegendHTML(), '');
 }
 
 /* ===================== CIRCLE OF FIFTHS ===================== */
@@ -2156,7 +2197,7 @@ function applyLang(){
   buildSeqPresets(); renderSeq(); setSeqTransport();
   { const o=document.getElementById('cl-overlay'); if(o && !o.hidden) renderChangelog(); }
   renderChords(); renderTriads(); renderScales(); renderNotes(); renderCircle();
-  setHView(hView); updateGlobalPlay();
+  setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
   activateRoot(document.getElementById('g-roots'), gRoot);
   document.querySelectorAll('[data-root]').forEach(b=>b.classList.toggle('active', !!ntRoot && b.dataset.root===ntRoot));
@@ -2199,7 +2240,7 @@ const LS_KEY='guitarStudio.v1';
 let currentTab='harmony';
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
   lang, tab:currentTab, tuningIdx, fretRangeIdx, tempo, lefty, toolbarOpen,
-  gRoot, gRootLbl, gMode, hView,
+  gRoot, gRootLbl, gMode, hView, scView,
   chQual, scIdx, scPos, scOverlay,
   chVoicing,
   trQual, trSet, trInv,
@@ -2218,7 +2259,12 @@ function loadState(){ try{
   if(Number.isInteger(s.gRoot)&&s.gRoot>=0&&s.gRoot<12){ gRoot=s.gRoot; if(typeof s.gRootLbl==='string') gRootLbl=s.gRootLbl; }
   if(s.gMode==='names'||s.gMode==='deg') gMode=s.gMode;
   if(s.hView==='chords'||s.hView==='triads') hView=s.hView;
-  if(typeof s.tab==='string') currentTab = (s.tab==='chords'||s.tab==='triads') ? 'harmony' : s.tab;  // migrate merged tab
+  if(s.scView==='scale'||s.scView==='notes') scView=s.scView;
+  if(typeof s.tab==='string'){
+    if(s.tab==='chords'||s.tab==='triads') currentTab='harmony';          // migrate old merged tabs
+    else if(s.tab==='notes'){ currentTab='scales'; scView='notes'; }      // 1b: Notes folded into Scales
+    else currentTab=s.tab;
+  }
   // ---- working musical state (added in 1.6.1) ----
   if(Number.isInteger(s.chQual)&&QUALITIES[s.chQual]) chQual=s.chQual;
   if(Number.isInteger(s.chVoicing)&&s.chVoicing>=0&&s.chVoicing<6) chVoicing=s.chVoicing;  // clamped again at render against the actual list length
@@ -2246,8 +2292,13 @@ function loadState(){ try{
 
 /* ===================== WIRING ===================== */
 /* ---- shared root picker, display mode, sub-view toggle, global play ---- */
-function renderContextViews(){ renderChords(); renderTriads(); renderScales(); }
-function renderActiveContext(){ if(currentTab==='harmony'){ hView==='triads'?renderTriads():renderChords(); } else if(currentTab==='scales'){ renderScales(); } }
+/* Each render fn paints panel content for its mode and the ONE shared board only
+   when its mode is active (isBoardMode), so a cross-view pass paints the board once. */
+function renderContextViews(){ renderChords(); renderTriads(); renderScales(); renderNotes(); }
+function renderActiveContext(){
+  if(currentTab==='harmony'){ hView==='triads'?renderTriads():renderChords(); }
+  else if(currentTab==='scales'){ scView==='notes'?renderNotes():renderScales(); }
+}
 
 /* ---- one musical context (spine #1, 1a) ----
    gRoot/gRootLbl (key center) and scIdx (mode = selected scale) are the single
@@ -2289,12 +2340,28 @@ function setHView(v){ hView=v;
 document.getElementById('hv-chords').onclick=()=>setHView('chords');
 document.getElementById('hv-triads').onclick=()=>setHView('triads');
 
+/* Scales-tab sub-view (1b): Scale | Notes — mirrors the Harmony Chords/Triads
+   toggle. The folded-in Notes mode reuses the shared board + the context root. */
+function setScView(v){ scView=v;
+  document.getElementById('sub-scale').hidden = v!=='scale';
+  document.getElementById('sub-notes').hidden = v!=='notes';
+  ['scale','notes'].forEach(k=>{ const b=document.getElementById('sv-'+k); b.classList.toggle('active', k===v); b.setAttribute('aria-pressed', k===v?'true':'false'); });
+  document.getElementById('scales-h').textContent = t(v==='notes'?'nt_h':'sc_h');
+  document.getElementById('scales-p').textContent = t(v==='notes'?'nt_p':'sc_p');
+  v==='notes'?renderNotes():renderScales();
+  updateGlobalPlay(); saveState();
+}
+document.getElementById('sv-scale').onclick=()=>setScView('scale');
+document.getElementById('sv-notes').onclick=()=>setScView('notes');
+
 function applyContextBar(){ document.getElementById('context-bar').hidden = !(currentTab==='harmony' || currentTab==='scales'); }
+function applyBoardRegion(){ document.getElementById('board-region').hidden = !(currentTab==='harmony' || currentTab==='scales'); }
 function globalPlay(){
+  const boardEl=document.getElementById('board');
   if(currentTab==='harmony'){
-    if(hView==='triads'){ const v=currentTriadVoicing(); animArpMidi(document.getElementById('tr-board'), v.midis); }
-    else { const v=currentChordVoicing(); animArpMidi(document.getElementById('ch-board'), v.midis); }
-  } else if(currentTab==='scales'){ const s=SCALES[scIdx]; animRun(document.getElementById('sc-board'), 48+gRoot, s.iv.concat([12])); }
+    if(hView==='triads'){ const v=currentTriadVoicing(); animArpMidi(boardEl, v.midis); }
+    else { const v=currentChordVoicing(); animArpMidi(boardEl, v.midis); }
+  } else if(currentTab==='scales' && scView==='scale'){ const s=SCALES[scIdx]; animRun(boardEl, 48+gRoot, s.iv.concat([12])); }
   else if(currentTab==='circle'){
     const cofMinor=ctxCofMinor(), pc=gRoot, b=48+pc, iv=cofMinor?[0,3,7]:[0,4,7], bt=0.5;  // fixed cadence pace, independent of practice tempo
     [0,5,7,12].forEach((off,i)=>{ const base=b+off; iv.forEach((x,j)=>pluck(base+x, i*bt + j*0.018, Math.max(0.9, bt*1.4))); });
@@ -2303,7 +2370,7 @@ function globalPlay(){
 function updateGlobalPlay(){
   const b=document.getElementById('g-play');
   if(b){
-    b.hidden = (currentTab==='notes');
+    b.hidden = (currentTab==='scales' && scView==='notes');   // nothing to "listen" to in the notes view
     const cadence = currentTab==='circle';
     b.innerHTML='&#9654; '+t(cadence?'b_cadence':'b_listen');
     const tip=t(cadence?'b_cadence':'b_listen_tip');
@@ -2339,7 +2406,8 @@ document.getElementById('seq-strip').addEventListener('click',e=>{
   const chip=e.target.closest('.seq-chip'); if(chip){ const st=seq[+chip.dataset.i]; if(st) setChord(st.pc, st.lbl, st.qi); }
 });
 renderSeq(); setSeqTransport();
-wirePlay(document.getElementById('ch-board'));
+// one shared board, wired once (1b): a dot click sounds that string, Enter/Space plays focused.
+wirePlay(document.getElementById('board'));
 /* chord cards: a dot click sounds that string; clicking elsewhere on a card
    selects that voicing (so Listen/Loop use it). Keyboard note-play stays on the
    fretboard, which is the fully focusable surface. */
@@ -2350,7 +2418,6 @@ document.getElementById('ch-diagram').addEventListener('click',e=>{
   chVoicing=+card.dataset.v; renderChordDiagram(); saveState();
 });
 
-wirePlay(document.getElementById('tr-board'));
 /* triad cards: a dot click sounds that string. Inversion/string-set buttons are
    the selector here, so cards aren't separately selectable. */
 document.getElementById('tr-diagram').addEventListener('click',e=>{
@@ -2365,7 +2432,6 @@ document.getElementById('sc-diatonic').addEventListener('click',e=>{
   scOverlay = (scOverlay && scOverlay.tag===c.tag) ? null : {rootPc:c.rootPc, iv:c.iv, tag:c.tag};
   renderScales(); saveState();
 });
-wirePlay(document.getElementById('sc-board'));
 
 /* a circle node picks the key: set the context root + a canonical mode
    (major → Ionian, minor → Aeolian). The wheel re-derives its highlight. */
@@ -2387,13 +2453,12 @@ document.getElementById('cof-open').onclick=function(){ selectTab('scales'); };
 document.getElementById('nt-all').onclick=function(){ntFilter='all';this.classList.add('active');this.setAttribute('aria-pressed','true');const o=document.getElementById('nt-nat');o.classList.remove('active');o.setAttribute('aria-pressed','false');renderNotes();saveState();};
 document.getElementById('nt-nat').onclick=function(){ntFilter='nat';this.classList.add('active');this.setAttribute('aria-pressed','true');const o=document.getElementById('nt-all');o.classList.remove('active');o.setAttribute('aria-pressed','false');renderNotes();saveState();};
 document.getElementById('nt-reset').onclick=function(){ntRoot='';document.querySelectorAll('[data-root]').forEach(b=>b.classList.remove('active'));renderNotes();saveState();};
-document.getElementById('panel-notes').addEventListener('click',e=>{
+document.getElementById('sub-notes').addEventListener('click',e=>{
   const b=e.target.closest('[data-root]'); if(!b) return; const n=b.dataset.root;
   document.querySelectorAll('[data-root]').forEach(x=>x.classList.remove('active'));
   if(n===ntRoot){ ntRoot=''; } else { ntRoot=n; b.classList.add('active'); }
   renderNotes(); saveState();
 });
-wirePlay(document.getElementById('nt-board'));
 
 fillMini(document.getElementById('mini-major'),MAJ_TABLE,'p-third');
 fillMini(document.getElementById('mini-minor'),MIN_TABLE,'p-mthird');
@@ -2407,6 +2472,7 @@ function selectTab(name){
   document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active', x.id==='panel-'+name));
   applyAsideState();
   applyContextBar();
+  applyBoardRegion();
   updateGlobalPlay();
   renderActiveContext();
   saveState();
@@ -2501,13 +2567,13 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
     schedAdvance, clocks, beat,
-    selectTab, setHView, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
+    selectTab, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
     setFret:(i)=>{ fretRangeIdx=i; },
     setChQual:(i)=>{ chQual=i; chVoicing=0; }, setChVoicing:(i)=>{ chVoicing=i; },
     setTriad:(q,set,inv)=>{ trQual=q; trSet=set; trInv=inv; },
     initAudio:()=>audio(),
     setCtxNow:(t)=>{ if(actx) actx.currentTime=t; },
-    state:()=>({ gRoot, gRootLbl, scIdx, chQual, chVoicing, currentTab, hView,
+    state:()=>({ gRoot, gRootLbl, scIdx, scView, chQual, chVoicing, currentTab, hView,
                  loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo })
   };
 }

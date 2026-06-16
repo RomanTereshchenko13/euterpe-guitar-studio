@@ -199,6 +199,10 @@
   .context-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 18px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
   .context-bar[hidden] { display: none; }
   .context-bar .ctx-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  /* one shared fretboard (1b): a single board region below the active panel's
+     controls, shown for Harmony + Scales, hidden on the Circle tab. */
+  .board-region { margin-top: 4px; }
+  .board-region[hidden] { display: none; }
 
   /* ---- chord diagrams ---- */
   .chorddia { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 18px; align-items: flex-start; }

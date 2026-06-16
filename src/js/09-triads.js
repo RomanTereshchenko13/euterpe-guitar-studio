@@ -111,15 +111,18 @@ function buildTrInvs(){
 }
 function renderTriads(){
   const {cells,iv}=triadCells(), tri=TRIADS[trQual], set=STRING_SETS[trSet];
-  renderBoard(document.getElementById('tr-board'),(pc,si,f)=>{
-    const o=cells[si+'_'+f]; if(o===undefined) return null;
-    return makeDot(triFuncClass(o,iv), triLabel(o,iv,pc), OPEN_MIDI[si]+f);
-  });
-  renderNums(document.getElementById('tr-nums'));
+  // panel content
   const notes=iv.map(i=>spellNote(gRootLbl,mod(gRoot+i,12),DEG_OF[i])).join(' – ');
   const invDesc=[t('inv_all_desc'),t('inv_root_desc'),t('inv_1st_desc'),t('inv_2nd_desc')][trInv];
   document.getElementById('tr-info').innerHTML=
     `<div class="big">${gRootLbl}${tri.short} · ${qName(tri)} · ${t('strings_word')} ${set.label}: ${notes}</div><div class="sub">${invDesc}</div>`;
   renderTriadCards();
+  // shared board
+  if(isBoardMode('triads')){
+    paintBoard((pc,si,f)=>{
+      const o=cells[si+'_'+f]; if(o===undefined) return null;
+      return makeDot(triFuncClass(o,iv), triLabel(o,iv,pc), OPEN_MIDI[si]+f);
+    }, triadLegendHTML(), t('tr_hint'));
+  }
 }
 

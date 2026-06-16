@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-06-16 · shipping: v1.15.0_
+_Last updated: 2026-06-16 · shipping: v1.16.0_
 
 ---
 
@@ -151,16 +151,18 @@ middle, net-new features, then a scoped feel pass last.
   `diatonicTriads()` helper both call. Parity asserted against *both* old outputs in the harness
   before deleting the duplicate.
 
-**1b — One board, modes (the risky refactor · isolated).** The highest-risk near-term change, so
-it lands on its own behind the green harness and ships by itself.
-- **One board, not four.** Collapse the four separate DOM boards (`ch`/`tr`/`sc`/`nt`) into a
-  single board that switches what it highlights — less code, consistent behaviour, the home for
-  the context. Keep the responsive + a11y assertions green throughout.
-- **Consolidate control strips.** Group the many separate button rows (quality / set / inversion
-  / position / root) into one compact control area.
-- **Fewer tabs.** Fold the **Notes on fretboard** tab into a "Notes" *mode* on the unified board
-  (4 tabs → 3). Its one unique function — highlight every instance of a note — is what the
-  Phase 3 note-finder does, interactively and better; it doesn't need its own tab.
+**1b — One board, modes (the risky refactor · isolated). ✅ Shipped v1.16.0.** The highest-risk
+near-term change, landed on its own behind the green harness.
+- **One board, not four.** ✅ The four DOM boards (`ch`/`tr`/`sc`/`nt`) collapsed into a single
+  shared `#board` that switches what it highlights; each render path now splits panel content from
+  the board paint and only the active mode paints (one shared legend + hint switch with the mode).
+  Responsive + a11y assertions stay green; the live harness drives real tab/sub-view clicks.
+- **Consolidate control strips.** ✅ Grouped where clean (e.g. scale select + position share a row);
+  deeper compaction of the triad rows can ride 1d's pass while the board is open.
+- **Fewer tabs.** ✅ Folded **Notes on fretboard** from its own tab into a **Notes view inside
+  Scales** (4 tabs → 3), mirroring the Chords/Triads toggle (chosen over a board-lens to reuse the
+  existing sub-view pattern). Its note-highlighting is preserved; the richer note-finder is Phase 3.
+  Old saved `notes`-tab state migrates to Scales + the Notes view.
 
 **1c — Reverse lookup (net-new value).** The questions players actually arrive with, currently
 impossible — and the biggest usefulness gain per unit of new code:

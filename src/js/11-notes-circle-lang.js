@@ -3,13 +3,13 @@ const NAT=['C','D','E','F','G','A','B'], SHARP=['C#','D#','F#','G#','A#'], FLAT=
 let ntFilter='all', ntRoot='';
 function ntMatch(note){ if(!ntRoot) return false; if(note===ntRoot) return true; if(ENHARM[note]===ntRoot) return true; const rev=Object.entries(ENHARM).find(([k,v])=>v===ntRoot); return rev && rev[0]===note; }
 function renderNotes(){
-  renderBoard(document.getElementById('nt-board'),(pc,si,f)=>{
+  if(!isBoardMode('notes')) return;
+  paintBoard((pc,si,f)=>{
     const note=NOTES[pc], sharp=note.includes('#'), root=ntMatch(note);
     if(ntFilter==='nat' && sharp && !root) return null;
     let label=note; if(root && ENHARM[note] && FLAT.includes(ntRoot)) label=ENHARM[note];
     return makeDot(root?'d-root':(sharp?'d-sharp':'d-natural'), label, OPEN_MIDI[si]+f);
-  });
-  renderNums(document.getElementById('nt-nums'));
+  }, notesLegendHTML(), '');
 }
 
 /* ===================== CIRCLE OF FIFTHS ===================== */
@@ -115,7 +115,7 @@ function applyLang(){
   buildSeqPresets(); renderSeq(); setSeqTransport();
   { const o=document.getElementById('cl-overlay'); if(o && !o.hidden) renderChangelog(); }
   renderChords(); renderTriads(); renderScales(); renderNotes(); renderCircle();
-  setHView(hView); updateGlobalPlay();
+  setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
   activateRoot(document.getElementById('g-roots'), gRoot);
   document.querySelectorAll('[data-root]').forEach(b=>b.classList.toggle('active', !!ntRoot && b.dataset.root===ntRoot));

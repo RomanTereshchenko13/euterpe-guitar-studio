@@ -1,7 +1,12 @@
 /* ===================== WIRING ===================== */
 /* ---- shared root picker, display mode, sub-view toggle, global play ---- */
-function renderContextViews(){ renderChords(); renderTriads(); renderScales(); }
-function renderActiveContext(){ if(currentTab==='harmony'){ hView==='triads'?renderTriads():renderChords(); } else if(currentTab==='scales'){ renderScales(); } }
+/* Each render fn paints panel content for its mode and the ONE shared board only
+   when its mode is active (isBoardMode), so a cross-view pass paints the board once. */
+function renderContextViews(){ renderChords(); renderTriads(); renderScales(); renderNotes(); }
+function renderActiveContext(){
+  if(currentTab==='harmony'){ hView==='triads'?renderTriads():renderChords(); }
+  else if(currentTab==='scales'){ scView==='notes'?renderNotes():renderScales(); }
+}
 
 /* ---- one musical context (spine #1, 1a) ----
    gRoot/gRootLbl (key center) and scIdx (mode = selected scale) are the single
@@ -43,12 +48,28 @@ function setHView(v){ hView=v;
 document.getElementById('hv-chords').onclick=()=>setHView('chords');
 document.getElementById('hv-triads').onclick=()=>setHView('triads');
 
+/* Scales-tab sub-view (1b): Scale | Notes — mirrors the Harmony Chords/Triads
+   toggle. The folded-in Notes mode reuses the shared board + the context root. */
+function setScView(v){ scView=v;
+  document.getElementById('sub-scale').hidden = v!=='scale';
+  document.getElementById('sub-notes').hidden = v!=='notes';
+  ['scale','notes'].forEach(k=>{ const b=document.getElementById('sv-'+k); b.classList.toggle('active', k===v); b.setAttribute('aria-pressed', k===v?'true':'false'); });
+  document.getElementById('scales-h').textContent = t(v==='notes'?'nt_h':'sc_h');
+  document.getElementById('scales-p').textContent = t(v==='notes'?'nt_p':'sc_p');
+  v==='notes'?renderNotes():renderScales();
+  updateGlobalPlay(); saveState();
+}
+document.getElementById('sv-scale').onclick=()=>setScView('scale');
+document.getElementById('sv-notes').onclick=()=>setScView('notes');
+
 function applyContextBar(){ document.getElementById('context-bar').hidden = !(currentTab==='harmony' || currentTab==='scales'); }
+function applyBoardRegion(){ document.getElementById('board-region').hidden = !(currentTab==='harmony' || currentTab==='scales'); }
 function globalPlay(){
+  const boardEl=document.getElementById('board');
   if(currentTab==='harmony'){
-    if(hView==='triads'){ const v=currentTriadVoicing(); animArpMidi(document.getElementById('tr-board'), v.midis); }
-    else { const v=currentChordVoicing(); animArpMidi(document.getElementById('ch-board'), v.midis); }
-  } else if(currentTab==='scales'){ const s=SCALES[scIdx]; animRun(document.getElementById('sc-board'), 48+gRoot, s.iv.concat([12])); }
+    if(hView==='triads'){ const v=currentTriadVoicing(); animArpMidi(boardEl, v.midis); }
+    else { const v=currentChordVoicing(); animArpMidi(boardEl, v.midis); }
+  } else if(currentTab==='scales' && scView==='scale'){ const s=SCALES[scIdx]; animRun(boardEl, 48+gRoot, s.iv.concat([12])); }
   else if(currentTab==='circle'){
     const cofMinor=ctxCofMinor(), pc=gRoot, b=48+pc, iv=cofMinor?[0,3,7]:[0,4,7], bt=0.5;  // fixed cadence pace, independent of practice tempo
     [0,5,7,12].forEach((off,i)=>{ const base=b+off; iv.forEach((x,j)=>pluck(base+x, i*bt + j*0.018, Math.max(0.9, bt*1.4))); });
@@ -57,7 +78,7 @@ function globalPlay(){
 function updateGlobalPlay(){
   const b=document.getElementById('g-play');
   if(b){
-    b.hidden = (currentTab==='notes');
+    b.hidden = (currentTab==='scales' && scView==='notes');   // nothing to "listen" to in the notes view
     const cadence = currentTab==='circle';
     b.innerHTML='&#9654; '+t(cadence?'b_cadence':'b_listen');
     const tip=t(cadence?'b_cadence':'b_listen_tip');
@@ -93,7 +114,8 @@ document.getElementById('seq-strip').addEventListener('click',e=>{
   const chip=e.target.closest('.seq-chip'); if(chip){ const st=seq[+chip.dataset.i]; if(st) setChord(st.pc, st.lbl, st.qi); }
 });
 renderSeq(); setSeqTransport();
-wirePlay(document.getElementById('ch-board'));
+// one shared board, wired once (1b): a dot click sounds that string, Enter/Space plays focused.
+wirePlay(document.getElementById('board'));
 /* chord cards: a dot click sounds that string; clicking elsewhere on a card
    selects that voicing (so Listen/Loop use it). Keyboard note-play stays on the
    fretboard, which is the fully focusable surface. */
@@ -104,7 +126,6 @@ document.getElementById('ch-diagram').addEventListener('click',e=>{
   chVoicing=+card.dataset.v; renderChordDiagram(); saveState();
 });
 
-wirePlay(document.getElementById('tr-board'));
 /* triad cards: a dot click sounds that string. Inversion/string-set buttons are
    the selector here, so cards aren't separately selectable. */
 document.getElementById('tr-diagram').addEventListener('click',e=>{
@@ -119,7 +140,6 @@ document.getElementById('sc-diatonic').addEventListener('click',e=>{
   scOverlay = (scOverlay && scOverlay.tag===c.tag) ? null : {rootPc:c.rootPc, iv:c.iv, tag:c.tag};
   renderScales(); saveState();
 });
-wirePlay(document.getElementById('sc-board'));
 
 /* a circle node picks the key: set the context root + a canonical mode
    (major → Ionian, minor → Aeolian). The wheel re-derives its highlight. */
@@ -141,13 +161,12 @@ document.getElementById('cof-open').onclick=function(){ selectTab('scales'); };
 document.getElementById('nt-all').onclick=function(){ntFilter='all';this.classList.add('active');this.setAttribute('aria-pressed','true');const o=document.getElementById('nt-nat');o.classList.remove('active');o.setAttribute('aria-pressed','false');renderNotes();saveState();};
 document.getElementById('nt-nat').onclick=function(){ntFilter='nat';this.classList.add('active');this.setAttribute('aria-pressed','true');const o=document.getElementById('nt-all');o.classList.remove('active');o.setAttribute('aria-pressed','false');renderNotes();saveState();};
 document.getElementById('nt-reset').onclick=function(){ntRoot='';document.querySelectorAll('[data-root]').forEach(b=>b.classList.remove('active'));renderNotes();saveState();};
-document.getElementById('panel-notes').addEventListener('click',e=>{
+document.getElementById('sub-notes').addEventListener('click',e=>{
   const b=e.target.closest('[data-root]'); if(!b) return; const n=b.dataset.root;
   document.querySelectorAll('[data-root]').forEach(x=>x.classList.remove('active'));
   if(n===ntRoot){ ntRoot=''; } else { ntRoot=n; b.classList.add('active'); }
   renderNotes(); saveState();
 });
-wirePlay(document.getElementById('nt-board'));
 
 fillMini(document.getElementById('mini-major'),MAJ_TABLE,'p-third');
 fillMini(document.getElementById('mini-minor'),MIN_TABLE,'p-mthird');
@@ -161,6 +180,7 @@ function selectTab(name){
   document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active', x.id==='panel-'+name));
   applyAsideState();
   applyContextBar();
+  applyBoardRegion();
   updateGlobalPlay();
   renderActiveContext();
   saveState();
@@ -255,13 +275,13 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
     schedAdvance, clocks, beat,
-    selectTab, setHView, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
+    selectTab, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
     setFret:(i)=>{ fretRangeIdx=i; },
     setChQual:(i)=>{ chQual=i; chVoicing=0; }, setChVoicing:(i)=>{ chVoicing=i; },
     setTriad:(q,set,inv)=>{ trQual=q; trSet=set; trInv=inv; },
     initAudio:()=>audio(),
     setCtxNow:(t)=>{ if(actx) actx.currentTime=t; },
-    state:()=>({ gRoot, gRootLbl, scIdx, chQual, chVoicing, currentTab, hView,
+    state:()=>({ gRoot, gRootLbl, scIdx, scView, chQual, chVoicing, currentTab, hView,
                  loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo })
   };
 }

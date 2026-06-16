@@ -146,8 +146,17 @@ if (T) {
   /* ---- DOM resolution ---- */
   ok('g-loop present in DOM', !!win.document.getElementById('g-loop'));
   ok('ch-loop absent from DOM', !win.document.getElementById('ch-loop'));
-  ['g-play','tb-stop','tb-transport','g-roots','ch-board','tr-board','sc-board','nt-board','app-ver']
+  ['g-play','tb-stop','tb-transport','g-roots','board','nums','legend','app-ver']
     .forEach(id => ok('DOM id resolves: ' + id, !!win.document.getElementById(id)));
+  // 1b: the four per-tab boards collapsed into one shared #board
+  ['ch-board','tr-board','sc-board','nt-board'].forEach(id =>
+    ok('1b: old per-tab board gone: ' + id, !win.document.getElementById(id)));
+  ok('1b: exactly one fretboard in the DOM',
+     win.document.querySelectorAll('.fretboard').length === 1,
+     win.document.querySelectorAll('.fretboard').length + ' found');
+  ok('1b: Notes tab folded away (3 tabs)', win.document.querySelectorAll('.tab').length === 3,
+     win.document.querySelectorAll('.tab').length + ' tabs');
+  ok('1b: notes controls live under Scales (sub-notes)', !!win.document.getElementById('sub-notes'));
 
   /* ---- i18n symmetry + new keys ---- */
   const uk = Object.keys(T.I18N.uk).sort();
@@ -157,7 +166,8 @@ if (T) {
   ok('i18n: no keys only in uk', onlyUk.length === 0, onlyUk.join(', '));
   ok('i18n: no keys only in en', onlyEn.length === 0, onlyEn.join(', '));
   ['b_listen_tip','b_loop_tip','b_loop_stop_tip','audio_off',
-   'cd_voicings','cd_eshape','cd_ashape','cd_fret','cd_pick_hint','tr_shapes'].forEach(k => {
+   'cd_voicings','cd_eshape','cd_ashape','cd_fret','cd_pick_hint','tr_shapes',
+   'view_scale','view_notes'].forEach(k => {
     ok('i18n new key present (uk+en): ' + k,
        T.I18N.uk[k] !== undefined && T.I18N.en[k] !== undefined);
   });
@@ -327,9 +337,9 @@ if (T) {
     ok('All-frets view exceeds 360px (uses scroll fallback)', T.boardWidth() > 360);
     // alignment: number of fret cells equals number of fret-number entries on the active board
     T.setFret(1);
-    T.selectTab && T.selectTab('harmony');
-    const board = win.document.getElementById('ch-board');
-    const nums = win.document.getElementById('ch-nums');
+    T.selectTab && T.selectTab('harmony'); T.setHView && T.setHView('chords');
+    const board = win.document.getElementById('board');
+    const nums = win.document.getElementById('nums');
     if (board && nums) {
       const firstRow = board.querySelector('.srow');
       const cells = firstRow ? firstRow.querySelectorAll('.cell').length : -1;
@@ -343,19 +353,26 @@ if (T) {
     }
   })();
 
-  /* ---- behaviour: contextual Loop visibility ---- */
+  /* ---- behaviour: contextual Loop visibility + scales sub-views (1b) ---- */
   (function loopVisibility() {
     T.selectTab('harmony'); T.setHView('chords');
     const lp = win.document.getElementById('g-loop');
+    const gp = win.document.getElementById('g-play');
     ok('Loop visible on chord-tones view', lp && lp.hidden === false);
     T.setHView('triads');
     ok('Loop now visible on triads view (v1.12.0)', lp && lp.hidden === false);
     T.setHView('chords');
-    T.selectTab('scales');
+    T.selectTab('scales'); T.setScView('scale');
     ok('Loop hidden on scales tab', lp && lp.hidden === true);
-    T.selectTab('notes');
-    const gp = win.document.getElementById('g-play');
-    ok('Listen hidden on notes tab', gp && gp.hidden === true);
+    ok('Listen visible on scale view', gp && gp.hidden === false);
+    // 1b: Notes is now a view inside Scales, not a tab
+    T.setScView('notes');
+    ok('1b: scale controls hidden in notes view', win.document.getElementById('sub-scale').hidden === true);
+    ok('1b: notes controls shown in notes view', win.document.getElementById('sub-notes').hidden === false);
+    ok('1b: board shows notes mode in notes view', T.isBoardMode('notes') === true);
+    ok('Listen hidden in notes view', gp && gp.hidden === true);
+    T.setScView('scale');
+    ok('1b: back to scale view restores scale board', T.isBoardMode('scale') === true);
     T.selectTab('harmony'); T.setHView('chords');
   })();
 

@@ -34,7 +34,7 @@ const LS_KEY='guitarStudio.v1';
 let currentTab='harmony';
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
   lang, tab:currentTab, tuningIdx, fretRangeIdx, tempo, lefty, toolbarOpen,
-  gRoot, gRootLbl, gMode, hView,
+  gRoot, gRootLbl, gMode, hView, scView,
   chQual, scIdx, scPos, scOverlay,
   chVoicing,
   trQual, trSet, trInv,
@@ -53,7 +53,12 @@ function loadState(){ try{
   if(Number.isInteger(s.gRoot)&&s.gRoot>=0&&s.gRoot<12){ gRoot=s.gRoot; if(typeof s.gRootLbl==='string') gRootLbl=s.gRootLbl; }
   if(s.gMode==='names'||s.gMode==='deg') gMode=s.gMode;
   if(s.hView==='chords'||s.hView==='triads') hView=s.hView;
-  if(typeof s.tab==='string') currentTab = (s.tab==='chords'||s.tab==='triads') ? 'harmony' : s.tab;  // migrate merged tab
+  if(s.scView==='scale'||s.scView==='notes') scView=s.scView;
+  if(typeof s.tab==='string'){
+    if(s.tab==='chords'||s.tab==='triads') currentTab='harmony';          // migrate old merged tabs
+    else if(s.tab==='notes'){ currentTab='scales'; scView='notes'; }      // 1b: Notes folded into Scales
+    else currentTab=s.tab;
+  }
   // ---- working musical state (added in 1.6.1) ----
   if(Number.isInteger(s.chQual)&&QUALITIES[s.chQual]) chQual=s.chQual;
   if(Number.isInteger(s.chVoicing)&&s.chVoicing>=0&&s.chVoicing<6) chVoicing=s.chVoicing;  // clamped again at render against the actual list length
