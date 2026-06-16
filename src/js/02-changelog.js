@@ -1,6 +1,11 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.15.0', date:'2026-06-16',
+    en:['Pick your key once and the whole app follows: choosing a root — or a key on the circle of fifths — now switches the chords, scales, circle and notes views together, instead of each tab keeping its own separate key.',
+        'The circle of fifths is now tied to your current key: it always highlights the key you are in and its closest neighbours, and tapping any key on it sets that key everywhere.'],
+    uk:['Обери тональність один раз — і вся програма слідує за нею: вибір тоніки чи тональності на квінтовому колі тепер одночасно перемикає акорди, гами, коло та ноти, замість того щоб кожна вкладка тримала свою окрему тональність.',
+        'Квінтове коло тепер прив’язане до твоєї поточної тональності: воно завжди підсвічує тональність, у якій ти перебуваєш, та її найближчих сусідів, а дотик до будь-якої тональності на колі встановлює її всюди.'] },
   { v:'1.14.0', date:'2026-06-15',
     en:['The drums now have a backbeat: a snare lands on beats 2 and 4, so turning on Drums sounds like a real groove instead of a ticking pulse.',
         'Listen now plays at a fixed, comfortable speed no matter your tempo — so slowing the metronome down for practice no longer makes the preview crawl. Loop and progression Play still follow the tempo, since they are backings you play over.'],

@@ -45,18 +45,26 @@ function labClass(lab){
    To stop later phases (Practice / ear / rhythm) from multiplying ad-hoc
    globals, keep ALL persisted state in this catalogue and route it through
    saveState()/loadState() with a bounds-checked restore. Current members:
-     shared    : gRoot, gRootLbl, gMode            (this block)
+     context   : gRoot, gRootLbl (root) + scIdx (mode)   (set via setKey)
+     display   : gMode (note-names vs degrees)     (this block)
      chords    : chQual                            (this block)
      triads    : trQual, trSet, trInv              (~"TRIADS view")
-     scales    : scIdx, scPos, scOverlay           (~"SCALES view")
+     scales    : scPos, scOverlay                  (~"SCALES view")
      notes     : ntFilter, ntRoot                  (~"NOTES view")
-     circle    : cofSel, cofMinor                  (~"CIRCLE view")
+     circle    : (derived from context; not persisted)
      transport : tempo, lefty, bassOn, grooveOn, seqLoopOn, seq[]
      ui        : lang, currentTab, tuningIdx, fretRangeIdx, toolbarOpen
    New phases: add fields here (or in a `practice = {…}` object), then extend
    saveState()/loadState() — do not introduce free-floating globals elsewhere.
+
+   The musical CONTEXT (spine #1, 1a) is the shared key center + mode that every
+   key-centric view reflects: gRoot/gRootLbl (root) + scIdx (mode = scale). It is
+   set in ONE place — setKey() — and Harmony, Scales, Circle and Notes all follow.
+   The circle's selection is DERIVED from (gRoot, scIdx), not stored.
    ========================================================================== */
-/* shared musical context — one root + one display mode across Harmony & Scales */
+/* shared musical context (the spine): one key center (gRoot/gRootLbl) + mode
+   (scIdx, in the scales block) across Harmony, Scales, Circle and Notes, set via
+   setKey(). gMode is the note-name/degree display toggle, not the musical mode. */
 let gRoot=9, gRootLbl='A', gMode='names';
 let chQual=1;
 let chVoicing=0;   // index of the selected voicing card (open / E-barre / A-barre / computed)

@@ -1,8 +1,15 @@
 <!DOCTYPE html>
 <!-- ===========================================================
      Guitar Studio
-     Version: 1.14.0  (2026-06-15)
+     Version: 1.15.0  (2026-06-16)
      Changelog:
+       1.15.0 — one musical context + one diatonic source (Phase 1a). The key
+               center and mode are now a single shared context: pick a root or
+               key once and Harmony, Scales, the Circle of Fifths and Notes all
+               follow (the circle is now a live projection of your key, not a
+               separate selection). Internally the duplicated diatonic-chord
+               logic (scales vs circle) collapsed into one helper, removing a
+               correctness-drift risk. No new dependencies.
        1.14.0 — backing groove + preview tempo fix. The drums gained a snare
                backbeat on 2 & 4 so the groove actually grooves instead of just
                ticking, and one-shot Listen previews now play at a fixed,
@@ -125,7 +132,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="version" content="1.14.0">
+<meta name="version" content="1.15.0">
 <title>Гітарна студія — гами, моди, акорди</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -30,7 +30,6 @@ const COF=[
 const SHARP_ORDER=['F','C','G','D','A','E','B'], FLAT_ORDER=['B','E','A','D','G','C','F'];
 const ROMAN_MAJ=['I','ii','iii','IV','V','vi','vii°'], ROMAN_MIN=['i','ii°','III','iv','v','VI','VII'];
 const MAJ_IV=[0,2,4,5,7,9,11], MIN_IV=[0,2,3,5,7,8,10];
-let cofSel=0, cofMinor=false;
 function sigText(sig){
   if(sig===0) return t('cof_sig0');
   if(sig===6) return '6 ♯ / 6 ♭';
@@ -38,19 +37,21 @@ function sigText(sig){
   const a=-sig; return a+' ♭ — '+FLAT_ORDER.slice(0,a).map(x=>x+'♭').join(' ');
 }
 function buildDia(rootPc, sc, flat){
-  const res=[];
-  for(let d=0;d<7;d++){
-    const r=sc[d], th=sc[(d+2)%7], fi=sc[(d+4)%7];
-    const t3=(th-r+12)%12, t5=(fi-r+12)%12; let suf='';
-    if(t3===3&&t5===7)suf='m'; else if(t3===3&&t5===6)suf='dim'; else if(t3===4&&t5===8)suf='aug';
-    res.push(noteName((rootPc+r)%12,flat)+suf);
-  }
-  return res;
+  // One diatonic source (1a): the circle spells each chord by key signature.
+  return diatonicTriads(rootPc, sc).map(c=> noteName(c.rootPc, flat)+c.suf);
 }
+/* Circle as a projection of the one musical context (1a): instead of its own
+   selection state, the wheel shows the current key. The major/minor ring is
+   derived from the mode (major-third family → outer ring), and the highlighted
+   node is the COF entry whose major (or relative-minor) note is the context
+   root. Circle clicks set the context via setKey(); these never persist. */
+function ctxCofMinor(){ return !isMajorFamily(scIdx); }
+function ctxCofSel(){ const minor=ctxCofMinor(); const i=COF.findIndex(c=>(minor?c.minPc:c.majPc)===gRoot); return i<0?0:i; }
 function pcToRootLabel(pc){ const i=ROOTS.findIndex(r=> (FLAT_ROOTS[r]!==undefined?FLAT_ROOTS[r]:NOTES.indexOf(r))===pc ); return ROOTS[i]; }
 function activateRoot(container, pc){ [...container.children].forEach(b=>{ const lbl=b.textContent; const p=FLAT_ROOTS[lbl]!==undefined?FLAT_ROOTS[lbl]:NOTES.indexOf(lbl); b.classList.toggle('active', p===pc); }); }
 function cofXY(i,r){ const a=(-90+i*30)*Math.PI/180; return [180+r*Math.cos(a), 180+r*Math.sin(a)]; }
 function renderCircle(){
+  const cofSel=ctxCofSel(), cofMinor=ctxCofMinor();
   const RO=132, RI=85, rMaj=27, rMin=21, dom=(cofSel+1)%12, sub=(cofSel+11)%12;
   let s=`<circle cx="180" cy="180" r="${RO}" fill="none" stroke="var(--border)" stroke-width="1"/><circle cx="180" cy="180" r="${RI}" fill="none" stroke="var(--border)" stroke-width="1"/>`;
   COF.forEach(c=>{
@@ -77,6 +78,7 @@ function renderCircle(){
   renderCofInfo();
 }
 function renderCofInfo(){
+  const cofSel=ctxCofSel(), cofMinor=ctxCofMinor();
   const c=COF[cofSel], useFlat=(c.sig<0||c.sig===6);
   const keyPc=cofMinor?c.minPc:c.majPc;
   const dia=buildDia(keyPc, cofMinor?MIN_IV:MAJ_IV, useFlat);

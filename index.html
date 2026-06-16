@@ -1,8 +1,15 @@
 <!DOCTYPE html>
 <!-- ===========================================================
      Guitar Studio
-     Version: 1.14.0  (2026-06-15)
+     Version: 1.15.0  (2026-06-16)
      Changelog:
+       1.15.0 — one musical context + one diatonic source (Phase 1a). The key
+               center and mode are now a single shared context: pick a root or
+               key once and Harmony, Scales, the Circle of Fifths and Notes all
+               follow (the circle is now a live projection of your key, not a
+               separate selection). Internally the duplicated diatonic-chord
+               logic (scales vs circle) collapsed into one helper, removing a
+               correctness-drift risk. No new dependencies.
        1.14.0 — backing groove + preview tempo fix. The drums gained a snare
                backbeat on 2 & 4 so the groove actually grooves instead of just
                ticking, and one-shot Listen previews now play at a fixed,
@@ -125,7 +132,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="version" content="1.14.0">
+<meta name="version" content="1.15.0">
 <title>Гітарна студія — гами, моди, акорди</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -626,10 +633,15 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '1.14.0';
+const APP_VERSION = '1.15.0';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.15.0', date:'2026-06-16',
+    en:['Pick your key once and the whole app follows: choosing a root — or a key on the circle of fifths — now switches the chords, scales, circle and notes views together, instead of each tab keeping its own separate key.',
+        'The circle of fifths is now tied to your current key: it always highlights the key you are in and its closest neighbours, and tapping any key on it sets that key everywhere.'],
+    uk:['Обери тональність один раз — і вся програма слідує за нею: вибір тоніки чи тональності на квінтовому колі тепер одночасно перемикає акорди, гами, коло та ноти, замість того щоб кожна вкладка тримала свою окрему тональність.',
+        'Квінтове коло тепер прив’язане до твоєї поточної тональності: воно завжди підсвічує тональність, у якій ти перебуваєш, та її найближчих сусідів, а дотик до будь-якої тональності на колі встановлює її всюди.'] },
   { v:'1.14.0', date:'2026-06-15',
     en:['The drums now have a backbeat: a snare lands on beats 2 and 4, so turning on Drums sounds like a real groove instead of a ticking pulse.',
         'Listen now plays at a fixed, comfortable speed no matter your tempo — so slowing the metronome down for practice no longer makes the preview crawl. Loop and progression Play still follow the tempo, since they are backings you play over.'],
@@ -945,6 +957,29 @@ function spellNote(rootLbl, pc, degree){
   let acc=mod(pc-LET_PC[idx],12); if(acc>6) acc-=12;
   if(acc<-1||acc>1) return simpleName(pc, rootLbl); // avoid double sharps/flats
   return LET[idx]+ACC[acc];
+}
+
+/* One diatonic source (spine, 1a). The seven stacked-thirds triads of a 7-note
+   scale `sc` (semitone offsets) rooted at pitch-class `rootPc`, as a list of
+   { rootPc, deg, suf, iv }: the chord-quality suffix ('', m, dim, aug, or '?'
+   for a non-tertian triad) and its interval set — QUALITY only. Spelling stays
+   the caller's job (the scales view spells by degree, the circle by key
+   signature). Collapses the formerly duplicated logic in diatonic() and
+   buildDia(), which disagreed on the aug / '?' fallback. */
+function diatonicTriads(rootPc, sc){
+  const res=[];
+  for(let d=0; d<7; d++){
+    const r=sc[d], th=sc[(d+2)%7], fi=sc[(d+4)%7];
+    const t3=mod(th-r,12), t5=mod(fi-r,12);
+    let suf, iv;
+    if(t3===4&&t5===7){ suf='';    iv=[0,4,7]; }
+    else if(t3===3&&t5===7){ suf='m';   iv=[0,3,7]; }
+    else if(t3===3&&t5===6){ suf='dim'; iv=[0,3,6]; }
+    else if(t3===4&&t5===8){ suf='aug'; iv=[0,4,8]; }
+    else { suf='?'; iv=[0,t3,t5]; }
+    res.push({ rootPc:mod(rootPc+r,12), deg:d, suf, iv });
+  }
+  return res;
 }
 
 /* ===================== AUDIO =====================
@@ -1595,18 +1630,26 @@ function labClass(lab){
    To stop later phases (Practice / ear / rhythm) from multiplying ad-hoc
    globals, keep ALL persisted state in this catalogue and route it through
    saveState()/loadState() with a bounds-checked restore. Current members:
-     shared    : gRoot, gRootLbl, gMode            (this block)
+     context   : gRoot, gRootLbl (root) + scIdx (mode)   (set via setKey)
+     display   : gMode (note-names vs degrees)     (this block)
      chords    : chQual                            (this block)
      triads    : trQual, trSet, trInv              (~"TRIADS view")
-     scales    : scIdx, scPos, scOverlay           (~"SCALES view")
+     scales    : scPos, scOverlay                  (~"SCALES view")
      notes     : ntFilter, ntRoot                  (~"NOTES view")
-     circle    : cofSel, cofMinor                  (~"CIRCLE view")
+     circle    : (derived from context; not persisted)
      transport : tempo, lefty, bassOn, grooveOn, seqLoopOn, seq[]
      ui        : lang, currentTab, tuningIdx, fretRangeIdx, toolbarOpen
    New phases: add fields here (or in a `practice = {…}` object), then extend
    saveState()/loadState() — do not introduce free-floating globals elsewhere.
+
+   The musical CONTEXT (spine #1, 1a) is the shared key center + mode that every
+   key-centric view reflects: gRoot/gRootLbl (root) + scIdx (mode = scale). It is
+   set in ONE place — setKey() — and Harmony, Scales, Circle and Notes all follow.
+   The circle's selection is DERIVED from (gRoot, scIdx), not stored.
    ========================================================================== */
-/* shared musical context — one root + one display mode across Harmony & Scales */
+/* shared musical context (the spine): one key center (gRoot/gRootLbl) + mode
+   (scIdx, in the scales block) across Harmony, Scales, Circle and Notes, set via
+   setKey(). gMode is the note-name/degree display toggle, not the musical mode. */
 let gRoot=9, gRootLbl='A', gMode='names';
 let chQual=1;
 let chVoicing=0;   // index of the selected voicing card (open / E-barre / A-barre / computed)
@@ -1927,6 +1970,9 @@ const SCALES=[
   {iv:[0,2,3,5,7,9,11],en:'Melodic minor',uk:'Мелодичний мінор'},
 ];
 function sName(s){ return lang==='en'?s.en:s.uk; }
+/* mode family for the circle projection (1a): a major third (interval 4) puts a
+   scale on the circle's major ring, a minor third (3) on the minor ring. */
+function isMajorFamily(i){ return SCALES[i].iv.includes(4); }
 const MODE_OFF={1:2,2:4,3:5,4:7,5:9,6:11};
 const BOX_OFFSETS=[0,3,5,7,10];
 let scIdx=5, scPos=0, scOverlay=null;
@@ -1935,16 +1981,12 @@ function scClass(iv){ if(iv===0)return'd-root'; if(iv===3||iv===4)return'd-third
 function boxWindow(pos){ if(!pos) return null; const anchor=(gRoot-4+12)%12; const start=anchor+BOX_OFFSETS[pos-1]; return [start, start+4]; }
 function diatonic(){
   const iv=SCALES[scIdx].iv; if(iv.length!==7) return [];
-  const flat=useFlatFor(gRootLbl); const res=[];
-  for(let d=0; d<7; d++){
-    const r=iv[d], th=iv[(d+2)%7], fi=iv[(d+4)%7];
-    const t3=(th-r+12)%12, t5=(fi-r+12)%12; let suf='', qiv=[0,4,7];
-    if(t3===4&&t5===7){suf='';qiv=[0,4,7];} else if(t3===3&&t5===7){suf='m';qiv=[0,3,7];}
-    else if(t3===3&&t5===6){suf='dim';qiv=[0,3,6];} else if(t3===4&&t5===8){suf='aug';qiv=[0,4,8];}
-    else {qiv=[0,t3,t5];suf='?';}
-    res.push({label:spellNote(gRootLbl,(gRoot+r)%12,d+1)+suf, rootPc:(gRoot+r)%12, iv:qiv, tag:'dia'+d});
-  }
-  return res;
+  // One diatonic source (1a): quality comes from the shared diatonicTriads()
+  // helper; the scales view spells each root by its diatonic degree.
+  return diatonicTriads(gRoot, iv).map(c=>({
+    label: spellNote(gRootLbl, c.rootPc, c.deg+1)+c.suf,
+    rootPc: c.rootPc, iv: c.iv, tag: 'dia'+c.deg
+  }));
 }
 function renderDiatonic(){
   const cont=document.getElementById('sc-diatonic'); diaList=diatonic();
@@ -2029,7 +2071,6 @@ const COF=[
 const SHARP_ORDER=['F','C','G','D','A','E','B'], FLAT_ORDER=['B','E','A','D','G','C','F'];
 const ROMAN_MAJ=['I','ii','iii','IV','V','vi','vii°'], ROMAN_MIN=['i','ii°','III','iv','v','VI','VII'];
 const MAJ_IV=[0,2,4,5,7,9,11], MIN_IV=[0,2,3,5,7,8,10];
-let cofSel=0, cofMinor=false;
 function sigText(sig){
   if(sig===0) return t('cof_sig0');
   if(sig===6) return '6 ♯ / 6 ♭';
@@ -2037,19 +2078,21 @@ function sigText(sig){
   const a=-sig; return a+' ♭ — '+FLAT_ORDER.slice(0,a).map(x=>x+'♭').join(' ');
 }
 function buildDia(rootPc, sc, flat){
-  const res=[];
-  for(let d=0;d<7;d++){
-    const r=sc[d], th=sc[(d+2)%7], fi=sc[(d+4)%7];
-    const t3=(th-r+12)%12, t5=(fi-r+12)%12; let suf='';
-    if(t3===3&&t5===7)suf='m'; else if(t3===3&&t5===6)suf='dim'; else if(t3===4&&t5===8)suf='aug';
-    res.push(noteName((rootPc+r)%12,flat)+suf);
-  }
-  return res;
+  // One diatonic source (1a): the circle spells each chord by key signature.
+  return diatonicTriads(rootPc, sc).map(c=> noteName(c.rootPc, flat)+c.suf);
 }
+/* Circle as a projection of the one musical context (1a): instead of its own
+   selection state, the wheel shows the current key. The major/minor ring is
+   derived from the mode (major-third family → outer ring), and the highlighted
+   node is the COF entry whose major (or relative-minor) note is the context
+   root. Circle clicks set the context via setKey(); these never persist. */
+function ctxCofMinor(){ return !isMajorFamily(scIdx); }
+function ctxCofSel(){ const minor=ctxCofMinor(); const i=COF.findIndex(c=>(minor?c.minPc:c.majPc)===gRoot); return i<0?0:i; }
 function pcToRootLabel(pc){ const i=ROOTS.findIndex(r=> (FLAT_ROOTS[r]!==undefined?FLAT_ROOTS[r]:NOTES.indexOf(r))===pc ); return ROOTS[i]; }
 function activateRoot(container, pc){ [...container.children].forEach(b=>{ const lbl=b.textContent; const p=FLAT_ROOTS[lbl]!==undefined?FLAT_ROOTS[lbl]:NOTES.indexOf(lbl); b.classList.toggle('active', p===pc); }); }
 function cofXY(i,r){ const a=(-90+i*30)*Math.PI/180; return [180+r*Math.cos(a), 180+r*Math.sin(a)]; }
 function renderCircle(){
+  const cofSel=ctxCofSel(), cofMinor=ctxCofMinor();
   const RO=132, RI=85, rMaj=27, rMin=21, dom=(cofSel+1)%12, sub=(cofSel+11)%12;
   let s=`<circle cx="180" cy="180" r="${RO}" fill="none" stroke="var(--border)" stroke-width="1"/><circle cx="180" cy="180" r="${RI}" fill="none" stroke="var(--border)" stroke-width="1"/>`;
   COF.forEach(c=>{
@@ -2076,6 +2119,7 @@ function renderCircle(){
   renderCofInfo();
 }
 function renderCofInfo(){
+  const cofSel=ctxCofSel(), cofMinor=ctxCofMinor();
   const c=COF[cofSel], useFlat=(c.sig<0||c.sig===6);
   const keyPc=cofMinor?c.minPc:c.majPc;
   const dia=buildDia(keyPc, cofMinor?MIN_IV:MAJ_IV, useFlat);
@@ -2159,7 +2203,6 @@ function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
   chQual, scIdx, scPos, scOverlay,
   chVoicing,
   trQual, trSet, trInv,
-  cofSel, cofMinor,
   ntRoot, ntFilter,
   seq, seqLoopOn,
   bassOn, grooveOn
@@ -2186,8 +2229,9 @@ function loadState(){ try{
   if(Number.isInteger(s.trQual)&&TRIADS[s.trQual]) trQual=s.trQual;
   if(Number.isInteger(s.trSet)&&STRING_SETS[s.trSet]) trSet=s.trSet;
   if(Number.isInteger(s.trInv)&&s.trInv>=0&&s.trInv<=3) trInv=s.trInv;
-  if(Number.isInteger(s.cofSel)&&s.cofSel>=0&&s.cofSel<COF.length) cofSel=s.cofSel;
-  if(typeof s.cofMinor==='boolean') cofMinor=s.cofMinor;
+  // circle selection is no longer persisted — it is derived from the context
+  // (gRoot + scIdx) at render time (1a). Older saves with cofSel/cofMinor are
+  // simply ignored.
   if(s.ntFilter==='all'||s.ntFilter==='nat') ntFilter=s.ntFilter;
   if(s.ntRoot===''||NAT.includes(s.ntRoot)||SHARP.includes(s.ntRoot)||FLAT.includes(s.ntRoot)) ntRoot=s.ntRoot;
   if(typeof s.seqLoopOn==='boolean') seqLoopOn=s.seqLoopOn;
@@ -2204,7 +2248,25 @@ function loadState(){ try{
 /* ---- shared root picker, display mode, sub-view toggle, global play ---- */
 function renderContextViews(){ renderChords(); renderTriads(); renderScales(); }
 function renderActiveContext(){ if(currentTab==='harmony'){ hView==='triads'?renderTriads():renderChords(); } else if(currentTab==='scales'){ renderScales(); } }
-buildRootBtns(document.getElementById('g-roots'), gRoot, (pc,r)=>{ gRoot=pc; gRootLbl=r; chVoicing=0; scOverlay=null; buildChQuals(); renderContextViews(); saveState(); });
+
+/* ---- one musical context (spine #1, 1a) ----
+   gRoot/gRootLbl (key center) and scIdx (mode = selected scale) are the single
+   source of truth shared by Harmony, Scales, Circle and Notes. setKey() is the
+   ONE place they change, so the views never drift: pick a key once and every
+   view follows. Pass `mode` to also move the scale (e.g. a circle click); omit
+   it to keep the current mode (e.g. the root picker). */
+function setKey(pc, lbl, mode){
+  gRoot=pc; gRootLbl=lbl;
+  if(Number.isInteger(mode) && SCALES[mode]) scIdx=mode;
+  chVoicing=0; scOverlay=null;
+  ntRoot=lbl;                                   // Notes reflects the shared root
+  activateRoot(document.getElementById('g-roots'), gRoot);
+  document.querySelectorAll('[data-root]').forEach(b=>b.classList.toggle('active', b.dataset.root===ntRoot));
+  buildChQuals(); buildScSelect(); buildScPos();
+  renderContextViews(); renderCircle(); renderNotes();
+  saveState();
+}
+buildRootBtns(document.getElementById('g-roots'), gRoot, (pc,r)=>{ setKey(pc,r); });
 
 function setGMode(m){ gMode=m;
   const on=document.getElementById(m==='names'?'g-names':'g-deg'), off=document.getElementById(m==='names'?'g-deg':'g-names');
@@ -2234,7 +2296,7 @@ function globalPlay(){
     else { const v=currentChordVoicing(); animArpMidi(document.getElementById('ch-board'), v.midis); }
   } else if(currentTab==='scales'){ const s=SCALES[scIdx]; animRun(document.getElementById('sc-board'), 48+gRoot, s.iv.concat([12])); }
   else if(currentTab==='circle'){
-    const c=COF[cofSel], pc=cofMinor?c.minPc:c.majPc, b=48+pc, iv=cofMinor?[0,3,7]:[0,4,7], bt=0.5;  // fixed cadence pace, independent of practice tempo
+    const cofMinor=ctxCofMinor(), pc=gRoot, b=48+pc, iv=cofMinor?[0,3,7]:[0,4,7], bt=0.5;  // fixed cadence pace, independent of practice tempo
     [0,5,7,12].forEach((off,i)=>{ const base=b+off; iv.forEach((x,j)=>pluck(base+x, i*bt + j*0.018, Math.max(0.9, bt*1.4))); });
   }
 }
@@ -2296,7 +2358,7 @@ document.getElementById('tr-diagram').addEventListener('click',e=>{
   if(dot && dot.dataset.midi!=null){ pluck(parseInt(dot.dataset.midi)); }
 });
 
-document.getElementById('sc-select').onchange=function(){ scIdx=parseInt(this.value); scOverlay=null; renderScales(); saveState(); };
+document.getElementById('sc-select').onchange=function(){ scIdx=parseInt(this.value); scOverlay=null; renderScales(); renderCircle(); saveState(); };
 document.getElementById('sc-diatonic').addEventListener('click',e=>{
   if(e.target.closest('[data-clear]')){ scOverlay=null; renderScales(); saveState(); return; }
   const b=e.target.closest('.dia'); if(!b) return; const c=diaList[+b.dataset.i];
@@ -2305,22 +2367,21 @@ document.getElementById('sc-diatonic').addEventListener('click',e=>{
 });
 wirePlay(document.getElementById('sc-board'));
 
+/* a circle node picks the key: set the context root + a canonical mode
+   (major → Ionian, minor → Aeolian). The wheel re-derives its highlight. */
+function selectCircleNode(g){
+  const i=+g.dataset.i, minor=(g.dataset.type==='min'), pc=minor?COF[i].minPc:COF[i].majPc;
+  setKey(pc, pcToRootLabel(pc), minor?5:0);
+}
 document.getElementById('cof-svg').addEventListener('click',e=>{
-  const g=e.target.closest('.cof-node'); if(!g) return;
-  cofSel=+g.dataset.i; cofMinor=(g.dataset.type==='min'); renderCircle(); saveState();
+  const g=e.target.closest('.cof-node'); if(g) selectCircleNode(g);
 });
 document.getElementById('cof-svg').addEventListener('keydown',e=>{
   if(e.key!=='Enter'&&e.key!==' ') return;
-  const g=e.target.closest('.cof-node'); if(!g) return;
-  cofSel=+g.dataset.i; cofMinor=(g.dataset.type==='min'); renderCircle(); saveState(); e.preventDefault();
+  const g=e.target.closest('.cof-node'); if(g){ selectCircleNode(g); e.preventDefault(); }
 });
-document.getElementById('cof-open').onclick=function(){
-  const c=COF[cofSel], pc=cofMinor?c.minPc:c.majPc;
-  gRoot=pc; gRootLbl=pcToRootLabel(pc); scIdx=cofMinor?5:0; scOverlay=null; scPos=0;
-  activateRoot(document.getElementById('g-roots'), pc);
-  buildScSelect(); buildScPos(); renderContextViews();
-  selectTab('scales');
-};
+// the circle already reflects the context; "open in scales" is now navigation.
+document.getElementById('cof-open').onclick=function(){ selectTab('scales'); };
 
 (function(){ const mk=(arr,cont)=>arr.forEach(n=>{ const b=document.createElement('button'); b.className='btn'; b.textContent=n; b.dataset.root=n; cont.appendChild(b); }); mk(NAT,document.getElementById('nt-natural')); mk(SHARP,document.getElementById('nt-sharp')); mk(FLAT,document.getElementById('nt-flat')); })();
 document.getElementById('nt-all').onclick=function(){ntFilter='all';this.classList.add('active');this.setAttribute('aria-pressed','true');const o=document.getElementById('nt-nat');o.classList.remove('active');o.setAttribute('aria-pressed','false');renderNotes();saveState();};
@@ -2436,6 +2497,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
   window.__GS_TEST__ = {
     APP_VERSION, I18N, QUALITIES, TRIADS, SCALES, COF, FRET_RANGES, SEQ_PRESETS,
     fifthInterval, spellNote, rootParts, simpleName,
+    diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey,
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
     schedAdvance, clocks, beat,
@@ -2445,7 +2507,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     setTriad:(q,set,inv)=>{ trQual=q; trSet=set; trInv=inv; },
     initAudio:()=>audio(),
     setCtxNow:(t)=>{ if(actx) actx.currentTime=t; },
-    state:()=>({ gRoot, gRootLbl, chQual, chVoicing, currentTab, hView,
+    state:()=>({ gRoot, gRootLbl, scIdx, chQual, chVoicing, currentTab, hView,
                  loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo })
   };
 }

@@ -75,3 +75,26 @@ function spellNote(rootLbl, pc, degree){
   return LET[idx]+ACC[acc];
 }
 
+/* One diatonic source (spine, 1a). The seven stacked-thirds triads of a 7-note
+   scale `sc` (semitone offsets) rooted at pitch-class `rootPc`, as a list of
+   { rootPc, deg, suf, iv }: the chord-quality suffix ('', m, dim, aug, or '?'
+   for a non-tertian triad) and its interval set — QUALITY only. Spelling stays
+   the caller's job (the scales view spells by degree, the circle by key
+   signature). Collapses the formerly duplicated logic in diatonic() and
+   buildDia(), which disagreed on the aug / '?' fallback. */
+function diatonicTriads(rootPc, sc){
+  const res=[];
+  for(let d=0; d<7; d++){
+    const r=sc[d], th=sc[(d+2)%7], fi=sc[(d+4)%7];
+    const t3=mod(th-r,12), t5=mod(fi-r,12);
+    let suf, iv;
+    if(t3===4&&t5===7){ suf='';    iv=[0,4,7]; }
+    else if(t3===3&&t5===7){ suf='m';   iv=[0,3,7]; }
+    else if(t3===3&&t5===6){ suf='dim'; iv=[0,3,6]; }
+    else if(t3===4&&t5===8){ suf='aug'; iv=[0,4,8]; }
+    else { suf='?'; iv=[0,t3,t5]; }
+    res.push({ rootPc:mod(rootPc+r,12), deg:d, suf, iv });
+  }
+  return res;
+}
+

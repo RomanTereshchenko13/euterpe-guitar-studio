@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-06-16 · shipping: v1.14.0_
+_Last updated: 2026-06-16 · shipping: v1.15.0_
 
 ---
 
@@ -137,15 +137,19 @@ phase that resists "stands on its own," so it ships as four ordered, independent
 steps: foundational logic first (low risk, fully assertable), the risky refactor isolated in the
 middle, net-new features, then a scoped feel pass last.
 
-**1a — Spine + dedup (foundational · low risk).** Pure logic, minimal UI churn; ship this alone.
-- **One musical context** (spine #1) wired through every existing view. Replaces the current
-  shared-root-only state (today just `gRoot`/`gRootLbl` plus per-tab selections); lives in the
-  documented state catalogue and rides `saveState()` / `loadState()` with a bounds-checked
-  restore like everything else.
-- **One diatonic source.** Collapse the duplicated diatonic logic — `diatonic()` (scales) and
-  `buildDia()` (circle), which already disagree on edge cases (the `'?'`/`aug` fallbacks) — into
-  a single helper both call. Removes a real correctness-drift risk; assert parity against *both*
-  old outputs before deleting the duplicate.
+**1a — Spine + dedup (foundational · low risk). ✅ Shipped v1.15.0.** Pure logic, minimal UI churn.
+- **One musical context** (spine #1) wired through every existing view. ✅ The key center + mode
+  (`gRoot`/`gRootLbl` + `scIdx`) is now a first-class shared context set in one place (`setKey()`);
+  Harmony, Scales, the Circle and Notes all follow it. The circle became a live *projection* of the
+  context (its selection is derived, no longer separately persisted). Replaced the old
+  shared-root-only state; documented in the state catalogue and bounds-checked through
+  `saveState()` / `loadState()`. _Carried into 1b: the Notes tab currently only **reflects** the
+  shared root (push); full bidirectional key-setting lands when Notes is folded into the unified
+  board._
+- **One diatonic source.** ✅ Collapsed the duplicated diatonic logic — `diatonic()` (scales) and
+  `buildDia()` (circle), which disagreed on the `'?'`/`aug` fallback — into a single
+  `diatonicTriads()` helper both call. Parity asserted against *both* old outputs in the harness
+  before deleting the duplicate.
 
 **1b — One board, modes (the risky refactor · isolated).** The highest-risk near-term change, so
 it lands on its own behind the green harness and ships by itself.

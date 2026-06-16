@@ -15,6 +15,9 @@ const SCALES=[
   {iv:[0,2,3,5,7,9,11],en:'Melodic minor',uk:'Мелодичний мінор'},
 ];
 function sName(s){ return lang==='en'?s.en:s.uk; }
+/* mode family for the circle projection (1a): a major third (interval 4) puts a
+   scale on the circle's major ring, a minor third (3) on the minor ring. */
+function isMajorFamily(i){ return SCALES[i].iv.includes(4); }
 const MODE_OFF={1:2,2:4,3:5,4:7,5:9,6:11};
 const BOX_OFFSETS=[0,3,5,7,10];
 let scIdx=5, scPos=0, scOverlay=null;
@@ -23,16 +26,12 @@ function scClass(iv){ if(iv===0)return'd-root'; if(iv===3||iv===4)return'd-third
 function boxWindow(pos){ if(!pos) return null; const anchor=(gRoot-4+12)%12; const start=anchor+BOX_OFFSETS[pos-1]; return [start, start+4]; }
 function diatonic(){
   const iv=SCALES[scIdx].iv; if(iv.length!==7) return [];
-  const flat=useFlatFor(gRootLbl); const res=[];
-  for(let d=0; d<7; d++){
-    const r=iv[d], th=iv[(d+2)%7], fi=iv[(d+4)%7];
-    const t3=(th-r+12)%12, t5=(fi-r+12)%12; let suf='', qiv=[0,4,7];
-    if(t3===4&&t5===7){suf='';qiv=[0,4,7];} else if(t3===3&&t5===7){suf='m';qiv=[0,3,7];}
-    else if(t3===3&&t5===6){suf='dim';qiv=[0,3,6];} else if(t3===4&&t5===8){suf='aug';qiv=[0,4,8];}
-    else {qiv=[0,t3,t5];suf='?';}
-    res.push({label:spellNote(gRootLbl,(gRoot+r)%12,d+1)+suf, rootPc:(gRoot+r)%12, iv:qiv, tag:'dia'+d});
-  }
-  return res;
+  // One diatonic source (1a): quality comes from the shared diatonicTriads()
+  // helper; the scales view spells each root by its diatonic degree.
+  return diatonicTriads(gRoot, iv).map(c=>({
+    label: spellNote(gRootLbl, c.rootPc, c.deg+1)+c.suf,
+    rootPc: c.rootPc, iv: c.iv, tag: 'dia'+c.deg
+  }));
 }
 function renderDiatonic(){
   const cont=document.getElementById('sc-diatonic'); diaList=diatonic();

@@ -38,7 +38,6 @@ function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
   chQual, scIdx, scPos, scOverlay,
   chVoicing,
   trQual, trSet, trInv,
-  cofSel, cofMinor,
   ntRoot, ntFilter,
   seq, seqLoopOn,
   bassOn, grooveOn
@@ -65,8 +64,9 @@ function loadState(){ try{
   if(Number.isInteger(s.trQual)&&TRIADS[s.trQual]) trQual=s.trQual;
   if(Number.isInteger(s.trSet)&&STRING_SETS[s.trSet]) trSet=s.trSet;
   if(Number.isInteger(s.trInv)&&s.trInv>=0&&s.trInv<=3) trInv=s.trInv;
-  if(Number.isInteger(s.cofSel)&&s.cofSel>=0&&s.cofSel<COF.length) cofSel=s.cofSel;
-  if(typeof s.cofMinor==='boolean') cofMinor=s.cofMinor;
+  // circle selection is no longer persisted — it is derived from the context
+  // (gRoot + scIdx) at render time (1a). Older saves with cofSel/cofMinor are
+  // simply ignored.
   if(s.ntFilter==='all'||s.ntFilter==='nat') ntFilter=s.ntFilter;
   if(s.ntRoot===''||NAT.includes(s.ntRoot)||SHARP.includes(s.ntRoot)||FLAT.includes(s.ntRoot)) ntRoot=s.ntRoot;
   if(typeof s.seqLoopOn==='boolean') seqLoopOn=s.seqLoopOn;

@@ -215,6 +215,66 @@ if (T) {
     ok('scale ' + (s.en || i) + ' has unique degrees', unique);
   });
 
+  /* ---- 1a: one diatonic source (dedup parity) ----
+     The single diatonicTriads() helper must reproduce BOTH pre-1a
+     implementations (diatonic() and buildDia()) before the duplicate is gone.
+     We inline the old quality logic here as the parity reference. */
+  (function diatonicDedup() {
+    function oldDiatonic(t3, t5) {                  // from scales' diatonic()
+      if (t3 === 4 && t5 === 7) return { suf: '', iv: [0, 4, 7] };
+      if (t3 === 3 && t5 === 7) return { suf: 'm', iv: [0, 3, 7] };
+      if (t3 === 3 && t5 === 6) return { suf: 'dim', iv: [0, 3, 6] };
+      if (t3 === 4 && t5 === 8) return { suf: 'aug', iv: [0, 4, 8] };
+      return { suf: '?', iv: [0, t3, t5] };
+    }
+    function oldBuildDiaSuf(t3, t5) {               // from circle's buildDia()
+      if (t3 === 3 && t5 === 7) return 'm';
+      if (t3 === 3 && t5 === 6) return 'dim';
+      if (t3 === 4 && t5 === 8) return 'aug';
+      return '';
+    }
+    let diaParity = true, buildParity = true;
+    const roots = [0, 5, 9];                        // quality is root-invariant; spot-check a few
+    T.SCALES.forEach(s => {
+      if (s.iv.length !== 7) return;
+      roots.forEach(root => {
+        const got = T.diatonicTriads(root, s.iv);
+        for (let d = 0; d < 7; d++) {
+          const r = s.iv[d], th = s.iv[(d + 2) % 7], fi = s.iv[(d + 4) % 7];
+          const t3 = ((th - r) % 12 + 12) % 12, t5 = ((fi - r) % 12 + 12) % 12;
+          const od = oldDiatonic(t3, t5);
+          if (got[d].suf !== od.suf || got[d].iv.join(',') !== od.iv.join(',')) diaParity = false;
+          if (got[d].rootPc !== (root + r) % 12) diaParity = false;
+          // buildDia agrees on every triad it actually produced (m/dim/aug/maj);
+          // its only divergence was the dead non-tertian fallback ('' vs '?').
+          if (od.suf !== '?' && got[d].suf !== oldBuildDiaSuf(t3, t5)) buildParity = false;
+        }
+      });
+    });
+    ok('1a: diatonicTriads reproduces old diatonic() quality + iv', diaParity);
+    ok('1a: diatonicTriads reproduces old buildDia() suffixes', buildParity);
+  })();
+
+  /* ---- 1a: one musical context (root + mode); circle is a projection ---- */
+  (function oneContext() {
+    T.setKey(7, 'G', 0);                            // G major (Ionian)
+    ok('1a: setKey sets the shared root', T.state().gRoot === 7 && T.state().gRootLbl === 'G');
+    ok('1a: setKey sets the mode (scIdx)', T.state().scIdx === 0);
+    ok('1a: Ionian → circle major ring', T.ctxCofMinor() === false && T.isMajorFamily(0) === true);
+    ok('1a: circle node tracks the major root', T.COF[T.ctxCofSel()].majPc === 7);
+
+    T.setKey(9, 'A', 5);                            // A minor (Aeolian)
+    ok('1a: Aeolian → circle minor ring', T.ctxCofMinor() === true && T.isMajorFamily(5) === false);
+    ok('1a: circle node tracks the relative-minor root', T.COF[T.ctxCofSel()].minPc === 9);
+
+    // context round-trips through localStorage; the derived circle state is not stored
+    const saved = JSON.parse(win.localStorage.getItem('guitarStudio.v1') || '{}');
+    ok('1a: saved state carries the context root', saved.gRoot === 9 && saved.gRootLbl === 'A');
+    ok('1a: saved state carries the mode (scIdx)', saved.scIdx === 5);
+    ok('1a: derived circle selection is not persisted',
+       saved.cofSel === undefined && saved.cofMinor === undefined);
+  })();
+
   /* ---- Phase A: equal-temperament tuning target ---- */
   const f = m => 440 * Math.pow(2, (m - 69) / 12);
   ok('tuning: A4 (midi 69) = 440 Hz', approx(f(69), 440, 1e-6));

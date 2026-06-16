@@ -2,7 +2,25 @@
 /* ---- shared root picker, display mode, sub-view toggle, global play ---- */
 function renderContextViews(){ renderChords(); renderTriads(); renderScales(); }
 function renderActiveContext(){ if(currentTab==='harmony'){ hView==='triads'?renderTriads():renderChords(); } else if(currentTab==='scales'){ renderScales(); } }
-buildRootBtns(document.getElementById('g-roots'), gRoot, (pc,r)=>{ gRoot=pc; gRootLbl=r; chVoicing=0; scOverlay=null; buildChQuals(); renderContextViews(); saveState(); });
+
+/* ---- one musical context (spine #1, 1a) ----
+   gRoot/gRootLbl (key center) and scIdx (mode = selected scale) are the single
+   source of truth shared by Harmony, Scales, Circle and Notes. setKey() is the
+   ONE place they change, so the views never drift: pick a key once and every
+   view follows. Pass `mode` to also move the scale (e.g. a circle click); omit
+   it to keep the current mode (e.g. the root picker). */
+function setKey(pc, lbl, mode){
+  gRoot=pc; gRootLbl=lbl;
+  if(Number.isInteger(mode) && SCALES[mode]) scIdx=mode;
+  chVoicing=0; scOverlay=null;
+  ntRoot=lbl;                                   // Notes reflects the shared root
+  activateRoot(document.getElementById('g-roots'), gRoot);
+  document.querySelectorAll('[data-root]').forEach(b=>b.classList.toggle('active', b.dataset.root===ntRoot));
+  buildChQuals(); buildScSelect(); buildScPos();
+  renderContextViews(); renderCircle(); renderNotes();
+  saveState();
+}
+buildRootBtns(document.getElementById('g-roots'), gRoot, (pc,r)=>{ setKey(pc,r); });
 
 function setGMode(m){ gMode=m;
   const on=document.getElementById(m==='names'?'g-names':'g-deg'), off=document.getElementById(m==='names'?'g-deg':'g-names');
@@ -32,7 +50,7 @@ function globalPlay(){
     else { const v=currentChordVoicing(); animArpMidi(document.getElementById('ch-board'), v.midis); }
   } else if(currentTab==='scales'){ const s=SCALES[scIdx]; animRun(document.getElementById('sc-board'), 48+gRoot, s.iv.concat([12])); }
   else if(currentTab==='circle'){
-    const c=COF[cofSel], pc=cofMinor?c.minPc:c.majPc, b=48+pc, iv=cofMinor?[0,3,7]:[0,4,7], bt=0.5;  // fixed cadence pace, independent of practice tempo
+    const cofMinor=ctxCofMinor(), pc=gRoot, b=48+pc, iv=cofMinor?[0,3,7]:[0,4,7], bt=0.5;  // fixed cadence pace, independent of practice tempo
     [0,5,7,12].forEach((off,i)=>{ const base=b+off; iv.forEach((x,j)=>pluck(base+x, i*bt + j*0.018, Math.max(0.9, bt*1.4))); });
   }
 }
@@ -94,7 +112,7 @@ document.getElementById('tr-diagram').addEventListener('click',e=>{
   if(dot && dot.dataset.midi!=null){ pluck(parseInt(dot.dataset.midi)); }
 });
 
-document.getElementById('sc-select').onchange=function(){ scIdx=parseInt(this.value); scOverlay=null; renderScales(); saveState(); };
+document.getElementById('sc-select').onchange=function(){ scIdx=parseInt(this.value); scOverlay=null; renderScales(); renderCircle(); saveState(); };
 document.getElementById('sc-diatonic').addEventListener('click',e=>{
   if(e.target.closest('[data-clear]')){ scOverlay=null; renderScales(); saveState(); return; }
   const b=e.target.closest('.dia'); if(!b) return; const c=diaList[+b.dataset.i];
@@ -103,22 +121,21 @@ document.getElementById('sc-diatonic').addEventListener('click',e=>{
 });
 wirePlay(document.getElementById('sc-board'));
 
+/* a circle node picks the key: set the context root + a canonical mode
+   (major → Ionian, minor → Aeolian). The wheel re-derives its highlight. */
+function selectCircleNode(g){
+  const i=+g.dataset.i, minor=(g.dataset.type==='min'), pc=minor?COF[i].minPc:COF[i].majPc;
+  setKey(pc, pcToRootLabel(pc), minor?5:0);
+}
 document.getElementById('cof-svg').addEventListener('click',e=>{
-  const g=e.target.closest('.cof-node'); if(!g) return;
-  cofSel=+g.dataset.i; cofMinor=(g.dataset.type==='min'); renderCircle(); saveState();
+  const g=e.target.closest('.cof-node'); if(g) selectCircleNode(g);
 });
 document.getElementById('cof-svg').addEventListener('keydown',e=>{
   if(e.key!=='Enter'&&e.key!==' ') return;
-  const g=e.target.closest('.cof-node'); if(!g) return;
-  cofSel=+g.dataset.i; cofMinor=(g.dataset.type==='min'); renderCircle(); saveState(); e.preventDefault();
+  const g=e.target.closest('.cof-node'); if(g){ selectCircleNode(g); e.preventDefault(); }
 });
-document.getElementById('cof-open').onclick=function(){
-  const c=COF[cofSel], pc=cofMinor?c.minPc:c.majPc;
-  gRoot=pc; gRootLbl=pcToRootLabel(pc); scIdx=cofMinor?5:0; scOverlay=null; scPos=0;
-  activateRoot(document.getElementById('g-roots'), pc);
-  buildScSelect(); buildScPos(); renderContextViews();
-  selectTab('scales');
-};
+// the circle already reflects the context; "open in scales" is now navigation.
+document.getElementById('cof-open').onclick=function(){ selectTab('scales'); };
 
 (function(){ const mk=(arr,cont)=>arr.forEach(n=>{ const b=document.createElement('button'); b.className='btn'; b.textContent=n; b.dataset.root=n; cont.appendChild(b); }); mk(NAT,document.getElementById('nt-natural')); mk(SHARP,document.getElementById('nt-sharp')); mk(FLAT,document.getElementById('nt-flat')); })();
 document.getElementById('nt-all').onclick=function(){ntFilter='all';this.classList.add('active');this.setAttribute('aria-pressed','true');const o=document.getElementById('nt-nat');o.classList.remove('active');o.setAttribute('aria-pressed','false');renderNotes();saveState();};
@@ -234,6 +251,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
   window.__GS_TEST__ = {
     APP_VERSION, I18N, QUALITIES, TRIADS, SCALES, COF, FRET_RANGES, SEQ_PRESETS,
     fifthInterval, spellNote, rootParts, simpleName,
+    diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey,
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
     schedAdvance, clocks, beat,
@@ -243,7 +261,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     setTriad:(q,set,inv)=>{ trQual=q; trSet=set; trInv=inv; },
     initAudio:()=>audio(),
     setCtxNow:(t)=>{ if(actx) actx.currentTime=t; },
-    state:()=>({ gRoot, gRootLbl, chQual, chVoicing, currentTab, hView,
+    state:()=>({ gRoot, gRootLbl, scIdx, chQual, chVoicing, currentTab, hView,
                  loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo })
   };
 }

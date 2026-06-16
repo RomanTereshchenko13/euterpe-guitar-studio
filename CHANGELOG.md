@@ -2,6 +2,11 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v1.15.0 — 2026-06-16
+
+- Pick your key once and the whole app follows: choosing a root — or a key on the circle of fifths — now switches the chords, scales, circle and notes views together, instead of each tab keeping its own separate key.
+- The circle of fifths is now tied to your current key: it always highlights the key you are in and its closest neighbours, and tapping any key on it sets that key everywhere.
+
 ## v1.14.0 — 2026-06-15
 
 - The drums now have a backbeat: a snare lands on beats 2 and 4, so turning on Drums sounds like a real groove instead of a ticking pulse.
