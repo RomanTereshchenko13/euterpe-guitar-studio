@@ -294,7 +294,14 @@ function applyAudioAvailability(){
 
 /* ---- init: restore saved state, apply tuning, render, restore tab ---- */
 const hadState = loadState();
-if(!hadState && typeof window!=='undefined' && window.innerWidth<=600) fretRangeIdx=1;  // phones default to a 5-fret window
+if(!hadState){
+  // First visit (no saved state): match the browser's preferred language —
+  // Ukrainian if it asks for it, English otherwise — instead of always landing
+  // on the hard-coded 'uk' default. The EN/UK toggle + localStorage take over
+  // from the next visit on, so this only chooses the very first impression.
+  try{ const nav=(navigator.languages&&navigator.languages[0])||navigator.language||''; lang = /^uk\b/i.test(nav) ? 'uk' : 'en'; }catch(_){ /* keep the 'uk' default */ }
+  if(typeof window!=='undefined' && window.innerWidth<=600) fretRangeIdx=1;  // phones default to a 5-fret window
+}
 applyTuning();
 applyLang();
 selectTab(currentTab);

@@ -1,6 +1,5 @@
 {
   "name": "guitar-studio-tests",
-  "version": "1.11.0",
   "private": true,
   "description": "Headless smoke + correctness suite for Guitar Studio. The app itself ships as a single zero-dependency HTML file; jsdom is a DEV-only dependency used by this gate, nothing shipped depends on it.",
   "scripts": {
