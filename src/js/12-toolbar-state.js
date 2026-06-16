@@ -20,10 +20,20 @@ function applyAsideState(){
   if(aside) aside.style.display = ASIDE_TABS.includes(currentTab) ? '' : 'none';
 }
 function renderAllBoards(){ renderChords(); renderTriads(); renderScales(); renderNotes(); }
+/* the mobile tab strip scrolls horizontally when its labels overflow (esp. in
+   English); fade the right edge while more tabs sit off-screen — and drop the
+   fade once scrolled to the end — so the cut-off tab reads as "more →", not
+   clipped. Mirrors the fretboard's .scrollable hint. */
+function syncTabsScroll(){
+  const el=document.getElementById('tabs'); if(!el) return;
+  const max=el.scrollWidth - el.clientWidth;
+  el.classList.toggle('scrollable', max>1 && el.scrollLeft < max-1);
+}
 /* re-fit responsive fret cells when the viewport width changes (rotation/resize) */
 if(typeof window!=='undefined'){
   let _rzT=null, _rzW=window.innerWidth;
   window.addEventListener('resize', ()=>{
+    syncTabsScroll();
     if(window.innerWidth===_rzW) return;          // ignore height-only changes (mobile URL bar)
     _rzW=window.innerWidth;
     clearTimeout(_rzT); _rzT=setTimeout(()=>{ renderAllBoards(); renderCircle&&renderCircle(); }, 150);

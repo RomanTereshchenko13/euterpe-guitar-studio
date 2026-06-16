@@ -120,5 +120,6 @@ function applyLang(){
   activateRoot(document.getElementById('g-roots'), gRoot);
   document.querySelectorAll('[data-root]').forEach(b=>b.classList.toggle('active', !!ntRoot && b.dataset.root===ntRoot));
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
+  if(typeof syncTabsScroll==='function') syncTabsScroll();
 }
 

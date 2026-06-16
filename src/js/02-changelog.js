@@ -1,6 +1,17 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.19.0', date:'2026-06-16',
+    en:['Clarity pass: the same tools, less clutter — and the fretboard front and centre.',
+        'The neck now sits directly under the controls. The chord-shape cards and the progression sequencer moved below the board, so on a phone you reach the fretboard right after picking a chord instead of scrolling past everything first.',
+        'The chord picker is grouped into Basic / Sevenths / Extended tiers, so the 21 chord types read as organised sections instead of one long wall of buttons.',
+        'The timing bar is tidier: the metronome, bass and drums are collected into one labelled "Backing" group, so the bar reads as a few clusters rather than a row of loose buttons.',
+        'Smaller polish: on a narrow screen the tab strip now fades at its right edge to show more tabs scroll off-screen, and the root / note-name separator no longer strands itself on its own line when the controls wrap.'],
+    uk:['Прохід на ясність: ті самі інструменти, менше безладу — і гриф у центрі уваги.',
+        'Гриф тепер одразу під керуванням. Картки форм акорду та секвенсор прогресії переїхали під гриф, тож на телефоні ти потрапляєш на гриф одразу після вибору акорду, а не прогортуєш усе перед тим.',
+        'Вибір акорду згруповано в рівні «Базові / Септакорди / Розширені», тож 21 тип акорду читається як впорядковані секції, а не суцільна стіна кнопок.',
+        'Панель темпу охайніша: метроном, бас і ударні зібрано в одну підписану групу «Супровід», тож панель читається як кілька кластерів, а не ряд розрізнених кнопок.',
+        'Дрібні штрихи: на вузькому екрані смужка вкладок тепер згасає праворуч, показуючи, що частина вкладок ховається за краєм, а роздільник між тонікою й назвами нот більше не лишається сам на окремому рядку, коли керування переноситься.'] },
   { v:'1.18.0', date:'2026-06-16',
     en:['Feel pass (Phase 1d): subtle, motion-respecting animation that makes sound and rhythm visible.',
         'Beat pulse — while a loop or the backing band plays, the transport indicator now pumps on every beat (a stronger pulse on the downbeat), locked to the same precise clock as the sound, so you can see the tempo.',

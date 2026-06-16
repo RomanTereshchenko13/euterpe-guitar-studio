@@ -2,6 +2,14 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v1.19.0 — 2026-06-16
+
+- Clarity pass: the same tools, less clutter — and the fretboard front and centre.
+- The neck now sits directly under the controls. The chord-shape cards and the progression sequencer moved below the board, so on a phone you reach the fretboard right after picking a chord instead of scrolling past everything first.
+- The chord picker is grouped into Basic / Sevenths / Extended tiers, so the 21 chord types read as organised sections instead of one long wall of buttons.
+- The timing bar is tidier: the metronome, bass and drums are collected into one labelled "Backing" group, so the bar reads as a few clusters rather than a row of loose buttons.
+- Smaller polish: on a narrow screen the tab strip now fades at its right edge to show more tabs scroll off-screen, and the root / note-name separator no longer strands itself on its own line when the controls wrap.
+
 ## v1.18.0 — 2026-06-16
 
 - Feel pass (Phase 1d): subtle, motion-respecting animation that makes sound and rhythm visible.

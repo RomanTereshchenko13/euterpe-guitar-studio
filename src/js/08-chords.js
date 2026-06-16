@@ -7,29 +7,35 @@ const DEG_LABEL={0:'1',3:'♭3',4:'3',6:'♭5',7:'5',8:'♯5',10:'♭7',11:'7'};
      deg — diatonic letter degree (1-7) that drives correct spelling
            (9→2nd letter, 11→4th, 13→6th, etc.)
    Colour is derived from the label, not the raw interval, via labClass(). */
+/* `grp` chunks the vocabulary into the picker's three labelled tiers (basic
+   triads · sevenths & sixths · extended) so the row reads as organised sections
+   instead of one undifferentiated wall of buttons. The ARRAY ORDER is unchanged
+   — chQual indices are persisted and referenced by presets/tests, so grouping is
+   done at render time by reading `grp`, never by reordering this list. */
 const QUALITIES=[
-  {short:'',     iv:[0,4,7],          lab:['1','3','5'],                deg:[1,3,5],         en:'Major',uk:'Мажор'},
-  {short:'m',    iv:[0,3,7],          lab:['1','♭3','5'],               deg:[1,3,5],         en:'Minor',uk:'Мінор'},
-  {short:'sus2', iv:[0,2,7],          lab:['1','2','5'],                deg:[1,2,5],         en:'Sus2',uk:'Sus2'},
-  {short:'sus4', iv:[0,5,7],          lab:['1','4','5'],                deg:[1,4,5],         en:'Sus4',uk:'Sus4'},
-  {short:'6',    iv:[0,4,7,9],        lab:['1','3','5','6'],            deg:[1,3,5,6],       en:'Sixth',uk:'Секст-акорд'},
-  {short:'m6',   iv:[0,3,7,9],        lab:['1','♭3','5','6'],           deg:[1,3,5,6],       en:'Minor 6',uk:'Мінорний 6'},
-  {short:'7',    iv:[0,4,7,10],       lab:['1','3','5','♭7'],           deg:[1,3,5,7],       en:'Dom 7',uk:'Домінант 7'},
-  {short:'maj7', iv:[0,4,7,11],       lab:['1','3','5','7'],            deg:[1,3,5,7],       en:'Maj 7',uk:'Мажор 7'},
-  {short:'m7',   iv:[0,3,7,10],       lab:['1','♭3','5','♭7'],          deg:[1,3,5,7],       en:'Min 7',uk:'Мінор 7'},
-  {short:'m7♭5', iv:[0,3,6,10],       lab:['1','♭3','♭5','♭7'],         deg:[1,3,5,7],       en:'Half-dim (m7♭5)',uk:'Напівзменш. (m7♭5)'},
-  {short:'dim',  iv:[0,3,6],          lab:['1','♭3','♭5'],              deg:[1,3,5],         en:'Dim',uk:'Зменшений'},
-  {short:'dim7', iv:[0,3,6,9],        lab:['1','♭3','♭5','♭♭7'],        deg:[1,3,5,7],       en:'Dim 7',uk:'Зменшений 7'},
-  {short:'aug',  iv:[0,4,8],          lab:['1','3','♯5'],               deg:[1,3,5],         en:'Aug',uk:'Збільшений'},
-  {short:'add9', iv:[0,4,7,14],       lab:['1','3','5','9'],            deg:[1,3,5,2],       en:'Add 9',uk:'Add 9'},
-  {short:'9',    iv:[0,4,7,10,14],    lab:['1','3','5','♭7','9'],       deg:[1,3,5,7,2],     en:'Dom 9',uk:'Домінант 9'},
-  {short:'maj9', iv:[0,4,7,11,14],    lab:['1','3','5','7','9'],        deg:[1,3,5,7,2],     en:'Maj 9',uk:'Мажор 9'},
-  {short:'m9',   iv:[0,3,7,10,14],    lab:['1','♭3','5','♭7','9'],      deg:[1,3,5,7,2],     en:'Min 9',uk:'Мінор 9'},
-  {short:'11',   iv:[0,7,10,14,17],   lab:['1','5','♭7','9','11'],      deg:[1,5,7,2,4],     en:'Dom 11',uk:'Домінант 11'},
-  {short:'13',   iv:[0,4,7,10,14,21], lab:['1','3','5','♭7','9','13'],  deg:[1,3,5,7,2,6],   en:'Dom 13',uk:'Домінант 13'},
-  {short:'7♭9',  iv:[0,4,7,10,13],    lab:['1','3','5','♭7','♭9'],      deg:[1,3,5,7,2],     en:'7♭9',uk:'7♭9'},
-  {short:'7♯9',  iv:[0,4,7,10,15],    lab:['1','3','5','♭7','♯9'],      deg:[1,3,5,7,2],     en:'7♯9 (Hendrix)',uk:'7♯9 (Гендрікс)'},
+  {short:'',     grp:'basic',   iv:[0,4,7],          lab:['1','3','5'],                deg:[1,3,5],         en:'Major',uk:'Мажор'},
+  {short:'m',    grp:'basic',   iv:[0,3,7],          lab:['1','♭3','5'],               deg:[1,3,5],         en:'Minor',uk:'Мінор'},
+  {short:'sus2', grp:'basic',   iv:[0,2,7],          lab:['1','2','5'],                deg:[1,2,5],         en:'Sus2',uk:'Sus2'},
+  {short:'sus4', grp:'basic',   iv:[0,5,7],          lab:['1','4','5'],                deg:[1,4,5],         en:'Sus4',uk:'Sus4'},
+  {short:'6',    grp:'seventh', iv:[0,4,7,9],        lab:['1','3','5','6'],            deg:[1,3,5,6],       en:'Sixth',uk:'Секст-акорд'},
+  {short:'m6',   grp:'seventh', iv:[0,3,7,9],        lab:['1','♭3','5','6'],           deg:[1,3,5,6],       en:'Minor 6',uk:'Мінорний 6'},
+  {short:'7',    grp:'seventh', iv:[0,4,7,10],       lab:['1','3','5','♭7'],           deg:[1,3,5,7],       en:'Dom 7',uk:'Домінант 7'},
+  {short:'maj7', grp:'seventh', iv:[0,4,7,11],       lab:['1','3','5','7'],            deg:[1,3,5,7],       en:'Maj 7',uk:'Мажор 7'},
+  {short:'m7',   grp:'seventh', iv:[0,3,7,10],       lab:['1','♭3','5','♭7'],          deg:[1,3,5,7],       en:'Min 7',uk:'Мінор 7'},
+  {short:'m7♭5', grp:'seventh', iv:[0,3,6,10],       lab:['1','♭3','♭5','♭7'],         deg:[1,3,5,7],       en:'Half-dim (m7♭5)',uk:'Напівзменш. (m7♭5)'},
+  {short:'dim',  grp:'basic',   iv:[0,3,6],          lab:['1','♭3','♭5'],              deg:[1,3,5],         en:'Dim',uk:'Зменшений'},
+  {short:'dim7', grp:'seventh', iv:[0,3,6,9],        lab:['1','♭3','♭5','♭♭7'],        deg:[1,3,5,7],       en:'Dim 7',uk:'Зменшений 7'},
+  {short:'aug',  grp:'basic',   iv:[0,4,8],          lab:['1','3','♯5'],               deg:[1,3,5],         en:'Aug',uk:'Збільшений'},
+  {short:'add9', grp:'ext',     iv:[0,4,7,14],       lab:['1','3','5','9'],            deg:[1,3,5,2],       en:'Add 9',uk:'Add 9'},
+  {short:'9',    grp:'ext',     iv:[0,4,7,10,14],    lab:['1','3','5','♭7','9'],       deg:[1,3,5,7,2],     en:'Dom 9',uk:'Домінант 9'},
+  {short:'maj9', grp:'ext',     iv:[0,4,7,11,14],    lab:['1','3','5','7','9'],        deg:[1,3,5,7,2],     en:'Maj 9',uk:'Мажор 9'},
+  {short:'m9',   grp:'ext',     iv:[0,3,7,10,14],    lab:['1','♭3','5','♭7','9'],      deg:[1,3,5,7,2],     en:'Min 9',uk:'Мінор 9'},
+  {short:'11',   grp:'ext',     iv:[0,7,10,14,17],   lab:['1','5','♭7','9','11'],      deg:[1,5,7,2,4],     en:'Dom 11',uk:'Домінант 11'},
+  {short:'13',   grp:'ext',     iv:[0,4,7,10,14,21], lab:['1','3','5','♭7','9','13'],  deg:[1,3,5,7,2,6],   en:'Dom 13',uk:'Домінант 13'},
+  {short:'7♭9',  grp:'ext',     iv:[0,4,7,10,13],    lab:['1','3','5','♭7','♭9'],      deg:[1,3,5,7,2],     en:'7♭9',uk:'7♭9'},
+  {short:'7♯9',  grp:'ext',     iv:[0,4,7,10,15],    lab:['1','3','5','♭7','♯9'],      deg:[1,3,5,7,2],     en:'7♯9 (Hendrix)',uk:'7♯9 (Гендрікс)'},
 ];
+const QUAL_GROUPS=['basic','seventh','ext'];
 function qName(q){ return lang==='en'?q.en:q.uk; }
 /* colour by degree label (label-driven, robust across the whole vocabulary) */
 function labClass(lab){
@@ -146,9 +152,18 @@ function currentHarmonyChord(){
 }
 function buildChQuals(){
   const c=document.getElementById('ch-quals'); c.innerHTML='';
-  QUALITIES.forEach((q,i)=>{ const b=document.createElement('button'); b.className='btn'+(i===chQual?' active':'');
-    b.textContent=q.short||'maj'; b.title=qName(q); b.setAttribute('aria-label', qName(q)); b.setAttribute('aria-pressed', i===chQual);
-    b.onclick=()=>{ chQual=i; chVoicing=0; buildChQuals(); renderChords(); saveState(); }; c.appendChild(b); });
+  QUAL_GROUPS.forEach(g=>{
+    const seg=document.createElement('div'); seg.className='qual-grp';
+    const lab=document.createElement('span'); lab.className='qual-grp-lab'; lab.textContent=t('qg_'+g); seg.appendChild(lab);
+    const wrap=document.createElement('div'); wrap.className='group';
+    QUALITIES.forEach((q,i)=>{ if(q.grp!==g) return;
+      const b=document.createElement('button'); b.className='btn'+(i===chQual?' active':'');
+      b.textContent=q.short||'maj'; b.title=qName(q); b.setAttribute('aria-label', qName(q)); b.setAttribute('aria-pressed', i===chQual);
+      b.onclick=()=>{ chQual=i; chVoicing=0; buildChQuals(); renderChords(); saveState(); };
+      wrap.appendChild(b);
+    });
+    seg.appendChild(wrap); c.appendChild(seg);
+  });
 }
 function renderChords(){
   const q=QUALITIES[chQual];

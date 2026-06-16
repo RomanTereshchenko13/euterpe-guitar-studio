@@ -36,9 +36,12 @@
         <input type="range" id="tb-tempo" min="40" max="200" step="2" value="90" aria-label="Tempo">
         <span class="bpm-val" id="tb-bpm">90 BPM</span>
       </div>
-      <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
-      <button class="btn band" id="tb-bass" aria-pressed="false"></button>
-      <button class="btn band" id="tb-drums" aria-pressed="false"></button>
+      <div class="tb-group tb-backing">
+        <span class="tb-label" data-i18n="tb_backing">Супровід</span>
+        <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
+        <button class="btn band" id="tb-bass" aria-pressed="false"></button>
+        <button class="btn band" id="tb-drums" aria-pressed="false"></button>
+      </div>
       <button class="btn play" id="g-play"></button>
       <button class="btn play loop" id="g-loop"></button>
       <div class="tb-transport" id="tb-transport" hidden>
@@ -68,9 +71,10 @@
 
   <div class="context-bar" id="context-bar">
     <div class="ctx-group"><span class="ctrl-label" data-i18n="lbl_root">Тоніка</span><div class="group" id="g-roots"></div></div>
-    <div class="divider"></div>
-    <button class="btn active" id="g-names" data-i18n="b_notes">Ноти</button>
-    <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
+    <div class="ctx-group ctx-display">
+      <button class="btn active" id="g-names" data-i18n="b_notes">Ноти</button>
+      <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
+    </div>
   </div>
 
   <section class="panel active" id="panel-harmony">
@@ -88,26 +92,10 @@
     </div>
 
     <div id="sub-chords">
-      <div class="row">
+      <div class="row row-quals">
         <span class="ctrl-label" data-i18n="lbl_chord">Акорд</span><div class="group" id="ch-quals"></div>
       </div>
       <div class="info" id="ch-info"></div>
-      <div class="cd-head"><span class="cd-h" data-i18n="cd_voicings">Форми акорду</span><span class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</span></div>
-      <div class="chorddia" id="ch-diagram"></div>
-      <div class="seq" id="ch-seq">
-        <div class="seq-head">
-          <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
-          <button class="btn" id="seq-add" data-i18n="seq_add">Додати акорд</button>
-          <div class="divider"></div>
-          <span class="ctrl-label" data-i18n="seq_presets">Пресети</span>
-          <div class="seq-presets" id="seq-presets"></div>
-          <div class="divider"></div>
-          <button class="btn play" id="seq-play"></button>
-          <button class="btn" id="seq-loopbtn"></button>
-          <button class="btn" id="seq-clear" data-i18n="seq_clear">Очистити</button>
-        </div>
-        <div class="seq-strip" id="seq-strip"></div>
-      </div>
     </div>
 
     <div id="sub-triads" hidden>
@@ -200,6 +188,29 @@
     <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
     <div class="legend" id="legend"></div>
     <div class="hint" id="hint"></div>
+  </div>
+
+  <!-- Chord-tones reference (1e): voicing cards + the progression sequencer live
+       BELOW the shared board, so the board (the centrepiece) sits directly under
+       the controls instead of being pushed offscreen by these on mobile. Shown
+       only in Harmony → Chord-tones; toggled by applyHarmonyExtras(). -->
+  <div id="harmony-extras" hidden>
+    <div class="cd-head"><span class="cd-h" data-i18n="cd_voicings">Форми акорду</span><span class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</span></div>
+    <div class="chorddia" id="ch-diagram"></div>
+    <div class="seq" id="ch-seq">
+      <div class="seq-head">
+        <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
+        <button class="btn" id="seq-add" data-i18n="seq_add">Додати акорд</button>
+        <div class="divider"></div>
+        <span class="ctrl-label" data-i18n="seq_presets">Пресети</span>
+        <div class="seq-presets" id="seq-presets"></div>
+        <div class="divider"></div>
+        <button class="btn play" id="seq-play"></button>
+        <button class="btn" id="seq-loopbtn"></button>
+        <button class="btn" id="seq-clear" data-i18n="seq_clear">Очистити</button>
+      </div>
+      <div class="seq-strip" id="seq-strip"></div>
+    </div>
   </div>
 
 </div>

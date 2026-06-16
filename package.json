@@ -1,6 +1,6 @@
 {
   "name": "guitar-studio",
-  "version": "1.18.0",
+  "version": "1.19.0",
   "private": true,
   "description": "Guitar theory & practice app. Authored as editable sources under src/ and assembled by build.js into a single zero-runtime-dependency index.html (the deployable artifact).",
   "scripts": {

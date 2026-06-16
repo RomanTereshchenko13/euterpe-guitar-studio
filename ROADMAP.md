@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-06-16 · shipping: v1.18.0_
+_Last updated: 2026-06-16 · shipping: v1.19.0_
 
 ---
 
@@ -202,6 +202,22 @@ animation should make *sound and rhythm visible*:
 
 Broader feel — onboarding, empty/error states, drill responsiveness — stays Phase 9's; 1d is
 just the reference-level polish that belongs with the views being built here.
+
+**1e — Clarity pass (declutter, no new surface). ✅ Shipped v1.19.0.** A UX-audit follow-up that
+reduced first-load density without removing any tool — the Phase-1 surface was complete but reading
+as overloaded, especially on a phone:
+- **Board front-and-centre** ✅ — the chord-shape cards + the progression sequencer moved out of
+  `#sub-chords` into `#harmony-extras` **below** the shared board (toggled by `applyHarmonyExtras()`
+  for Harmony→chord-tones only), so the neck sits directly under the controls instead of being
+  pushed ~2 screens down on mobile.
+- **Chord picker chunked** ✅ — the 21 qualities render in three labelled tiers (basic / sevenths /
+  extended) via a per-quality `grp` tag; the array order is untouched so persisted `chQual` indices,
+  presets and the test harness are unaffected.
+- **Timing bar declustered** ✅ — metronome / bass / drums collected into one labelled "Backing"
+  `.tb-group`, so the always-visible bar reads as a few chunks rather than 8 loose controls.
+- **Alignment nits** ✅ — the mobile tab strip gains a position-aware right-edge fade (`syncTabsScroll`)
+  so a clipped tab reads as scrollable; the root↔display separator now hugs the display group
+  (`.ctx-display` border-left) instead of orphaning a floating divider when the controls wrap.
 
 **Validation:** the single diatonic helper reproduces the old scales + circle output (assert
 parity before deleting the duplicate); context round-trips through localStorage; the chord

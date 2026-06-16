@@ -226,10 +226,25 @@
   .context-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 18px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
   .context-bar[hidden] { display: none; }
   .context-bar .ctx-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  /* the display toggle carries its own left separator instead of a free-standing
+     divider — so when the roots wrap it onto a new line the rule hugs the group
+     (reads intentional) rather than orphaning a floating bar */
+  .context-bar .ctx-display { padding-left: 12px; border-left: 1px solid var(--border-strong); }
   /* one shared fretboard (1b): a single board region below the active panel's
      controls, shown for Harmony + Scales, hidden on the Circle tab. */
   .board-region { margin-top: 4px; }
   .board-region[hidden] { display: none; }
+  /* chord-tones reference (voicing cards + sequencer) sits below the board */
+  #harmony-extras { margin-top: 26px; }
+  #harmony-extras[hidden] { display: none; }
+
+  /* chord-quality picker, chunked into labelled tiers (basic / sevenths / extended)
+     so 21 qualities read as organised sections rather than one wall of buttons */
+  .row-quals { align-items: flex-start; }
+  .row-quals .ctrl-label { padding-top: 4px; }
+  #ch-quals { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-start; }
+  .qual-grp { display: flex; flex-direction: column; gap: 5px; }
+  .qual-grp-lab { font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
 
   /* ---- chord diagrams ---- */
   .chorddia { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 18px; align-items: flex-start; }
@@ -281,6 +296,9 @@
     .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -14px; margin-right: -14px; padding: 0 14px; }
     .tabs::-webkit-scrollbar { display: none; }
     .tab { white-space: nowrap; flex-shrink: 0; }
+    /* fade the right edge while more tabs sit off-screen (toggled in JS) so the
+       clipped tab reads as scrollable; the fade clears at the end of the strip */
+    .tabs.scrollable { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent); }
   }
   footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-faint); }
 

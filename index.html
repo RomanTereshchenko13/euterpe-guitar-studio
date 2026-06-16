@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Guitar Studio — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 1.18.0  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 1.19.0  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="version" content="1.18.0">
+<meta name="version" content="1.19.0">
 <title>Гітарна студія — гами, моди, акорди</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -240,10 +240,25 @@
   .context-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 18px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
   .context-bar[hidden] { display: none; }
   .context-bar .ctx-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  /* the display toggle carries its own left separator instead of a free-standing
+     divider — so when the roots wrap it onto a new line the rule hugs the group
+     (reads intentional) rather than orphaning a floating bar */
+  .context-bar .ctx-display { padding-left: 12px; border-left: 1px solid var(--border-strong); }
   /* one shared fretboard (1b): a single board region below the active panel's
      controls, shown for Harmony + Scales, hidden on the Circle tab. */
   .board-region { margin-top: 4px; }
   .board-region[hidden] { display: none; }
+  /* chord-tones reference (voicing cards + sequencer) sits below the board */
+  #harmony-extras { margin-top: 26px; }
+  #harmony-extras[hidden] { display: none; }
+
+  /* chord-quality picker, chunked into labelled tiers (basic / sevenths / extended)
+     so 21 qualities read as organised sections rather than one wall of buttons */
+  .row-quals { align-items: flex-start; }
+  .row-quals .ctrl-label { padding-top: 4px; }
+  #ch-quals { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-start; }
+  .qual-grp { display: flex; flex-direction: column; gap: 5px; }
+  .qual-grp-lab { font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
 
   /* ---- chord diagrams ---- */
   .chorddia { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 18px; align-items: flex-start; }
@@ -295,6 +310,9 @@
     .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -14px; margin-right: -14px; padding: 0 14px; }
     .tabs::-webkit-scrollbar { display: none; }
     .tab { white-space: nowrap; flex-shrink: 0; }
+    /* fade the right edge while more tabs sit off-screen (toggled in JS) so the
+       clipped tab reads as scrollable; the fade clears at the end of the strip */
+    .tabs.scrollable { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent); }
   }
   footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-faint); }
 
@@ -341,9 +359,12 @@
         <input type="range" id="tb-tempo" min="40" max="200" step="2" value="90" aria-label="Tempo">
         <span class="bpm-val" id="tb-bpm">90 BPM</span>
       </div>
-      <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
-      <button class="btn band" id="tb-bass" aria-pressed="false"></button>
-      <button class="btn band" id="tb-drums" aria-pressed="false"></button>
+      <div class="tb-group tb-backing">
+        <span class="tb-label" data-i18n="tb_backing">Супровід</span>
+        <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
+        <button class="btn band" id="tb-bass" aria-pressed="false"></button>
+        <button class="btn band" id="tb-drums" aria-pressed="false"></button>
+      </div>
       <button class="btn play" id="g-play"></button>
       <button class="btn play loop" id="g-loop"></button>
       <div class="tb-transport" id="tb-transport" hidden>
@@ -373,9 +394,10 @@
 
   <div class="context-bar" id="context-bar">
     <div class="ctx-group"><span class="ctrl-label" data-i18n="lbl_root">Тоніка</span><div class="group" id="g-roots"></div></div>
-    <div class="divider"></div>
-    <button class="btn active" id="g-names" data-i18n="b_notes">Ноти</button>
-    <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
+    <div class="ctx-group ctx-display">
+      <button class="btn active" id="g-names" data-i18n="b_notes">Ноти</button>
+      <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
+    </div>
   </div>
 
   <section class="panel active" id="panel-harmony">
@@ -393,26 +415,10 @@
     </div>
 
     <div id="sub-chords">
-      <div class="row">
+      <div class="row row-quals">
         <span class="ctrl-label" data-i18n="lbl_chord">Акорд</span><div class="group" id="ch-quals"></div>
       </div>
       <div class="info" id="ch-info"></div>
-      <div class="cd-head"><span class="cd-h" data-i18n="cd_voicings">Форми акорду</span><span class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</span></div>
-      <div class="chorddia" id="ch-diagram"></div>
-      <div class="seq" id="ch-seq">
-        <div class="seq-head">
-          <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
-          <button class="btn" id="seq-add" data-i18n="seq_add">Додати акорд</button>
-          <div class="divider"></div>
-          <span class="ctrl-label" data-i18n="seq_presets">Пресети</span>
-          <div class="seq-presets" id="seq-presets"></div>
-          <div class="divider"></div>
-          <button class="btn play" id="seq-play"></button>
-          <button class="btn" id="seq-loopbtn"></button>
-          <button class="btn" id="seq-clear" data-i18n="seq_clear">Очистити</button>
-        </div>
-        <div class="seq-strip" id="seq-strip"></div>
-      </div>
     </div>
 
     <div id="sub-triads" hidden>
@@ -507,6 +513,29 @@
     <div class="hint" id="hint"></div>
   </div>
 
+  <!-- Chord-tones reference (1e): voicing cards + the progression sequencer live
+       BELOW the shared board, so the board (the centrepiece) sits directly under
+       the controls instead of being pushed offscreen by these on mobile. Shown
+       only in Harmony → Chord-tones; toggled by applyHarmonyExtras(). -->
+  <div id="harmony-extras" hidden>
+    <div class="cd-head"><span class="cd-h" data-i18n="cd_voicings">Форми акорду</span><span class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</span></div>
+    <div class="chorddia" id="ch-diagram"></div>
+    <div class="seq" id="ch-seq">
+      <div class="seq-head">
+        <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
+        <button class="btn" id="seq-add" data-i18n="seq_add">Додати акорд</button>
+        <div class="divider"></div>
+        <span class="ctrl-label" data-i18n="seq_presets">Пресети</span>
+        <div class="seq-presets" id="seq-presets"></div>
+        <div class="divider"></div>
+        <button class="btn play" id="seq-play"></button>
+        <button class="btn" id="seq-loopbtn"></button>
+        <button class="btn" id="seq-clear" data-i18n="seq_clear">Очистити</button>
+      </div>
+      <div class="seq-strip" id="seq-strip"></div>
+    </div>
+  </div>
+
 </div>
 
 <aside class="aside">
@@ -535,10 +564,21 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '1.18.0';
+const APP_VERSION = '1.19.0';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.19.0', date:'2026-06-16',
+    en:['Clarity pass: the same tools, less clutter — and the fretboard front and centre.',
+        'The neck now sits directly under the controls. The chord-shape cards and the progression sequencer moved below the board, so on a phone you reach the fretboard right after picking a chord instead of scrolling past everything first.',
+        'The chord picker is grouped into Basic / Sevenths / Extended tiers, so the 21 chord types read as organised sections instead of one long wall of buttons.',
+        'The timing bar is tidier: the metronome, bass and drums are collected into one labelled "Backing" group, so the bar reads as a few clusters rather than a row of loose buttons.',
+        'Smaller polish: on a narrow screen the tab strip now fades at its right edge to show more tabs scroll off-screen, and the root / note-name separator no longer strands itself on its own line when the controls wrap.'],
+    uk:['Прохід на ясність: ті самі інструменти, менше безладу — і гриф у центрі уваги.',
+        'Гриф тепер одразу під керуванням. Картки форм акорду та секвенсор прогресії переїхали під гриф, тож на телефоні ти потрапляєш на гриф одразу після вибору акорду, а не прогортуєш усе перед тим.',
+        'Вибір акорду згруповано в рівні «Базові / Септакорди / Розширені», тож 21 тип акорду читається як впорядковані секції, а не суцільна стіна кнопок.',
+        'Панель темпу охайніша: метроном, бас і ударні зібрано в одну підписану групу «Супровід», тож панель читається як кілька кластерів, а не ряд розрізнених кнопок.',
+        'Дрібні штрихи: на вузькому екрані смужка вкладок тепер згасає праворуч, показуючи, що частина вкладок ховається за краєм, а роздільник між тонікою й назвами нот більше не лишається сам на окремому рядку, коли керування переноситься.'] },
   { v:'1.18.0', date:'2026-06-16',
     en:['Feel pass (Phase 1d): subtle, motion-respecting animation that makes sound and rhythm visible.',
         'Beat pulse — while a loop or the backing band plays, the transport indicator now pumps on every beat (a stronger pulse on the downbeat), locked to the same precise clock as the sound, so you can see the tempo.',
@@ -742,7 +782,8 @@ const I18N = {
     tb_settings:'Налаштування',
     tb_tuning:'Стрій', tb_lefty:'Ліворукий', tb_frets:'Лади', tb_tempo:'Темп',
     tb_metro_on:'Метроном', tb_metro_off:'Метроном',
-    tb_bass:'Бас', tb_drums:'Ударні',
+    tb_bass:'Бас', tb_drums:'Ударні', tb_backing:'Супровід',
+    qg_basic:'Базові', qg_seventh:'Септакорди', qg_ext:'Розширені',
     tb_now_loop:'Луп', tb_now_seq:'Прогресія', tb_stop:'Стоп',
     cl_title:'Що нового', cl_current:'зараз',
     frets_all:'Усі', cd_open:'відкритий акорд',
@@ -803,7 +844,8 @@ const I18N = {
     tb_settings:'Settings',
     tb_tuning:'Tuning', tb_lefty:'Left-handed', tb_frets:'Frets', tb_tempo:'Tempo',
     tb_metro_on:'Metronome', tb_metro_off:'Metronome',
-    tb_bass:'Bass', tb_drums:'Drums',
+    tb_bass:'Bass', tb_drums:'Drums', tb_backing:'Backing',
+    qg_basic:'Basic', qg_seventh:'Sevenths', qg_ext:'Extended',
     tb_now_loop:'Loop', tb_now_seq:'Progression', tb_stop:'Stop',
     cl_title:'What\'s new', cl_current:'current',
     frets_all:'All', cd_open:'open chord',
@@ -1586,29 +1628,35 @@ const DEG_LABEL={0:'1',3:'♭3',4:'3',6:'♭5',7:'5',8:'♯5',10:'♭7',11:'7'};
      deg — diatonic letter degree (1-7) that drives correct spelling
            (9→2nd letter, 11→4th, 13→6th, etc.)
    Colour is derived from the label, not the raw interval, via labClass(). */
+/* `grp` chunks the vocabulary into the picker's three labelled tiers (basic
+   triads · sevenths & sixths · extended) so the row reads as organised sections
+   instead of one undifferentiated wall of buttons. The ARRAY ORDER is unchanged
+   — chQual indices are persisted and referenced by presets/tests, so grouping is
+   done at render time by reading `grp`, never by reordering this list. */
 const QUALITIES=[
-  {short:'',     iv:[0,4,7],          lab:['1','3','5'],                deg:[1,3,5],         en:'Major',uk:'Мажор'},
-  {short:'m',    iv:[0,3,7],          lab:['1','♭3','5'],               deg:[1,3,5],         en:'Minor',uk:'Мінор'},
-  {short:'sus2', iv:[0,2,7],          lab:['1','2','5'],                deg:[1,2,5],         en:'Sus2',uk:'Sus2'},
-  {short:'sus4', iv:[0,5,7],          lab:['1','4','5'],                deg:[1,4,5],         en:'Sus4',uk:'Sus4'},
-  {short:'6',    iv:[0,4,7,9],        lab:['1','3','5','6'],            deg:[1,3,5,6],       en:'Sixth',uk:'Секст-акорд'},
-  {short:'m6',   iv:[0,3,7,9],        lab:['1','♭3','5','6'],           deg:[1,3,5,6],       en:'Minor 6',uk:'Мінорний 6'},
-  {short:'7',    iv:[0,4,7,10],       lab:['1','3','5','♭7'],           deg:[1,3,5,7],       en:'Dom 7',uk:'Домінант 7'},
-  {short:'maj7', iv:[0,4,7,11],       lab:['1','3','5','7'],            deg:[1,3,5,7],       en:'Maj 7',uk:'Мажор 7'},
-  {short:'m7',   iv:[0,3,7,10],       lab:['1','♭3','5','♭7'],          deg:[1,3,5,7],       en:'Min 7',uk:'Мінор 7'},
-  {short:'m7♭5', iv:[0,3,6,10],       lab:['1','♭3','♭5','♭7'],         deg:[1,3,5,7],       en:'Half-dim (m7♭5)',uk:'Напівзменш. (m7♭5)'},
-  {short:'dim',  iv:[0,3,6],          lab:['1','♭3','♭5'],              deg:[1,3,5],         en:'Dim',uk:'Зменшений'},
-  {short:'dim7', iv:[0,3,6,9],        lab:['1','♭3','♭5','♭♭7'],        deg:[1,3,5,7],       en:'Dim 7',uk:'Зменшений 7'},
-  {short:'aug',  iv:[0,4,8],          lab:['1','3','♯5'],               deg:[1,3,5],         en:'Aug',uk:'Збільшений'},
-  {short:'add9', iv:[0,4,7,14],       lab:['1','3','5','9'],            deg:[1,3,5,2],       en:'Add 9',uk:'Add 9'},
-  {short:'9',    iv:[0,4,7,10,14],    lab:['1','3','5','♭7','9'],       deg:[1,3,5,7,2],     en:'Dom 9',uk:'Домінант 9'},
-  {short:'maj9', iv:[0,4,7,11,14],    lab:['1','3','5','7','9'],        deg:[1,3,5,7,2],     en:'Maj 9',uk:'Мажор 9'},
-  {short:'m9',   iv:[0,3,7,10,14],    lab:['1','♭3','5','♭7','9'],      deg:[1,3,5,7,2],     en:'Min 9',uk:'Мінор 9'},
-  {short:'11',   iv:[0,7,10,14,17],   lab:['1','5','♭7','9','11'],      deg:[1,5,7,2,4],     en:'Dom 11',uk:'Домінант 11'},
-  {short:'13',   iv:[0,4,7,10,14,21], lab:['1','3','5','♭7','9','13'],  deg:[1,3,5,7,2,6],   en:'Dom 13',uk:'Домінант 13'},
-  {short:'7♭9',  iv:[0,4,7,10,13],    lab:['1','3','5','♭7','♭9'],      deg:[1,3,5,7,2],     en:'7♭9',uk:'7♭9'},
-  {short:'7♯9',  iv:[0,4,7,10,15],    lab:['1','3','5','♭7','♯9'],      deg:[1,3,5,7,2],     en:'7♯9 (Hendrix)',uk:'7♯9 (Гендрікс)'},
+  {short:'',     grp:'basic',   iv:[0,4,7],          lab:['1','3','5'],                deg:[1,3,5],         en:'Major',uk:'Мажор'},
+  {short:'m',    grp:'basic',   iv:[0,3,7],          lab:['1','♭3','5'],               deg:[1,3,5],         en:'Minor',uk:'Мінор'},
+  {short:'sus2', grp:'basic',   iv:[0,2,7],          lab:['1','2','5'],                deg:[1,2,5],         en:'Sus2',uk:'Sus2'},
+  {short:'sus4', grp:'basic',   iv:[0,5,7],          lab:['1','4','5'],                deg:[1,4,5],         en:'Sus4',uk:'Sus4'},
+  {short:'6',    grp:'seventh', iv:[0,4,7,9],        lab:['1','3','5','6'],            deg:[1,3,5,6],       en:'Sixth',uk:'Секст-акорд'},
+  {short:'m6',   grp:'seventh', iv:[0,3,7,9],        lab:['1','♭3','5','6'],           deg:[1,3,5,6],       en:'Minor 6',uk:'Мінорний 6'},
+  {short:'7',    grp:'seventh', iv:[0,4,7,10],       lab:['1','3','5','♭7'],           deg:[1,3,5,7],       en:'Dom 7',uk:'Домінант 7'},
+  {short:'maj7', grp:'seventh', iv:[0,4,7,11],       lab:['1','3','5','7'],            deg:[1,3,5,7],       en:'Maj 7',uk:'Мажор 7'},
+  {short:'m7',   grp:'seventh', iv:[0,3,7,10],       lab:['1','♭3','5','♭7'],          deg:[1,3,5,7],       en:'Min 7',uk:'Мінор 7'},
+  {short:'m7♭5', grp:'seventh', iv:[0,3,6,10],       lab:['1','♭3','♭5','♭7'],         deg:[1,3,5,7],       en:'Half-dim (m7♭5)',uk:'Напівзменш. (m7♭5)'},
+  {short:'dim',  grp:'basic',   iv:[0,3,6],          lab:['1','♭3','♭5'],              deg:[1,3,5],         en:'Dim',uk:'Зменшений'},
+  {short:'dim7', grp:'seventh', iv:[0,3,6,9],        lab:['1','♭3','♭5','♭♭7'],        deg:[1,3,5,7],       en:'Dim 7',uk:'Зменшений 7'},
+  {short:'aug',  grp:'basic',   iv:[0,4,8],          lab:['1','3','♯5'],               deg:[1,3,5],         en:'Aug',uk:'Збільшений'},
+  {short:'add9', grp:'ext',     iv:[0,4,7,14],       lab:['1','3','5','9'],            deg:[1,3,5,2],       en:'Add 9',uk:'Add 9'},
+  {short:'9',    grp:'ext',     iv:[0,4,7,10,14],    lab:['1','3','5','♭7','9'],       deg:[1,3,5,7,2],     en:'Dom 9',uk:'Домінант 9'},
+  {short:'maj9', grp:'ext',     iv:[0,4,7,11,14],    lab:['1','3','5','7','9'],        deg:[1,3,5,7,2],     en:'Maj 9',uk:'Мажор 9'},
+  {short:'m9',   grp:'ext',     iv:[0,3,7,10,14],    lab:['1','♭3','5','♭7','9'],      deg:[1,3,5,7,2],     en:'Min 9',uk:'Мінор 9'},
+  {short:'11',   grp:'ext',     iv:[0,7,10,14,17],   lab:['1','5','♭7','9','11'],      deg:[1,5,7,2,4],     en:'Dom 11',uk:'Домінант 11'},
+  {short:'13',   grp:'ext',     iv:[0,4,7,10,14,21], lab:['1','3','5','♭7','9','13'],  deg:[1,3,5,7,2,6],   en:'Dom 13',uk:'Домінант 13'},
+  {short:'7♭9',  grp:'ext',     iv:[0,4,7,10,13],    lab:['1','3','5','♭7','♭9'],      deg:[1,3,5,7,2],     en:'7♭9',uk:'7♭9'},
+  {short:'7♯9',  grp:'ext',     iv:[0,4,7,10,15],    lab:['1','3','5','♭7','♯9'],      deg:[1,3,5,7,2],     en:'7♯9 (Hendrix)',uk:'7♯9 (Гендрікс)'},
 ];
+const QUAL_GROUPS=['basic','seventh','ext'];
 function qName(q){ return lang==='en'?q.en:q.uk; }
 /* colour by degree label (label-driven, robust across the whole vocabulary) */
 function labClass(lab){
@@ -1725,9 +1773,18 @@ function currentHarmonyChord(){
 }
 function buildChQuals(){
   const c=document.getElementById('ch-quals'); c.innerHTML='';
-  QUALITIES.forEach((q,i)=>{ const b=document.createElement('button'); b.className='btn'+(i===chQual?' active':'');
-    b.textContent=q.short||'maj'; b.title=qName(q); b.setAttribute('aria-label', qName(q)); b.setAttribute('aria-pressed', i===chQual);
-    b.onclick=()=>{ chQual=i; chVoicing=0; buildChQuals(); renderChords(); saveState(); }; c.appendChild(b); });
+  QUAL_GROUPS.forEach(g=>{
+    const seg=document.createElement('div'); seg.className='qual-grp';
+    const lab=document.createElement('span'); lab.className='qual-grp-lab'; lab.textContent=t('qg_'+g); seg.appendChild(lab);
+    const wrap=document.createElement('div'); wrap.className='group';
+    QUALITIES.forEach((q,i)=>{ if(q.grp!==g) return;
+      const b=document.createElement('button'); b.className='btn'+(i===chQual?' active':'');
+      b.textContent=q.short||'maj'; b.title=qName(q); b.setAttribute('aria-label', qName(q)); b.setAttribute('aria-pressed', i===chQual);
+      b.onclick=()=>{ chQual=i; chVoicing=0; buildChQuals(); renderChords(); saveState(); };
+      wrap.appendChild(b);
+    });
+    seg.appendChild(wrap); c.appendChild(seg);
+  });
 }
 function renderChords(){
   const q=QUALITIES[chQual];
@@ -2286,6 +2343,7 @@ function applyLang(){
   activateRoot(document.getElementById('g-roots'), gRoot);
   document.querySelectorAll('[data-root]').forEach(b=>b.classList.toggle('active', !!ntRoot && b.dataset.root===ntRoot));
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
+  if(typeof syncTabsScroll==='function') syncTabsScroll();
 }
 
 /* ===================== TOOLBAR + PERSISTENCE ===================== */
@@ -2310,10 +2368,20 @@ function applyAsideState(){
   if(aside) aside.style.display = ASIDE_TABS.includes(currentTab) ? '' : 'none';
 }
 function renderAllBoards(){ renderChords(); renderTriads(); renderScales(); renderNotes(); }
+/* the mobile tab strip scrolls horizontally when its labels overflow (esp. in
+   English); fade the right edge while more tabs sit off-screen — and drop the
+   fade once scrolled to the end — so the cut-off tab reads as "more →", not
+   clipped. Mirrors the fretboard's .scrollable hint. */
+function syncTabsScroll(){
+  const el=document.getElementById('tabs'); if(!el) return;
+  const max=el.scrollWidth - el.clientWidth;
+  el.classList.toggle('scrollable', max>1 && el.scrollLeft < max-1);
+}
 /* re-fit responsive fret cells when the viewport width changes (rotation/resize) */
 if(typeof window!=='undefined'){
   let _rzT=null, _rzW=window.innerWidth;
   window.addEventListener('resize', ()=>{
+    syncTabsScroll();
     if(window.innerWidth===_rzW) return;          // ignore height-only changes (mobile URL bar)
     _rzW=window.innerWidth;
     clearTimeout(_rzT); _rzT=setTimeout(()=>{ renderAllBoards(); renderCircle&&renderCircle(); }, 150);
@@ -2420,6 +2488,7 @@ function setHView(v){ hView=v;
   const head = v==='identify'?'id':(v==='triads'?'tr':'ch');
   document.getElementById('harmony-h').textContent = t(head+'_h');
   document.getElementById('harmony-p').textContent = t(head+'_p');
+  applyHarmonyExtras();
   (v==='identify'?renderIdentify:v==='triads'?renderTriads:renderChords)();
   updateGlobalPlay(); saveState();
 }
@@ -2443,6 +2512,9 @@ document.getElementById('sv-notes').onclick=()=>setScView('notes');
 
 function applyContextBar(){ document.getElementById('context-bar').hidden = !(currentTab==='harmony' || currentTab==='scales'); }
 function applyBoardRegion(){ document.getElementById('board-region').hidden = !(currentTab==='harmony' || currentTab==='scales'); }
+/* voicing cards + sequencer (now below the board) belong only to Harmony's
+   chord-tones view; hide them everywhere else so the board stays the last thing. */
+function applyHarmonyExtras(){ const el=document.getElementById('harmony-extras'); if(el) el.hidden = !(currentTab==='harmony' && hView==='chords'); }
 function globalPlay(){
   const boardEl=document.getElementById('board');
   if(currentTab==='harmony'){
@@ -2579,6 +2651,7 @@ function selectTab(name){
   applyAsideState();
   applyContextBar();
   applyBoardRegion();
+  applyHarmonyExtras();
   updateGlobalPlay();
   renderActiveContext();
   saveState();
@@ -2598,6 +2671,7 @@ document.getElementById('tabs').addEventListener('click',e=>{
   const tb=e.target.closest('.tab'); if(!tb) return;
   selectTab(tb.dataset.panel);
 });
+document.getElementById('tabs').addEventListener('scroll', syncTabsScroll, {passive:true});
 document.getElementById('lang-switch').addEventListener('click',e=>{
   const b=e.target.closest('.langbtn'); if(!b||b.dataset.lang===lang) return;
   lang=b.dataset.lang; applyLang(); saveState();
@@ -2659,6 +2733,7 @@ if(!hadState && typeof window!=='undefined' && window.innerWidth<=600) fretRange
 applyTuning();
 applyLang();
 selectTab(currentTab);
+syncTabsScroll();
 applyAudioAvailability();
 document.getElementById('app-ver').textContent = 'v' + APP_VERSION;
 

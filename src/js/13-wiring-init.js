@@ -44,6 +44,7 @@ function setHView(v){ hView=v;
   const head = v==='identify'?'id':(v==='triads'?'tr':'ch');
   document.getElementById('harmony-h').textContent = t(head+'_h');
   document.getElementById('harmony-p').textContent = t(head+'_p');
+  applyHarmonyExtras();
   (v==='identify'?renderIdentify:v==='triads'?renderTriads:renderChords)();
   updateGlobalPlay(); saveState();
 }
@@ -67,6 +68,9 @@ document.getElementById('sv-notes').onclick=()=>setScView('notes');
 
 function applyContextBar(){ document.getElementById('context-bar').hidden = !(currentTab==='harmony' || currentTab==='scales'); }
 function applyBoardRegion(){ document.getElementById('board-region').hidden = !(currentTab==='harmony' || currentTab==='scales'); }
+/* voicing cards + sequencer (now below the board) belong only to Harmony's
+   chord-tones view; hide them everywhere else so the board stays the last thing. */
+function applyHarmonyExtras(){ const el=document.getElementById('harmony-extras'); if(el) el.hidden = !(currentTab==='harmony' && hView==='chords'); }
 function globalPlay(){
   const boardEl=document.getElementById('board');
   if(currentTab==='harmony'){
@@ -203,6 +207,7 @@ function selectTab(name){
   applyAsideState();
   applyContextBar();
   applyBoardRegion();
+  applyHarmonyExtras();
   updateGlobalPlay();
   renderActiveContext();
   saveState();
@@ -222,6 +227,7 @@ document.getElementById('tabs').addEventListener('click',e=>{
   const tb=e.target.closest('.tab'); if(!tb) return;
   selectTab(tb.dataset.panel);
 });
+document.getElementById('tabs').addEventListener('scroll', syncTabsScroll, {passive:true});
 document.getElementById('lang-switch').addEventListener('click',e=>{
   const b=e.target.closest('.langbtn'); if(!b||b.dataset.lang===lang) return;
   lang=b.dataset.lang; applyLang(); saveState();
@@ -283,6 +289,7 @@ if(!hadState && typeof window!=='undefined' && window.innerWidth<=600) fretRange
 applyTuning();
 applyLang();
 selectTab(currentTab);
+syncTabsScroll();
 applyAudioAvailability();
 document.getElementById('app-ver').textContent = 'v' + APP_VERSION;
 
