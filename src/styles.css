@@ -45,14 +45,36 @@
   .tab:hover:not(.active) { color: var(--text); background: var(--bg-panel); }
   .tab.active { color: var(--text); border-bottom-color: var(--accent); }
 
-  .layout { display: flex; gap: 30px; align-items: flex-start; padding-top: 30px; }
-  .main { flex: 1; min-width: 0; }
-  .aside { width: 234px; flex-shrink: 0; position: sticky; top: 20px; }
-  /* Stacked layout: stretch items to the viewport. Without align-items:stretch the
-     column would let .main shrink-to-content, so the wide fretboard drags the whole
-     page past the viewport (sideways scroll, every row clipped) instead of staying
-     inside its own .scroll scroller. */
-  @media (max-width: 940px) { .layout { flex-direction: column; align-items: stretch; } .main, .aside { width: 100%; } .aside { position: static; } }
+  /* Two-column grid: controls + board + chord reference stack down the left, the
+     "Play over this" suggester is a sticky right column spanning them. Named areas
+     (not source order) place the pieces, so on a phone the same DOM reflows to put
+     the suggester right under the board (see the mobile override). minmax(0,1fr)
+     keeps the wide fretboard from blowing the column out — it scrolls inside its
+     own .scroll instead. */
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 234px;
+    grid-template-areas: "main aside" "board aside" "extras aside";
+    column-gap: 30px;
+    align-items: start;
+    padding-top: 30px;
+  }
+  /* the suggester only shows on Harmony; on Scales / Circle drop the empty column
+     so the board + controls use the full width (toggled in applyAsideState) */
+  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "main" "board" "extras"; }
+  .main { grid-area: main; min-width: 0; }
+  #board-region { grid-area: board; }
+  #harmony-extras { grid-area: extras; }
+  .aside { grid-area: aside; position: sticky; top: 20px; align-self: start; }
+  /* Stacked single column on a phone; the suggester slots between the board and
+     the chord reference (cards + sequencer) rather than landing at the very end. */
+  @media (max-width: 940px) {
+    .layout, .layout.no-aside {
+      grid-template-columns: minmax(0,1fr);
+      grid-template-areas: "main" "board" "aside" "extras";
+    }
+    .aside { position: static; }
+  }
 
   .panel { display: none; animation: fade 0.25s ease; }
   .panel.active { display: block; }
@@ -226,10 +248,13 @@
   .context-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 18px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
   .context-bar[hidden] { display: none; }
   .context-bar .ctx-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  /* the display toggle carries its own left separator instead of a free-standing
-     divider — so when the roots wrap it onto a new line the rule hugs the group
-     (reads intentional) rather than orphaning a floating bar */
-  .context-bar .ctx-display { padding-left: 12px; border-left: 1px solid var(--border-strong); }
+  .context-bar .ctx-group[hidden] { display: none; }
+  /* Each group except the leading view switch carries its own left separator (a
+     border that hugs the group), so the bar reads as View · Root · Display — and
+     when a group wraps to a new line the rule stays attached to it instead of
+     orphaning a free-standing divider. The view group is always the first visible
+     group, so it never needs one; root/display always follow one, so they always do. */
+  .context-bar .ctx-group:not(.ctx-view) { padding-left: 13px; border-left: 1px solid var(--border-strong); }
   /* one shared fretboard (1b): a single board region below the active panel's
      controls, shown for Harmony + Scales, hidden on the Circle tab. */
   .board-region { margin-top: 4px; }

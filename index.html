@@ -59,14 +59,36 @@
   .tab:hover:not(.active) { color: var(--text); background: var(--bg-panel); }
   .tab.active { color: var(--text); border-bottom-color: var(--accent); }
 
-  .layout { display: flex; gap: 30px; align-items: flex-start; padding-top: 30px; }
-  .main { flex: 1; min-width: 0; }
-  .aside { width: 234px; flex-shrink: 0; position: sticky; top: 20px; }
-  /* Stacked layout: stretch items to the viewport. Without align-items:stretch the
-     column would let .main shrink-to-content, so the wide fretboard drags the whole
-     page past the viewport (sideways scroll, every row clipped) instead of staying
-     inside its own .scroll scroller. */
-  @media (max-width: 940px) { .layout { flex-direction: column; align-items: stretch; } .main, .aside { width: 100%; } .aside { position: static; } }
+  /* Two-column grid: controls + board + chord reference stack down the left, the
+     "Play over this" suggester is a sticky right column spanning them. Named areas
+     (not source order) place the pieces, so on a phone the same DOM reflows to put
+     the suggester right under the board (see the mobile override). minmax(0,1fr)
+     keeps the wide fretboard from blowing the column out — it scrolls inside its
+     own .scroll instead. */
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 234px;
+    grid-template-areas: "main aside" "board aside" "extras aside";
+    column-gap: 30px;
+    align-items: start;
+    padding-top: 30px;
+  }
+  /* the suggester only shows on Harmony; on Scales / Circle drop the empty column
+     so the board + controls use the full width (toggled in applyAsideState) */
+  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "main" "board" "extras"; }
+  .main { grid-area: main; min-width: 0; }
+  #board-region { grid-area: board; }
+  #harmony-extras { grid-area: extras; }
+  .aside { grid-area: aside; position: sticky; top: 20px; align-self: start; }
+  /* Stacked single column on a phone; the suggester slots between the board and
+     the chord reference (cards + sequencer) rather than landing at the very end. */
+  @media (max-width: 940px) {
+    .layout, .layout.no-aside {
+      grid-template-columns: minmax(0,1fr);
+      grid-template-areas: "main" "board" "aside" "extras";
+    }
+    .aside { position: static; }
+  }
 
   .panel { display: none; animation: fade 0.25s ease; }
   .panel.active { display: block; }
@@ -240,10 +262,13 @@
   .context-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 18px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
   .context-bar[hidden] { display: none; }
   .context-bar .ctx-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  /* the display toggle carries its own left separator instead of a free-standing
-     divider — so when the roots wrap it onto a new line the rule hugs the group
-     (reads intentional) rather than orphaning a floating bar */
-  .context-bar .ctx-display { padding-left: 12px; border-left: 1px solid var(--border-strong); }
+  .context-bar .ctx-group[hidden] { display: none; }
+  /* Each group except the leading view switch carries its own left separator (a
+     border that hugs the group), so the bar reads as View · Root · Display — and
+     when a group wraps to a new line the rule stays attached to it instead of
+     orphaning a free-standing divider. The view group is always the first visible
+     group, so it never needs one; root/display always follow one, so they always do. */
+  .context-bar .ctx-group:not(.ctx-view) { padding-left: 13px; border-left: 1px solid var(--border-strong); }
   /* one shared fretboard (1b): a single board region below the active panel's
      controls, shown for Harmony + Scales, hidden on the Circle tab. */
   .board-region { margin-top: 4px; }
@@ -392,10 +417,29 @@
 <div class="layout">
 <div class="main">
 
+  <!-- shared control header (1e): View · Root · Display on one bar. The per-tab
+       view switch was folded up out of each panel so Harmony / Scales no longer
+       carry a separate ВИД row — fewer control layers before the board. Only the
+       active tab's view group is shown (toggled in applyContextBar). -->
   <div class="context-bar" id="context-bar">
+    <div class="ctx-group ctx-view" id="ctx-view-harmony">
+      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
+      <div class="group">
+        <button class="btn active" id="hv-chords" data-i18n="view_chords">Тони акорду</button>
+        <button class="btn" id="hv-triads" data-i18n="view_triads">Форми тріад</button>
+        <button class="btn" id="hv-identify" data-i18n="view_identify">Розпізнати</button>
+      </div>
+    </div>
+    <div class="ctx-group ctx-view" id="ctx-view-scales" hidden>
+      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
+      <div class="group">
+        <button class="btn active" id="sv-scale" data-i18n="view_scale">Гама</button>
+        <button class="btn" id="sv-notes" data-i18n="view_notes">Ноти</button>
+      </div>
+    </div>
     <div class="ctx-group"><span class="ctrl-label" data-i18n="lbl_root">Тоніка</span><div class="group" id="g-roots"></div></div>
     <div class="ctx-group ctx-display">
-      <button class="btn active" id="g-names" data-i18n="b_notes">Ноти</button>
+      <button class="btn active" id="g-names" data-i18n="b_notes">Назви</button>
       <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
     </div>
   </div>
@@ -404,14 +448,6 @@
     <div class="panel-head">
       <h2 id="harmony-h">Тони акорду на грифі</h2>
       <p id="harmony-p">Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу.</p>
-    </div>
-    <div class="row">
-      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
-      <div class="group">
-        <button class="btn active" id="hv-chords" data-i18n="view_chords">Тони акорду</button>
-        <button class="btn" id="hv-triads" data-i18n="view_triads">Форми тріад</button>
-        <button class="btn" id="hv-identify" data-i18n="view_identify">Розпізнати</button>
-      </div>
     </div>
 
     <div id="sub-chords">
@@ -445,13 +481,6 @@
     <div class="panel-head">
       <h2 id="scales-h" data-i18n="sc_h">Гами і моди</h2>
       <p id="scales-p" data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
-    </div>
-    <div class="row">
-      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
-      <div class="group">
-        <button class="btn active" id="sv-scale" data-i18n="view_scale">Гама</button>
-        <button class="btn" id="sv-notes" data-i18n="view_notes">Ноти</button>
-      </div>
     </div>
 
     <div id="sub-scale">
@@ -504,38 +533,40 @@
     </div>
   </section>
 
-  <!-- One shared fretboard (1b): every board-bearing mode (chord tones, triads,
-       scale, notes) renders into this single board; the legend + hint switch with
-       the active mode. Hidden on the Circle tab. -->
-  <div class="board-region" id="board-region">
-    <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
-    <div class="legend" id="legend"></div>
-    <div class="hint" id="hint"></div>
-  </div>
+</div>
 
-  <!-- Chord-tones reference (1e): voicing cards + the progression sequencer live
-       BELOW the shared board, so the board (the centrepiece) sits directly under
-       the controls instead of being pushed offscreen by these on mobile. Shown
-       only in Harmony → Chord-tones; toggled by applyHarmonyExtras(). -->
-  <div id="harmony-extras" hidden>
-    <div class="cd-head"><span class="cd-h" data-i18n="cd_voicings">Форми акорду</span><span class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</span></div>
-    <div class="chorddia" id="ch-diagram"></div>
-    <div class="seq" id="ch-seq">
-      <div class="seq-head">
-        <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
-        <button class="btn" id="seq-add" data-i18n="seq_add">Додати акорд</button>
-        <div class="divider"></div>
-        <span class="ctrl-label" data-i18n="seq_presets">Пресети</span>
-        <div class="seq-presets" id="seq-presets"></div>
-        <div class="divider"></div>
-        <button class="btn play" id="seq-play"></button>
-        <button class="btn" id="seq-loopbtn"></button>
-        <button class="btn" id="seq-clear" data-i18n="seq_clear">Очистити</button>
-      </div>
-      <div class="seq-strip" id="seq-strip"></div>
+<!-- One shared fretboard (1b): every board-bearing mode (chord tones, triads,
+     scale, notes) renders into this single board; the legend + hint switch with
+     the active mode. Hidden on the Circle tab. A direct child of .layout (not
+     .main) so the grid can slot the suggester between it and the chord reference
+     on a phone (1e). -->
+<div class="board-region" id="board-region">
+  <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
+  <div class="legend" id="legend"></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<!-- Chord-tones reference (1e): voicing cards + the progression sequencer live
+     BELOW the shared board, so the board (the centrepiece) sits directly under
+     the controls instead of being pushed offscreen by these on mobile. Shown
+     only in Harmony → Chord-tones; toggled by applyHarmonyExtras(). -->
+<div id="harmony-extras" hidden>
+  <div class="cd-head"><span class="cd-h" data-i18n="cd_voicings">Форми акорду</span><span class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</span></div>
+  <div class="chorddia" id="ch-diagram"></div>
+  <div class="seq" id="ch-seq">
+    <div class="seq-head">
+      <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
+      <button class="btn" id="seq-add" data-i18n="seq_add">Додати акорд</button>
+      <div class="divider"></div>
+      <span class="ctrl-label" data-i18n="seq_presets">Пресети</span>
+      <div class="seq-presets" id="seq-presets"></div>
+      <div class="divider"></div>
+      <button class="btn play" id="seq-play"></button>
+      <button class="btn" id="seq-loopbtn"></button>
+      <button class="btn" id="seq-clear" data-i18n="seq_clear">Очистити</button>
     </div>
+    <div class="seq-strip" id="seq-strip"></div>
   </div>
-
 </div>
 
 <aside class="aside">
@@ -573,11 +604,17 @@ const CHANGELOG = [
         'The neck now sits directly under the controls. The chord-shape cards and the progression sequencer moved below the board, so on a phone you reach the fretboard right after picking a chord instead of scrolling past everything first.',
         'The chord picker is grouped into Basic / Sevenths / Extended tiers, so the 21 chord types read as organised sections instead of one long wall of buttons.',
         'The timing bar is tidier: the metronome, bass and drums are collected into one labelled "Backing" group, so the bar reads as a few clusters rather than a row of loose buttons.',
+        'Backing that starts itself: turning on Bass or Drums now starts the chord loop when nothing is playing, so they behave like the metronome instead of staying silent until you start a loop or progression first.',
+        'Fewer control layers: the view switch (chord tones / triad shapes / identify, or scale / notes) moved up next to the root, so each tab shows one "View · Root · Display" header instead of a separate row above the board; the dot-label toggle is now "Names / Intervals" so it no longer reads as a second "Notes".',
+        '"Play over this" where you need it: on a phone the suggestion panel now sits directly under the fretboard instead of at the very bottom of the page, below the chord shapes and the progression builder.',
         'Smaller polish: on a narrow screen the tab strip now fades at its right edge to show more tabs scroll off-screen, and the root / note-name separator no longer strands itself on its own line when the controls wrap.'],
     uk:['Прохід на ясність: ті самі інструменти, менше безладу — і гриф у центрі уваги.',
         'Гриф тепер одразу під керуванням. Картки форм акорду та секвенсор прогресії переїхали під гриф, тож на телефоні ти потрапляєш на гриф одразу після вибору акорду, а не прогортуєш усе перед тим.',
         'Вибір акорду згруповано в рівні «Базові / Септакорди / Розширені», тож 21 тип акорду читається як впорядковані секції, а не суцільна стіна кнопок.',
         'Панель темпу охайніша: метроном, бас і ударні зібрано в одну підписану групу «Супровід», тож панель читається як кілька кластерів, а не ряд розрізнених кнопок.',
+        'Супровід, що сам запускається: увімкнення «Бас» чи «Ударні» тепер запускає луп акорду, коли нічого не грає, тож вони поводяться як метроном, а не мовчать, доки спершу не запустиш луп чи прогресію.',
+        'Менше шарів керування: перемикач виду (тони акорду / форми тріад / розпізнати чи гама / ноти) переїхав угору, поряд із тонікою, тож кожна вкладка показує один заголовок «Вид · Тоніка · Показ» замість окремого рядка над грифом; перемикач підпису крапок тепер «Назви / Інтервали», тож він більше не читається як друге «Ноти».',
+        '«Що грати над цим» там, де треба: на телефоні панель підказок тепер одразу під грифом, а не в самому низу сторінки під формами акорду та секвенсором.',
         'Дрібні штрихи: на вузькому екрані смужка вкладок тепер згасає праворуч, показуючи, що частина вкладок ховається за краєм, а роздільник між тонікою й назвами нот більше не лишається сам на окремому рядку, коли керування переноситься.'] },
   { v:'1.18.0', date:'2026-06-16',
     en:['Feel pass (Phase 1d): subtle, motion-respecting animation that makes sound and rhythm visible.',
@@ -759,7 +796,7 @@ const I18N = {
     nt_p:'Довідник усіх нот. Натисни ноту в керуванні, щоб підсвітити її скрізь, або клікни по ноті на грифі, щоб почути.',
     lbl_root:'Тоніка', lbl_chord:'Акорд', lbl_scale:'Гама', lbl_pos:'Позиція', lbl_dia:'Акорди тональності',
     lbl_show:'Показати', lbl_nat:'Натуральні', lbl_sharp:'Дієзи', lbl_flat:'Бемолі', lbl_set:'Набір струн', lbl_inv:'Обернення',
-    b_notes:'Ноти', b_intervals:'Інтервали', b_listen:'Прослухати', b_loop:'Луп', b_reset:'скинути',
+    b_notes:'Назви', b_intervals:'Інтервали', b_listen:'Прослухати', b_loop:'Луп', b_reset:'скинути',
     b_listen_tip:'Прослухати поточний вибір один раз', b_loop_tip:'Зациклити поточний акорд як супровід для імпровізації', b_loop_stop_tip:'Зупинити луп',
     audio_off:'Звук недоступний у цьому браузері — відтворення вимкнено.',
     seq_title:'Прогресія', seq_add:'Додати акорд', seq_presets:'Пресети', seq_clear:'Очистити',
@@ -821,7 +858,7 @@ const I18N = {
     nt_p:'A reference for every note. Tap a note in the controls to highlight it everywhere, or tap a note on the neck to hear it.',
     lbl_root:'Root', lbl_chord:'Chord', lbl_scale:'Scale', lbl_pos:'Position', lbl_dia:'Chords in key',
     lbl_show:'Show', lbl_nat:'Naturals', lbl_sharp:'Sharps', lbl_flat:'Flats', lbl_set:'String set', lbl_inv:'Inversion',
-    b_notes:'Notes', b_intervals:'Intervals', b_listen:'Listen', b_loop:'Loop', b_reset:'reset',
+    b_notes:'Names', b_intervals:'Intervals', b_listen:'Listen', b_loop:'Loop', b_reset:'reset',
     b_listen_tip:'Hear the current selection once', b_loop_tip:'Loop the current chord as a backing to play over', b_loop_stop_tip:'Stop the loop',
     audio_off:'Audio is unavailable in this browser — playback is disabled.',
     seq_title:'Progression', seq_add:'Add chord', seq_presets:'Presets', seq_clear:'Clear',
@@ -1175,7 +1212,8 @@ function strumMidi(midis, when, vel, spread, dir){
    groove (kick on 1 & 3, 8th-note hats) supplies the pulse. Everything is
    scheduled per-bar from inside loopStrum / seqStrumStep, so it shares the bar
    start time and current chord and stays perfectly aligned to Phase B's clock —
-   no separate drifting timer. Bass + groove only sound while a backing runs. */
+   no separate drifting timer. Enabling bass/groove while idle auto-starts the
+   single-chord loop so they always have a bar to ride (see bassToggle). */
 let bassOn=false, grooveOn=false;
 
 /* the chord's actual fifth, derived from its degree map: perfect (7) for most,
@@ -1301,16 +1339,22 @@ function metroToggle(){
   btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setMetroLabel();
 }
 function setMetroLabel(){ const b=document.getElementById('tb-metro'); b.innerHTML=(metroClock?'&#9632; ':'&#9654; ')+t(metroClock?'tb_metro_on':'tb_metro_off'); b.setAttribute('aria-label', t('tb_metro_off')); }
-/* ---- backing band toggles (bass + groove). They take effect on the next bar
-   of whatever backing is running, and persist across reloads. ---- */
+/* ---- backing band toggles (bass + groove) ----
+   Self-starting, to match the metronome: turning Bass or Drums on while nothing
+   is playing kicks off the single-chord loop so you immediately hear a backing
+   over the current chord (otherwise the band has no bar engine to ride). Turning
+   them off does NOT stop that loop — the chord keeps strumming; Stop / the Loop
+   button end it. While a loop or progression already runs, they just join on the
+   next bar (scheduleBand reads bassOn/grooveOn live). Persist across reloads. */
+function ensureBacking(){ if(!loopClock && !seqClock) loopToggle(); }   // loopToggle starts when idle
 function setBandLabels(){
   const bb=document.getElementById('tb-bass');
   if(bb){ bb.innerHTML='&#9834; '+t('tb_bass'); bb.classList.toggle('active', bassOn); bb.setAttribute('aria-pressed', bassOn?'true':'false'); bb.setAttribute('aria-label', t('tb_bass')); }
   const db=document.getElementById('tb-drums');
   if(db){ db.innerHTML='&#9835; '+t('tb_drums'); db.classList.toggle('active', grooveOn); db.setAttribute('aria-pressed', grooveOn?'true':'false'); db.setAttribute('aria-label', t('tb_drums')); }
 }
-function bassToggle(){ audio(); bassOn=!bassOn; setBandLabels(); saveState(); }
-function drumsToggle(){ audio(); grooveOn=!grooveOn; setBandLabels(); saveState(); }
+function bassToggle(){ audio(); bassOn=!bassOn; if(bassOn) ensureBacking(); setBandLabels(); saveState(); }
+function drumsToggle(){ audio(); grooveOn=!grooveOn; if(grooveOn) ensureBacking(); setBandLabels(); saveState(); }
 
 /* ---- single-chord / single-triad loop: re-strums the current voicing at the top
    of every bar. loopMode is captured at start (chord vs triad) but the voicing is
@@ -2364,8 +2408,12 @@ function applyToolbarState(){
   tg.setAttribute('aria-expanded', toolbarOpen);
 }
 function applyAsideState(){
+  const show = ASIDE_TABS.includes(currentTab);
   const aside=document.querySelector('.aside');
-  if(aside) aside.style.display = ASIDE_TABS.includes(currentTab) ? '' : 'none';
+  if(aside) aside.style.display = show ? '' : 'none';
+  // drop the reserved suggester column on tabs that don't use it (1e), so the
+  // board + controls take the full width instead of leaving a 234px gap
+  const layout=document.querySelector('.layout'); if(layout) layout.classList.toggle('no-aside', !show);
 }
 function renderAllBoards(){ renderChords(); renderTriads(); renderScales(); renderNotes(); }
 /* the mobile tab strip scrolls horizontally when its labels overflow (esp. in
@@ -2510,7 +2558,12 @@ function setScView(v){ scView=v;
 document.getElementById('sv-scale').onclick=()=>setScView('scale');
 document.getElementById('sv-notes').onclick=()=>setScView('notes');
 
-function applyContextBar(){ document.getElementById('context-bar').hidden = !(currentTab==='harmony' || currentTab==='scales'); }
+function applyContextBar(){
+  document.getElementById('context-bar').hidden = !(currentTab==='harmony' || currentTab==='scales');
+  // only the active tab's view switch lives in the shared bar (1e)
+  const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
+  const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
+}
 function applyBoardRegion(){ document.getElementById('board-region').hidden = !(currentTab==='harmony' || currentTab==='scales'); }
 /* voicing cards + sequencer (now below the board) belong only to Harmony's
    chord-tones view; hide them everywhere else so the board stays the last thing. */

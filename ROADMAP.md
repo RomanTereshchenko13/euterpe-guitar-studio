@@ -215,9 +215,17 @@ as overloaded, especially on a phone:
   presets and the test harness are unaffected.
 - **Timing bar declustered** ✅ — metronome / bass / drums collected into one labelled "Backing"
   `.tb-group`, so the always-visible bar reads as a few chunks rather than 8 loose controls.
+- **Fewer control layers** ✅ — the per-tab view switch (chord-tones / triads / identify, or
+  scale / notes) folded up out of each panel into the shared context bar, which now reads as one
+  **View · Root · Display** header (`#ctx-view-harmony` / `#ctx-view-scales`, toggled in
+  `applyContextBar`); separators hug each group via `.ctx-group:not(.ctx-view)` so they never orphan.
+- **Suggester beside the board** ✅ — `.layout` became a CSS grid with named areas; `#board-region`
+  and `#harmony-extras` are now direct grid children, so on a phone the "Play over this" aside slots
+  between the board and the chord reference instead of landing at the very bottom. A `no-aside`
+  class (set in `applyAsideState`) drops the reserved 234 px column on Scales / Circle.
 - **Alignment nits** ✅ — the mobile tab strip gains a position-aware right-edge fade (`syncTabsScroll`)
-  so a clipped tab reads as scrollable; the root↔display separator now hugs the display group
-  (`.ctx-display` border-left) instead of orphaning a floating divider when the controls wrap.
+  so a clipped tab reads as scrollable; the root↔display separator now hugs its group
+  (`.ctx-group` border-left) instead of orphaning a floating divider when the controls wrap.
 
 **Validation:** the single diatonic helper reproduces the old scales + circle output (assert
 parity before deleting the duplicate); context round-trips through localStorage; the chord

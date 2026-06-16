@@ -5,7 +5,8 @@
    groove (kick on 1 & 3, 8th-note hats) supplies the pulse. Everything is
    scheduled per-bar from inside loopStrum / seqStrumStep, so it shares the bar
    start time and current chord and stays perfectly aligned to Phase B's clock —
-   no separate drifting timer. Bass + groove only sound while a backing runs. */
+   no separate drifting timer. Enabling bass/groove while idle auto-starts the
+   single-chord loop so they always have a bar to ride (see bassToggle). */
 let bassOn=false, grooveOn=false;
 
 /* the chord's actual fifth, derived from its degree map: perfect (7) for most,
@@ -131,16 +132,22 @@ function metroToggle(){
   btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setMetroLabel();
 }
 function setMetroLabel(){ const b=document.getElementById('tb-metro'); b.innerHTML=(metroClock?'&#9632; ':'&#9654; ')+t(metroClock?'tb_metro_on':'tb_metro_off'); b.setAttribute('aria-label', t('tb_metro_off')); }
-/* ---- backing band toggles (bass + groove). They take effect on the next bar
-   of whatever backing is running, and persist across reloads. ---- */
+/* ---- backing band toggles (bass + groove) ----
+   Self-starting, to match the metronome: turning Bass or Drums on while nothing
+   is playing kicks off the single-chord loop so you immediately hear a backing
+   over the current chord (otherwise the band has no bar engine to ride). Turning
+   them off does NOT stop that loop — the chord keeps strumming; Stop / the Loop
+   button end it. While a loop or progression already runs, they just join on the
+   next bar (scheduleBand reads bassOn/grooveOn live). Persist across reloads. */
+function ensureBacking(){ if(!loopClock && !seqClock) loopToggle(); }   // loopToggle starts when idle
 function setBandLabels(){
   const bb=document.getElementById('tb-bass');
   if(bb){ bb.innerHTML='&#9834; '+t('tb_bass'); bb.classList.toggle('active', bassOn); bb.setAttribute('aria-pressed', bassOn?'true':'false'); bb.setAttribute('aria-label', t('tb_bass')); }
   const db=document.getElementById('tb-drums');
   if(db){ db.innerHTML='&#9835; '+t('tb_drums'); db.classList.toggle('active', grooveOn); db.setAttribute('aria-pressed', grooveOn?'true':'false'); db.setAttribute('aria-label', t('tb_drums')); }
 }
-function bassToggle(){ audio(); bassOn=!bassOn; setBandLabels(); saveState(); }
-function drumsToggle(){ audio(); grooveOn=!grooveOn; setBandLabels(); saveState(); }
+function bassToggle(){ audio(); bassOn=!bassOn; if(bassOn) ensureBacking(); setBandLabels(); saveState(); }
+function drumsToggle(){ audio(); grooveOn=!grooveOn; if(grooveOn) ensureBacking(); setBandLabels(); saveState(); }
 
 /* ---- single-chord / single-triad loop: re-strums the current voicing at the top
    of every bar. loopMode is captured at start (chord vs triad) but the voicing is

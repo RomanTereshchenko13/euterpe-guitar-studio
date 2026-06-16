@@ -69,10 +69,29 @@
 <div class="layout">
 <div class="main">
 
+  <!-- shared control header (1e): View · Root · Display on one bar. The per-tab
+       view switch was folded up out of each panel so Harmony / Scales no longer
+       carry a separate ВИД row — fewer control layers before the board. Only the
+       active tab's view group is shown (toggled in applyContextBar). -->
   <div class="context-bar" id="context-bar">
+    <div class="ctx-group ctx-view" id="ctx-view-harmony">
+      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
+      <div class="group">
+        <button class="btn active" id="hv-chords" data-i18n="view_chords">Тони акорду</button>
+        <button class="btn" id="hv-triads" data-i18n="view_triads">Форми тріад</button>
+        <button class="btn" id="hv-identify" data-i18n="view_identify">Розпізнати</button>
+      </div>
+    </div>
+    <div class="ctx-group ctx-view" id="ctx-view-scales" hidden>
+      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
+      <div class="group">
+        <button class="btn active" id="sv-scale" data-i18n="view_scale">Гама</button>
+        <button class="btn" id="sv-notes" data-i18n="view_notes">Ноти</button>
+      </div>
+    </div>
     <div class="ctx-group"><span class="ctrl-label" data-i18n="lbl_root">Тоніка</span><div class="group" id="g-roots"></div></div>
     <div class="ctx-group ctx-display">
-      <button class="btn active" id="g-names" data-i18n="b_notes">Ноти</button>
+      <button class="btn active" id="g-names" data-i18n="b_notes">Назви</button>
       <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
     </div>
   </div>
@@ -81,14 +100,6 @@
     <div class="panel-head">
       <h2 id="harmony-h">Тони акорду на грифі</h2>
       <p id="harmony-p">Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу.</p>
-    </div>
-    <div class="row">
-      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
-      <div class="group">
-        <button class="btn active" id="hv-chords" data-i18n="view_chords">Тони акорду</button>
-        <button class="btn" id="hv-triads" data-i18n="view_triads">Форми тріад</button>
-        <button class="btn" id="hv-identify" data-i18n="view_identify">Розпізнати</button>
-      </div>
     </div>
 
     <div id="sub-chords">
@@ -122,13 +133,6 @@
     <div class="panel-head">
       <h2 id="scales-h" data-i18n="sc_h">Гами і моди</h2>
       <p id="scales-p" data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
-    </div>
-    <div class="row">
-      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
-      <div class="group">
-        <button class="btn active" id="sv-scale" data-i18n="view_scale">Гама</button>
-        <button class="btn" id="sv-notes" data-i18n="view_notes">Ноти</button>
-      </div>
     </div>
 
     <div id="sub-scale">
@@ -181,38 +185,40 @@
     </div>
   </section>
 
-  <!-- One shared fretboard (1b): every board-bearing mode (chord tones, triads,
-       scale, notes) renders into this single board; the legend + hint switch with
-       the active mode. Hidden on the Circle tab. -->
-  <div class="board-region" id="board-region">
-    <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
-    <div class="legend" id="legend"></div>
-    <div class="hint" id="hint"></div>
-  </div>
+</div>
 
-  <!-- Chord-tones reference (1e): voicing cards + the progression sequencer live
-       BELOW the shared board, so the board (the centrepiece) sits directly under
-       the controls instead of being pushed offscreen by these on mobile. Shown
-       only in Harmony → Chord-tones; toggled by applyHarmonyExtras(). -->
-  <div id="harmony-extras" hidden>
-    <div class="cd-head"><span class="cd-h" data-i18n="cd_voicings">Форми акорду</span><span class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</span></div>
-    <div class="chorddia" id="ch-diagram"></div>
-    <div class="seq" id="ch-seq">
-      <div class="seq-head">
-        <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
-        <button class="btn" id="seq-add" data-i18n="seq_add">Додати акорд</button>
-        <div class="divider"></div>
-        <span class="ctrl-label" data-i18n="seq_presets">Пресети</span>
-        <div class="seq-presets" id="seq-presets"></div>
-        <div class="divider"></div>
-        <button class="btn play" id="seq-play"></button>
-        <button class="btn" id="seq-loopbtn"></button>
-        <button class="btn" id="seq-clear" data-i18n="seq_clear">Очистити</button>
-      </div>
-      <div class="seq-strip" id="seq-strip"></div>
+<!-- One shared fretboard (1b): every board-bearing mode (chord tones, triads,
+     scale, notes) renders into this single board; the legend + hint switch with
+     the active mode. Hidden on the Circle tab. A direct child of .layout (not
+     .main) so the grid can slot the suggester between it and the chord reference
+     on a phone (1e). -->
+<div class="board-region" id="board-region">
+  <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
+  <div class="legend" id="legend"></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<!-- Chord-tones reference (1e): voicing cards + the progression sequencer live
+     BELOW the shared board, so the board (the centrepiece) sits directly under
+     the controls instead of being pushed offscreen by these on mobile. Shown
+     only in Harmony → Chord-tones; toggled by applyHarmonyExtras(). -->
+<div id="harmony-extras" hidden>
+  <div class="cd-head"><span class="cd-h" data-i18n="cd_voicings">Форми акорду</span><span class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</span></div>
+  <div class="chorddia" id="ch-diagram"></div>
+  <div class="seq" id="ch-seq">
+    <div class="seq-head">
+      <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
+      <button class="btn" id="seq-add" data-i18n="seq_add">Додати акорд</button>
+      <div class="divider"></div>
+      <span class="ctrl-label" data-i18n="seq_presets">Пресети</span>
+      <div class="seq-presets" id="seq-presets"></div>
+      <div class="divider"></div>
+      <button class="btn play" id="seq-play"></button>
+      <button class="btn" id="seq-loopbtn"></button>
+      <button class="btn" id="seq-clear" data-i18n="seq_clear">Очистити</button>
     </div>
+    <div class="seq-strip" id="seq-strip"></div>
   </div>
-
 </div>
 
 <aside class="aside">

@@ -66,7 +66,12 @@ function setScView(v){ scView=v;
 document.getElementById('sv-scale').onclick=()=>setScView('scale');
 document.getElementById('sv-notes').onclick=()=>setScView('notes');
 
-function applyContextBar(){ document.getElementById('context-bar').hidden = !(currentTab==='harmony' || currentTab==='scales'); }
+function applyContextBar(){
+  document.getElementById('context-bar').hidden = !(currentTab==='harmony' || currentTab==='scales');
+  // only the active tab's view switch lives in the shared bar (1e)
+  const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
+  const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
+}
 function applyBoardRegion(){ document.getElementById('board-region').hidden = !(currentTab==='harmony' || currentTab==='scales'); }
 /* voicing cards + sequencer (now below the board) belong only to Harmony's
    chord-tones view; hide them everywhere else so the board stays the last thing. */

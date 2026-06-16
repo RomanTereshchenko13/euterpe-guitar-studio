@@ -8,6 +8,9 @@ _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 - The neck now sits directly under the controls. The chord-shape cards and the progression sequencer moved below the board, so on a phone you reach the fretboard right after picking a chord instead of scrolling past everything first.
 - The chord picker is grouped into Basic / Sevenths / Extended tiers, so the 21 chord types read as organised sections instead of one long wall of buttons.
 - The timing bar is tidier: the metronome, bass and drums are collected into one labelled "Backing" group, so the bar reads as a few clusters rather than a row of loose buttons.
+- Backing that starts itself: turning on Bass or Drums now starts the chord loop when nothing is playing, so they behave like the metronome instead of staying silent until you start a loop or progression first.
+- Fewer control layers: the view switch (chord tones / triad shapes / identify, or scale / notes) moved up next to the root, so each tab shows one "View · Root · Display" header instead of a separate row above the board; the dot-label toggle is now "Names / Intervals" so it no longer reads as a second "Notes".
+- "Play over this" where you need it: on a phone the suggestion panel now sits directly under the fretboard instead of at the very bottom of the page, below the chord shapes and the progression builder.
 - Smaller polish: on a narrow screen the tab strip now fades at its right edge to show more tabs scroll off-screen, and the root / note-name separator no longer strands itself on its own line when the controls wrap.
 
 ## v1.18.0 — 2026-06-16

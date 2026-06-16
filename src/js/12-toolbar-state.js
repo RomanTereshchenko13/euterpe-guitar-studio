@@ -16,8 +16,12 @@ function applyToolbarState(){
   tg.setAttribute('aria-expanded', toolbarOpen);
 }
 function applyAsideState(){
+  const show = ASIDE_TABS.includes(currentTab);
   const aside=document.querySelector('.aside');
-  if(aside) aside.style.display = ASIDE_TABS.includes(currentTab) ? '' : 'none';
+  if(aside) aside.style.display = show ? '' : 'none';
+  // drop the reserved suggester column on tabs that don't use it (1e), so the
+  // board + controls take the full width instead of leaving a 234px gap
+  const layout=document.querySelector('.layout'); if(layout) layout.classList.toggle('no-aside', !show);
 }
 function renderAllBoards(){ renderChords(); renderTriads(); renderScales(); renderNotes(); }
 /* the mobile tab strip scrolls horizontally when its labels overflow (esp. in
