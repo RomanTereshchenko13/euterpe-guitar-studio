@@ -556,6 +556,29 @@ if (T) {
     T.setHView('chords');
   })();
 
+  /* ---- regression: tuning/fret/capo changes must repaint EVERY board mode ----
+     renderAllBoards() (wired to the tuning / fret / capo / lefty controls) once
+     fanned out to chords/triads/scales/notes only — omitting arp + identify — so
+     those two boards froze with stale geometry on a fret/capo/tuning change. Drive
+     the real onchange sequence (set the global, then renderAllBoards) on each view
+     and assert the shared #board actually re-paints to the new fret range. */
+  (function staleBoardRegression() {
+    const cellsPerRow = () => {
+      const row = win.document.getElementById('board').querySelector('.srow');
+      return row ? row.querySelectorAll('.cell').length : -1;
+    };
+    ['arp', 'identify', 'chords'].forEach(view => {
+      T.selectTab('harmony'); T.setHView(view);
+      T.setFret(0); T.renderAllBoards();            // All frets (1..22)
+      const wide = cellsPerRow();
+      T.setFret(1); T.renderAllBoards();            // 5-fret window (1..5)
+      const narrow = cellsPerRow();
+      ok('regression: ' + view + ' board repaints on a fret-range change',
+         narrow > 0 && narrow < wide, view + ': ' + wide + ' → ' + narrow + ' cells');
+    });
+    T.setFret(0); T.selectTab('harmony'); T.setHView('chords');
+  })();
+
   /* ---- behaviour: loop + sequencer transport toggles ---- */
   (function transport() {
     ok('loop initially off', T.state().loop === false);

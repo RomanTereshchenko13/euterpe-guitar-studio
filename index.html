@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 1.21.0  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 1.21.1  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="version" content="1.21.0">
+<meta name="version" content="1.21.1">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <meta property="og:type" content="website">
@@ -624,10 +624,13 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '1.21.0';
+const APP_VERSION = '1.21.1';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.21.1', date:'2026-06-17',
+    en:['Fixed: on the Arpeggio and Identify views, the fretboard now updates straight away when you change the tuning, capo, fret window or handedness — previously it kept its old layout on those two views until you switched away and back.'],
+    uk:['Виправлено: у видах «Арпеджіо» та «Розпізнати» гриф тепер одразу оновлюється, коли ти змінюєш стрій, каподастр, діапазон ладів чи ліворукість — раніше на цих двох видах він лишався зі старим виглядом, доки ти не перемкнешся на інший вид і назад.'] },
   { v:'1.21.0', date:'2026-06-17',
     en:['The app is now called Euterpe — after the Greek muse of music. "Guitar studio" stays on as a descriptor; nothing about how the app works has changed.',
         'Scales view now colours the fifth and the seventh, not just the root and third.',
@@ -2562,7 +2565,13 @@ function applyAsideState(){
   // board + controls take the full width instead of leaving a 234px gap
   const layout=document.querySelector('.layout'); if(layout) layout.classList.toggle('no-aside', !show);
 }
-function renderAllBoards(){ renderChords(); renderTriads(); renderScales(); renderNotes(); }
+/* Repaint every board-bearing view after a tuning / fret-range / capo / lefty
+   change. Delegates to renderContextViews — the ONE complete fan-out (incl. the
+   arp + identify views) — so a newly-added view can never be left off this list.
+   It previously listed only chords/triads/scales/notes, which silently froze the
+   Arpeggio and Identify boards on a tuning/fret/capo/lefty change (they weren't
+   re-rendered, so isBoardMode never re-painted the shared #board for them). */
+function renderAllBoards(){ renderContextViews(); }
 /* the mobile tab strip scrolls horizontally when its labels overflow (esp. in
    English); fade the right edge while more tabs sit off-screen — and drop the
    fade once scrolled to the end — so the cut-off tab reads as "more →", not
@@ -2966,6 +2975,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
     schedAdvance, clocks, beat,
     selectTab, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
+    renderAllBoards,
     CAGED_BY_POS, isCAGEDScale,
     setFret:(i)=>{ fretRangeIdx=i; },
     setCapo:(i)=>{ capo=i; }, getCapo:()=>capo,

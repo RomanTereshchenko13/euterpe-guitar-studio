@@ -25,7 +25,13 @@ function applyAsideState(){
   // board + controls take the full width instead of leaving a 234px gap
   const layout=document.querySelector('.layout'); if(layout) layout.classList.toggle('no-aside', !show);
 }
-function renderAllBoards(){ renderChords(); renderTriads(); renderScales(); renderNotes(); }
+/* Repaint every board-bearing view after a tuning / fret-range / capo / lefty
+   change. Delegates to renderContextViews — the ONE complete fan-out (incl. the
+   arp + identify views) — so a newly-added view can never be left off this list.
+   It previously listed only chords/triads/scales/notes, which silently froze the
+   Arpeggio and Identify boards on a tuning/fret/capo/lefty change (they weren't
+   re-rendered, so isBoardMode never re-painted the shared #board for them). */
+function renderAllBoards(){ renderContextViews(); }
 /* the mobile tab strip scrolls horizontally when its labels overflow (esp. in
    English); fade the right edge while more tabs sit off-screen — and drop the
    fade once scrolled to the end — so the cut-off tab reads as "more →", not

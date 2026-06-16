@@ -1,6 +1,9 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.21.1', date:'2026-06-17',
+    en:['Fixed: on the Arpeggio and Identify views, the fretboard now updates straight away when you change the tuning, capo, fret window or handedness — previously it kept its old layout on those two views until you switched away and back.'],
+    uk:['Виправлено: у видах «Арпеджіо» та «Розпізнати» гриф тепер одразу оновлюється, коли ти змінюєш стрій, каподастр, діапазон ладів чи ліворукість — раніше на цих двох видах він лишався зі старим виглядом, доки ти не перемкнешся на інший вид і назад.'] },
   { v:'1.21.0', date:'2026-06-17',
     en:['The app is now called Euterpe — after the Greek muse of music. "Guitar studio" stays on as a descriptor; nothing about how the app works has changed.',
         'Scales view now colours the fifth and the seventh, not just the root and third.',
