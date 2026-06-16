@@ -148,8 +148,13 @@ function notesLegendHTML(){ return legChip('--natural','leg_nat')+legChip('--sha
 function scaleLegendHTML(){
   if(scOverlay) return legChip('--root','leg_root')+legChip('--third','leg_third')+legChip('--fifth','leg_fifth')+legChip('--seventh','leg_seventh')+
     `<div class="leg"><span class="leg-dot" style="background:rgba(220,200,160,0.4)"></span><span>${t('leg_sc_other')}</span></div>`;
-  return legChip('--root','leg_root')+legChip('--third','leg_third')+
-    `<div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span>${t('leg_sc_other')}</span></div>`;
+  const ivs=SCALES[scIdx].iv;
+  const present=new Set(ivs.map(iv=>scClass(iv, ivs)));
+  let out=legChip('--root','leg_root')+legChip('--third','leg_third');
+  if(present.has('d-fifth')) out+=legChip('--fifth','leg_fifth');
+  if(present.has('d-sev')) out+=legChip('--seventh','leg_seventh');
+  if(present.has('d-other')) out+=`<div class="leg"><span class="leg-dot" style="background:var(--sc-other)"></span><span>${t('leg_sc_other')}</span></div>`;
+  return out;
 }
 function buildRootBtns(container, current, onPick){
   container.innerHTML='';

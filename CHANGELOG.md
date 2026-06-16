@@ -2,6 +2,13 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v1.21.0 — 2026-06-17
+
+- The app is now called Euterpe — after the Greek muse of music. "Guitar studio" stays on as a descriptor; nothing about how the app works has changed.
+- Scales view now colours the fifth and the seventh, not just the root and third.
+- Each scale shows its tonic-seventh skeleton — root, third, fifth, seventh — in the same colours used across the chord and triad views, with the remaining passing tones (2 · 4 · 6) in a neutral tone. The fifth is finally named in the legend instead of blending into a generic "other" that had borrowed the fifth’s blue.
+- The legend now lists only the degrees the selected scale actually contains, so a pentatonic with no seventh no longer shows a seventh swatch.
+
 ## v1.20.0 — 2026-06-16
 
 - Phase 2 — completing the reference: arpeggios, a capo, and the CAGED framework, added without crowding the three-tab layout.

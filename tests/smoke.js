@@ -1,5 +1,5 @@
 /* =============================================================================
-   Guitar Studio — headless smoke + correctness suite
+   Euterpe — headless smoke + correctness suite
    -----------------------------------------------------------------------------
    Run with:  npm test        (from this tests/ directory)
    or:        node smoke.js ../guitar-studio.html
@@ -580,7 +580,7 @@ process.exit(fail ? 1 : 0);
 
 function report() {
   console.log('\n──────────────────────────────────────────────');
-  console.log('Guitar Studio smoke suite: ' + pass + ' passed, ' + fail + ' failed  (' + (pass + fail) + ' checks)');
+  console.log('Euterpe smoke suite: ' + pass + ' passed, ' + fail + ' failed  (' + (pass + fail) + ' checks)');
   if (fails.length) {
     console.log('\nFailures:');
     fails.forEach(f => console.log('  ✗ ' + f));

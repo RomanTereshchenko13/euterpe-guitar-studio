@@ -1,4 +1,4 @@
-# Guitar Studio — Roadmap
+# Euterpe — Roadmap
 
 The next chapter is not "more features." It's turning what we have — a strong **reference**
 app plus a planned set of **drills** — into **one learning system** where a single musical
@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-06-16 · shipping: v1.20.0_
+_Last updated: 2026-06-17 · shipping: v1.21.0_
 
 ---
 

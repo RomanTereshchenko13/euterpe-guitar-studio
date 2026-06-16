@@ -2,7 +2,7 @@
   "name": "guitar-studio",
   "version": "1.20.0",
   "private": true,
-  "description": "Guitar theory & practice app. Authored as editable sources under src/ and assembled by build.js into a single zero-runtime-dependency index.html (the deployable artifact).",
+  "description": "Euterpe — guitar theory & practice app (brand: Euterpe; package slug stays guitar-studio). Authored as editable sources under src/ and assembled by build.js into a single zero-runtime-dependency index.html (the deployable artifact).",
   "scripts": {
     "build": "node build.js",
     "test": "npm --prefix tests test",

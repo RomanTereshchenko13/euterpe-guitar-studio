@@ -1,7 +1,7 @@
 /* ===================== i18n ===================== */
 const I18N = {
   uk: {
-    brand:'Гітарна студія',
+    brand:'Euterpe', brand_desc:'гітарна студія',
     tab_scales:'Гами / моди', tab_circle:'Коло квінт',
     tab_harmony:'Акорди / тріади', lbl_view:'Вид', view_chords:'Тони акорду', view_triads:'Форми тріад',
     view_scale:'Гама', view_notes:'Ноти', view_identify:'Розпізнати',
@@ -43,7 +43,7 @@ const I18N = {
     leg_root:'Тоніка (1)', leg_third:'Терція (3 / ♭3)', leg_fifth:'Квінта (5)', leg_seventh:'Септима (7 / ♭7)', leg_ext:'Розширення (6 · 9 · 11 · 13)',
     leg_nat:'Натуральна нота', leg_sharpflat:'Дієз / бемоль', leg_highlight:'Виділена нота',
     leg_sc_other:'Інші ноти гами',
-    footer:'Гітарна студія · стандартний стрій (E A D G B e) · працює офлайн',
+    footer:'Euterpe · гітарна студія · стандартний стрій (E A D G B e) · працює офлайн',
     intervals_word:'Інтервали', degrees_word:'Ступені',
     samenotes:'Ті самі ноти, що й', major_word:'мажор', mode_tail:'— змінюється лише тоніка',
     overlay_msg:'Накладено акорд: цільові ноти підсвічені, решта гами приглушена',
@@ -68,7 +68,7 @@ const I18N = {
     tr_shapes:'Форми тризвуку'
   },
   en: {
-    brand:'Guitar Studio',
+    brand:'Euterpe', brand_desc:'guitar studio',
     tab_scales:'Scales / modes', tab_circle:'Circle of fifths',
     tab_harmony:'Chords / triads', lbl_view:'View', view_chords:'Chord tones', view_triads:'Triad shapes',
     view_scale:'Scale', view_notes:'Notes', view_identify:'Identify',
@@ -110,7 +110,7 @@ const I18N = {
     leg_root:'Root (1)', leg_third:'Third (3 / ♭3)', leg_fifth:'Fifth (5)', leg_seventh:'Seventh (7 / ♭7)', leg_ext:'Extensions (6 · 9 · 11 · 13)',
     leg_nat:'Natural note', leg_sharpflat:'Sharp / flat', leg_highlight:'Selected note',
     leg_sc_other:'Other scale tones',
-    footer:'Guitar Studio · standard tuning (E A D G B e) · works offline',
+    footer:'Euterpe · guitar studio · standard tuning (E A D G B e) · works offline',
     intervals_word:'Intervals', degrees_word:'Scale degrees',
     samenotes:'Same notes as', major_word:'major', mode_tail:'— only the tonic changes',
     overlay_msg:'Chord overlaid: target tones highlighted, the rest of the scale dimmed',

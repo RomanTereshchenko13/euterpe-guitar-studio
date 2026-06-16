@@ -8,7 +8,7 @@
     /* UI accent is a cool teal, deliberately distinct from the musical "fifth"
        blue below — selection/focus chrome must never be mistaken for a note role */
     --accent: #2DB6A6; --root: #6BA53A; --third: #E0962B; --fifth: #4A9EE8; --seventh: #D14E7E;
-    --ext: #9B7BE0;
+    --ext: #9B7BE0; --sc-other: #b3a989;
     --natural: #4A9EE8; --sharp: #C98426; --radius: 10px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,9 +33,11 @@
   .wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
   header { border-bottom: 1px solid var(--border); padding: 28px 0 0; background: linear-gradient(180deg, #1c1913 0%, var(--bg) 100%); }
   .brand { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .brand-name { display: flex; flex-direction: column; gap: 1px; }
   .brand h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 30px; letter-spacing: -0.01em; }
-  .brand .ver { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; color: var(--text-faint); border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px; align-self: center; cursor: pointer; background: transparent; transition: all 0.12s; }
-  .brand .ver:hover { color: var(--text); border-color: var(--text-faint); }
+  .brand-desc { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 13px; line-height: 1.1; color: var(--text-dim); letter-spacing: 0.01em; }
+  .brand .ver { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; color: var(--text-faint); border: 1px solid rgba(45, 182, 166, 0.4); border-radius: 6px; padding: 2px 7px; align-self: center; cursor: pointer; background: transparent; transition: all 0.12s; }
+  .brand .ver:hover { color: var(--accent); border-color: var(--accent); }
   .lang { margin-left: auto; display: flex; gap: 2px; align-self: center; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 8px; padding: 2px; }
   .langbtn { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; padding: 5px 11px; border: none; background: transparent; color: var(--text-dim); border-radius: 6px; cursor: pointer; transition: all 0.12s; }
   .langbtn:hover:not(.active) { color: var(--text); }
@@ -156,7 +158,7 @@
   .d-third { background: var(--third); }
   .d-fifth { background: var(--fifth); color: #07203a; }
   .d-sev { background: var(--seventh); color: #2a0a16; }
-  .d-other { background: var(--fifth); color: #07203a; }
+  .d-other { background: var(--sc-other); color: #1c1810; }
   .d-ext { background: var(--ext); color: #160a2e; }
   .d-natural { background: var(--natural); color: #07203a; }
   .d-sharp { background: var(--sharp); color: #1f1405; }

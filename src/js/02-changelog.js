@@ -1,6 +1,15 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.21.0', date:'2026-06-17',
+    en:['The app is now called Euterpe — after the Greek muse of music. "Guitar studio" stays on as a descriptor; nothing about how the app works has changed.',
+        'Scales view now colours the fifth and the seventh, not just the root and third.',
+        'Each scale shows its tonic-seventh skeleton — root, third, fifth, seventh — in the same colours used across the chord and triad views, with the remaining passing tones (2 · 4 · 6) in a neutral tone. The fifth is finally named in the legend instead of blending into a generic "other" that had borrowed the fifth’s blue.',
+        'The legend now lists only the degrees the selected scale actually contains, so a pentatonic with no seventh no longer shows a seventh swatch.'],
+    uk:['Застосунок тепер називається Euterpe — на честь грецької музи музики. «Гітарна студія» лишається описом; у роботі застосунку нічого не змінилося.',
+        'Вид «Гами» тепер фарбує квінту й септиму, а не лише тоніку й терцію.',
+        'Кожна гама показує свій каркас — тоніка, терція, квінта, септима — тими самими кольорами, що й види акордів і тріад, а решта прохідних нот (2 · 4 · 6) — нейтральним тоном. Квінту нарешті названо в легенді, замість того щоб зливатися із загальним «іншим», який позичав її синій колір.',
+        'Легенда тепер перелічує лише ті ступені, які справді є в обраній гамі, тож пентатоніка без септими більше не показує позначку септими.'] },
   { v:'1.20.0', date:'2026-06-16',
     en:['Phase 2 — completing the reference: arpeggios, a capo, and the CAGED framework, added without crowding the three-tab layout.',
         'New "Arpeggio" view under Chords / triads: the same chord, shown as a melodic shape you run up the neck. Listen plays it ascending, and you can isolate one position as a practice box — the bridge between a chord and the scale you solo with over it.',

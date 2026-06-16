@@ -1,8 +1,9 @@
-# Guitar Studio (Гітарна студія)
+# Euterpe
 
 A guitar theory and practice app — scales, modes, chords, triads, the circle of
 fifths, and fretboard visualisation, with a Karplus-Strong audio engine and a
-jam-along backing band. Bilingual UI (Ukrainian / English).
+jam-along backing band. Bilingual UI (Ukrainian / English). Named after
+**Euterpe**, the Greek muse of music.
 
 **The shipped app is one file: [`index.html`](./index.html)** — zero runtime
 dependencies, runs entirely offline, opening it in a browser *is* running the

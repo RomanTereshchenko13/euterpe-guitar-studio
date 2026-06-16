@@ -1,4 +1,4 @@
-# Guitar Studio — test harness
+# Euterpe — test harness
 
 The app ships as a single, zero-dependency HTML file. This directory holds the
 **release gate**: a headless smoke + correctness suite. `jsdom` is a dev-only

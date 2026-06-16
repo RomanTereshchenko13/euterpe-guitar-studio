@@ -43,7 +43,18 @@ function cagedShapeName(letter){ return lang==='en' ? letter+'-shape' : 'фор�
 let scIdx=5, scPos=0, scOverlay=null;
 let scView='scale';   // Scales-tab sub-view: 'scale' | 'notes' (folded-in Notes mode, 1b)
 let diaList=[];
-function scClass(iv){ if(iv===0)return'd-root'; if(iv===3||iv===4)return'd-third'; return'd-other'; }
+/* Scale-degree coloring: paint the tonic-seventh skeleton (1·3·5·7) with the
+   app's semantic interval colors and leave the passing tones (2·4·6) neutral, so
+   the fifth keeps its blue instead of being swallowed by a generic "other" that
+   reused fifth-blue. The fifth is iv 7, or iv 6 only when no perfect-5 is present
+   (Locrian/blues ♭5 is the fifth; Lydian's ♯4 and any ♭6 stay passing tones). */
+function scClass(iv, ivs){
+  if(iv===0) return 'd-root';
+  if(iv===3||iv===4) return 'd-third';
+  if(iv===7 || (iv===6 && !ivs.includes(7))) return 'd-fifth';
+  if(iv===10||iv===11) return 'd-sev';
+  return 'd-other';
+}
 function boxWindow(pos){ if(!pos) return null; const anchor=(gRoot-4+12)%12; const start=anchor+BOX_OFFSETS[pos-1]; return [start, start+4]; }
 function diatonic(){
   const iv=SCALES[scIdx].iv; if(iv.length!==7) return [];
@@ -82,7 +93,7 @@ function renderScales(){
       if(win && (f<win[0]||f>win[1])) return null;
       let cls;
       if(ovMap){ cls = (ovMap[pc]!==undefined) ? chDegClass(ovMap[pc]) : 'd-dim'; }
-      else { cls = scClass(map[pc]); }
+      else { cls = scClass(map[pc], s.iv); }
       return makeDot(cls, gMode==='names'?scName(pc):SDEG[map[pc]], OPEN_MIDI[si]+f);
     }, scaleLegendHTML(), '');
   }
