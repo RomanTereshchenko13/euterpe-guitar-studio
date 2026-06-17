@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Euterpe">
+  <defs>
+    <path id="mk" d="M48 48 L48 72 L72 72 L72 56 L56 56 L56 48 L80 48 L80 72 L104 72 L104 56 L88 56 L88 48 L112 48 L112 72 L136 72 L136 56 L120 56 L120 48 L144 48 L144 72 L168 72 L168 56 L152 56 L152 48 L176 48 L176 72 L200 72 L200 56 L184 56 L184 48 L208 48 L208 72 L232 72 L232 56 L216 56 L216 48 L240 48 L240 72 L264 72 L264 56 L248 56 L248 48 L272 48 L272 72 L296 72 L296 56 L280 56 L280 48 L304 48 L304 72 L328 72 L328 56 L312 56 L312 48 L336 48 L336 72 L360 72 L360 56 L344 56 L344 48 L368 48 L368 72 L392 72 L392 56 L376 56 L376 48 L400 48 L400 72 L424 72 L424 56 L408 56 L408 48 L432 48 L432 72 L456 72 L456 56 L440 56 L440 48 L464 48"/>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#1b1712"/>
+
+  <!-- Greek-key (meander) frame: one edge, mirrored to all four sides -->
+  <g fill="none" stroke="#2DB6A6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.92">
+    <use href="#mk"/>
+    <use href="#mk" transform="rotate(90 256 256)"/>
+    <use href="#mk" transform="rotate(180 256 256)"/>
+    <use href="#mk" transform="rotate(270 256 256)"/>
+  </g>
+
+  <!-- guitar -->
+  <g>
+    <rect x="228" y="96" width="56" height="38" rx="10" fill="#ece3d2"/>
+    <rect x="238" y="120" width="36" height="138" rx="8" fill="#ece3d2"/>
+    <path d="M256 246 C300 246 327 263 331 294 C334 317 312 329 308 345
+      C305 364 331 369 341 388 C351 409 330 423 300 429 C284 433 270 434 256 434
+      C242 434 228 433 212 429 C182 423 161 409 171 388 C181 369 207 364 204 345
+      C200 329 178 317 181 294 C185 263 212 246 256 246 Z" fill="#ece3d2"/>
+    <circle cx="256" cy="334" r="32" fill="#1b1712"/>
+    <circle cx="256" cy="334" r="32" fill="none" stroke="#2DB6A6" stroke-width="6"/>
+    <rect x="233" y="384" width="46" height="13" rx="4" fill="#3a3026"/>
+    <g stroke="#2DB6A6" stroke-width="2.4" opacity="0.85">
+      <line x1="247" y1="122" x2="247" y2="390"/>
+      <line x1="256" y1="120" x2="256" y2="390"/>
+      <line x1="265" y1="122" x2="265" y2="390"/>
+    </g>
+  </g>
+</svg>

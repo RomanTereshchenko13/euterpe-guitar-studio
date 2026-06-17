@@ -2,6 +2,11 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v1.22.0 — 2026-06-17
+
+- Euterpe is now installable. Add it to your phone's home screen or your desktop and it opens in its own window — no browser bar — and keeps working with no connection.
+- New app icon: the guitar inside a Greek-key (meander) border, a nod to Euterpe, the Greek muse of music.
+
 ## v1.21.1 — 2026-06-17
 
 - Fixed: on the Arpeggio and Identify views, the fretboard now updates straight away when you change the tuning, capo, fret window or handedness — previously it kept its old layout on those two views until you switched away and back.

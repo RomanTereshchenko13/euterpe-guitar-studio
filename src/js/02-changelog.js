@@ -1,6 +1,11 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.22.0', date:'2026-06-17',
+    en:['Euterpe is now installable. Add it to your phone\'s home screen or your desktop and it opens in its own window — no browser bar — and keeps working with no connection.',
+        'New app icon: the guitar inside a Greek-key (meander) border, a nod to Euterpe, the Greek muse of music.'],
+    uk:['Euterpe тепер можна встановити. Додай застосунок на головний екран телефона чи на робочий стіл — він відкриється у власному вікні, без панелі браузера, і працюватиме без інтернету.',
+        'Нова іконка застосунку: гітара в обрамленні грецького меандра — відсилання до Евтерпи, грецької музи музики.'] },
   { v:'1.21.1', date:'2026-06-17',
     en:['Fixed: on the Arpeggio and Identify views, the fretboard now updates straight away when you change the tuning, capo, fret window or handedness — previously it kept its old layout on those two views until you switched away and back.'],
     uk:['Виправлено: у видах «Арпеджіо» та «Розпізнати» гриф тепер одразу оновлюється, коли ти змінюєш стрій, каподастр, діапазон ладів чи ліворукість — раніше на цих двох видах він лишався зі старим виглядом, доки ти не перемкнешся на інший вид і назад.'] },

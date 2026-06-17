@@ -23,21 +23,46 @@ const verMatch = js.match(/APP_VERSION\s*=\s*'([\d.]+)'/);
 if (!verMatch) throw new Error('APP_VERSION not found in sources — cannot name versioned build');
 const version = verMatch[1];
 
+// Favicon: inline the guitar mark (src/icons/icon.svg) as a data URI so the
+// single-file build stays self-contained (the dist copy has no sidecar files).
+// The PNG/manifest icons are separate served files used by the installed PWA.
+const iconSvg = fs.readFileSync(path.join(root, 'src', 'icons', 'icon.svg'), 'utf8').replace(/\n\s*/g, ' ').trim();
+const favicon = 'data:image/svg+xml,' + encodeURIComponent(iconSvg);
+
 // Function replacers: CSS/JS contain `$` (e.g. `${...}`), which a string
 // replacement would mis-interpret as $-patterns. A function value is inserted verbatim.
 const out = tpl
   .replace(/@@VERSION@@/g, () => version)
+  .replace(/@@FAVICON@@/g, () => favicon)
   .replace('@@STYLES@@', () => css)
   .replace('@@SCRIPT@@', () => js);
 
 // index.html: the stable entry point (GitHub Pages URL + what the test suite reads).
 fs.writeFileSync(path.join(root, 'index.html'), out);
 
-// Versioned copy (identical bytes) for file-based sharing / archival.
+// sw.js: the service worker, generated from src/sw.template.js with the version
+// baked into the cache name so every release busts the old offline cache.
+const swTpl = fs.readFileSync(path.join(root, 'src', 'sw.template.js'), 'utf8');
+fs.writeFileSync(path.join(root, 'sw.js'), swTpl.replace(/@@VERSION@@/g, () => version));
+
+// Publish the icon SVG to the served icons/ dir (the manifest + SW reference
+// icons/icon.svg). It's the same editable source used for the favicon and the
+// PNG icons (tools/make-icons.js); copying it on every build keeps it in sync
+// and present in CI. The raster PNGs are generated separately and committed.
+fs.copyFileSync(path.join(root, 'src', 'icons', 'icon.svg'), path.join(root, 'icons', 'icon.svg'));
+
+// Versioned standalone copy for file-based sharing / archival. It travels with
+// no sidecar files, so strip the served-only <link>s (manifest + apple-touch
+// icon) that would otherwise 404 when opened directly. The favicon stays — it's
+// an inlined data URI — and 14-pwa.js self-disables on file://, so this copy is
+// fully self-contained.
 const distDir = path.join(root, 'dist');
 fs.mkdirSync(distDir, { recursive: true });
 const versioned = 'guitar-studio-v' + version + '.html';
-fs.writeFileSync(path.join(distDir, versioned), out);
+const standalone = out
+  .replace(/<link rel="manifest" href="manifest\.webmanifest">\r?\n/, '')
+  .replace(/<link rel="apple-touch-icon" href="icons\/apple-touch-icon\.png">\r?\n/, '');
+fs.writeFileSync(path.join(distDir, versioned), standalone);
 
 // CHANGELOG.md: a human-facing changelog generated from the same CHANGELOG array
 // that powers the in-app "What's new" modal, so the two never drift. English
@@ -57,4 +82,4 @@ fs.writeFileSync(path.join(root, 'CHANGELOG.md'), md);
 
 console.log('Built from styles.css + ' + jsFiles.length + ' JS modules:');
 jsFiles.forEach(f => console.log('  src/js/' + f));
-console.log('Wrote index.html, dist/' + versioned + ', and CHANGELOG.md');
+console.log('Wrote index.html, sw.js, dist/' + versioned + ', and CHANGELOG.md');

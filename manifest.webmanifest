@@ -1,0 +1,19 @@
+{
+  "name": "Euterpe — Guitar Studio",
+  "short_name": "Euterpe",
+  "description": "A guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#15120d",
+  "theme_color": "#16140f",
+  "categories": ["music", "education"],
+  "icons": [
+    { "src": "icons/icon.svg", "type": "image/svg+xml", "sizes": "any" },
+    { "src": "icons/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "icons/icon-512.png", "type": "image/png", "sizes": "512x512" },
+    { "src": "icons/icon-maskable.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}

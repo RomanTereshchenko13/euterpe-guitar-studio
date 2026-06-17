@@ -5,16 +5,52 @@ fifths, and fretboard visualisation, with a Karplus-Strong audio engine and a
 jam-along backing band. Bilingual UI (Ukrainian / English). Named after
 **Euterpe**, the Greek muse of music.
 
-**The shipped app is one file: [`index.html`](./index.html)** — zero runtime
+**The app is one file: [`index.html`](./index.html)** — zero runtime
 dependencies, runs entirely offline, opening it in a browser *is* running the
 app. That file is **generated** from editable sources under [`src/`](./src/) by
 a tiny pure-string [`build.js`](./build.js) (no bundler, no transpile). The split
 keeps each concern in its own small module for editing; the build reassembles
-them so the deployable stays a single zero-dependency file.
+them so the core stays a single zero-dependency file.
+
+When **served over HTTPS** (e.g. GitHub Pages) it also behaves as an installable
+[PWA](#install-pwa): a web-app manifest + service worker add a home-screen/desktop
+icon, its own window, and offline caching. These are a thin, additive layer of
+sidecar files (`manifest.webmanifest`, `sw.js`, `icons/`) alongside `index.html`
+— the app itself is still the single file, and the double-clicked `file://` /
+`dist/` copy works exactly as before (the PWA layer is simply dormant there).
 
 ## Run
 
 Open `index.html` in any modern browser. That's it — no server, no install.
+
+<a name="install-pwa"></a>
+### Install (PWA)
+
+From the **hosted** (HTTPS) build, install it like an app:
+
+- **Desktop (Chrome/Edge):** the install icon in the address bar, or menu → *Install*.
+- **Android (Chrome):** menu → *Add to Home screen* / *Install app*.
+- **iOS (Safari):** Share → *Add to Home Screen*.
+
+Installed, it opens in its own window and works with no connection. The service
+worker (`sw.js`) precaches the app shell + icons; its cache name is stamped with
+`APP_VERSION`, so each release automatically supersedes the old offline cache.
+
+> The service worker needs an HTTPS (or `localhost`) origin, so install/offline
+> only apply to the hosted copy — a double-clicked `file://` `index.html` runs
+> normally but without the PWA layer.
+
+### Icons
+
+The icon is authored once as [`src/icons/icon.svg`](./src/icons/icon.svg) (a
+guitar inside a Greek-key border — a nod to the muse Euterpe). `build.js` inlines
+it as the favicon and copies it to `icons/icon.svg`; the raster PNGs the manifest
+and iOS need are generated from it with **system Edge/Chrome headless** (no npm
+install, like `tools/shoot.js`):
+
+```bash
+node tools/make-icons.js   # regenerate icons/*.png after editing src/icons/icon.svg
+```
 
 ## Edit & build
 
@@ -27,19 +63,25 @@ node build.js      # or: npm run build
 ```
 
 `build.js` concatenates `src/js/*.js` (alphabetical = intended order; files are
-zero-padded `01`..`13`) into one `<script>`, inlines `src/styles.css`, and writes
-two identical files: `index.html` (the stable, committed entry point that GitHub
-Pages serves) and a versioned copy `dist/guitar-studio-vX.Y.Z.html` (name taken
+zero-padded `01`..`15`) into one `<script>`, inlines `src/styles.css` and the
+favicon, and writes `index.html` (the stable, committed entry point that GitHub
+Pages serves) plus a versioned copy `dist/guitar-studio-vX.Y.Z.html` (name taken
 automatically from `APP_VERSION`) for file-based sharing or archiving a specific
-release. `dist/` is gitignored — it's a local, build-on-demand convenience, not
+release. It also emits the service worker `sw.js` from
+[`src/sw.template.js`](./src/sw.template.js) (stamping `APP_VERSION` into the
+cache name) and copies `src/icons/icon.svg` to the served `icons/icon.svg`. `dist/` is gitignored — it's a local, build-on-demand convenience, not
 published. The committed `index.html` must always match the sources — `npm test`
 rebuilds first (`pretest`) so CI catches a stale commit.
 
 ## Deploy
 
-`index.html` is the deployable artifact. On GitHub Pages, serve the repo root;
-the app loads as static files. Rebuild before committing so the published file
-reflects the latest sources.
+`index.html` is the primary artifact; the PWA adds a few static sidecars
+(`manifest.webmanifest`, `sw.js`, `icons/`). On GitHub Pages, serve the repo
+root; everything loads as static files. GitHub Pages is a natural fit: it's
+HTTPS (required for the service worker) and same-origin. All PWA paths are
+**relative**, so it works whether Pages serves from a domain root or a project
+subpath (`https://<you>.github.io/guitar-studio/`). Rebuild before committing so
+the published files reflect the latest sources.
 
 ## Test
 
@@ -83,17 +125,25 @@ The currently shipping version is recorded at the top of
 ```
 guitar-studio/
 ├── index.html              the app (generated, committed; stable URL, zero-dependency)
+├── manifest.webmanifest    PWA manifest (name, icons, standalone display)
+├── sw.js                   service worker (generated from src/sw.template.js)
+├── icons/                  served icon assets: icon.svg (copied) + generated PNGs
 ├── dist/                   generated versioned copies (gitignored; built on demand)
-├── build.js                assembles index.html + dist/ + CHANGELOG.md from src/
+├── build.js                assembles index.html + sw.js + dist/ + CHANGELOG.md from src/
 ├── CHANGELOG.md             generated from src/js/02-changelog.js (do not hand-edit)
 ├── package.json            build + test scripts
 ├── src/                    editable sources (the things you change)
-│   ├── index.template.html markup shell with @@STYLES@@ / @@SCRIPT@@ markers
+│   ├── index.template.html markup shell with @@STYLES@@ / @@SCRIPT@@ / @@FAVICON@@ markers
 │   ├── styles.css          all CSS
-│   └── js/                 ordered modules (01-version, 02-changelog … 13-wiring-init)
+│   ├── sw.template.js      service-worker source (@@VERSION@@ → cache name)
+│   ├── icons/icon.svg      the app icon, authored once (favicon + PNG source)
+│   └── js/                 ordered modules (01-version, 02-changelog … 14-pwa)
 ├── README.md               this file
 ├── ROADMAP.md              phased plan; current shipping version at the top
 ├── .gitignore
+├── tools/
+│   ├── shoot.js            dev-only responsive screenshots (system Edge/Chrome)
+│   └── make-icons.js       dev-only icon PNG rasterizer (system Edge/Chrome)
 ├── .github/workflows/
 │   └── test.yml            CI: runs the smoke suite on push/PR
 └── tests/                  dev-only test harness
@@ -106,8 +156,14 @@ guitar-studio/
 ## Architecture notes
 
 - Authored as small modules under `src/`; `build.js` concatenates them into a
-  single-file `index.html`. The shipped file is still plain HTML/CSS/JS with the
-  only external resource being Google Fonts.
+  single-file `index.html`. The core is still plain HTML/CSS/JS; the only
+  external resource it *fetches* is Google Fonts.
+- PWA layer (additive, hosted-only): `manifest.webmanifest` + a service worker
+  (`sw.js`, generated from `src/sw.template.js`) make it installable and
+  offline-first. The SW precaches the app shell + icons (cache-first, with the
+  cached `index.html` served for navigations) and runtime-caches Google Fonts.
+  Registration ([`src/js/14-pwa.js`](./src/js/14-pwa.js)) is guarded to a no-op
+  off HTTPS, so `file://` and the jsdom tests are unaffected.
 - Web Audio API: Karplus-Strong synthesis, body-resonance EQ, compressor +
   convolution reverb, a lookahead scheduler for drift-free timing, and named
   buses (backing / lead-target / cue) plus a synthesized backing band.
