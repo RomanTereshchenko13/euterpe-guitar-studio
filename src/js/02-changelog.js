@@ -1,6 +1,11 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.22.1', date:'2026-06-17',
+    en:['Installed-app polish for iPhone: adding Euterpe to your home screen now opens it in its own dark, full-screen window with the proper app name and a matching status bar, instead of a generic browser-style shell.',
+        'On phones with a camera notch or a home-indicator bar, the layout now keeps clear of them, so nothing hides behind the cut-out edges when the app runs full-screen.'],
+    uk:['Шліфування встановленого застосунку для iPhone: додавання Euterpe на головний екран тепер відкриває його у власному темному повноекранному вікні з правильною назвою застосунку та відповідним рядком стану, а не в загальному вигляді браузера.',
+        'На телефонах із вирізом під камеру чи смугою-індикатором унизу макет тепер тримається від них на відстані, тож у повноекранному режимі нічого не ховається за краями екрана.'] },
   { v:'1.22.0', date:'2026-06-17',
     en:['Euterpe is now installable. Add it to your phone\'s home screen or your desktop and it opens in its own window — no browser bar — and keeps working with no connection.',
         'New app icon: the guitar inside a Greek-key (meander) border, a nod to Euterpe, the Greek muse of music.'],

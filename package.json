@@ -1,6 +1,6 @@
 {
   "name": "guitar-studio",
-  "version": "1.20.0",
+  "version": "1.22.1",
   "private": true,
   "description": "Euterpe — guitar theory & practice app (brand: Euterpe; package slug stays guitar-studio). Authored as editable sources under src/ and assembled by build.js into a single zero-runtime-dependency index.html (the deployable artifact).",
   "scripts": {

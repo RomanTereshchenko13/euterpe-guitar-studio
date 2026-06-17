@@ -31,6 +31,17 @@
     *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
   }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+  /* Installed-PWA / notched-phone polish: with viewport-fit=cover the OS hands us
+     the display cutouts via env(safe-area-inset-*). Keep content clear of the
+     notch, rounded corners and home indicator. max(...) never shrinks the existing
+     spacing (insets are 0 on a normal screen), and the whole block is gated on
+     @supports env() so jsdom — which can't parse env() — falls back to the base
+     rules above, keeping the responsive-overflow test measuring today's values. */
+  @supports (padding: max(0px, env(safe-area-inset-left))) {
+    .wrap { padding-left: max(24px, env(safe-area-inset-left)); padding-right: max(24px, env(safe-area-inset-right)); }
+    header { padding-top: max(28px, env(safe-area-inset-top)); }
+    body { padding-bottom: max(4rem, env(safe-area-inset-bottom)); }
+  }
   header { border-bottom: 1px solid var(--border); padding: 28px 0 0; background: linear-gradient(180deg, #1c1913 0%, var(--bg) 100%); }
   .brand { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
   .brand-name { display: flex; flex-direction: column; gap: 1px; }

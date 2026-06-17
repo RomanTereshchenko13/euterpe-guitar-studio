@@ -2,6 +2,11 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v1.22.1 — 2026-06-17
+
+- Installed-app polish for iPhone: adding Euterpe to your home screen now opens it in its own dark, full-screen window with the proper app name and a matching status bar, instead of a generic browser-style shell.
+- On phones with a camera notch or a home-indicator bar, the layout now keeps clear of them, so nothing hides behind the cut-out edges when the app runs full-screen.
+
 ## v1.22.0 — 2026-06-17
 
 - Euterpe is now installable. Add it to your phone's home screen or your desktop and it opens in its own window — no browser bar — and keeps working with no connection.
