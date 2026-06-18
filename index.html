@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 1.26.0  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 1.27.0  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="1.26.0">
+<meta name="version" content="1.27.0">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -825,6 +825,7 @@
         <div class="info" id="cof-info"></div>
         <div class="row" style="margin-top:14px">
           <button class="btn" id="cof-open"></button>
+          <button class="btn" id="cof-harmony"></button>
         </div>
         <div class="legend" style="margin-top:18px">
           <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_tonic">Тоніка</span></div>
@@ -946,10 +947,15 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '1.26.0';
+const APP_VERSION = '1.27.0';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.27.0', date:'2026-06-19',
+    en:['The links between the tabs now go both ways. In Scales, once you overlay one of the key\'s chords on the neck, an "Open in chords" button jumps you straight to that chord in the Chords view — so the diatonic-chord row is no longer a dead end.',
+        'The Circle of fifths gains an "Open in chords" button beside "Open in scales", so you can jump from a key straight to its tonic chord on the neck.'],
+    uk:['Звʼязки між вкладками тепер працюють в обидва боки. У «Гамах», коли ти накладаєш один з акордів тональності на гриф, кнопка «Відкрити в акордах» одразу переносить до цього акорду у вкладці «Акорди» — тож ряд акордів тональності більше не глухий кут.',
+        'У «Колі квінт» зʼявилася кнопка «Відкрити в акордах» поруч із «Відкрити в гамах» — тож від тональності можна одразу перейти до її тонічного акорду на грифі.'] },
   { v:'1.26.0', date:'2026-06-19',
     en:['The chord-shapes card now shows a fuller set of ways to play each chord — the open shape, the barre forms, and several movable shapes higher up the neck — so it reads as a shape library instead of one or two lonely diagrams.',
         'You can fold the chord shapes away: a − on the card collapses it when you don\'t need it, and it remembers whether you left it open or closed.',
@@ -1209,7 +1215,7 @@ const I18N = {
     cof_sig:'Ключові знаки', cof_sig0:'без ключових знаків',
     cof_rel_minor:'Паралельний мінор', cof_rel_major:'Паралельний мажор',
     cof_neighbors:'Сусіди по колу', cof_subdom:'субдомінанта', cof_dom:'домінанта',
-    min_word:'мінор', b_cadence:'Прослухати I–IV–V', b_open_scales:'Відкрити в гамах',
+    min_word:'мінор', b_cadence:'Прослухати I–IV–V', b_open_scales:'Відкрити в гамах', b_open_harmony:'Відкрити в акордах',
     leg_tonic:'Тоніка', leg_dom:'Домінанта (V)', leg_subdom:'Субдомінанта (IV)', leg_rel:'Паралель',
     ch_h:'Тони акорду на грифі',
     ch_p:'Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу. Натисни на ноту, щоб почути її.',
@@ -1284,7 +1290,7 @@ const I18N = {
     cof_sig:'Key signature', cof_sig0:'no sharps or flats',
     cof_rel_minor:'Relative minor', cof_rel_major:'Relative major',
     cof_neighbors:'Neighbours on the circle', cof_subdom:'subdominant', cof_dom:'dominant',
-    min_word:'minor', b_cadence:'Play I–IV–V', b_open_scales:'Open in scales',
+    min_word:'minor', b_cadence:'Play I–IV–V', b_open_scales:'Open in scales', b_open_harmony:'Open in chords',
     leg_tonic:'Tonic', leg_dom:'Dominant (V)', leg_subdom:'Subdominant (IV)', leg_rel:'Relative key',
     ch_h:'Chord tones across the neck',
     ch_p:'Pick a root and a chord type — the root, third, fifth (and seventh for seventh chords) light up across the whole neck. Tap a note to hear it.',
@@ -2830,6 +2836,15 @@ function scalesOverChord(rootPc, chordPcs){
   });
   return out;
 }
+/* reverse seam (Scales/Circle → Harmony, 1c follow-up): map a diatonic triad's
+   interval set to the Harmony chord-quality index, so an overlaid scale chord (or
+   the circle's tonic) can open in the chord-tones view. Mirrors TRI_TO_QUAL
+   (maj/m/dim/aug → QUALITIES); non-tertian triads ('?') fall back to major. */
+function triadQi(iv){
+  const t3=iv[1], t5=iv[2];
+  const tri = (t3===3&&t5===6) ? 2 : (t3===4&&t5===8) ? 3 : (t3===3) ? 1 : 0;
+  return TRI_TO_QUAL[tri];
+}
 const MODE_OFF={1:2,2:4,3:5,4:7,5:9,6:11};
 const BOX_OFFSETS=[0,3,5,7,10];
 /* CAGED (Phase 2): the app's five scale positions cycle through the five movable
@@ -2882,7 +2897,7 @@ function renderScales(){
   let html=`<div class="big">${gRootLbl} ${sName(s)}: ${notes}</div><div class="sub">${t('degrees_word')}: ${degs}</div>`;
   if(MODE_OFF[scIdx]!==undefined){ const pr=noteName((gRoot-MODE_OFF[scIdx]+120)%12,flat); html+=`<div class="sub">${t('samenotes')} ${pr} ${t('major_word')} ${t('mode_tail')}</div>`; }
   if(isCAGEDScale() && scPos>0){ const letter=CAGED_BY_POS[scPos-1]; html+=`<div class="sub">CAGED · ${cagedShapeName(letter)} — ${t('caged_desc')}</div>`; }
-  if(scOverlay){ html+=`<div class="sub" style="color:var(--third)">${t('overlay_msg')}</div>`; }
+  if(scOverlay){ html+=`<div class="sub" style="color:var(--third)">${t('overlay_msg')} <button class="btn dia sc-open-harmony" type="button">${t('b_open_harmony')} →</button></div>`; }
   document.getElementById('sc-info').innerHTML=html;
   renderDiatonic();
   // shared board: only when the Scale view is active
@@ -3025,6 +3040,7 @@ function applyLang(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{ const k=el.getAttribute('data-i18n'); if(I18N[lang][k]!==undefined) el.textContent=I18N[lang][k]; });
   document.title = lang==='en' ? 'Euterpe — Guitar Studio' : 'Euterpe — Гітарна студія';
   document.getElementById('cof-open').textContent=t('b_open_scales');
+  { const ch=document.getElementById('cof-harmony'); if(ch) ch.textContent=t('b_open_harmony'); }
   const setPair=(onId,offId)=>{ const a=document.getElementById(onId),b=document.getElementById(offId); if(a){a.classList.add('active');a.setAttribute('aria-pressed','true');} if(b){b.classList.remove('active');b.setAttribute('aria-pressed','false');} };
   gMode==='names'?setPair('g-names','g-deg'):setPair('g-deg','g-names');
   applyNtFilter();
@@ -3443,6 +3459,16 @@ document.getElementById('sc-diatonic').addEventListener('click',e=>{
   scOverlay = (scOverlay && scOverlay.tag===c.tag) ? null : {rootPc:c.rootPc, iv:c.iv, tag:c.tag};
   renderScales(); saveState();
 });
+/* reverse seam (Scales → Harmony, mirrors the suggester's Harmony → Scales jump,
+   spine #2): open the overlaid diatonic chord in Harmony's chord-tones view, so
+   the diatonic row is no longer a dead end — you can drill from "the V chord of
+   this key" straight into its voicings. */
+document.getElementById('sc-info').addEventListener('click', e=>{
+  if(!e.target.closest('.sc-open-harmony') || !scOverlay) return;
+  const pc=scOverlay.rootPc;
+  setChord(pc, ROOTS[pc], triadQi(scOverlay.iv));
+  setHView('chords'); selectTab('harmony');
+});
 
 /* a circle node picks the key: set the context root + a canonical mode
    (major → Ionian, minor → Aeolian). The wheel re-derives its highlight. */
@@ -3459,6 +3485,10 @@ document.getElementById('cof-svg').addEventListener('keydown',e=>{
 });
 // the circle already reflects the context; "open in scales" is now navigation.
 document.getElementById('cof-open').onclick=function(){ selectTab('scales'); };
+/* Circle → Harmony seam: open the current key's tonic chord (major or minor,
+   from the wheel's ring) in Harmony's chord-tones view — the harmonic peer of
+   "open in scales". */
+{ const ch=document.getElementById('cof-harmony'); if(ch) ch.onclick=function(){ setChord(gRoot, gRootLbl, ctxCofMinor()?1:0); setHView('chords'); selectTab('harmony'); }; }
 
 /* Notes view (#4): a single "Naturals only" toggle. The note to highlight is no
    longer picked here — it follows the shared Root (setKey sets ntRoot), so this
@@ -3649,7 +3679,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     APP_VERSION, I18N, QUALITIES, TRIADS, SCALES, COF, FRET_RANGES, SEQ_PRESETS,
     fifthInterval, spellNote, rootParts, simpleName,
     diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey,
-    identifyChord, nearChords, scalesOverChord, currentHarmonyChord, renderIdentify,
+    identifyChord, nearChords, scalesOverChord, triadQi, currentHarmonyChord, renderIdentify,
     setIdSel:(arr)=>{ idSel=arr.slice(); },
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,

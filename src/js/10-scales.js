@@ -29,6 +29,15 @@ function scalesOverChord(rootPc, chordPcs){
   });
   return out;
 }
+/* reverse seam (Scales/Circle → Harmony, 1c follow-up): map a diatonic triad's
+   interval set to the Harmony chord-quality index, so an overlaid scale chord (or
+   the circle's tonic) can open in the chord-tones view. Mirrors TRI_TO_QUAL
+   (maj/m/dim/aug → QUALITIES); non-tertian triads ('?') fall back to major. */
+function triadQi(iv){
+  const t3=iv[1], t5=iv[2];
+  const tri = (t3===3&&t5===6) ? 2 : (t3===4&&t5===8) ? 3 : (t3===3) ? 1 : 0;
+  return TRI_TO_QUAL[tri];
+}
 const MODE_OFF={1:2,2:4,3:5,4:7,5:9,6:11};
 const BOX_OFFSETS=[0,3,5,7,10];
 /* CAGED (Phase 2): the app's five scale positions cycle through the five movable
@@ -81,7 +90,7 @@ function renderScales(){
   let html=`<div class="big">${gRootLbl} ${sName(s)}: ${notes}</div><div class="sub">${t('degrees_word')}: ${degs}</div>`;
   if(MODE_OFF[scIdx]!==undefined){ const pr=noteName((gRoot-MODE_OFF[scIdx]+120)%12,flat); html+=`<div class="sub">${t('samenotes')} ${pr} ${t('major_word')} ${t('mode_tail')}</div>`; }
   if(isCAGEDScale() && scPos>0){ const letter=CAGED_BY_POS[scPos-1]; html+=`<div class="sub">CAGED · ${cagedShapeName(letter)} — ${t('caged_desc')}</div>`; }
-  if(scOverlay){ html+=`<div class="sub" style="color:var(--third)">${t('overlay_msg')}</div>`; }
+  if(scOverlay){ html+=`<div class="sub" style="color:var(--third)">${t('overlay_msg')} <button class="btn dia sc-open-harmony" type="button">${t('b_open_harmony')} →</button></div>`; }
   document.getElementById('sc-info').innerHTML=html;
   renderDiatonic();
   // shared board: only when the Scale view is active

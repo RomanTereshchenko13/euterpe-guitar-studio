@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-06-18 · shipping: v1.25.1_
+_Last updated: 2026-06-19 · shipping: v1.27.0_
 
 ---
 
@@ -179,6 +179,14 @@ with, previously impossible — the biggest usefulness gain per unit of new code
 
 > **IA note (decided during 1c):** Circle of Fifths stays its own tab. The Chord-reference sidebar
 > was replaced by the contextual suggester rather than removed.
+
+**1c follow-up — the seam goes both ways (✅ Shipped v1.27.0).** The suggester wired Harmony → Scales,
+but the reverse direction was missing — Scales and the Circle were sinks. Now: an overlaid diatonic
+chord in Scales exposes an **"Open in chords"** action that jumps to that chord in Harmony's chord-tones
+view (`triadQi` maps the diatonic triad to its `QUALITIES` index), and the Circle gains the same
+**"Open in chords"** button beside "Open in scales" (opens the key's tonic triad). Every reference view
+that *shows* a chord can now *open* it — bidirectional navigation on the same content (spine #2), the
+literal seam the practice phases extend with "drill this / show this."
 
 **1d — Feel pass (the polish bar, scoped). ✅ Shipped v1.18.0.** Held the "every phase ships
 feel" bar here rather than deferring all of it to Phase 9 — riding 1b's board rebuild while the
@@ -351,7 +359,8 @@ smooth condense); screenshot passes at 390 / 1280 incl. condensed-header and Bac
 
 **Size:** L · **Risk:** med — the learner model is net-new; pin its schema first (below).
 
-The **Practice** tab and the machinery every drill shares:
+The **Practice** surface and the machinery every drill shares. **Settle the navigation model first**
+(recommendation below) — Practice is the tab count's tipping point, so the IA decision gates the shell:
 
 - **Practice shell + session scoring**, reusing the unified board + the scheduler + cue sounds.
 - **Learner model v1** (spine #3): per-item history, streaks, spaced-repetition queue. **Pin the
@@ -375,7 +384,25 @@ The **Practice** tab and the machinery every drill shares:
   windows, reused later by mic windows. Not a mic-only concern.
 - **First drill: fretboard note-naming.** App asks for a note; you tap every instance; timed
   and scored. Pure-screen, low-risk — the table-stakes floor of the tab.
-- **The seam** (spine #2) wired in: jump from any reference view into a drill on that content.
+- **The seam** (spine #2) wired in: jump from any reference view into a drill on that content. The
+  bidirectional reference seam already ships (v1.27.0, above) — Practice extends it, it doesn't invent it.
+
+> **Recommendation — split navigation onto two axes before adding Practice (decide now, build once).**
+> Today's three tabs (Harmony / Scales / Circle) are all **reference content**; Practice and Ear are
+> **activity modes**, a different axis. Flattening both onto one top strip is the IA smell — and that
+> strip *already* horizontal-scrolls on a phone at three tabs, so appending Practice (4) + Ear (5) makes
+> it worse exactly where most practice happens. Don't add Practice as top tab #4. Instead:
+> 1. **Keep the three reference tabs as-is** — they're well-unified (one shared context, one board) and
+>    need no churn. They become the sub-level *inside* Reference.
+> 2. **Introduce a primary mode layer** — Reference · Practice · Ear (· Progress later) — as a
+>    **bottom-anchored nav** on mobile (which doubles as the thumb-zone home the cross-cutting notes
+>    already call for); Harmony/Scales/Circle ride as a secondary level within Reference.
+> 3. **Make Practice contextual, not just a destination.** Per the thesis, Practice is reachable as
+>    "drill this" *from* each reference view via the seam — not only by navigating to a tab from cold.
+>    A 4th island would re-create the two-halves problem Phase 1 exists to kill.
+>
+> This is the cheapest moment to make the call: the shell built here is what Phases 4–7 inherit, and the
+> bidirectional seam (v1.27.0) is the first working piece of axis #3.
 
 **Validation:** drill logic, scoring-window correctness with the calibration offset applied,
 persistence of stats + streak/SRS state.
@@ -559,7 +586,9 @@ Phase 9  Product layer                          (curriculum / distribution / pol
     one bottom action shell, reused by every drill, not re-placed per drill.
   - **Navigation that scales.** The top tab strip already horizontal-scrolls; as Practice / Ear tabs
     land (Phases 3–4) it overflows, so move to a bottom-anchored nav (which doubles as the thumb-zone
-    home) — decide the pattern *before* the tab count grows, not after.
+    home) — decide the pattern *before* the tab count grows, not after. See the **two-axis navigation
+    recommendation in Phase 3**: reference content (Harmony/Scales/Circle) and activity modes
+    (Reference/Practice/Ear) are different axes and shouldn't share one flat strip.
   - **Full-height drill panels.** Dynamic viewport units (`dvh`/`svh`) so the URL-bar resize doesn't
     reflow a live drill or the mic-permission sheet; scoring badges in reserved space (no layout shift
     when a streak counter appears).

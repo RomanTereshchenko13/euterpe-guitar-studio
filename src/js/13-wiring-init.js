@@ -189,6 +189,16 @@ document.getElementById('sc-diatonic').addEventListener('click',e=>{
   scOverlay = (scOverlay && scOverlay.tag===c.tag) ? null : {rootPc:c.rootPc, iv:c.iv, tag:c.tag};
   renderScales(); saveState();
 });
+/* reverse seam (Scales → Harmony, mirrors the suggester's Harmony → Scales jump,
+   spine #2): open the overlaid diatonic chord in Harmony's chord-tones view, so
+   the diatonic row is no longer a dead end — you can drill from "the V chord of
+   this key" straight into its voicings. */
+document.getElementById('sc-info').addEventListener('click', e=>{
+  if(!e.target.closest('.sc-open-harmony') || !scOverlay) return;
+  const pc=scOverlay.rootPc;
+  setChord(pc, ROOTS[pc], triadQi(scOverlay.iv));
+  setHView('chords'); selectTab('harmony');
+});
 
 /* a circle node picks the key: set the context root + a canonical mode
    (major → Ionian, minor → Aeolian). The wheel re-derives its highlight. */
@@ -205,6 +215,10 @@ document.getElementById('cof-svg').addEventListener('keydown',e=>{
 });
 // the circle already reflects the context; "open in scales" is now navigation.
 document.getElementById('cof-open').onclick=function(){ selectTab('scales'); };
+/* Circle → Harmony seam: open the current key's tonic chord (major or minor,
+   from the wheel's ring) in Harmony's chord-tones view — the harmonic peer of
+   "open in scales". */
+{ const ch=document.getElementById('cof-harmony'); if(ch) ch.onclick=function(){ setChord(gRoot, gRootLbl, ctxCofMinor()?1:0); setHView('chords'); selectTab('harmony'); }; }
 
 /* Notes view (#4): a single "Naturals only" toggle. The note to highlight is no
    longer picked here — it follows the shared Root (setKey sets ntRoot), so this
@@ -395,7 +409,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     APP_VERSION, I18N, QUALITIES, TRIADS, SCALES, COF, FRET_RANGES, SEQ_PRESETS,
     fifthInterval, spellNote, rootParts, simpleName,
     diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey,
-    identifyChord, nearChords, scalesOverChord, currentHarmonyChord, renderIdentify,
+    identifyChord, nearChords, scalesOverChord, triadQi, currentHarmonyChord, renderIdentify,
     setIdSel:(arr)=>{ idSel=arr.slice(); },
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,

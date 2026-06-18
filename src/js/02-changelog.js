@@ -1,6 +1,11 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.27.0', date:'2026-06-19',
+    en:['The links between the tabs now go both ways. In Scales, once you overlay one of the key\'s chords on the neck, an "Open in chords" button jumps you straight to that chord in the Chords view — so the diatonic-chord row is no longer a dead end.',
+        'The Circle of fifths gains an "Open in chords" button beside "Open in scales", so you can jump from a key straight to its tonic chord on the neck.'],
+    uk:['Звʼязки між вкладками тепер працюють в обидва боки. У «Гамах», коли ти накладаєш один з акордів тональності на гриф, кнопка «Відкрити в акордах» одразу переносить до цього акорду у вкладці «Акорди» — тож ряд акордів тональності більше не глухий кут.',
+        'У «Колі квінт» зʼявилася кнопка «Відкрити в акордах» поруч із «Відкрити в гамах» — тож від тональності можна одразу перейти до її тонічного акорду на грифі.'] },
   { v:'1.26.0', date:'2026-06-19',
     en:['The chord-shapes card now shows a fuller set of ways to play each chord — the open shape, the barre forms, and several movable shapes higher up the neck — so it reads as a shape library instead of one or two lonely diagrams.',
         'You can fold the chord shapes away: a − on the card collapses it when you don\'t need it, and it remembers whether you left it open or closed.',

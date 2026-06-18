@@ -2,6 +2,11 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v1.27.0 — 2026-06-19
+
+- The links between the tabs now go both ways. In Scales, once you overlay one of the key's chords on the neck, an "Open in chords" button jumps you straight to that chord in the Chords view — so the diatonic-chord row is no longer a dead end.
+- The Circle of fifths gains an "Open in chords" button beside "Open in scales", so you can jump from a key straight to its tonic chord on the neck.
+
 ## v1.26.0 — 2026-06-19
 
 - The chord-shapes card now shows a fuller set of ways to play each chord — the open shape, the barre forms, and several movable shapes higher up the neck — so it reads as a shape library instead of one or two lonely diagrams.
