@@ -1,6 +1,13 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.26.0', date:'2026-06-19',
+    en:['The chord-shapes card now shows a fuller set of ways to play each chord — the open shape, the barre forms, and several movable shapes higher up the neck — so it reads as a shape library instead of one or two lonely diagrams.',
+        'You can fold the chord shapes away: a − on the card collapses it when you don\'t need it, and it remembers whether you left it open or closed.',
+        'On a phone the chord shapes now sit right under the neck — before the "what to play over this" panel — so "how to play it" comes first.'],
+    uk:['Картка форм акорду тепер показує більший набір способів зіграти акорд — відкриту форму, барре та кілька рухомих форм вище по грифу — тож це радше бібліотека форм, ніж одна-дві самотні діаграми.',
+        'Форми акорду можна згорнути: позначка − на картці ховає її, коли вона не потрібна, і застосунок запам\'ятовує, лишив ти її відкритою чи закритою.',
+        'На телефоні форми акорду тепер одразу під грифом — перед панеллю «що грати над цим» — тож «як це зіграти» йде першим.'] },
   { v:'1.25.1', date:'2026-06-18',
     en:['Chord types start simple: only the basic chords show at first, with a "more" toggle that reveals the sevenths and extended chords when you want them — so the picker is no longer a wall of twenty buttons.',
         'A bigger fretboard on desktop: the neck now spans the full width of the page, with the "what to play over this" panel tucked up beside the controls.',

@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 1.25.1  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 1.26.0  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="1.25.1">
+<meta name="version" content="1.26.0">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -127,6 +127,7 @@
       "main      aside"
       "board     board"
       "boardmeta boardmeta"
+      "shapes    shapes"
       "extras    extras";
     column-gap: 30px;
     align-items: start;
@@ -134,22 +135,28 @@
   }
   /* the suggester only shows on Harmony; on Scales / Circle drop the empty column
      so the board + controls use the full width (toggled in applyAsideState) */
-  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "main" "board" "boardmeta" "extras"; }
+  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "main" "board" "boardmeta" "shapes" "extras"; }
   .main { grid-area: main; min-width: 0; }
   #board-region { grid-area: board; }
   .board-meta { grid-area: boardmeta; }
   #harmony-extras { grid-area: extras; }
   .aside { grid-area: aside; align-self: start; }
+  /* full-width collapsible chord-shape row below the neck (the neck keeps the full
+     width above it); reordered above the suggester on a phone via the area maps */
+  #shapes-card { grid-area: shapes; align-self: start; margin-top: 26px; }
+  #shapes-card[hidden] { display: none; }
   /* Stacked single column on a phone; the suggester slots between the board and
      the chord reference (cards + sequencer) rather than landing at the very end. */
   @media (max-width: 940px) {
     .layout, .layout.no-aside {
       grid-template-columns: minmax(0,1fr);
-      grid-template-areas: "main" "board" "boardmeta" "aside" "extras";
+      grid-template-areas: "main" "board" "boardmeta" "shapes" "aside" "extras";
     }
-    /* the suggester follows the legend in flow on a phone; give it air so it doesn't
-       crowd the legend row directly above it */
+    /* shapes + suggester follow the legend in flow on a phone; give each air so it
+       doesn't crowd the row directly above it. Shapes sit FIRST ("how to fret this"
+       before "what to play over it"), via the grid area order above. */
     .aside { position: static; margin-top: 22px; }
+    #shapes-card { margin-top: 22px; }
   }
 
   .panel { display: none; animation: fade 0.25s ease; }
@@ -272,6 +279,10 @@
   .aside-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .aside-head span { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
   .aside-toggle { background: transparent; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; line-height: 1; padding: 0 4px; }
+  /* chord-shape cards inside the rail card: the pick-hint reads as a caption above the
+     diagrams; drop the diagram's standalone bottom margin (the card already pads it) */
+  #shapes-body .cd-hint { display: block; font-size: 11px; color: var(--text-faint); font-style: italic; margin-bottom: 11px; }
+  #shapes-body .chorddia { margin: 0; }
   /* "Play over this" suggester (1c) */
   .sug-chord { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; margin-bottom: 8px; }
   .sug-row { font-size: 13px; color: var(--text); margin-bottom: 8px; line-height: 1.5; }
@@ -843,13 +854,12 @@
   <div class="hint" id="hint"></div>
 </div>
 
-<!-- Chord-tones reference (1e): voicing cards + the progression sequencer live
-     BELOW the shared board, so the board (the centrepiece) sits directly under
-     the controls instead of being pushed offscreen by these on mobile. Shown
-     only in Harmony → Chord-tones; toggled by applyHarmonyExtras(). -->
+<!-- Progression sequencer (1e): a full-width row below the board. Shown only in
+     Harmony → Chord-tones; toggled by applyHarmonyExtras(). The chord-shape cards
+     used to share this block but moved to the right rail (#shapes-card) so the most
+     practical "how to fret this" reference sits beside the controls, not at the very
+     bottom past the whole neck. -->
 <div id="harmony-extras" hidden>
-  <div class="cd-head"><span class="cd-h" data-i18n="cd_voicings">Форми акорду</span><span class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</span></div>
-  <div class="chorddia" id="ch-diagram"></div>
   <div class="seq" id="ch-seq">
     <div class="seq-head">
       <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
@@ -874,6 +884,20 @@
     </div>
   </div>
 </aside>
+
+<!-- Chord-shape voicing cards (1f): a collapsible, state-persisted card (shapesOpen).
+     A full-width row below the neck (grid-area: shapes) so the neck keeps the full
+     page width above it; on a phone it sits right under the board+legend, above the
+     suggester. Holds several voicings up the neck (see chordVoicings/upNeckVoicings)
+     so it reads as a shape library, not a near-empty box. Shown only in
+     Harmony → Chord-tones; toggled by applyHarmonyExtras(). -->
+<div class="aside-card" id="shapes-card" hidden>
+  <div class="aside-head"><span data-i18n="cd_voicings">Форми акорду</span><button class="aside-toggle" id="shapes-toggle" aria-expanded="true">−</button></div>
+  <div id="shapes-body">
+    <div class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</div>
+    <div class="chorddia" id="ch-diagram"></div>
+  </div>
+</div>
 </div>
 
   <footer data-i18n="footer">Гітарна студія · стандартний стрій (E A D G B e) · працює офлайн</footer>
@@ -922,10 +946,17 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '1.25.1';
+const APP_VERSION = '1.26.0';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.26.0', date:'2026-06-19',
+    en:['The chord-shapes card now shows a fuller set of ways to play each chord — the open shape, the barre forms, and several movable shapes higher up the neck — so it reads as a shape library instead of one or two lonely diagrams.',
+        'You can fold the chord shapes away: a − on the card collapses it when you don\'t need it, and it remembers whether you left it open or closed.',
+        'On a phone the chord shapes now sit right under the neck — before the "what to play over this" panel — so "how to play it" comes first.'],
+    uk:['Картка форм акорду тепер показує більший набір способів зіграти акорд — відкриту форму, барре та кілька рухомих форм вище по грифу — тож це радше бібліотека форм, ніж одна-дві самотні діаграми.',
+        'Форми акорду можна згорнути: позначка − на картці ховає її, коли вона не потрібна, і застосунок запам\'ятовує, лишив ти її відкритою чи закритою.',
+        'На телефоні форми акорду тепер одразу під грифом — перед панеллю «що грати над цим» — тож «як це зіграти» йде першим.'] },
   { v:'1.25.1', date:'2026-06-18',
     en:['Chord types start simple: only the basic chords show at first, with a "more" toggle that reveals the sevenths and extended chords when you want them — so the picker is no longer a wall of twenty buttons.',
         'A bigger fretboard on desktop: the neck now spans the full width of the page, with the "what to play over this" panel tucked up beside the controls.',
@@ -1229,7 +1260,7 @@ const I18N = {
     cl_title:'Що нового', cl_current:'зараз',
     frets_all:'Усі', cd_open:'відкритий акорд',
     cd_barre:'барре, лад', cd_std:'аплікатура для стандартного строю',
-    cd_na:'немає простої форми', cd_calc:'обчислена аплікатура',
+    cd_na:'немає простої форми', cd_calc:'обчислена аплікатура', cd_pos:'вище по грифу',
     cd_voicings:'Форми акорду', cd_eshape:'барре у формі E', cd_ashape:'барре у формі A',
     cd_fret:'лад', cd_pick_hint:'Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»',
     tr_shapes:'Форми тризвуку',
@@ -1304,7 +1335,7 @@ const I18N = {
     cl_title:'What\'s new', cl_current:'current',
     frets_all:'All', cd_open:'open chord',
     cd_barre:'barre, fret', cd_std:'fingering for standard tuning',
-    cd_na:'no simple shape', cd_calc:'computed voicing',
+    cd_na:'no simple shape', cd_calc:'computed voicing', cd_pos:'up the neck',
     cd_voicings:'Chord shapes', cd_eshape:'E-shape barre', cd_ashape:'A-shape barre',
     cd_fret:'fret', cd_pick_hint:'Tap a card to choose the shape for Listen / Loop',
     tr_shapes:'Triad shapes',
@@ -1374,6 +1405,8 @@ let toolbarOpen = (typeof window!=='undefined' && window.innerWidth>700 && windo
 /* the backing band (metronome + bass/drums) lives in its own collapsible panel,
    default closed — secondary jam-along tools, kept out of the lean transport bar */
 let backingOpen = false;
+/* the chord-shape voicing cards (right rail) are collapsible + persisted, default open */
+let shapesOpen = true;
 /* the chord-reference sidebar is only shown on chord-oriented tabs */
 const ASIDE_TABS = ['harmony'];
 
@@ -2493,6 +2526,16 @@ function chordVoicings(rootPc, short, ivs){
     if(tmpl.A){ const barre=mod(rootPc-9,12); add(tmpl.A.map(o=>o==null?null:barre+o), barre, barre===0?'open':'A', false); }
   }
   if(out.length===0){ const g=genVoicing(rootPc, ivs); if(g) add(g.frets, g.barre, 'computed', true); }
+  // Round out a sparse set with extra movable shapes found up the neck, so the
+  // shapes card shows several positions (CAGED-style) rather than just one or two.
+  // Triads/7ths only (≤4 chord tones) — extended chords have no neat movable form
+  // and keep their single computed voicing. Capped, and deduped by add().
+  if(new Set(ivs.map(i=>mod(rootPc+i,12))).size<=4){
+    for(const v of upNeckVoicings(rootPc, ivs)){
+      if(out.length>=MAX_VOICINGS) break;
+      add(v.frets, v.barre, v.shape, true);
+    }
+  }
   out.sort((a,b)=> (a.shape==='open'?-1:b.shape==='open'?1:0) || (a.barre-b.barre) );
   return out;
 }
@@ -2542,6 +2585,37 @@ function genVoicing(rootPc, ivs){
   const played=best.frets.filter(x=>x!=null&&x>0);
   return {frets:best.frets, barre:played.length?Math.min(...played):0, generated:true};
 }
+/* Most shape cards to show for one chord (open + barres + a few movable forms up
+   the neck). Capped so the row stays tidy and the saved card index stays in range. */
+const MAX_VOICINGS = 6;
+/* Movable voicings discovered by scanning 4-fret windows up the neck: one full,
+   playable shape per position (root in the bass, every chord tone present, ≥4 strings,
+   ≤3-fret span). Returned low-position-first; the caller dedupes them against the
+   curated open/E/A shapes so only genuinely new positions are added. */
+function upNeckVoicings(rootPc, ivs){
+  const need=[...new Set(ivs.map(i=>mod(rootPc+i,12)))];
+  const out=[], seen={};
+  for(let base=0; base<=9; base++){
+    const frets=[];
+    for(let s=0;s<6;s++){
+      const openPc=mod(STD_LOW6[s],12); let chosen=null;
+      for(let f=Math.max(0,base); f<=base+3; f++){ if(need.includes(mod(openPc+f,12))){ chosen=f; break; } }
+      frets.push(chosen);
+    }
+    let lo=0; while(lo<6 && (frets[lo]==null || mod(STD_LOW6[lo]+frets[lo],12)!==rootPc)){ frets[lo]=null; lo++; }
+    if(lo>=6) continue;                                  // no root in the bass within this window
+    const cov=new Set(); let count=0; const span=[];
+    for(let s=0;s<6;s++){ if(frets[s]!=null){ cov.add(mod(STD_LOW6[s]+frets[s],12)); count++; if(frets[s]>0) span.push(frets[s]); } }
+    if(count<4) continue;                                // a full-sounding shape, not a thin grip
+    if(need.some(pc=>!cov.has(pc))) continue;            // every chord tone present
+    const width=span.length?Math.max(...span)-Math.min(...span):0;
+    if(width>3) continue;                                // comfortably inside a 4-fret box
+    const key=frets.map(f=>f==null?'x':f).join(',');
+    if(seen[key]) continue; seen[key]=1;
+    out.push({frets:frets.slice(), barre:span.length?Math.min(...span):0, shape:'pos', generated:true});
+  }
+  return out.sort((a,b)=>a.barre-b.barre);
+}
 /* Draw one chord-box SVG. funcMap: pitch-class -> d-* class, so card dots are
    coloured by their role in the chord (root/third/fifth/seventh/extension),
    matching the fretboard. Each dot carries data-midi so a click sounds it. */
@@ -2576,6 +2650,7 @@ function chordBoxSVG(v, funcMap){
   s+=`</svg>`; return s;
 }
 function voicingCaption(v){
+  if(v.shape==='pos') return `${t('cd_pos')} · ${v.barre}${t('cd_fret')}`;
   if(v.generated) return v.barre>0 ? `${t('cd_calc')} · ${t('cd_barre')} ${v.barre}` : t('cd_calc');
   if(v.shape==='open') return t('cd_open');
   const name = v.shape==='E' ? t('cd_eshape') : v.shape==='A' ? t('cd_ashape') : t('cd_barre');
@@ -2990,6 +3065,13 @@ function applyBackingPanel(){
   if(p) p.classList.toggle('collapsed', !backingOpen);
   if(tg){ tg.classList.toggle('open', backingOpen); tg.setAttribute('aria-expanded', backingOpen); }
 }
+/* collapsible chord-shape card in the right rail; mirrors the suggester's inline
+   show/hide but its open/closed state is persisted (shapesOpen) */
+function applyShapesPanel(){
+  const body=document.getElementById('shapes-body'), tg=document.getElementById('shapes-toggle');
+  if(body) body.style.display = shapesOpen ? '' : 'none';
+  if(tg){ tg.textContent = shapesOpen ? '−' : '+'; tg.setAttribute('aria-expanded', shapesOpen); }
+}
 function applyAsideState(){
   const show = ASIDE_TABS.includes(currentTab);
   const aside=document.querySelector('.aside');
@@ -3115,7 +3197,7 @@ if(typeof window!=='undefined'){
 const LS_KEY='guitarStudio.v1';
 let currentTab='harmony';
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
-  lang, tab:currentTab, tuningIdx, fretRangeIdx, tempo, lefty, toolbarOpen, backingOpen, capo,
+  lang, tab:currentTab, tuningIdx, fretRangeIdx, tempo, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
   gRoot, gRootLbl, gMode, hView, scView,
   chQual, arpPos, scIdx, scPos, scOverlay,
   chVoicing,
@@ -3134,6 +3216,7 @@ function loadState(){ try{
   if(typeof s.lefty==='boolean') lefty=s.lefty;
   if(typeof s.toolbarOpen==='boolean') toolbarOpen=s.toolbarOpen;
   if(typeof s.backingOpen==='boolean') backingOpen=s.backingOpen;
+  if(typeof s.shapesOpen==='boolean') shapesOpen=s.shapesOpen;
   if(Number.isInteger(s.gRoot)&&s.gRoot>=0&&s.gRoot<12){ gRoot=s.gRoot; if(typeof s.gRootLbl==='string') gRootLbl=s.gRootLbl; }
   if(s.gMode==='names'||s.gMode==='deg') gMode=s.gMode;
   if(s.hView==='chords'||s.hView==='triads'||s.hView==='arp') hView=s.hView;   // identify stays transient (idSel is scratch)
@@ -3256,7 +3339,12 @@ function applyBoardRegion(){
 }
 /* voicing cards + sequencer (now below the board) belong only to Harmony's
    chord-tones view; hide them everywhere else so the board stays the last thing. */
-function applyHarmonyExtras(){ const el=document.getElementById('harmony-extras'); if(el) el.hidden = !(currentTab==='harmony' && hView==='chords'); }
+function applyHarmonyExtras(){
+  const on = currentTab==='harmony' && hView==='chords';
+  const el=document.getElementById('harmony-extras'); if(el) el.hidden = !on;     // progression sequencer (full-width row)
+  const sc=document.getElementById('shapes-card'); if(sc) sc.hidden = !on;        // chord-shape cards (full-width row below the neck)
+  applyShapesPanel();
+}
 function globalPlay(){
   const boardEl=document.getElementById('board');
   if(currentTab==='harmony'){
@@ -3380,6 +3468,8 @@ document.getElementById('nt-nat').onclick=function(){ ntFilter = ntFilter==='nat
 applyNtFilter();
 
 document.getElementById('aside-toggle').onclick=function(){ const b=document.getElementById('aside-body'); const hidden=b.style.display==='none'; b.style.display=hidden?'block':'none'; this.textContent=hidden?'−':'+'; this.setAttribute('aria-expanded', hidden); };
+const _shapesTg=document.getElementById('shapes-toggle');
+if(_shapesTg) _shapesTg.onclick=function(){ shapesOpen=!shapesOpen; applyShapesPanel(); saveState(); };
 
 /* help toggle: one ? collapses/reveals BOTH the active view's description and the
    board's playing-hint, on every viewport now (was phone-only, description-only), so

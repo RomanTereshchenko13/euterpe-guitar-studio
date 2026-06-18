@@ -54,6 +54,8 @@ let toolbarOpen = (typeof window!=='undefined' && window.innerWidth>700 && windo
 /* the backing band (metronome + bass/drums) lives in its own collapsible panel,
    default closed — secondary jam-along tools, kept out of the lean transport bar */
 let backingOpen = false;
+/* the chord-shape voicing cards (right rail) are collapsible + persisted, default open */
+let shapesOpen = true;
 /* the chord-reference sidebar is only shown on chord-oriented tabs */
 const ASIDE_TABS = ['harmony'];
 

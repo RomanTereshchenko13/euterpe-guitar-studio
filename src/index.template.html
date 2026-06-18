@@ -261,13 +261,12 @@
   <div class="hint" id="hint"></div>
 </div>
 
-<!-- Chord-tones reference (1e): voicing cards + the progression sequencer live
-     BELOW the shared board, so the board (the centrepiece) sits directly under
-     the controls instead of being pushed offscreen by these on mobile. Shown
-     only in Harmony → Chord-tones; toggled by applyHarmonyExtras(). -->
+<!-- Progression sequencer (1e): a full-width row below the board. Shown only in
+     Harmony → Chord-tones; toggled by applyHarmonyExtras(). The chord-shape cards
+     used to share this block but moved to the right rail (#shapes-card) so the most
+     practical "how to fret this" reference sits beside the controls, not at the very
+     bottom past the whole neck. -->
 <div id="harmony-extras" hidden>
-  <div class="cd-head"><span class="cd-h" data-i18n="cd_voicings">Форми акорду</span><span class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</span></div>
-  <div class="chorddia" id="ch-diagram"></div>
   <div class="seq" id="ch-seq">
     <div class="seq-head">
       <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
@@ -292,6 +291,20 @@
     </div>
   </div>
 </aside>
+
+<!-- Chord-shape voicing cards (1f): a collapsible, state-persisted card (shapesOpen).
+     A full-width row below the neck (grid-area: shapes) so the neck keeps the full
+     page width above it; on a phone it sits right under the board+legend, above the
+     suggester. Holds several voicings up the neck (see chordVoicings/upNeckVoicings)
+     so it reads as a shape library, not a near-empty box. Shown only in
+     Harmony → Chord-tones; toggled by applyHarmonyExtras(). -->
+<div class="aside-card" id="shapes-card" hidden>
+  <div class="aside-head"><span data-i18n="cd_voicings">Форми акорду</span><button class="aside-toggle" id="shapes-toggle" aria-expanded="true">−</button></div>
+  <div id="shapes-body">
+    <div class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</div>
+    <div class="chorddia" id="ch-diagram"></div>
+  </div>
+</div>
 </div>
 
   <footer data-i18n="footer">Гітарна студія · стандартний стрій (E A D G B e) · працює офлайн</footer>

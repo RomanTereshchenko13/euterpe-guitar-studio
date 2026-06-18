@@ -85,7 +85,12 @@ function applyBoardRegion(){
 }
 /* voicing cards + sequencer (now below the board) belong only to Harmony's
    chord-tones view; hide them everywhere else so the board stays the last thing. */
-function applyHarmonyExtras(){ const el=document.getElementById('harmony-extras'); if(el) el.hidden = !(currentTab==='harmony' && hView==='chords'); }
+function applyHarmonyExtras(){
+  const on = currentTab==='harmony' && hView==='chords';
+  const el=document.getElementById('harmony-extras'); if(el) el.hidden = !on;     // progression sequencer (full-width row)
+  const sc=document.getElementById('shapes-card'); if(sc) sc.hidden = !on;        // chord-shape cards (full-width row below the neck)
+  applyShapesPanel();
+}
 function globalPlay(){
   const boardEl=document.getElementById('board');
   if(currentTab==='harmony'){
@@ -209,6 +214,8 @@ document.getElementById('nt-nat').onclick=function(){ ntFilter = ntFilter==='nat
 applyNtFilter();
 
 document.getElementById('aside-toggle').onclick=function(){ const b=document.getElementById('aside-body'); const hidden=b.style.display==='none'; b.style.display=hidden?'block':'none'; this.textContent=hidden?'−':'+'; this.setAttribute('aria-expanded', hidden); };
+const _shapesTg=document.getElementById('shapes-toggle');
+if(_shapesTg) _shapesTg.onclick=function(){ shapesOpen=!shapesOpen; applyShapesPanel(); saveState(); };
 
 /* help toggle: one ? collapses/reveals BOTH the active view's description and the
    board's playing-hint, on every viewport now (was phone-only, description-only), so

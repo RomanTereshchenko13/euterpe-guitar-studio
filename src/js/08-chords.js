@@ -334,6 +334,16 @@ function chordVoicings(rootPc, short, ivs){
     if(tmpl.A){ const barre=mod(rootPc-9,12); add(tmpl.A.map(o=>o==null?null:barre+o), barre, barre===0?'open':'A', false); }
   }
   if(out.length===0){ const g=genVoicing(rootPc, ivs); if(g) add(g.frets, g.barre, 'computed', true); }
+  // Round out a sparse set with extra movable shapes found up the neck, so the
+  // shapes card shows several positions (CAGED-style) rather than just one or two.
+  // Triads/7ths only (≤4 chord tones) — extended chords have no neat movable form
+  // and keep their single computed voicing. Capped, and deduped by add().
+  if(new Set(ivs.map(i=>mod(rootPc+i,12))).size<=4){
+    for(const v of upNeckVoicings(rootPc, ivs)){
+      if(out.length>=MAX_VOICINGS) break;
+      add(v.frets, v.barre, v.shape, true);
+    }
+  }
   out.sort((a,b)=> (a.shape==='open'?-1:b.shape==='open'?1:0) || (a.barre-b.barre) );
   return out;
 }
@@ -383,6 +393,37 @@ function genVoicing(rootPc, ivs){
   const played=best.frets.filter(x=>x!=null&&x>0);
   return {frets:best.frets, barre:played.length?Math.min(...played):0, generated:true};
 }
+/* Most shape cards to show for one chord (open + barres + a few movable forms up
+   the neck). Capped so the row stays tidy and the saved card index stays in range. */
+const MAX_VOICINGS = 6;
+/* Movable voicings discovered by scanning 4-fret windows up the neck: one full,
+   playable shape per position (root in the bass, every chord tone present, ≥4 strings,
+   ≤3-fret span). Returned low-position-first; the caller dedupes them against the
+   curated open/E/A shapes so only genuinely new positions are added. */
+function upNeckVoicings(rootPc, ivs){
+  const need=[...new Set(ivs.map(i=>mod(rootPc+i,12)))];
+  const out=[], seen={};
+  for(let base=0; base<=9; base++){
+    const frets=[];
+    for(let s=0;s<6;s++){
+      const openPc=mod(STD_LOW6[s],12); let chosen=null;
+      for(let f=Math.max(0,base); f<=base+3; f++){ if(need.includes(mod(openPc+f,12))){ chosen=f; break; } }
+      frets.push(chosen);
+    }
+    let lo=0; while(lo<6 && (frets[lo]==null || mod(STD_LOW6[lo]+frets[lo],12)!==rootPc)){ frets[lo]=null; lo++; }
+    if(lo>=6) continue;                                  // no root in the bass within this window
+    const cov=new Set(); let count=0; const span=[];
+    for(let s=0;s<6;s++){ if(frets[s]!=null){ cov.add(mod(STD_LOW6[s]+frets[s],12)); count++; if(frets[s]>0) span.push(frets[s]); } }
+    if(count<4) continue;                                // a full-sounding shape, not a thin grip
+    if(need.some(pc=>!cov.has(pc))) continue;            // every chord tone present
+    const width=span.length?Math.max(...span)-Math.min(...span):0;
+    if(width>3) continue;                                // comfortably inside a 4-fret box
+    const key=frets.map(f=>f==null?'x':f).join(',');
+    if(seen[key]) continue; seen[key]=1;
+    out.push({frets:frets.slice(), barre:span.length?Math.min(...span):0, shape:'pos', generated:true});
+  }
+  return out.sort((a,b)=>a.barre-b.barre);
+}
 /* Draw one chord-box SVG. funcMap: pitch-class -> d-* class, so card dots are
    coloured by their role in the chord (root/third/fifth/seventh/extension),
    matching the fretboard. Each dot carries data-midi so a click sounds it. */
@@ -417,6 +458,7 @@ function chordBoxSVG(v, funcMap){
   s+=`</svg>`; return s;
 }
 function voicingCaption(v){
+  if(v.shape==='pos') return `${t('cd_pos')} · ${v.barre}${t('cd_fret')}`;
   if(v.generated) return v.barre>0 ? `${t('cd_calc')} · ${t('cd_barre')} ${v.barre}` : t('cd_calc');
   if(v.shape==='open') return t('cd_open');
   const name = v.shape==='E' ? t('cd_eshape') : v.shape==='A' ? t('cd_ashape') : t('cd_barre');

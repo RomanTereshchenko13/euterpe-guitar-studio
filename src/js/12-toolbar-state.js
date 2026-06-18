@@ -22,6 +22,13 @@ function applyBackingPanel(){
   if(p) p.classList.toggle('collapsed', !backingOpen);
   if(tg){ tg.classList.toggle('open', backingOpen); tg.setAttribute('aria-expanded', backingOpen); }
 }
+/* collapsible chord-shape card in the right rail; mirrors the suggester's inline
+   show/hide but its open/closed state is persisted (shapesOpen) */
+function applyShapesPanel(){
+  const body=document.getElementById('shapes-body'), tg=document.getElementById('shapes-toggle');
+  if(body) body.style.display = shapesOpen ? '' : 'none';
+  if(tg){ tg.textContent = shapesOpen ? '−' : '+'; tg.setAttribute('aria-expanded', shapesOpen); }
+}
 function applyAsideState(){
   const show = ASIDE_TABS.includes(currentTab);
   const aside=document.querySelector('.aside');
@@ -147,7 +154,7 @@ if(typeof window!=='undefined'){
 const LS_KEY='guitarStudio.v1';
 let currentTab='harmony';
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
-  lang, tab:currentTab, tuningIdx, fretRangeIdx, tempo, lefty, toolbarOpen, backingOpen, capo,
+  lang, tab:currentTab, tuningIdx, fretRangeIdx, tempo, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
   gRoot, gRootLbl, gMode, hView, scView,
   chQual, arpPos, scIdx, scPos, scOverlay,
   chVoicing,
@@ -166,6 +173,7 @@ function loadState(){ try{
   if(typeof s.lefty==='boolean') lefty=s.lefty;
   if(typeof s.toolbarOpen==='boolean') toolbarOpen=s.toolbarOpen;
   if(typeof s.backingOpen==='boolean') backingOpen=s.backingOpen;
+  if(typeof s.shapesOpen==='boolean') shapesOpen=s.shapesOpen;
   if(Number.isInteger(s.gRoot)&&s.gRoot>=0&&s.gRoot<12){ gRoot=s.gRoot; if(typeof s.gRootLbl==='string') gRootLbl=s.gRootLbl; }
   if(s.gMode==='names'||s.gMode==='deg') gMode=s.gMode;
   if(s.hView==='chords'||s.hView==='triads'||s.hView==='arp') hView=s.hView;   // identify stays transient (idSel is scratch)

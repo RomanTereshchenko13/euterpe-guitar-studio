@@ -96,6 +96,7 @@
       "main      aside"
       "board     board"
       "boardmeta boardmeta"
+      "shapes    shapes"
       "extras    extras";
     column-gap: 30px;
     align-items: start;
@@ -103,22 +104,28 @@
   }
   /* the suggester only shows on Harmony; on Scales / Circle drop the empty column
      so the board + controls use the full width (toggled in applyAsideState) */
-  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "main" "board" "boardmeta" "extras"; }
+  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "main" "board" "boardmeta" "shapes" "extras"; }
   .main { grid-area: main; min-width: 0; }
   #board-region { grid-area: board; }
   .board-meta { grid-area: boardmeta; }
   #harmony-extras { grid-area: extras; }
   .aside { grid-area: aside; align-self: start; }
+  /* full-width collapsible chord-shape row below the neck (the neck keeps the full
+     width above it); reordered above the suggester on a phone via the area maps */
+  #shapes-card { grid-area: shapes; align-self: start; margin-top: 26px; }
+  #shapes-card[hidden] { display: none; }
   /* Stacked single column on a phone; the suggester slots between the board and
      the chord reference (cards + sequencer) rather than landing at the very end. */
   @media (max-width: 940px) {
     .layout, .layout.no-aside {
       grid-template-columns: minmax(0,1fr);
-      grid-template-areas: "main" "board" "boardmeta" "aside" "extras";
+      grid-template-areas: "main" "board" "boardmeta" "shapes" "aside" "extras";
     }
-    /* the suggester follows the legend in flow on a phone; give it air so it doesn't
-       crowd the legend row directly above it */
+    /* shapes + suggester follow the legend in flow on a phone; give each air so it
+       doesn't crowd the row directly above it. Shapes sit FIRST ("how to fret this"
+       before "what to play over it"), via the grid area order above. */
     .aside { position: static; margin-top: 22px; }
+    #shapes-card { margin-top: 22px; }
   }
 
   .panel { display: none; animation: fade 0.25s ease; }
@@ -241,6 +248,10 @@
   .aside-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .aside-head span { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
   .aside-toggle { background: transparent; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; line-height: 1; padding: 0 4px; }
+  /* chord-shape cards inside the rail card: the pick-hint reads as a caption above the
+     diagrams; drop the diagram's standalone bottom margin (the card already pads it) */
+  #shapes-body .cd-hint { display: block; font-size: 11px; color: var(--text-faint); font-style: italic; margin-bottom: 11px; }
+  #shapes-body .chorddia { margin: 0; }
   /* "Play over this" suggester (1c) */
   .sug-chord { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; margin-bottom: 8px; }
   .sug-row { font-size: 13px; color: var(--text); margin-bottom: 8px; line-height: 1.5; }

@@ -2,6 +2,12 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v1.26.0 — 2026-06-19
+
+- The chord-shapes card now shows a fuller set of ways to play each chord — the open shape, the barre forms, and several movable shapes higher up the neck — so it reads as a shape library instead of one or two lonely diagrams.
+- You can fold the chord shapes away: a − on the card collapses it when you don't need it, and it remembers whether you left it open or closed.
+- On a phone the chord shapes now sit right under the neck — before the "what to play over this" panel — so "how to play it" comes first.
+
 ## v1.25.1 — 2026-06-18
 
 - Chord types start simple: only the basic chords show at first, with a "more" toggle that reveals the sevenths and extended chords when you want them — so the picker is no longer a wall of twenty buttons.
