@@ -109,16 +109,15 @@ function applyLang(){
   document.getElementById('cof-open').textContent=t('b_open_scales');
   const setPair=(onId,offId)=>{ const a=document.getElementById(onId),b=document.getElementById(offId); if(a){a.classList.add('active');a.setAttribute('aria-pressed','true');} if(b){b.classList.remove('active');b.setAttribute('aria-pressed','false');} };
   gMode==='names'?setPair('g-names','g-deg'):setPair('g-deg','g-names');
-  ntFilter==='all'?setPair('nt-all','nt-nat'):setPair('nt-nat','nt-all');
+  applyNtFilter();
   buildChQuals(); buildArpQuals(); buildArpPos(); buildTrQuals(); buildTrSets(); buildTrInvs(); buildScSelect(); buildScPos();
-  buildToolbar(); setMetroLabel(); setLoopLabel(); setBandLabels();
+  buildToolbar(); setMetroLabel(); setLoopLabel(); setBandLabels(); setBackingToggle(); applyBackingPanel();
   buildSeqPresets(); renderSeq(); setSeqTransport();
   { const o=document.getElementById('cl-overlay'); if(o && !o.hidden) renderChangelog(); }
   renderChords(); renderArp(); renderTriads(); renderScales(); renderNotes(); renderCircle();
   setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
   activateRoot(document.getElementById('g-roots'), gRoot);
-  document.querySelectorAll('[data-root]').forEach(b=>b.classList.toggle('active', !!ntRoot && b.dataset.root===ntRoot));
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));
   if(typeof syncTabsScroll==='function') syncTabsScroll();

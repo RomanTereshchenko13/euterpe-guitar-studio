@@ -55,22 +55,10 @@
       <button class="tab" data-panel="scales" data-i18n="tab_scales">Гами / моди</button>
       <button class="tab" data-panel="circle" data-i18n="tab_circle">Коло квінт</button>
     </nav>
+    <!-- Lean transport bar: the primary verbs (Listen / Loop) + Tempo stay visible;
+         the studio extras (tuning/frets/capo and the metronome+backing band) tuck
+         behind two disclosure toggles so the header reads as actions, not a console. -->
     <div class="tb-bar">
-      <div class="tb-group">
-        <div class="tbg-inner">
-          <span class="tb-label" data-i18n="tb_tempo">Темп</span>
-          <input type="range" id="tb-tempo" min="40" max="200" step="2" value="90" aria-label="Tempo">
-          <span class="bpm-val" id="tb-bpm">90 BPM</span>
-        </div>
-      </div>
-      <div class="tb-group tb-backing">
-        <div class="tbg-inner">
-          <span class="tb-label" data-i18n="tb_backing">Супровід</span>
-          <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
-          <button class="btn band" id="tb-bass" aria-pressed="false"></button>
-          <button class="btn band" id="tb-drums" aria-pressed="false"></button>
-        </div>
-      </div>
       <button class="btn play" id="g-play"></button>
       <button class="btn play loop" id="g-loop"></button>
       <div class="tb-transport" id="tb-transport" hidden>
@@ -78,7 +66,21 @@
         <span class="tb-transport-label" id="tb-transport-label"></span>
         <button class="btn" id="tb-stop"></button>
       </div>
-      <button class="tb-toggle" id="tb-toggle" aria-expanded="false" aria-controls="toolbar"><span data-i18n="tb_settings">Налаштування</span> <span class="chev">▾</span></button>
+      <!-- the two disclosure toggles are grouped so they wrap together — Backing never
+           orphans onto its own line, it always rides next to Settings. -->
+      <span class="tb-toggles">
+        <button class="tb-toggle" id="tb-toggle" aria-expanded="false" aria-controls="toolbar"><span data-i18n="tb_settings">Налаштування</span> <span class="chev">▾</span></button>
+        <button class="tb-toggle" id="backing-toggle" aria-expanded="false" aria-controls="backing-panel"><span data-i18n="tb_backing">Супровід</span> <span class="chev">▾</span></button>
+      </span>
+      <!-- Tempo sits last and (on mobile) on its own full-width row, so its condense-fold
+           collapses a whole empty line instead of leaving a gap beside the toggles. -->
+      <div class="tb-group tb-tempo">
+        <div class="tbg-inner">
+          <span class="tb-label" data-i18n="tb_tempo">Темп</span>
+          <input type="range" id="tb-tempo" min="40" max="200" step="2" value="90" aria-label="Tempo">
+          <span class="bpm-val" id="tb-bpm">90 BPM</span>
+        </div>
+      </div>
     </div>
     <div class="toolbar collapsed" id="toolbar">
       <div class="tb-group">
@@ -93,6 +95,17 @@
       <div class="tb-group">
         <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
         <select id="tb-capo"></select>
+      </div>
+    </div>
+    <!-- Backing band (metronome + synth bass/drums): secondary jam-along tools, one
+         tap to reveal. The toggle tints green while any of them is active so you can
+         see backing is running without expanding the panel. -->
+    <div class="toolbar collapsed" id="backing-panel">
+      <div class="tb-group">
+        <span class="tb-label" data-i18n="tb_backing">Супровід</span>
+        <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
+        <button class="btn band" id="tb-bass" aria-pressed="false"></button>
+        <button class="btn band" id="tb-drums" aria-pressed="false"></button>
       </div>
     </div>
   </div>
@@ -125,6 +138,7 @@
     </div>
     <div class="ctx-group"><span class="ctrl-label" data-i18n="lbl_root">Тоніка</span><div class="group" id="g-roots"></div></div>
     <div class="ctx-group ctx-display">
+      <span class="ctrl-label" data-i18n="lbl_display">Показ</span>
       <button class="btn active" id="g-names" data-i18n="b_notes">Назви</button>
       <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
     </div>
@@ -137,8 +151,12 @@
     </div>
 
     <div id="sub-chords">
-      <div class="row row-quals">
-        <span class="ctrl-label" data-i18n="lbl_chord">Акорд</span><div class="group" id="ch-quals"></div>
+      <div class="row-quals">
+        <div class="quals-head">
+          <span class="ctrl-label" data-i18n="lbl_chord">Акорд</span>
+          <button type="button" class="qual-more" id="ch-quals-toggle" aria-controls="ch-quals" aria-expanded="false"></button>
+        </div>
+        <div id="ch-quals"></div>
       </div>
       <div class="info" id="ch-info"></div>
     </div>
@@ -153,7 +171,13 @@
     </div>
 
     <div id="sub-arp" hidden>
-      <div class="row"><span class="ctrl-label" data-i18n="lbl_chord">Акорд</span><div class="group" id="arp-quals"></div></div>
+      <div class="row-quals">
+        <div class="quals-head">
+          <span class="ctrl-label" data-i18n="lbl_chord">Акорд</span>
+          <button type="button" class="qual-more" id="arp-quals-toggle" aria-controls="arp-quals" aria-expanded="false"></button>
+        </div>
+        <div id="arp-quals"></div>
+      </div>
       <div class="row"><span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="arp-pos"></div></div>
       <div class="info" id="arp-info"></div>
     </div>
@@ -185,20 +209,14 @@
       <div class="info" id="sc-info"></div>
     </div>
 
+    <!-- Notes is a reference view (#4): the highlighted note follows the shared Root
+         picker in the context bar above (so its own 17-button note grid was a duplicate
+         and is gone). One toggle left — show every note, or naturals only. -->
     <div id="sub-notes" hidden>
       <div class="row">
         <span class="ctrl-label" data-i18n="lbl_show">Показати</span>
-        <button class="btn active" id="nt-all" data-i18n="b_allnotes">Всі ноти</button>
-        <button class="btn" id="nt-nat" data-i18n="b_natonly">Тільки натуральні</button>
-      </div>
-      <div class="row">
-        <span class="ctrl-label" data-i18n="lbl_nat">Натуральні</span><div class="group" id="nt-natural"></div>
-        <div class="divider"></div>
-        <span class="ctrl-label" data-i18n="lbl_sharp">Дієзи</span><div class="group" id="nt-sharp"></div>
-        <div class="divider"></div>
-        <span class="ctrl-label" data-i18n="lbl_flat">Бемолі</span><div class="group" id="nt-flat"></div>
-        <div class="divider"></div>
-        <button class="btn" id="nt-reset" data-i18n="b_reset">скинути</button>
+        <button class="btn" id="nt-nat" aria-pressed="false" data-i18n="b_natonly">Тільки натуральні</button>
+        <span class="cd-hint" data-i18n="nt_pick_hint">Підсвічена нота йде за тонікою вгорі · «Тільки натуральні» ховає дієзи й бемолі</span>
       </div>
     </div>
   </section>

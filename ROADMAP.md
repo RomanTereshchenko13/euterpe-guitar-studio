@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-06-18 · shipping: v1.25.0_
+_Last updated: 2026-06-18 · shipping: v1.25.1_
 
 ---
 
@@ -321,6 +321,29 @@ fret-cell width math the overflow assertion measures (`boardWidth()`), and stick
 jsdom; the sticky board + condensing header got a real-device pass on iOS Safari. The v1.25.0 pass added
 two headless functional checks (`tools/kbd-check.js`, a help-toggle probe) and screenshot passes across
 desktop / landscape / narrow-phone widths.
+
+**Follow-up — pre-Phase-3 polish (declutter + mobile). ✅ Shipped v1.25.1.** A redundancy/clunk pass over
+the existing surface (no new musical features), patch-level:
+- **Chord-quality progressive disclosure.** ✅ Only the *basic* tier shows by default; a `more`/`less`
+  toggle on the CHORD header line reveals the seventh + extended tiers (auto-revealed when the active
+  quality lives in one). Shared `chQualsAdv` across the chord + arp pickers; the two builders collapsed
+  into one `renderQualPicker`.
+- **Full-width desktop board.** ✅ The suggester moved up beside the controls and the neck now spans the
+  full page width below (`availW()` measures the board's own `.scroll` column, not `.main` — also fixes a
+  latent landscape mis-fit).
+- **Notes view simplified.** ✅ Dropped the 17-button note grid (it duplicated the context Root picker);
+  the highlight follows the shared root, a single "Naturals only" toggle replaces the segmented control,
+  and the dead Names/Intervals toggle is hidden there.
+- **Backing collapsible + leaner header.** ✅ Metronome/bass/drums moved out of the always-visible bar into
+  a `Backing ▾` panel (tints green while active); the transport bar is now Listen · Loop · Settings ·
+  Backing on one row with Tempo on its own row below.
+- **Mobile context bar un-boxed.** ✅ The View/Root/Display panel drops its border/background on phones and
+  reads as clean labelled rows.
+- **Scroll fix.** ✅ Tempo sits last on its own full-width row so the condensing header's fold can't strand
+  a control mid-row (caught visually, not by `scroll-check`, which stayed green).
+
+**Validation:** `npm test` 271 green, `kbd-check` 12 green, `scroll-check` clean (no flip-flop/drift/thrash,
+smooth condense); screenshot passes at 390 / 1280 incl. condensed-header and Backing-open states.
 
 ---
 

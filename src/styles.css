@@ -80,16 +80,23 @@
   .tab:hover:not(.active) { color: var(--text); background: var(--bg-panel); }
   .tab.active { color: var(--text); border-bottom-color: var(--accent); }
 
-  /* Two-column grid: controls + board + chord reference stack down the left, the
-     "Play over this" suggester is a sticky right column spanning them. Named areas
-     (not source order) place the pieces, so on a phone the same DOM reflows to put
-     the suggester right under the board (see the mobile override). minmax(0,1fr)
-     keeps the wide fretboard from blowing the column out — it scrolls inside its
+  /* Desktop grid (#5): the "Play over this" suggester sits in the top row BESIDE the
+     (now short) controls, and the fretboard — the centrepiece — spans the FULL width
+     below it, with the board-meta and chord reference following full-width too. This
+     reclaims the tall empty right rail the old sticky-suggester layout left, and hands
+     the reclaimed ~264px to the neck (availW() measures the board's own column, so the
+     cells grow to fill it). Named areas (not source order) place the pieces, so on a
+     phone the same DOM reflows to put the suggester under the board (mobile override).
+     minmax(0,1fr) keeps the wide neck from blowing the row out — it scrolls inside its
      own .scroll instead. */
   .layout {
     display: grid;
     grid-template-columns: minmax(0,1fr) 234px;
-    grid-template-areas: "main aside" "board aside" "boardmeta aside" "extras aside";
+    grid-template-areas:
+      "main      aside"
+      "board     board"
+      "boardmeta boardmeta"
+      "extras    extras";
     column-gap: 30px;
     align-items: start;
     padding-top: 30px;
@@ -101,7 +108,7 @@
   #board-region { grid-area: board; }
   .board-meta { grid-area: boardmeta; }
   #harmony-extras { grid-area: extras; }
-  .aside { grid-area: aside; position: sticky; top: 20px; align-self: start; }
+  .aside { grid-area: aside; align-self: start; }
   /* Stacked single column on a phone; the suggester slots between the board and
      the chord reference (cards + sequencer) rather than landing at the very end. */
   @media (max-width: 940px) {
@@ -109,7 +116,9 @@
       grid-template-columns: minmax(0,1fr);
       grid-template-areas: "main" "board" "boardmeta" "aside" "extras";
     }
-    .aside { position: static; }
+    /* the suggester follows the legend in flow on a phone; give it air so it doesn't
+       crowd the legend row directly above it */
+    .aside { position: static; margin-top: 22px; }
   }
 
   .panel { display: none; animation: fade 0.25s ease; }
@@ -259,14 +268,20 @@
   /* uniform control height so the timing-bar controls — which carry slightly
      different paddings — line up cleanly in each (possibly wrapped) row at any
      browser-zoom level; everything centres to the same 34px line. */
-  .tb-bar > .btn, .tb-bar > .tb-toggle, .tb-bar > .tb-group, .tb-bar > .tb-transport { min-height: 34px; }
-  .tb-bar > .btn, .tb-bar > .tb-toggle { display: inline-flex; align-items: center; justify-content: center; }
+  .tb-bar > .btn, .tb-bar .tb-toggle, .tb-bar > .tb-group, .tb-bar > .tb-transport { min-height: 34px; }
+  .tb-bar > .btn, .tb-bar .tb-toggle { display: inline-flex; align-items: center; justify-content: center; }
+  /* paired disclosure toggles (Settings + Backing) wrap as one unit so Backing can't
+     orphan onto its own line */
+  .tb-toggles { display: inline-flex; align-items: center; gap: 8px; }
   /* Settings flows inline after the playback controls. It used to be pushed to
      the far right (margin-left:auto), but when the bar wrapped that stranded it
      alone on a second line — so it now wraps tidily next to the others instead. */
   .tb-toggle { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--bg-panel); color: var(--text-dim); cursor: pointer; transition: all 0.12s; }
   .tb-toggle:hover { color: var(--text); border-color: var(--text-faint); }
   .tb-toggle.open { background: var(--bg-panel-2); color: var(--text); }
+  /* the Backing toggle tints green while the metronome / bass / drums are running,
+     so an active backing is visible without expanding the (collapsed) panel */
+  .tb-toggle.on { color: var(--root); border-color: var(--root); }
   .tb-toggle .chev { transition: transform 0.18s; font-size: 10px; }
   .tb-toggle.open .chev { transform: rotate(180deg); }
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
@@ -346,7 +361,10 @@
     /* The tempo/backing groups fold with the grid-rows 1fr→0fr trick: it animates to their
        real content height, so the collapse is linear with no guessed max-height to clip the
        controls. .tbg-inner carries the original horizontal flex layout + overflow:hidden. */
-    .tb-bar .tb-group { display: grid; grid-template-rows: 1fr; }
+    /* flex-basis:100% puts the tempo group on its OWN row, so the condense-fold
+       (grid-rows 1fr→0fr) collapses an empty full-width line — it can never leave a
+       horizontal gap stranding the toggles beside it (the prior scroll bug). */
+    .tb-bar .tb-group { display: grid; grid-template-rows: 1fr; flex-basis: 100%; }
     .tb-bar .tbg-inner { min-height: 0; overflow: hidden; }   /* flex layout comes from the global .tbg-inner rule */
     header.scrolled { padding-top: 8px; }
     header.scrolled .brand-desc { max-height: 0; opacity: 0; }
@@ -403,11 +421,19 @@
 
   /* chord-quality picker, chunked into labelled tiers (basic / sevenths / extended)
      so 21 qualities read as organised sections rather than one wall of buttons */
-  .row-quals { align-items: flex-start; }
-  .row-quals .ctrl-label { padding-top: 4px; }
-  #ch-quals { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-start; }
+  .row-quals { margin-bottom: 13px; }
+  /* section header line: the CHORD label on the left, the disclosure toggle anchored
+     on the right — so the toggle reads as part of the section, never floating loose
+     after the buttons (the old placement looked like stray debris on mobile). */
+  .quals-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
+  .quals-head .ctrl-label { margin-right: 0; }
+  #ch-quals, #arp-quals { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-start; }
   .qual-grp { display: flex; flex-direction: column; gap: 5px; }
   .qual-grp-lab { font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+  /* progressive-disclosure toggle (#1/#2): reveals the seventh + extended tiers */
+  .qual-more { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--text-dim); background: transparent; border: 1px solid var(--border-strong); border-radius: 7px; padding: 4px 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.12s; }
+  .qual-more:hover { color: var(--text); border-color: var(--text-faint); }
+  .qual-more[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
 
   /* ---- chord diagrams ---- */
   .chorddia { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 18px; align-items: flex-start; }
@@ -468,6 +494,14 @@
   @media (max-width: 600px) {
     .wrap { padding: 0 14px; }
     .brand h1 { font-size: 25px; }
+    /* un-box the View / Root / Display bar on phones: the desktop "horizontal context
+       bar" panel becomes a tall, heavy box once it wraps. Drop the border/background
+       and stack each control as a clean labelled row (label on its own line, buttons
+       below) — consistent with the panel rows underneath, not a competing card. */
+    .context-bar { flex-direction: column; align-items: stretch; gap: 13px; padding: 0; margin-bottom: 16px; border: none; background: transparent; border-radius: 0; }
+    .context-bar .ctx-group { width: 100%; gap: 7px 8px; }
+    .context-bar .ctx-group:not(.ctx-view) { padding-left: 0; border-left: none; }
+    .context-bar .ctrl-label { width: 100%; margin: 0; }
     /* (the description + board-hint help toggle is now global — see .ph-help above) */
     /* control strips swipe instead of wrapping into tall blocks (2nd mobile-shell
        step). Scoped to panel-row groups — the shared context-bar root picker keeps
@@ -487,6 +521,16 @@
     #ch-quals .group::-webkit-scrollbar, #arp-quals .group::-webkit-scrollbar { display: none; }
     .toolbar { gap: 8px 10px; }
     input[type="range"] { width: 92px; }
+    /* tighten the transport bar so Listen · Loop · Settings · Backing fit one row (tempo
+       then owns the row below) — fewer, cleaner lines on a phone */
+    .tb-bar { gap: 7px 8px; }
+    .tb-bar .btn.play { padding: 7px 10px; }
+    .tb-bar .tb-toggle { padding: 6px 10px; }
+    .tb-toggles { gap: 6px; }
+    /* the lone tempo control owns its row on a phone — let the slider stretch to fill it
+       so the row reads as intentional, not a short control floating in empty space */
+    .tb-bar .tb-tempo .tbg-inner { width: 100%; }
+    .tb-bar .tb-tempo input[type="range"] { flex: 1; width: auto; min-width: 0; }
     /* finger-sized touch targets: dots are the app's primary verb (tap to hear),
        so on a phone they grow rather than shrink; the 5-fret window has the room */
     .dot { width: 33px; height: 33px; font-size: 11px; }

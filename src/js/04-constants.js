@@ -51,6 +51,9 @@ function beat(){ return 60/tempo; }
 /* collapsible toolbar; default open on wide screens, collapsed on phones — and also
    collapsed on a short (landscape-phone) viewport, where every row above the neck counts */
 let toolbarOpen = (typeof window!=='undefined' && window.innerWidth>700 && window.innerHeight>500);
+/* the backing band (metronome + bass/drums) lives in its own collapsible panel,
+   default closed — secondary jam-along tools, kept out of the lean transport bar */
+let backingOpen = false;
 /* the chord-reference sidebar is only shown on chord-oriented tabs */
 const ASIDE_TABS = ['harmony'];
 

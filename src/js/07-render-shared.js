@@ -27,10 +27,15 @@ function renderNums(el){
    Both .board and .fretnums are sized from boardWidth(), so dot/number
    alignment is preserved exactly — only the per-cell pixel width adapts. */
 const CELL_MIN = 34, CELL_MAX = 200;
+/* Width available to the neck. Measured from the board's OWN scroll container (#5):
+   the board spans a different column than the controls now (full width on desktop,
+   the right pane in landscape), so sizing off `.main` would mis-fit it. `.scroll`
+   always reflects the board's real column in every layout; fall back to `.main`
+   then the viewport for the jsdom harness, where clientWidth is 0. */
 function availW(){
   if(typeof document==='undefined') return 976;
-  const m=document.querySelector('.main');
-  const w = m && m.clientWidth ? m.clientWidth : ((typeof window!=='undefined'?window.innerWidth:1024) - 48);
+  const el=document.querySelector('.board-region .scroll') || document.querySelector('.main');
+  const w = el && el.clientWidth ? el.clientWidth : ((typeof window!=='undefined'?window.innerWidth:1024) - 48);
   return Math.max(280, w);
 }
 function leftFixed(){ return FRET_LO()<=1 ? 67 : 30; }

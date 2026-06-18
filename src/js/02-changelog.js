@@ -1,6 +1,17 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.25.1', date:'2026-06-18',
+    en:['Chord types start simple: only the basic chords show at first, with a "more" toggle that reveals the sevenths and extended chords when you want them — so the picker is no longer a wall of twenty buttons.',
+        'A bigger fretboard on desktop: the neck now spans the full width of the page, with the "what to play over this" panel tucked up beside the controls.',
+        'The Notes view is simpler: the highlighted note now follows the key you pick above, and a single "Naturals only" switch replaces the old grid of note buttons.',
+        'A tidier toolbar on phones: the metronome and backing band now tuck behind a "Backing" button next to Settings, and the view / key / display controls are no longer boxed in — so the header is lighter and the neck sits higher.',
+        'Fixed a glitch where the slimming header could strand a control mid-row as you scrolled on a phone.'],
+    uk:['Типи акордів починаються з простого: спершу показано лише базові акорди, а перемикач «більше» відкриває септакорди та розширені, коли вони потрібні — тож вибір більше не стіна з двадцяти кнопок.',
+        'Більший гриф на комп\'ютері: гриф тепер займає всю ширину сторінки, а панель «що грати над цим» перемістилася вгору поруч із керуванням.',
+        'Вид «Ноти» простіший: підсвічена нота тепер іде за тонікою, яку ти вибираєш вище, а один перемикач «Тільки натуральні» замінює стару сітку кнопок із нотами.',
+        'Охайніша панель на телефонах: метроном і супровід тепер ховаються за кнопкою «Супровід» поруч із «Налаштуваннями», а керування видом / тонікою / показом більше не в рамці — тож шапка легша, а гриф сидить вище.',
+        'Виправлено збій, коли шапка, що стискається, могла лишити елемент керування посеред ряду під час гортання на телефоні.'] },
   { v:'1.25.0', date:'2026-06-18',
     en:['A wider, more readable fretboard on desktop: on a large screen the neck now grows with the window — taller string spacing and bigger note dots — instead of stretching into a thin strip.',
         'Keyboard shortcuts on desktop: Space to listen or stop, L to loop, M for the metronome, 1–3 to switch tabs, A–G to set the key, and [ / ] to transpose it by a semitone. Press ? (or the link below the page) for the full list.',

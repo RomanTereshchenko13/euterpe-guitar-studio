@@ -151,20 +151,41 @@ function currentHarmonyChord(){
     return {rootPc:c.root, rootLbl:ROOTS[c.root], short:c.short, pcs:c.q.iv.map(iv=>mod(c.root+iv,12))}; }
   const q=QUALITIES[chQual]; return {rootPc:gRoot, rootLbl:gRootLbl, short:q.short, pcs:q.iv.map(iv=>mod(gRoot+iv,12))};
 }
-function buildChQuals(){
-  const c=document.getElementById('ch-quals'); c.innerHTML='';
-  QUAL_GROUPS.forEach(g=>{
-    const seg=document.createElement('div'); seg.className='qual-grp';
-    const lab=document.createElement('span'); lab.className='qual-grp-lab'; lab.textContent=t('qg_'+g); seg.appendChild(lab);
-    const wrap=document.createElement('div'); wrap.className='group';
-    QUALITIES.forEach((q,i)=>{ if(q.grp!==g) return;
-      const b=document.createElement('button'); b.className='btn'+(i===chQual?' active':'');
-      b.textContent=q.short||'maj'; b.title=qName(q); b.setAttribute('aria-label', qName(q)); b.setAttribute('aria-pressed', i===chQual);
-      b.onclick=()=>{ chQual=i; chVoicing=0; buildChQuals(); renderChords(); saveState(); };
-      wrap.appendChild(b);
-    });
-    seg.appendChild(wrap); c.appendChild(seg);
+/* Progressive disclosure (#1/#2): the 20-quality vocabulary is a lot to meet on
+   first load — beginners want maj/min/7. So only the BASIC tier shows by default;
+   the seventh + extended tiers tuck behind a "more" toggle. This shortens the tall
+   pre-board control stack (esp. on a phone) and makes the picker less intimidating.
+   The advanced tiers auto-reveal whenever the active quality lives in one (e.g. a
+   restored maj7), so the current selection is never hidden behind the toggle.
+   `chQualsAdv` is a UI-only preference (not persisted) shared by the chord + arp
+   pickers, so revealing in one reveals in both. */
+let chQualsAdv=false;
+function qualSeg(g, onPick, showLabel){
+  const seg=document.createElement('div'); seg.className='qual-grp';
+  if(showLabel){ const lab=document.createElement('span'); lab.className='qual-grp-lab'; lab.textContent=t('qg_'+g); seg.appendChild(lab); }
+  const wrap=document.createElement('div'); wrap.className='group';
+  QUALITIES.forEach((q,i)=>{ if(q.grp!==g) return;
+    const b=document.createElement('button'); b.className='btn'+(i===chQual?' active':'');
+    b.textContent=q.short||'maj'; b.title=qName(q); b.setAttribute('aria-label', qName(q)); b.setAttribute('aria-pressed', i===chQual);
+    b.onclick=()=>onPick(i);
+    wrap.appendChild(b);
   });
+  seg.appendChild(wrap); return seg;
+}
+/* Build a tiered quality picker into `containerId`, driving the disclosure toggle
+   at `toggleId` — which lives on the section-header line beside the CHORD label, not
+   floating after the buttons. Tier sub-labels only appear once expanded; the lone
+   Basic tier needs no "BASIC" caption when collapsed. */
+function renderQualPicker(containerId, toggleId, onPick){
+  const c=document.getElementById(containerId); if(!c) return; c.innerHTML='';
+  const adv = chQualsAdv || QUALITIES[chQual].grp!=='basic';   // keep the active quality visible
+  c.appendChild(qualSeg('basic', onPick, adv));
+  if(adv){ c.appendChild(qualSeg('seventh', onPick, adv)); c.appendChild(qualSeg('ext', onPick, adv)); }
+  const tog=document.getElementById(toggleId);
+  if(tog){ tog.setAttribute('aria-expanded', adv?'true':'false'); tog.textContent=(adv?t('qual_less')+' ▴':t('qual_more')+' ▾'); }
+}
+function buildChQuals(){
+  renderQualPicker('ch-quals','ch-quals-toggle', i=>{ chQual=i; chVoicing=0; buildChQuals(); renderChords(); saveState(); });
 }
 function renderChords(){
   const q=QUALITIES[chQual];
@@ -191,19 +212,7 @@ function renderChords(){
    (chQual) with the chord-tones view so switching views keeps the chord — that's
    the bridge. Reuses the chord-tone board paint + the scale-view box window. */
 function buildArpQuals(){
-  const c=document.getElementById('arp-quals'); if(!c) return; c.innerHTML='';
-  QUAL_GROUPS.forEach(g=>{
-    const seg=document.createElement('div'); seg.className='qual-grp';
-    const lab=document.createElement('span'); lab.className='qual-grp-lab'; lab.textContent=t('qg_'+g); seg.appendChild(lab);
-    const wrap=document.createElement('div'); wrap.className='group';
-    QUALITIES.forEach((q,i)=>{ if(q.grp!==g) return;
-      const b=document.createElement('button'); b.className='btn'+(i===chQual?' active':'');
-      b.textContent=q.short||'maj'; b.title=qName(q); b.setAttribute('aria-label', qName(q)); b.setAttribute('aria-pressed', i===chQual);
-      b.onclick=()=>{ chQual=i; chVoicing=0; buildChQuals(); buildArpQuals(); renderArp(); saveState(); };
-      wrap.appendChild(b);
-    });
-    seg.appendChild(wrap); c.appendChild(seg);
-  });
+  renderQualPicker('arp-quals','arp-quals-toggle', i=>{ chQual=i; chVoicing=0; buildChQuals(); buildArpQuals(); renderArp(); saveState(); });
 }
 function buildArpPos(){
   const c=document.getElementById('arp-pos'); if(!c) return; c.innerHTML='';

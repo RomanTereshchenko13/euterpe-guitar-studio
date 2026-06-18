@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 1.25.0  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 1.25.1  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="1.25.0">
+<meta name="version" content="1.25.1">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -111,16 +111,23 @@
   .tab:hover:not(.active) { color: var(--text); background: var(--bg-panel); }
   .tab.active { color: var(--text); border-bottom-color: var(--accent); }
 
-  /* Two-column grid: controls + board + chord reference stack down the left, the
-     "Play over this" suggester is a sticky right column spanning them. Named areas
-     (not source order) place the pieces, so on a phone the same DOM reflows to put
-     the suggester right under the board (see the mobile override). minmax(0,1fr)
-     keeps the wide fretboard from blowing the column out — it scrolls inside its
+  /* Desktop grid (#5): the "Play over this" suggester sits in the top row BESIDE the
+     (now short) controls, and the fretboard — the centrepiece — spans the FULL width
+     below it, with the board-meta and chord reference following full-width too. This
+     reclaims the tall empty right rail the old sticky-suggester layout left, and hands
+     the reclaimed ~264px to the neck (availW() measures the board's own column, so the
+     cells grow to fill it). Named areas (not source order) place the pieces, so on a
+     phone the same DOM reflows to put the suggester under the board (mobile override).
+     minmax(0,1fr) keeps the wide neck from blowing the row out — it scrolls inside its
      own .scroll instead. */
   .layout {
     display: grid;
     grid-template-columns: minmax(0,1fr) 234px;
-    grid-template-areas: "main aside" "board aside" "boardmeta aside" "extras aside";
+    grid-template-areas:
+      "main      aside"
+      "board     board"
+      "boardmeta boardmeta"
+      "extras    extras";
     column-gap: 30px;
     align-items: start;
     padding-top: 30px;
@@ -132,7 +139,7 @@
   #board-region { grid-area: board; }
   .board-meta { grid-area: boardmeta; }
   #harmony-extras { grid-area: extras; }
-  .aside { grid-area: aside; position: sticky; top: 20px; align-self: start; }
+  .aside { grid-area: aside; align-self: start; }
   /* Stacked single column on a phone; the suggester slots between the board and
      the chord reference (cards + sequencer) rather than landing at the very end. */
   @media (max-width: 940px) {
@@ -140,7 +147,9 @@
       grid-template-columns: minmax(0,1fr);
       grid-template-areas: "main" "board" "boardmeta" "aside" "extras";
     }
-    .aside { position: static; }
+    /* the suggester follows the legend in flow on a phone; give it air so it doesn't
+       crowd the legend row directly above it */
+    .aside { position: static; margin-top: 22px; }
   }
 
   .panel { display: none; animation: fade 0.25s ease; }
@@ -290,14 +299,20 @@
   /* uniform control height so the timing-bar controls — which carry slightly
      different paddings — line up cleanly in each (possibly wrapped) row at any
      browser-zoom level; everything centres to the same 34px line. */
-  .tb-bar > .btn, .tb-bar > .tb-toggle, .tb-bar > .tb-group, .tb-bar > .tb-transport { min-height: 34px; }
-  .tb-bar > .btn, .tb-bar > .tb-toggle { display: inline-flex; align-items: center; justify-content: center; }
+  .tb-bar > .btn, .tb-bar .tb-toggle, .tb-bar > .tb-group, .tb-bar > .tb-transport { min-height: 34px; }
+  .tb-bar > .btn, .tb-bar .tb-toggle { display: inline-flex; align-items: center; justify-content: center; }
+  /* paired disclosure toggles (Settings + Backing) wrap as one unit so Backing can't
+     orphan onto its own line */
+  .tb-toggles { display: inline-flex; align-items: center; gap: 8px; }
   /* Settings flows inline after the playback controls. It used to be pushed to
      the far right (margin-left:auto), but when the bar wrapped that stranded it
      alone on a second line — so it now wraps tidily next to the others instead. */
   .tb-toggle { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--bg-panel); color: var(--text-dim); cursor: pointer; transition: all 0.12s; }
   .tb-toggle:hover { color: var(--text); border-color: var(--text-faint); }
   .tb-toggle.open { background: var(--bg-panel-2); color: var(--text); }
+  /* the Backing toggle tints green while the metronome / bass / drums are running,
+     so an active backing is visible without expanding the (collapsed) panel */
+  .tb-toggle.on { color: var(--root); border-color: var(--root); }
   .tb-toggle .chev { transition: transform 0.18s; font-size: 10px; }
   .tb-toggle.open .chev { transform: rotate(180deg); }
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
@@ -377,7 +392,10 @@
     /* The tempo/backing groups fold with the grid-rows 1fr→0fr trick: it animates to their
        real content height, so the collapse is linear with no guessed max-height to clip the
        controls. .tbg-inner carries the original horizontal flex layout + overflow:hidden. */
-    .tb-bar .tb-group { display: grid; grid-template-rows: 1fr; }
+    /* flex-basis:100% puts the tempo group on its OWN row, so the condense-fold
+       (grid-rows 1fr→0fr) collapses an empty full-width line — it can never leave a
+       horizontal gap stranding the toggles beside it (the prior scroll bug). */
+    .tb-bar .tb-group { display: grid; grid-template-rows: 1fr; flex-basis: 100%; }
     .tb-bar .tbg-inner { min-height: 0; overflow: hidden; }   /* flex layout comes from the global .tbg-inner rule */
     header.scrolled { padding-top: 8px; }
     header.scrolled .brand-desc { max-height: 0; opacity: 0; }
@@ -434,11 +452,19 @@
 
   /* chord-quality picker, chunked into labelled tiers (basic / sevenths / extended)
      so 21 qualities read as organised sections rather than one wall of buttons */
-  .row-quals { align-items: flex-start; }
-  .row-quals .ctrl-label { padding-top: 4px; }
-  #ch-quals { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-start; }
+  .row-quals { margin-bottom: 13px; }
+  /* section header line: the CHORD label on the left, the disclosure toggle anchored
+     on the right — so the toggle reads as part of the section, never floating loose
+     after the buttons (the old placement looked like stray debris on mobile). */
+  .quals-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
+  .quals-head .ctrl-label { margin-right: 0; }
+  #ch-quals, #arp-quals { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-start; }
   .qual-grp { display: flex; flex-direction: column; gap: 5px; }
   .qual-grp-lab { font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+  /* progressive-disclosure toggle (#1/#2): reveals the seventh + extended tiers */
+  .qual-more { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--text-dim); background: transparent; border: 1px solid var(--border-strong); border-radius: 7px; padding: 4px 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.12s; }
+  .qual-more:hover { color: var(--text); border-color: var(--text-faint); }
+  .qual-more[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
 
   /* ---- chord diagrams ---- */
   .chorddia { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 18px; align-items: flex-start; }
@@ -499,6 +525,14 @@
   @media (max-width: 600px) {
     .wrap { padding: 0 14px; }
     .brand h1 { font-size: 25px; }
+    /* un-box the View / Root / Display bar on phones: the desktop "horizontal context
+       bar" panel becomes a tall, heavy box once it wraps. Drop the border/background
+       and stack each control as a clean labelled row (label on its own line, buttons
+       below) — consistent with the panel rows underneath, not a competing card. */
+    .context-bar { flex-direction: column; align-items: stretch; gap: 13px; padding: 0; margin-bottom: 16px; border: none; background: transparent; border-radius: 0; }
+    .context-bar .ctx-group { width: 100%; gap: 7px 8px; }
+    .context-bar .ctx-group:not(.ctx-view) { padding-left: 0; border-left: none; }
+    .context-bar .ctrl-label { width: 100%; margin: 0; }
     /* (the description + board-hint help toggle is now global — see .ph-help above) */
     /* control strips swipe instead of wrapping into tall blocks (2nd mobile-shell
        step). Scoped to panel-row groups — the shared context-bar root picker keeps
@@ -518,6 +552,16 @@
     #ch-quals .group::-webkit-scrollbar, #arp-quals .group::-webkit-scrollbar { display: none; }
     .toolbar { gap: 8px 10px; }
     input[type="range"] { width: 92px; }
+    /* tighten the transport bar so Listen · Loop · Settings · Backing fit one row (tempo
+       then owns the row below) — fewer, cleaner lines on a phone */
+    .tb-bar { gap: 7px 8px; }
+    .tb-bar .btn.play { padding: 7px 10px; }
+    .tb-bar .tb-toggle { padding: 6px 10px; }
+    .tb-toggles { gap: 6px; }
+    /* the lone tempo control owns its row on a phone — let the slider stretch to fill it
+       so the row reads as intentional, not a short control floating in empty space */
+    .tb-bar .tb-tempo .tbg-inner { width: 100%; }
+    .tb-bar .tb-tempo input[type="range"] { flex: 1; width: auto; min-width: 0; }
     /* finger-sized touch targets: dots are the app's primary verb (tap to hear),
        so on a phone they grow rather than shrink; the 5-fret window has the room */
     .dot { width: 33px; height: 33px; font-size: 11px; }
@@ -593,22 +637,10 @@
       <button class="tab" data-panel="scales" data-i18n="tab_scales">Гами / моди</button>
       <button class="tab" data-panel="circle" data-i18n="tab_circle">Коло квінт</button>
     </nav>
+    <!-- Lean transport bar: the primary verbs (Listen / Loop) + Tempo stay visible;
+         the studio extras (tuning/frets/capo and the metronome+backing band) tuck
+         behind two disclosure toggles so the header reads as actions, not a console. -->
     <div class="tb-bar">
-      <div class="tb-group">
-        <div class="tbg-inner">
-          <span class="tb-label" data-i18n="tb_tempo">Темп</span>
-          <input type="range" id="tb-tempo" min="40" max="200" step="2" value="90" aria-label="Tempo">
-          <span class="bpm-val" id="tb-bpm">90 BPM</span>
-        </div>
-      </div>
-      <div class="tb-group tb-backing">
-        <div class="tbg-inner">
-          <span class="tb-label" data-i18n="tb_backing">Супровід</span>
-          <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
-          <button class="btn band" id="tb-bass" aria-pressed="false"></button>
-          <button class="btn band" id="tb-drums" aria-pressed="false"></button>
-        </div>
-      </div>
       <button class="btn play" id="g-play"></button>
       <button class="btn play loop" id="g-loop"></button>
       <div class="tb-transport" id="tb-transport" hidden>
@@ -616,7 +648,21 @@
         <span class="tb-transport-label" id="tb-transport-label"></span>
         <button class="btn" id="tb-stop"></button>
       </div>
-      <button class="tb-toggle" id="tb-toggle" aria-expanded="false" aria-controls="toolbar"><span data-i18n="tb_settings">Налаштування</span> <span class="chev">▾</span></button>
+      <!-- the two disclosure toggles are grouped so they wrap together — Backing never
+           orphans onto its own line, it always rides next to Settings. -->
+      <span class="tb-toggles">
+        <button class="tb-toggle" id="tb-toggle" aria-expanded="false" aria-controls="toolbar"><span data-i18n="tb_settings">Налаштування</span> <span class="chev">▾</span></button>
+        <button class="tb-toggle" id="backing-toggle" aria-expanded="false" aria-controls="backing-panel"><span data-i18n="tb_backing">Супровід</span> <span class="chev">▾</span></button>
+      </span>
+      <!-- Tempo sits last and (on mobile) on its own full-width row, so its condense-fold
+           collapses a whole empty line instead of leaving a gap beside the toggles. -->
+      <div class="tb-group tb-tempo">
+        <div class="tbg-inner">
+          <span class="tb-label" data-i18n="tb_tempo">Темп</span>
+          <input type="range" id="tb-tempo" min="40" max="200" step="2" value="90" aria-label="Tempo">
+          <span class="bpm-val" id="tb-bpm">90 BPM</span>
+        </div>
+      </div>
     </div>
     <div class="toolbar collapsed" id="toolbar">
       <div class="tb-group">
@@ -631,6 +677,17 @@
       <div class="tb-group">
         <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
         <select id="tb-capo"></select>
+      </div>
+    </div>
+    <!-- Backing band (metronome + synth bass/drums): secondary jam-along tools, one
+         tap to reveal. The toggle tints green while any of them is active so you can
+         see backing is running without expanding the panel. -->
+    <div class="toolbar collapsed" id="backing-panel">
+      <div class="tb-group">
+        <span class="tb-label" data-i18n="tb_backing">Супровід</span>
+        <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
+        <button class="btn band" id="tb-bass" aria-pressed="false"></button>
+        <button class="btn band" id="tb-drums" aria-pressed="false"></button>
       </div>
     </div>
   </div>
@@ -663,6 +720,7 @@
     </div>
     <div class="ctx-group"><span class="ctrl-label" data-i18n="lbl_root">Тоніка</span><div class="group" id="g-roots"></div></div>
     <div class="ctx-group ctx-display">
+      <span class="ctrl-label" data-i18n="lbl_display">Показ</span>
       <button class="btn active" id="g-names" data-i18n="b_notes">Назви</button>
       <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
     </div>
@@ -675,8 +733,12 @@
     </div>
 
     <div id="sub-chords">
-      <div class="row row-quals">
-        <span class="ctrl-label" data-i18n="lbl_chord">Акорд</span><div class="group" id="ch-quals"></div>
+      <div class="row-quals">
+        <div class="quals-head">
+          <span class="ctrl-label" data-i18n="lbl_chord">Акорд</span>
+          <button type="button" class="qual-more" id="ch-quals-toggle" aria-controls="ch-quals" aria-expanded="false"></button>
+        </div>
+        <div id="ch-quals"></div>
       </div>
       <div class="info" id="ch-info"></div>
     </div>
@@ -691,7 +753,13 @@
     </div>
 
     <div id="sub-arp" hidden>
-      <div class="row"><span class="ctrl-label" data-i18n="lbl_chord">Акорд</span><div class="group" id="arp-quals"></div></div>
+      <div class="row-quals">
+        <div class="quals-head">
+          <span class="ctrl-label" data-i18n="lbl_chord">Акорд</span>
+          <button type="button" class="qual-more" id="arp-quals-toggle" aria-controls="arp-quals" aria-expanded="false"></button>
+        </div>
+        <div id="arp-quals"></div>
+      </div>
       <div class="row"><span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="arp-pos"></div></div>
       <div class="info" id="arp-info"></div>
     </div>
@@ -723,20 +791,14 @@
       <div class="info" id="sc-info"></div>
     </div>
 
+    <!-- Notes is a reference view (#4): the highlighted note follows the shared Root
+         picker in the context bar above (so its own 17-button note grid was a duplicate
+         and is gone). One toggle left — show every note, or naturals only. -->
     <div id="sub-notes" hidden>
       <div class="row">
         <span class="ctrl-label" data-i18n="lbl_show">Показати</span>
-        <button class="btn active" id="nt-all" data-i18n="b_allnotes">Всі ноти</button>
-        <button class="btn" id="nt-nat" data-i18n="b_natonly">Тільки натуральні</button>
-      </div>
-      <div class="row">
-        <span class="ctrl-label" data-i18n="lbl_nat">Натуральні</span><div class="group" id="nt-natural"></div>
-        <div class="divider"></div>
-        <span class="ctrl-label" data-i18n="lbl_sharp">Дієзи</span><div class="group" id="nt-sharp"></div>
-        <div class="divider"></div>
-        <span class="ctrl-label" data-i18n="lbl_flat">Бемолі</span><div class="group" id="nt-flat"></div>
-        <div class="divider"></div>
-        <button class="btn" id="nt-reset" data-i18n="b_reset">скинути</button>
+        <button class="btn" id="nt-nat" aria-pressed="false" data-i18n="b_natonly">Тільки натуральні</button>
+        <span class="cd-hint" data-i18n="nt_pick_hint">Підсвічена нота йде за тонікою вгорі · «Тільки натуральні» ховає дієзи й бемолі</span>
       </div>
     </div>
   </section>
@@ -860,10 +922,21 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '1.25.0';
+const APP_VERSION = '1.25.1';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.25.1', date:'2026-06-18',
+    en:['Chord types start simple: only the basic chords show at first, with a "more" toggle that reveals the sevenths and extended chords when you want them — so the picker is no longer a wall of twenty buttons.',
+        'A bigger fretboard on desktop: the neck now spans the full width of the page, with the "what to play over this" panel tucked up beside the controls.',
+        'The Notes view is simpler: the highlighted note now follows the key you pick above, and a single "Naturals only" switch replaces the old grid of note buttons.',
+        'A tidier toolbar on phones: the metronome and backing band now tuck behind a "Backing" button next to Settings, and the view / key / display controls are no longer boxed in — so the header is lighter and the neck sits higher.',
+        'Fixed a glitch where the slimming header could strand a control mid-row as you scrolled on a phone.'],
+    uk:['Типи акордів починаються з простого: спершу показано лише базові акорди, а перемикач «більше» відкриває септакорди та розширені, коли вони потрібні — тож вибір більше не стіна з двадцяти кнопок.',
+        'Більший гриф на комп\'ютері: гриф тепер займає всю ширину сторінки, а панель «що грати над цим» перемістилася вгору поруч із керуванням.',
+        'Вид «Ноти» простіший: підсвічена нота тепер іде за тонікою, яку ти вибираєш вище, а один перемикач «Тільки натуральні» замінює стару сітку кнопок із нотами.',
+        'Охайніша панель на телефонах: метроном і супровід тепер ховаються за кнопкою «Супровід» поруч із «Налаштуваннями», а керування видом / тонікою / показом більше не в рамці — тож шапка легша, а гриф сидить вище.',
+        'Виправлено збій, коли шапка, що стискається, могла лишити елемент керування посеред ряду під час гортання на телефоні.'] },
   { v:'1.25.0', date:'2026-06-18',
     en:['A wider, more readable fretboard on desktop: on a large screen the neck now grows with the window — taller string spacing and bigger note dots — instead of stretching into a thin strip.',
         'Keyboard shortcuts on desktop: Space to listen or stop, L to loop, M for the metronome, 1–3 to switch tabs, A–G to set the key, and [ / ] to transpose it by a semitone. Press ? (or the link below the page) for the full list.',
@@ -1123,7 +1196,7 @@ const I18N = {
     nt_h:'Всі ноти на грифі',
     nt_p:'Довідник усіх нот. Натисни ноту в керуванні, щоб підсвітити її скрізь, або клікни по ноті на грифі, щоб почути.',
     lbl_root:'Тоніка', lbl_chord:'Акорд', lbl_scale:'Гама', lbl_pos:'Позиція', lbl_dia:'Акорди тональності',
-    lbl_show:'Показати', lbl_nat:'Натуральні', lbl_sharp:'Дієзи', lbl_flat:'Бемолі', lbl_set:'Набір струн', lbl_inv:'Обернення',
+    lbl_show:'Показати', lbl_display:'Показ', lbl_nat:'Натуральні', lbl_sharp:'Дієзи', lbl_flat:'Бемолі', lbl_set:'Набір струн', lbl_inv:'Обернення',
     b_notes:'Назви', b_intervals:'Інтервали', b_listen:'Прослухати', b_loop:'Луп', b_reset:'скинути',
     b_listen_tip:'Прослухати поточний вибір один раз', b_loop_tip:'Зациклити поточний акорд як супровід для імпровізації', b_loop_stop_tip:'Зупинити луп',
     audio_off:'Звук недоступний у цьому браузері — відтворення вимкнено.',
@@ -1149,6 +1222,9 @@ const I18N = {
     tb_metro_on:'Метроном', tb_metro_off:'Метроном',
     tb_bass:'Бас', tb_drums:'Ударні', tb_backing:'Супровід',
     qg_basic:'Базові', qg_seventh:'Септакорди', qg_ext:'Розширені',
+    qual_more:'більше', qual_less:'менше',
+    seq_play_tip:'Програти всю прогресію', seq_loop_tip:'Циклити прогресію як супровід для імпровізації',
+    nt_pick_hint:'Підсвічена нота йде за тонікою вгорі · «Тільки натуральні» ховає дієзи й бемолі',
     tb_now_loop:'Луп', tb_now_seq:'Прогресія', tb_stop:'Стоп',
     cl_title:'Що нового', cl_current:'зараз',
     frets_all:'Усі', cd_open:'відкритий акорд',
@@ -1195,7 +1271,7 @@ const I18N = {
     nt_h:'All notes on the neck',
     nt_p:'A reference for every note. Tap a note in the controls to highlight it everywhere, or tap a note on the neck to hear it.',
     lbl_root:'Root', lbl_chord:'Chord', lbl_scale:'Scale', lbl_pos:'Position', lbl_dia:'Chords in key',
-    lbl_show:'Show', lbl_nat:'Naturals', lbl_sharp:'Sharps', lbl_flat:'Flats', lbl_set:'String set', lbl_inv:'Inversion',
+    lbl_show:'Show', lbl_display:'Display', lbl_nat:'Naturals', lbl_sharp:'Sharps', lbl_flat:'Flats', lbl_set:'String set', lbl_inv:'Inversion',
     b_notes:'Names', b_intervals:'Intervals', b_listen:'Listen', b_loop:'Loop', b_reset:'reset',
     b_listen_tip:'Hear the current selection once', b_loop_tip:'Loop the current chord as a backing to play over', b_loop_stop_tip:'Stop the loop',
     audio_off:'Audio is unavailable in this browser — playback is disabled.',
@@ -1221,6 +1297,9 @@ const I18N = {
     tb_metro_on:'Metronome', tb_metro_off:'Metronome',
     tb_bass:'Bass', tb_drums:'Drums', tb_backing:'Backing',
     qg_basic:'Basic', qg_seventh:'Sevenths', qg_ext:'Extended',
+    qual_more:'more', qual_less:'less',
+    seq_play_tip:'Play the whole progression', seq_loop_tip:'Loop the progression as a backing to play over',
+    nt_pick_hint:'The highlighted note follows the Root above · "Naturals only" hides sharps and flats',
     tb_now_loop:'Loop', tb_now_seq:'Progression', tb_stop:'Stop',
     cl_title:'What\'s new', cl_current:'current',
     frets_all:'All', cd_open:'open chord',
@@ -1292,6 +1371,9 @@ function beat(){ return 60/tempo; }
 /* collapsible toolbar; default open on wide screens, collapsed on phones — and also
    collapsed on a short (landscape-phone) viewport, where every row above the neck counts */
 let toolbarOpen = (typeof window!=='undefined' && window.innerWidth>700 && window.innerHeight>500);
+/* the backing band (metronome + bass/drums) lives in its own collapsible panel,
+   default closed — secondary jam-along tools, kept out of the lean transport bar */
+let backingOpen = false;
 /* the chord-reference sidebar is only shown on chord-oriented tabs */
 const ASIDE_TABS = ['harmony'];
 
@@ -1682,13 +1764,16 @@ function metroClick(when, accent){
 }
 function metroToggle(){
   const btn=document.getElementById('tb-metro');
-  if(metroClock){ removeClock(metroClock); metroClock=null; btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); setMetroLabel(); syncWakeLock(); return; }
+  if(metroClock){ removeClock(metroClock); metroClock=null; btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); setMetroLabel(); setBackingToggle(); syncWakeLock(); return; }
   audio();
   metroClock={ interval:()=>beat(), tick:(time,count)=>metroClick(time, count%4===0) };
   addClock(metroClock);
-  btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setMetroLabel(); syncWakeLock();
+  btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setMetroLabel(); setBackingToggle(); syncWakeLock();
 }
 function setMetroLabel(){ const b=document.getElementById('tb-metro'); b.innerHTML=(metroClock?'&#9632; ':'&#9654; ')+t(metroClock?'tb_metro_on':'tb_metro_off'); b.setAttribute('aria-label', t('tb_metro_off')); }
+/* Reflect "any backing active" on the collapsed Backing toggle (tints it green), so a
+   running metronome / bass / drums is visible without opening the panel. */
+function setBackingToggle(){ const b=document.getElementById('backing-toggle'); if(b) b.classList.toggle('on', !!metroClock || bandActive()); }
 /* ---- backing band toggles (bass + groove) ----
    Self-starting, to match the metronome: turning Bass or Drums on while nothing
    is playing kicks off the single-chord loop so you immediately hear a backing
@@ -1703,8 +1788,8 @@ function setBandLabels(){
   const db=document.getElementById('tb-drums');
   if(db){ db.innerHTML='&#9835; '+t('tb_drums'); db.classList.toggle('active', grooveOn); db.setAttribute('aria-pressed', grooveOn?'true':'false'); db.setAttribute('aria-label', t('tb_drums')); }
 }
-function bassToggle(){ audio(); bassOn=!bassOn; if(bassOn) ensureBacking(); setBandLabels(); saveState(); }
-function drumsToggle(){ audio(); grooveOn=!grooveOn; if(grooveOn) ensureBacking(); setBandLabels(); saveState(); }
+function bassToggle(){ audio(); bassOn=!bassOn; if(bassOn) ensureBacking(); setBandLabels(); setBackingToggle(); saveState(); }
+function drumsToggle(){ audio(); grooveOn=!grooveOn; if(grooveOn) ensureBacking(); setBandLabels(); setBackingToggle(); saveState(); }
 
 /* ---- single-chord / single-triad loop: re-strums the current voicing at the top
    of every bar. loopMode is captured at start (chord vs triad) but the voicing is
@@ -1879,8 +1964,11 @@ function seqRebuild(){ if(seqClock){ seqBuildMap(); if(seqBar>=seqBarMap.length)
 function seqLoopToggle(){ seqLoopOn=!seqLoopOn; setSeqTransport(); saveState(); }
 function seqClear(){ seq=[]; if(seqClock) seqStop(); seqStepIdx=-1; renderSeq(); saveState(); }
 function setSeqTransport(){
-  const p=document.getElementById('seq-play'); if(p){ p.innerHTML=(seqClock?'&#9632; ':'&#9654; ')+t('seq_play'); p.setAttribute('aria-label', t('seq_play')); p.classList.toggle('active', !!seqClock); }
-  const l=document.getElementById('seq-loopbtn'); if(l){ l.innerHTML='&#8635; '+t('seq_loop'); l.classList.toggle('active', seqLoopOn); l.setAttribute('aria-pressed', seqLoopOn?'true':'false'); }
+  // Scope tooltips (#3): the toolbar's Listen/Loop act on the CURRENT selection,
+  // these act on the whole PROGRESSION — name that on hover/AX so the two transport
+  // pairs read as distinct rather than duplicate.
+  const p=document.getElementById('seq-play'); if(p){ p.innerHTML=(seqClock?'&#9632; ':'&#9654; ')+t('seq_play'); p.setAttribute('aria-label', t('seq_play_tip')); p.title=t('seq_play_tip'); p.classList.toggle('active', !!seqClock); }
+  const l=document.getElementById('seq-loopbtn'); if(l){ l.innerHTML='&#8635; '+t('seq_loop'); l.setAttribute('aria-label', t('seq_loop_tip')); l.title=t('seq_loop_tip'); l.classList.toggle('active', seqLoopOn); l.setAttribute('aria-pressed', seqLoopOn?'true':'false'); }
   updateGlobalTransport();
 }
 
@@ -1913,10 +2001,15 @@ function renderNums(el){
    Both .board and .fretnums are sized from boardWidth(), so dot/number
    alignment is preserved exactly — only the per-cell pixel width adapts. */
 const CELL_MIN = 34, CELL_MAX = 200;
+/* Width available to the neck. Measured from the board's OWN scroll container (#5):
+   the board spans a different column than the controls now (full width on desktop,
+   the right pane in landscape), so sizing off `.main` would mis-fit it. `.scroll`
+   always reflects the board's real column in every layout; fall back to `.main`
+   then the viewport for the jsdom harness, where clientWidth is 0. */
 function availW(){
   if(typeof document==='undefined') return 976;
-  const m=document.querySelector('.main');
-  const w = m && m.clientWidth ? m.clientWidth : ((typeof window!=='undefined'?window.innerWidth:1024) - 48);
+  const el=document.querySelector('.board-region .scroll') || document.querySelector('.main');
+  const w = el && el.clientWidth ? el.clientWidth : ((typeof window!=='undefined'?window.innerWidth:1024) - 48);
   return Math.max(280, w);
 }
 function leftFixed(){ return FRET_LO()<=1 ? 67 : 30; }
@@ -2217,20 +2310,41 @@ function currentHarmonyChord(){
     return {rootPc:c.root, rootLbl:ROOTS[c.root], short:c.short, pcs:c.q.iv.map(iv=>mod(c.root+iv,12))}; }
   const q=QUALITIES[chQual]; return {rootPc:gRoot, rootLbl:gRootLbl, short:q.short, pcs:q.iv.map(iv=>mod(gRoot+iv,12))};
 }
-function buildChQuals(){
-  const c=document.getElementById('ch-quals'); c.innerHTML='';
-  QUAL_GROUPS.forEach(g=>{
-    const seg=document.createElement('div'); seg.className='qual-grp';
-    const lab=document.createElement('span'); lab.className='qual-grp-lab'; lab.textContent=t('qg_'+g); seg.appendChild(lab);
-    const wrap=document.createElement('div'); wrap.className='group';
-    QUALITIES.forEach((q,i)=>{ if(q.grp!==g) return;
-      const b=document.createElement('button'); b.className='btn'+(i===chQual?' active':'');
-      b.textContent=q.short||'maj'; b.title=qName(q); b.setAttribute('aria-label', qName(q)); b.setAttribute('aria-pressed', i===chQual);
-      b.onclick=()=>{ chQual=i; chVoicing=0; buildChQuals(); renderChords(); saveState(); };
-      wrap.appendChild(b);
-    });
-    seg.appendChild(wrap); c.appendChild(seg);
+/* Progressive disclosure (#1/#2): the 20-quality vocabulary is a lot to meet on
+   first load — beginners want maj/min/7. So only the BASIC tier shows by default;
+   the seventh + extended tiers tuck behind a "more" toggle. This shortens the tall
+   pre-board control stack (esp. on a phone) and makes the picker less intimidating.
+   The advanced tiers auto-reveal whenever the active quality lives in one (e.g. a
+   restored maj7), so the current selection is never hidden behind the toggle.
+   `chQualsAdv` is a UI-only preference (not persisted) shared by the chord + arp
+   pickers, so revealing in one reveals in both. */
+let chQualsAdv=false;
+function qualSeg(g, onPick, showLabel){
+  const seg=document.createElement('div'); seg.className='qual-grp';
+  if(showLabel){ const lab=document.createElement('span'); lab.className='qual-grp-lab'; lab.textContent=t('qg_'+g); seg.appendChild(lab); }
+  const wrap=document.createElement('div'); wrap.className='group';
+  QUALITIES.forEach((q,i)=>{ if(q.grp!==g) return;
+    const b=document.createElement('button'); b.className='btn'+(i===chQual?' active':'');
+    b.textContent=q.short||'maj'; b.title=qName(q); b.setAttribute('aria-label', qName(q)); b.setAttribute('aria-pressed', i===chQual);
+    b.onclick=()=>onPick(i);
+    wrap.appendChild(b);
   });
+  seg.appendChild(wrap); return seg;
+}
+/* Build a tiered quality picker into `containerId`, driving the disclosure toggle
+   at `toggleId` — which lives on the section-header line beside the CHORD label, not
+   floating after the buttons. Tier sub-labels only appear once expanded; the lone
+   Basic tier needs no "BASIC" caption when collapsed. */
+function renderQualPicker(containerId, toggleId, onPick){
+  const c=document.getElementById(containerId); if(!c) return; c.innerHTML='';
+  const adv = chQualsAdv || QUALITIES[chQual].grp!=='basic';   // keep the active quality visible
+  c.appendChild(qualSeg('basic', onPick, adv));
+  if(adv){ c.appendChild(qualSeg('seventh', onPick, adv)); c.appendChild(qualSeg('ext', onPick, adv)); }
+  const tog=document.getElementById(toggleId);
+  if(tog){ tog.setAttribute('aria-expanded', adv?'true':'false'); tog.textContent=(adv?t('qual_less')+' ▴':t('qual_more')+' ▾'); }
+}
+function buildChQuals(){
+  renderQualPicker('ch-quals','ch-quals-toggle', i=>{ chQual=i; chVoicing=0; buildChQuals(); renderChords(); saveState(); });
 }
 function renderChords(){
   const q=QUALITIES[chQual];
@@ -2257,19 +2371,7 @@ function renderChords(){
    (chQual) with the chord-tones view so switching views keeps the chord — that's
    the bridge. Reuses the chord-tone board paint + the scale-view box window. */
 function buildArpQuals(){
-  const c=document.getElementById('arp-quals'); if(!c) return; c.innerHTML='';
-  QUAL_GROUPS.forEach(g=>{
-    const seg=document.createElement('div'); seg.className='qual-grp';
-    const lab=document.createElement('span'); lab.className='qual-grp-lab'; lab.textContent=t('qg_'+g); seg.appendChild(lab);
-    const wrap=document.createElement('div'); wrap.className='group';
-    QUALITIES.forEach((q,i)=>{ if(q.grp!==g) return;
-      const b=document.createElement('button'); b.className='btn'+(i===chQual?' active':'');
-      b.textContent=q.short||'maj'; b.title=qName(q); b.setAttribute('aria-label', qName(q)); b.setAttribute('aria-pressed', i===chQual);
-      b.onclick=()=>{ chQual=i; chVoicing=0; buildChQuals(); buildArpQuals(); renderArp(); saveState(); };
-      wrap.appendChild(b);
-    });
-    seg.appendChild(wrap); c.appendChild(seg);
-  });
+  renderQualPicker('arp-quals','arp-quals-toggle', i=>{ chQual=i; chVoicing=0; buildChQuals(); buildArpQuals(); renderArp(); saveState(); });
 }
 function buildArpPos(){
   const c=document.getElementById('arp-pos'); if(!c) return; c.innerHTML='';
@@ -2850,16 +2952,15 @@ function applyLang(){
   document.getElementById('cof-open').textContent=t('b_open_scales');
   const setPair=(onId,offId)=>{ const a=document.getElementById(onId),b=document.getElementById(offId); if(a){a.classList.add('active');a.setAttribute('aria-pressed','true');} if(b){b.classList.remove('active');b.setAttribute('aria-pressed','false');} };
   gMode==='names'?setPair('g-names','g-deg'):setPair('g-deg','g-names');
-  ntFilter==='all'?setPair('nt-all','nt-nat'):setPair('nt-nat','nt-all');
+  applyNtFilter();
   buildChQuals(); buildArpQuals(); buildArpPos(); buildTrQuals(); buildTrSets(); buildTrInvs(); buildScSelect(); buildScPos();
-  buildToolbar(); setMetroLabel(); setLoopLabel(); setBandLabels();
+  buildToolbar(); setMetroLabel(); setLoopLabel(); setBandLabels(); setBackingToggle(); applyBackingPanel();
   buildSeqPresets(); renderSeq(); setSeqTransport();
   { const o=document.getElementById('cl-overlay'); if(o && !o.hidden) renderChangelog(); }
   renderChords(); renderArp(); renderTriads(); renderScales(); renderNotes(); renderCircle();
   setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
   activateRoot(document.getElementById('g-roots'), gRoot);
-  document.querySelectorAll('[data-root]').forEach(b=>b.classList.toggle('active', !!ntRoot && b.dataset.root===ntRoot));
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));
   if(typeof syncTabsScroll==='function') syncTabsScroll();
@@ -2883,6 +2984,11 @@ function applyToolbarState(){
   tb.classList.toggle('collapsed', !toolbarOpen);
   tg.classList.toggle('open', toolbarOpen);
   tg.setAttribute('aria-expanded', toolbarOpen);
+}
+function applyBackingPanel(){
+  const p=document.getElementById('backing-panel'), tg=document.getElementById('backing-toggle');
+  if(p) p.classList.toggle('collapsed', !backingOpen);
+  if(tg){ tg.classList.toggle('open', backingOpen); tg.setAttribute('aria-expanded', backingOpen); }
 }
 function applyAsideState(){
   const show = ASIDE_TABS.includes(currentTab);
@@ -3009,7 +3115,7 @@ if(typeof window!=='undefined'){
 const LS_KEY='guitarStudio.v1';
 let currentTab='harmony';
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
-  lang, tab:currentTab, tuningIdx, fretRangeIdx, tempo, lefty, toolbarOpen, capo,
+  lang, tab:currentTab, tuningIdx, fretRangeIdx, tempo, lefty, toolbarOpen, backingOpen, capo,
   gRoot, gRootLbl, gMode, hView, scView,
   chQual, arpPos, scIdx, scPos, scOverlay,
   chVoicing,
@@ -3027,6 +3133,7 @@ function loadState(){ try{
   if(typeof s.tempo==='number'&&s.tempo>=40&&s.tempo<=200) tempo=s.tempo;
   if(typeof s.lefty==='boolean') lefty=s.lefty;
   if(typeof s.toolbarOpen==='boolean') toolbarOpen=s.toolbarOpen;
+  if(typeof s.backingOpen==='boolean') backingOpen=s.backingOpen;
   if(Number.isInteger(s.gRoot)&&s.gRoot>=0&&s.gRoot<12){ gRoot=s.gRoot; if(typeof s.gRootLbl==='string') gRootLbl=s.gRootLbl; }
   if(s.gMode==='names'||s.gMode==='deg') gMode=s.gMode;
   if(s.hView==='chords'||s.hView==='triads'||s.hView==='arp') hView=s.hView;   // identify stays transient (idSel is scratch)
@@ -3083,9 +3190,8 @@ function setKey(pc, lbl, mode){
   gRoot=pc; gRootLbl=lbl;
   if(Number.isInteger(mode) && SCALES[mode]) scIdx=mode;
   chVoicing=0; scOverlay=null;
-  ntRoot=lbl;                                   // Notes reflects the shared root
+  ntRoot=lbl;                                   // Notes reflects the shared root (#4)
   activateRoot(document.getElementById('g-roots'), gRoot);
-  document.querySelectorAll('[data-root]').forEach(b=>b.classList.toggle('active', b.dataset.root===ntRoot));
   buildChQuals(); buildArpQuals(); buildArpPos(); buildScSelect(); buildScPos();
   renderContextViews(); renderCircle(); renderNotes();
   saveState();
@@ -3127,6 +3233,7 @@ function setScView(v){ scView=v;
   ['scale','notes'].forEach(k=>{ const b=document.getElementById('sv-'+k); b.classList.toggle('active', k===v); b.setAttribute('aria-pressed', k===v?'true':'false'); });
   document.getElementById('scales-h').textContent = t(v==='notes'?'nt_h':'sc_h');
   document.getElementById('scales-p').textContent = t(v==='notes'?'nt_p':'sc_p');
+  applyContextBar();   // toggle the (dead-in-Notes) display switch with the sub-view (#4)
   v==='notes'?renderNotes():renderScales();
   markScrollables(); updateGlobalPlay(); saveState();
 }
@@ -3138,6 +3245,9 @@ function applyContextBar(){
   // only the active tab's view switch lives in the shared bar (1e)
   const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
   const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
+  // the Names/Intervals display toggle does nothing in the Notes reference (it always
+  // shows note names), so hide it there (#4) to keep the bar honest
+  const cd=document.querySelector('.ctx-display'); if(cd) cd.hidden = (currentTab==='scales' && scView==='notes');
 }
 function applyBoardRegion(){
   const show = (currentTab==='harmony' || currentTab==='scales');
@@ -3262,16 +3372,12 @@ document.getElementById('cof-svg').addEventListener('keydown',e=>{
 // the circle already reflects the context; "open in scales" is now navigation.
 document.getElementById('cof-open').onclick=function(){ selectTab('scales'); };
 
-(function(){ const mk=(arr,cont)=>arr.forEach(n=>{ const b=document.createElement('button'); b.className='btn'; b.textContent=n; b.dataset.root=n; cont.appendChild(b); }); mk(NAT,document.getElementById('nt-natural')); mk(SHARP,document.getElementById('nt-sharp')); mk(FLAT,document.getElementById('nt-flat')); })();
-document.getElementById('nt-all').onclick=function(){ntFilter='all';this.classList.add('active');this.setAttribute('aria-pressed','true');const o=document.getElementById('nt-nat');o.classList.remove('active');o.setAttribute('aria-pressed','false');renderNotes();saveState();};
-document.getElementById('nt-nat').onclick=function(){ntFilter='nat';this.classList.add('active');this.setAttribute('aria-pressed','true');const o=document.getElementById('nt-all');o.classList.remove('active');o.setAttribute('aria-pressed','false');renderNotes();saveState();};
-document.getElementById('nt-reset').onclick=function(){ntRoot='';document.querySelectorAll('[data-root]').forEach(b=>b.classList.remove('active'));renderNotes();saveState();};
-document.getElementById('sub-notes').addEventListener('click',e=>{
-  const b=e.target.closest('[data-root]'); if(!b) return; const n=b.dataset.root;
-  document.querySelectorAll('[data-root]').forEach(x=>x.classList.remove('active'));
-  if(n===ntRoot){ ntRoot=''; } else { ntRoot=n; b.classList.add('active'); }
-  renderNotes(); saveState();
-});
+/* Notes view (#4): a single "Naturals only" toggle. The note to highlight is no
+   longer picked here — it follows the shared Root (setKey sets ntRoot), so this
+   view stays in lockstep with the rest of the app and sheds 17 redundant buttons. */
+function applyNtFilter(){ const b=document.getElementById('nt-nat'); if(b){ const on=ntFilter==='nat'; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on?'true':'false'); } }
+document.getElementById('nt-nat').onclick=function(){ ntFilter = ntFilter==='nat'?'all':'nat'; applyNtFilter(); renderNotes(); saveState(); };
+applyNtFilter();
 
 document.getElementById('aside-toggle').onclick=function(){ const b=document.getElementById('aside-body'); const hidden=b.style.display==='none'; b.style.display=hidden?'block':'none'; this.textContent=hidden?'−':'+'; this.setAttribute('aria-expanded', hidden); };
 
@@ -3336,6 +3442,12 @@ document.getElementById('tb-bass').onclick=bassToggle;
 document.getElementById('tb-drums').onclick=drumsToggle;
 document.getElementById('tb-stop').onclick=function(){ if(seqClock) seqStop(); else stopLoop(); };
 document.getElementById('tb-toggle').onclick=function(){ toolbarOpen=!toolbarOpen; applyToolbarState(); saveState(); };
+document.getElementById('backing-toggle').onclick=function(){ backingOpen=!backingOpen; applyBackingPanel(); saveState(); };
+/* quality-picker disclosure (#1/#2): one toggle per picker, both flip the shared
+   chQualsAdv and rebuild so chord + arp stay in lockstep */
+function qualMoreToggle(){ chQualsAdv=!chQualsAdv; buildChQuals(); buildArpQuals(); markScrollables(); }
+{ const a=document.getElementById('ch-quals-toggle'); if(a) a.onclick=qualMoreToggle;
+  const b=document.getElementById('arp-quals-toggle'); if(b) b.onclick=qualMoreToggle; }
 
 /* ---- changelog modal ---- */
 function renderChangelog(){
@@ -3423,6 +3535,7 @@ if(!hadState){
   try{ const nav=(navigator.languages&&navigator.languages[0])||navigator.language||''; lang = /^uk\b/i.test(nav) ? 'uk' : 'en'; }catch(_){ /* keep the 'uk' default */ }
   if(typeof window!=='undefined' && window.innerWidth<=600) fretRangeIdx=1;  // phones default to a 5-fret window
 }
+ntRoot=gRootLbl;   // Notes highlight follows the shared root (#4); keep them in sync from the first paint
 applyTuning();
 applyLang();
 selectTab(currentTab);

@@ -19,9 +19,8 @@ function setKey(pc, lbl, mode){
   gRoot=pc; gRootLbl=lbl;
   if(Number.isInteger(mode) && SCALES[mode]) scIdx=mode;
   chVoicing=0; scOverlay=null;
-  ntRoot=lbl;                                   // Notes reflects the shared root
+  ntRoot=lbl;                                   // Notes reflects the shared root (#4)
   activateRoot(document.getElementById('g-roots'), gRoot);
-  document.querySelectorAll('[data-root]').forEach(b=>b.classList.toggle('active', b.dataset.root===ntRoot));
   buildChQuals(); buildArpQuals(); buildArpPos(); buildScSelect(); buildScPos();
   renderContextViews(); renderCircle(); renderNotes();
   saveState();
@@ -63,6 +62,7 @@ function setScView(v){ scView=v;
   ['scale','notes'].forEach(k=>{ const b=document.getElementById('sv-'+k); b.classList.toggle('active', k===v); b.setAttribute('aria-pressed', k===v?'true':'false'); });
   document.getElementById('scales-h').textContent = t(v==='notes'?'nt_h':'sc_h');
   document.getElementById('scales-p').textContent = t(v==='notes'?'nt_p':'sc_p');
+  applyContextBar();   // toggle the (dead-in-Notes) display switch with the sub-view (#4)
   v==='notes'?renderNotes():renderScales();
   markScrollables(); updateGlobalPlay(); saveState();
 }
@@ -74,6 +74,9 @@ function applyContextBar(){
   // only the active tab's view switch lives in the shared bar (1e)
   const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
   const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
+  // the Names/Intervals display toggle does nothing in the Notes reference (it always
+  // shows note names), so hide it there (#4) to keep the bar honest
+  const cd=document.querySelector('.ctx-display'); if(cd) cd.hidden = (currentTab==='scales' && scView==='notes');
 }
 function applyBoardRegion(){
   const show = (currentTab==='harmony' || currentTab==='scales');
@@ -198,16 +201,12 @@ document.getElementById('cof-svg').addEventListener('keydown',e=>{
 // the circle already reflects the context; "open in scales" is now navigation.
 document.getElementById('cof-open').onclick=function(){ selectTab('scales'); };
 
-(function(){ const mk=(arr,cont)=>arr.forEach(n=>{ const b=document.createElement('button'); b.className='btn'; b.textContent=n; b.dataset.root=n; cont.appendChild(b); }); mk(NAT,document.getElementById('nt-natural')); mk(SHARP,document.getElementById('nt-sharp')); mk(FLAT,document.getElementById('nt-flat')); })();
-document.getElementById('nt-all').onclick=function(){ntFilter='all';this.classList.add('active');this.setAttribute('aria-pressed','true');const o=document.getElementById('nt-nat');o.classList.remove('active');o.setAttribute('aria-pressed','false');renderNotes();saveState();};
-document.getElementById('nt-nat').onclick=function(){ntFilter='nat';this.classList.add('active');this.setAttribute('aria-pressed','true');const o=document.getElementById('nt-all');o.classList.remove('active');o.setAttribute('aria-pressed','false');renderNotes();saveState();};
-document.getElementById('nt-reset').onclick=function(){ntRoot='';document.querySelectorAll('[data-root]').forEach(b=>b.classList.remove('active'));renderNotes();saveState();};
-document.getElementById('sub-notes').addEventListener('click',e=>{
-  const b=e.target.closest('[data-root]'); if(!b) return; const n=b.dataset.root;
-  document.querySelectorAll('[data-root]').forEach(x=>x.classList.remove('active'));
-  if(n===ntRoot){ ntRoot=''; } else { ntRoot=n; b.classList.add('active'); }
-  renderNotes(); saveState();
-});
+/* Notes view (#4): a single "Naturals only" toggle. The note to highlight is no
+   longer picked here — it follows the shared Root (setKey sets ntRoot), so this
+   view stays in lockstep with the rest of the app and sheds 17 redundant buttons. */
+function applyNtFilter(){ const b=document.getElementById('nt-nat'); if(b){ const on=ntFilter==='nat'; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on?'true':'false'); } }
+document.getElementById('nt-nat').onclick=function(){ ntFilter = ntFilter==='nat'?'all':'nat'; applyNtFilter(); renderNotes(); saveState(); };
+applyNtFilter();
 
 document.getElementById('aside-toggle').onclick=function(){ const b=document.getElementById('aside-body'); const hidden=b.style.display==='none'; b.style.display=hidden?'block':'none'; this.textContent=hidden?'−':'+'; this.setAttribute('aria-expanded', hidden); };
 
@@ -272,6 +271,12 @@ document.getElementById('tb-bass').onclick=bassToggle;
 document.getElementById('tb-drums').onclick=drumsToggle;
 document.getElementById('tb-stop').onclick=function(){ if(seqClock) seqStop(); else stopLoop(); };
 document.getElementById('tb-toggle').onclick=function(){ toolbarOpen=!toolbarOpen; applyToolbarState(); saveState(); };
+document.getElementById('backing-toggle').onclick=function(){ backingOpen=!backingOpen; applyBackingPanel(); saveState(); };
+/* quality-picker disclosure (#1/#2): one toggle per picker, both flip the shared
+   chQualsAdv and rebuild so chord + arp stay in lockstep */
+function qualMoreToggle(){ chQualsAdv=!chQualsAdv; buildChQuals(); buildArpQuals(); markScrollables(); }
+{ const a=document.getElementById('ch-quals-toggle'); if(a) a.onclick=qualMoreToggle;
+  const b=document.getElementById('arp-quals-toggle'); if(b) b.onclick=qualMoreToggle; }
 
 /* ---- changelog modal ---- */
 function renderChangelog(){
@@ -359,6 +364,7 @@ if(!hadState){
   try{ const nav=(navigator.languages&&navigator.languages[0])||navigator.language||''; lang = /^uk\b/i.test(nav) ? 'uk' : 'en'; }catch(_){ /* keep the 'uk' default */ }
   if(typeof window!=='undefined' && window.innerWidth<=600) fretRangeIdx=1;  // phones default to a 5-fret window
 }
+ntRoot=gRootLbl;   // Notes highlight follows the shared root (#4); keep them in sync from the first paint
 applyTuning();
 applyLang();
 selectTab(currentTab);

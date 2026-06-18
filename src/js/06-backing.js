@@ -125,13 +125,16 @@ function metroClick(when, accent){
 }
 function metroToggle(){
   const btn=document.getElementById('tb-metro');
-  if(metroClock){ removeClock(metroClock); metroClock=null; btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); setMetroLabel(); syncWakeLock(); return; }
+  if(metroClock){ removeClock(metroClock); metroClock=null; btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); setMetroLabel(); setBackingToggle(); syncWakeLock(); return; }
   audio();
   metroClock={ interval:()=>beat(), tick:(time,count)=>metroClick(time, count%4===0) };
   addClock(metroClock);
-  btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setMetroLabel(); syncWakeLock();
+  btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setMetroLabel(); setBackingToggle(); syncWakeLock();
 }
 function setMetroLabel(){ const b=document.getElementById('tb-metro'); b.innerHTML=(metroClock?'&#9632; ':'&#9654; ')+t(metroClock?'tb_metro_on':'tb_metro_off'); b.setAttribute('aria-label', t('tb_metro_off')); }
+/* Reflect "any backing active" on the collapsed Backing toggle (tints it green), so a
+   running metronome / bass / drums is visible without opening the panel. */
+function setBackingToggle(){ const b=document.getElementById('backing-toggle'); if(b) b.classList.toggle('on', !!metroClock || bandActive()); }
 /* ---- backing band toggles (bass + groove) ----
    Self-starting, to match the metronome: turning Bass or Drums on while nothing
    is playing kicks off the single-chord loop so you immediately hear a backing
@@ -146,8 +149,8 @@ function setBandLabels(){
   const db=document.getElementById('tb-drums');
   if(db){ db.innerHTML='&#9835; '+t('tb_drums'); db.classList.toggle('active', grooveOn); db.setAttribute('aria-pressed', grooveOn?'true':'false'); db.setAttribute('aria-label', t('tb_drums')); }
 }
-function bassToggle(){ audio(); bassOn=!bassOn; if(bassOn) ensureBacking(); setBandLabels(); saveState(); }
-function drumsToggle(){ audio(); grooveOn=!grooveOn; if(grooveOn) ensureBacking(); setBandLabels(); saveState(); }
+function bassToggle(){ audio(); bassOn=!bassOn; if(bassOn) ensureBacking(); setBandLabels(); setBackingToggle(); saveState(); }
+function drumsToggle(){ audio(); grooveOn=!grooveOn; if(grooveOn) ensureBacking(); setBandLabels(); setBackingToggle(); saveState(); }
 
 /* ---- single-chord / single-triad loop: re-strums the current voicing at the top
    of every bar. loopMode is captured at start (chord vs triad) but the voicing is
@@ -322,8 +325,11 @@ function seqRebuild(){ if(seqClock){ seqBuildMap(); if(seqBar>=seqBarMap.length)
 function seqLoopToggle(){ seqLoopOn=!seqLoopOn; setSeqTransport(); saveState(); }
 function seqClear(){ seq=[]; if(seqClock) seqStop(); seqStepIdx=-1; renderSeq(); saveState(); }
 function setSeqTransport(){
-  const p=document.getElementById('seq-play'); if(p){ p.innerHTML=(seqClock?'&#9632; ':'&#9654; ')+t('seq_play'); p.setAttribute('aria-label', t('seq_play')); p.classList.toggle('active', !!seqClock); }
-  const l=document.getElementById('seq-loopbtn'); if(l){ l.innerHTML='&#8635; '+t('seq_loop'); l.classList.toggle('active', seqLoopOn); l.setAttribute('aria-pressed', seqLoopOn?'true':'false'); }
+  // Scope tooltips (#3): the toolbar's Listen/Loop act on the CURRENT selection,
+  // these act on the whole PROGRESSION — name that on hover/AX so the two transport
+  // pairs read as distinct rather than duplicate.
+  const p=document.getElementById('seq-play'); if(p){ p.innerHTML=(seqClock?'&#9632; ':'&#9654; ')+t('seq_play'); p.setAttribute('aria-label', t('seq_play_tip')); p.title=t('seq_play_tip'); p.classList.toggle('active', !!seqClock); }
+  const l=document.getElementById('seq-loopbtn'); if(l){ l.innerHTML='&#8635; '+t('seq_loop'); l.setAttribute('aria-label', t('seq_loop_tip')); l.title=t('seq_loop_tip'); l.classList.toggle('active', seqLoopOn); l.setAttribute('aria-pressed', seqLoopOn?'true':'false'); }
   updateGlobalTransport();
 }
 

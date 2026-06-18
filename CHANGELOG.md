@@ -2,6 +2,14 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v1.25.1 — 2026-06-18
+
+- Chord types start simple: only the basic chords show at first, with a "more" toggle that reveals the sevenths and extended chords when you want them — so the picker is no longer a wall of twenty buttons.
+- A bigger fretboard on desktop: the neck now spans the full width of the page, with the "what to play over this" panel tucked up beside the controls.
+- The Notes view is simpler: the highlighted note now follows the key you pick above, and a single "Naturals only" switch replaces the old grid of note buttons.
+- A tidier toolbar on phones: the metronome and backing band now tuck behind a "Backing" button next to Settings, and the view / key / display controls are no longer boxed in — so the header is lighter and the neck sits higher.
+- Fixed a glitch where the slimming header could strand a control mid-row as you scrolled on a phone.
+
 ## v1.25.0 — 2026-06-18
 
 - A wider, more readable fretboard on desktop: on a large screen the neck now grows with the window — taller string spacing and bigger note dots — instead of stretching into a thin strip.
