@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 1.27.1  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 1.27.2  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="1.27.1">
+<meta name="version" content="1.27.2">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -439,10 +439,14 @@
     .toolbar { margin-top: 8px; padding: 8px 12px; }
     .layout:has(#board-region:not([hidden])) {
       grid-template-columns: minmax(0,1fr) minmax(300px, 46%);
+      /* left column scrolls (main → shapes → suggester → chord reference), matching
+         the portrait stacking order; the board pins in the right column. #shapes-card
+         needs an explicit slot here or it auto-places to the very bottom out of order. */
       grid-template-areas:
         "main      board"
-        "extras    board"
+        "shapes    board"
         "aside     board"
+        "extras    board"
         "boardmeta boardmeta";
       column-gap: 16px;
       padding-top: 12px;
@@ -537,18 +541,21 @@
   }
 
   /* ---- mobile ---- */
-  @media (max-width: 600px) {
-    .wrap { padding: 0 14px; }
-    .brand h1 { font-size: 25px; }
-    /* phone legend: drop the degree detail and tighten so the colour key fits one
-       clean row right under the neck, instead of wrapping into a second line that
-       reads as part of the neck's horizontal scroll just above it */
+  /* phone declutter — applies to BOTH portrait phones (narrow) and landscape phones
+     (short, which are wider than 600px and so miss the portrait block below): compact
+     the note-colour legend to one tidy row, drop the degree hints, and hide the
+     "tap a card" pick-hint, so the two orientations read the same. (max-height:500px
+     is the same short-viewport proxy the landscape board-shell above uses.) */
+  @media (max-width: 600px), (max-height: 500px) {
     .legend { gap: 12px; margin-top: 13px; }
     .leg { font-size: 11.5px; gap: 5px; }
     .leg-deg { display: none; }
-    /* the "tap a card to pick the shape" hint is discovery help; on a phone the
-       cards already read as tappable (they highlight), so reclaim the row */
     #shapes-body .cd-hint { display: none; }
+  }
+
+  @media (max-width: 600px) {
+    .wrap { padding: 0 14px; }
+    .brand h1 { font-size: 25px; }
     /* un-box the View / Root / Display bar on phones: the desktop "horizontal context
        bar" panel becomes a tall, heavy box once it wraps. Drop the border/background
        and stack each control as a clean labelled row (label on its own line, buttons
@@ -961,10 +968,13 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '1.27.1';
+const APP_VERSION = '1.27.2';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.27.2', date:'2026-06-19',
+    en:['Landscape now matches portrait: the same compact colour key applies, and the chord-shapes card keeps its proper place beside the neck instead of dropping to the bottom of the page.'],
+    uk:['Альбомна орієнтація тепер відповідає книжковій: застосовується та сама компактна легенда, а картка форм акорду лишається на своєму місці поруч із грифом, а не падає в самий низ сторінки.'] },
   { v:'1.27.1', date:'2026-06-19',
     en:['The chord-shapes card now opens with just the first few shapes — the open shape and the nearest forms — and a "More shapes" button reveals the rest of the library when you want them, so the card no longer floods a phone with diagrams.',
         'The note-colour key under the neck is tidier on phones: it now fits a single clean row (the degree numbers tuck away on small screens) instead of wrapping into a second line that looked like part of the neck\'s scroll.'],
@@ -2151,6 +2161,28 @@ function chordFingers(frets){
   }
   return map;
 }
+/* Shared chord/triad diagram scaffold: the SVG frame + fret/string lines, the nut
+   (drawn when the box starts at fret 1), and the "Nfr" position label, for a box of
+   `cols` strings. Returns the opening markup plus the coordinate helpers and the
+   resolved baseFret/rows/padTop so each caller draws its own dots — chord boxes mark
+   open/muted strings and colour by funcMap; triad cards draw only the three set
+   strings and colour by triad function. `dims.span` fixes the row count (chord boxes
+   use a constant 4); omit it to fit the rows to the shape (triad cards). */
+function fretGrid(frets, cols, dims){
+  const played=frets.filter(x=>x!=null && x>0);
+  const minF=played.length?Math.min(...played):0;
+  const maxF=played.length?Math.max(...played):0;
+  const baseFret=(maxF<=4?1:minF);
+  const rows=dims.span!=null ? dims.span : Math.max(3, maxF-baseFret+1);
+  const {W,H,padX,padTop,padBot,posDX}=dims;
+  const gw=(W-padX*2)/(cols-1), gh=(H-padTop-padBot)/rows;
+  const x=i=>padX+i*gw, y=r=>padTop+r*gh;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+  for(let r=0;r<=rows;r++){ const isNut=(baseFret===1 && r===0); svg+=`<line class="${isNut?'cd-nut':'cd-fret'}" x1="${x(0)}" y1="${y(r)}" x2="${x(cols-1)}" y2="${y(r)}"/>`; }
+  for(let i=0;i<cols;i++){ svg+=`<line class="cd-string" x1="${x(i)}" y1="${y(0)}" x2="${x(i)}" y2="${y(rows)}"/>`; }
+  if(baseFret>1){ svg+=`<text class="cd-pos" x="${x(0)-posDX}" y="${y(0)+gh*0.7}" text-anchor="end">${baseFret}fr</text>`; }
+  return {svg, x, y, gh, baseFret, rows, padTop};
+}
 function makeDot(cls,text,midi){
   const d=document.createElement('div'); d.className='dot '+cls; d.textContent=text;
   if(midi!=null){ d.dataset.midi=midi; d.tabIndex=0; d.setAttribute('role','button'); }
@@ -2219,6 +2251,24 @@ function buildRootBtns(container, current, onPick){
     container.appendChild(b);
   });
 }
+/* Shared segmented-button row: one `.btn` per item with the active index marked
+   (`active` class + aria-pressed) and each wired to onPick(i). `items` are
+   {label, title?, aria?} — title/aria are set only when provided, so callers that
+   want a bare button (just aria-pressed) match their old markup exactly. Backs the
+   arp-position, triad quality/string-set/inversion, and scale-position pickers. */
+function segButtons(containerId, items, activeIdx, onPick){
+  const c=document.getElementById(containerId); if(!c) return; c.innerHTML='';
+  items.forEach((it,i)=>{
+    const b=document.createElement('button');
+    b.className='btn'+(i===activeIdx?' active':'');
+    b.textContent=it.label;
+    if(it.title!=null) b.title=it.title;
+    if(it.aria!=null) b.setAttribute('aria-label', it.aria);
+    b.setAttribute('aria-pressed', i===activeIdx);
+    b.onclick=()=>onPick(i);
+    c.appendChild(b);
+  });
+}
 
 /* ===================== CHORD TONES ===================== */
 const DEG_LABEL={0:'1',3:'♭3',4:'3',6:'♭5',7:'5',8:'♯5',10:'♭7',11:'7'};  // triad/overlay use (interval -> label)
@@ -2257,7 +2307,6 @@ const QUALITIES=[
   {short:'7♭9',  grp:'ext',     iv:[0,4,7,10,13],    lab:['1','3','5','♭7','♭9'],      deg:[1,3,5,7,2],     en:'7♭9',uk:'7♭9'},
   {short:'7♯9',  grp:'ext',     iv:[0,4,7,10,15],    lab:['1','3','5','♭7','♯9'],      deg:[1,3,5,7,2],     en:'7♯9 (Hendrix)',uk:'7♯9 (Гендрікс)'},
 ];
-const QUAL_GROUPS=['basic','seventh','ext'];
 function qName(q){ return lang==='en'?q.en:q.uk; }
 /* colour by degree label (label-driven, robust across the whole vocabulary) */
 function labClass(lab){
@@ -2438,10 +2487,8 @@ function buildArpQuals(){
   renderQualPicker('arp-quals','arp-quals-toggle', i=>{ chQual=i; chVoicing=0; chShapesExpanded=false; buildChQuals(); buildArpQuals(); renderArp(); saveState(); });
 }
 function buildArpPos(){
-  const c=document.getElementById('arp-pos'); if(!c) return; c.innerHTML='';
-  const labels=[t('pos_all'),'1','2','3','4','5'];
-  labels.forEach((lab,i)=>{ const b=document.createElement('button'); b.className='btn'+(i===arpPos?' active':''); b.textContent=lab; b.setAttribute('aria-pressed', i===arpPos);
-    b.onclick=()=>{ arpPos=i; buildArpPos(); renderArp(); saveState(); }; c.appendChild(b); });
+  segButtons('arp-pos', [t('pos_all'),'1','2','3','4','5'].map(label=>({label})), arpPos,
+    i=>{ arpPos=i; buildArpPos(); renderArp(); saveState(); });
 }
 function renderArp(){
   const q=QUALITIES[chQual];
@@ -2519,7 +2566,6 @@ const CHORD_SHAPES = {
   'dim':  { A:[null,0,1,2,1,null] },
   'aug':  { A:[null,0,3,2,2,1] },
 };
-const STD_OPEN = [4,11,7,2,9,4];        // standard tuning, high->low (board order)
 const STD_LOW6 = [4,9,2,7,11,4];        // string6..string1 pitch classes (low->high)
 /* curated open-position shapes (low6 -> high1; null = muted). Keyed pc_quality. */
 const OPEN_OVERRIDES = {
@@ -2583,34 +2629,41 @@ function currentChordVoicing(){
   const midis=voicingMidi(list[idx]);
   return {midis, pcs:[...new Set(midis.map(m=>mod(m,12)))], list, idx};
 }
+/* Scan one 4-fret window [base, base+3] for a root-in-bass voicing: on each string
+   take the lowest fret in the window that lands on a chord tone, then mute leading
+   strings until the bass note is the root. Returns the resolved frets (low6->high1)
+   with coverage stats {cov, count, span, width}, or null if no root sits in the
+   bass within this window. Shared by genVoicing (scores windows for the single best)
+   and upNeckVoicings (collects the playable ones) so the scan logic lives once. */
+function scanWindow(base, need, rootPc){
+  const frets=[];                                   // index 0..5 = string6..string1 (low->high)
+  for(let s=0;s<6;s++){
+    const openPc=mod(STD_LOW6[s],12); let chosen=null;
+    for(let f=Math.max(0,base); f<=base+3; f++){ if(need.includes(mod(openPc+f,12))){ chosen=f; break; } }
+    frets.push(chosen);
+  }
+  // mute leading strings until the bass note is the root
+  let lo=0; while(lo<6 && (frets[lo]==null || mod(STD_LOW6[lo]+frets[lo],12)!==rootPc)){ frets[lo]=null; lo++; }
+  if(lo>=6) return null;                             // no root in the bass within this window
+  const cov=new Set(); let count=0; const span=[];
+  for(let s=0;s<6;s++){ if(frets[s]!=null){ cov.add(mod(STD_LOW6[s]+frets[s],12)); count++; if(frets[s]>0) span.push(frets[s]); } }
+  const width=span.length?Math.max(...span)-Math.min(...span):0;
+  return {frets, cov, count, span, width};
+}
 /* Generalized voicing generator — removes the need to hand-curate a shape for
-   every quality. Given the chord's pitch classes, it scans 4-fret windows up
-   the neck and, on each string, takes the lowest fret in the window that lands
-   on a chord tone; it then mutes leading strings until the root sits in the
-   bass. Scored for coverage, string count, compactness and low position. Every
+   every quality. Scans 4-fret windows up the neck (scanWindow) and keeps the
+   single best by coverage, string count, compactness and low position. Every
    sounded note is a real chord tone by construction. Used only when no curated
    open/barre shape exists, and labelled as a computed voicing. */
 function genVoicing(rootPc, ivs){
   const need=[...new Set(ivs.map(i=>mod(rootPc+i,12)))];
   let best=null, bestScore=-1e9;
   for(let base=0; base<=12; base++){
-    const frets=[];                                   // index 0..5 = string6..string1 (low->high)
-    for(let s=0;s<6;s++){
-      const openPc=mod(STD_LOW6[s],12); let chosen=null;
-      for(let f=Math.max(0,base); f<=base+3; f++){ if(need.includes(mod(openPc+f,12))){ chosen=f; break; } }
-      frets.push(chosen);
-    }
-    // mute leading strings until the bass note is the root
-    let lo=0; while(lo<6 && (frets[lo]==null || mod(STD_LOW6[lo]+frets[lo],12)!==rootPc)){ frets[lo]=null; lo++; }
-    if(lo>=6) continue;                               // no root in the bass within this window
-    const cov=new Set(); let count=0; const span=[];
-    for(let s=0;s<6;s++){ if(frets[s]!=null){ cov.add(mod(STD_LOW6[s]+frets[s],12)); count++; if(frets[s]>0) span.push(frets[s]); } }
-    if(count<3) continue;                              // too thin to be a useful chord
-    const width=span.length?Math.max(...span)-Math.min(...span):0;
-    if(width>4) continue;
-    const missing=need.filter(pc=>!cov.has(pc)).length;
-    const score=-missing*100 + count*8 - base*1.5 - width*2;
-    if(score>bestScore){ bestScore=score; best={frets:frets.slice(), base}; }
+    const w=scanWindow(base, need, rootPc);
+    if(!w || w.count<3 || w.width>4) continue;        // no root-in-bass / too thin / too wide
+    const missing=need.filter(pc=>!w.cov.has(pc)).length;
+    const score=-missing*100 + w.count*8 - base*1.5 - w.width*2;
+    if(score>bestScore){ bestScore=score; best={frets:w.frets.slice(), base}; }
   }
   if(!best) return null;
   const played=best.frets.filter(x=>x!=null&&x>0);
@@ -2630,23 +2683,13 @@ function upNeckVoicings(rootPc, ivs){
   const need=[...new Set(ivs.map(i=>mod(rootPc+i,12)))];
   const out=[], seen={};
   for(let base=0; base<=9; base++){
-    const frets=[];
-    for(let s=0;s<6;s++){
-      const openPc=mod(STD_LOW6[s],12); let chosen=null;
-      for(let f=Math.max(0,base); f<=base+3; f++){ if(need.includes(mod(openPc+f,12))){ chosen=f; break; } }
-      frets.push(chosen);
-    }
-    let lo=0; while(lo<6 && (frets[lo]==null || mod(STD_LOW6[lo]+frets[lo],12)!==rootPc)){ frets[lo]=null; lo++; }
-    if(lo>=6) continue;                                  // no root in the bass within this window
-    const cov=new Set(); let count=0; const span=[];
-    for(let s=0;s<6;s++){ if(frets[s]!=null){ cov.add(mod(STD_LOW6[s]+frets[s],12)); count++; if(frets[s]>0) span.push(frets[s]); } }
-    if(count<4) continue;                                // a full-sounding shape, not a thin grip
-    if(need.some(pc=>!cov.has(pc))) continue;            // every chord tone present
-    const width=span.length?Math.max(...span)-Math.min(...span):0;
-    if(width>3) continue;                                // comfortably inside a 4-fret box
-    const key=frets.map(f=>f==null?'x':f).join(',');
+    const w=scanWindow(base, need, rootPc);
+    if(!w || w.count<4) continue;                        // no root-in-bass / a full-sounding shape, not a thin grip
+    if(need.some(pc=>!w.cov.has(pc))) continue;          // every chord tone present
+    if(w.width>3) continue;                              // comfortably inside a 4-fret box
+    const key=w.frets.map(f=>f==null?'x':f).join(',');
     if(seen[key]) continue; seen[key]=1;
-    out.push({frets:frets.slice(), barre:span.length?Math.min(...span):0, shape:'pos', generated:true});
+    out.push({frets:w.frets.slice(), barre:w.span.length?Math.min(...w.span):0, shape:'pos', generated:true});
   }
   return out.sort((a,b)=>a.barre-b.barre);
 }
@@ -2655,18 +2698,8 @@ function upNeckVoicings(rootPc, ivs){
    matching the fretboard. Each dot carries data-midi so a click sounds it. */
 function chordBoxSVG(v, funcMap){
   const frets=v.frets;                      // low6 .. high1
-  const played=frets.filter(x=>x!==null && x>0);
-  const minF=played.length?Math.min(...played):0;
-  const maxF=played.length?Math.max(...played):0;
-  const baseFret = (maxF<=4 ? 1 : minF);
-  const span=4, W=120, H=140, padX=16, padTop=26, padBot=18;
-  const cols=6, rows=span;
-  const gw=(W-padX*2)/(cols-1), gh=(H-padTop-padBot)/rows;
-  const x=i=>padX+i*gw, y=r=>padTop+r*gh;
-  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
-  for(let r=0;r<=rows;r++){ const isNut=(baseFret===1 && r===0); s+=`<line class="${isNut?'cd-nut':'cd-fret'}" x1="${x(0)}" y1="${y(r)}" x2="${x(5)}" y2="${y(r)}"/>`; }
-  for(let i=0;i<6;i++){ s+=`<line class="cd-string" x1="${x(i)}" y1="${y(0)}" x2="${x(i)}" y2="${y(rows)}"/>`; }
-  if(baseFret>1){ s+=`<text class="cd-pos" x="${x(0)-9}" y="${y(0)+gh*0.7}" text-anchor="end">${baseFret}fr</text>`; }
+  const {svg, x, y, gh, baseFret, rows, padTop}=fretGrid(frets, 6, {W:120,H:140,padX:16,padTop:26,padBot:18,span:4,posDX:9});
+  let s=svg;
   const fing=chordFingers(frets);
   frets.forEach((fr,li)=>{
     const sx=x(li);                          // low E at left
@@ -2740,7 +2773,7 @@ function nearestFret(open, pc, ref){
   return best;
 }
 function triFuncClass(o, iv){ if(o===0)return'd-root'; if(o===iv[1])return'd-third'; return'd-fifth'; }
-function triLabel(o, iv, pc, flat){ return gMode==='names' ? spellNote(gRootLbl,pc,DEG_OF[o]) : (o===0?'1':(o===iv[1]?DEG_LABEL[iv[1]]:DEG_LABEL[iv[2]])); }
+function triLabel(o, iv, pc){ return gMode==='names' ? spellNote(gRootLbl,pc,DEG_OF[o]) : (o===0?'1':(o===iv[1]?DEG_LABEL[iv[1]]:DEG_LABEL[iv[2]])); }
 function triadCells(){
   const tri=TRIADS[trQual], iv=tri.iv, set=STRING_SETS[trSet];
   const invs = trInv===0 ? [0,1,2] : [trInv-1];
@@ -2782,17 +2815,8 @@ function currentTriadVoicing(){
    note; colours follow the chord function (root/third/fifth). */
 function triadCardSVG(notes, iv){
   const frets=notes.map(n=>n.fr);
-  const minF=Math.min(...frets), maxF=Math.max(...frets);
-  const baseFret=(maxF<=4?1:minF);
-  const span=Math.max(3, maxF-baseFret+1);
-  const W=82, H=120, padX=15, padTop=22, padBot=14;
-  const cols=3, rows=span;
-  const gw=(W-padX*2)/(cols-1), gh=(H-padTop-padBot)/rows;
-  const x=i=>padX+i*gw, y=r=>padTop+r*gh;
-  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
-  for(let r=0;r<=rows;r++){ const isNut=(baseFret===1 && r===0); s+=`<line class="${isNut?'cd-nut':'cd-fret'}" x1="${x(0)}" y1="${y(r)}" x2="${x(2)}" y2="${y(r)}"/>`; }
-  for(let i=0;i<3;i++){ s+=`<line class="cd-string" x1="${x(i)}" y1="${y(0)}" x2="${x(i)}" y2="${y(rows)}"/>`; }
-  if(baseFret>1){ s+=`<text class="cd-pos" x="${x(0)-8}" y="${y(0)+gh*0.7}" text-anchor="end">${baseFret}fr</text>`; }
+  const {svg, x, y, gh, baseFret, rows}=fretGrid(frets, 3, {W:82,H:120,padX:15,padTop:22,padBot:14,posDX:8});
+  let s=svg;
   const fing=chordFingers(frets);
   notes.forEach((n,col)=>{                 // col 0 = lowest string of the set
     const r=n.fr-baseFret; if(r<0||r>=rows) return;
@@ -2815,20 +2839,16 @@ function renderTriadCards(){
   }).join('');
 }
 function buildTrQuals(){
-  const c=document.getElementById('tr-quals'); c.innerHTML='';
-  TRIADS.forEach((q,i)=>{ const b=document.createElement('button'); b.className='btn'+(i===trQual?' active':''); b.textContent=qName(q); b.setAttribute('aria-pressed', i===trQual);
-    b.onclick=()=>{ trQual=i; buildTrQuals(); renderTriads(); saveState(); }; c.appendChild(b); });
+  segButtons('tr-quals', TRIADS.map(q=>({label:qName(q)})), trQual,
+    i=>{ trQual=i; buildTrQuals(); renderTriads(); saveState(); });
 }
 function buildTrSets(){
-  const c=document.getElementById('tr-sets'); c.innerHTML='';
-  STRING_SETS.forEach((s,i)=>{ const b=document.createElement('button'); b.className='btn'+(i===trSet?' active':''); b.textContent=s.label; b.setAttribute('aria-pressed', i===trSet);
-    b.onclick=()=>{ trSet=i; buildTrSets(); renderTriads(); saveState(); }; c.appendChild(b); });
+  segButtons('tr-sets', STRING_SETS.map(s=>({label:s.label})), trSet,
+    i=>{ trSet=i; buildTrSets(); renderTriads(); saveState(); });
 }
 function buildTrInvs(){
-  const c=document.getElementById('tr-invs'); c.innerHTML='';
-  const labels=[t('inv_all'),t('inv_root'),t('inv_1st'),t('inv_2nd')];
-  labels.forEach((lab,i)=>{ const b=document.createElement('button'); b.className='btn'+(i===trInv?' active':''); b.textContent=lab; b.setAttribute('aria-pressed', i===trInv);
-    b.onclick=()=>{ trInv=i; buildTrInvs(); renderTriads(); saveState(); }; c.appendChild(b); });
+  segButtons('tr-invs', [t('inv_all'),t('inv_root'),t('inv_1st'),t('inv_2nd')].map(label=>({label})), trInv,
+    i=>{ trInv=i; buildTrInvs(); renderTriads(); saveState(); });
 }
 function renderTriads(){
   const {cells,iv}=triadCells(), tri=TRIADS[trQual], set=STRING_SETS[trSet];
@@ -2962,22 +2982,18 @@ function buildScSelect(){
   SCALES.forEach((s,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=sName(s); if(i===scIdx)o.selected=true; sel.appendChild(o); });
 }
 function buildScPos(){
-  const c=document.getElementById('sc-pos'); c.innerHTML='';
   const caged=isCAGEDScale();
-  const labels=[t('pos_all'),'1','2','3','4','5'];
-  labels.forEach((lab,i)=>{
-    const b=document.createElement('button'); b.className='btn'+(i===scPos?' active':'');
-    if(caged && i>=1){ const letter=CAGED_BY_POS[i-1]; const title=t('lbl_pos')+' '+i+' · '+cagedShapeName(letter); b.textContent=letter; b.title=title; b.setAttribute('aria-label', title); }
-    else { b.textContent=lab; b.setAttribute('aria-label', lab); }
-    b.setAttribute('aria-pressed', i===scPos);
-    b.onclick=()=>{ scPos=i; buildScPos(); renderScales(); saveState(); }; c.appendChild(b);
+  const items=[t('pos_all'),'1','2','3','4','5'].map((lab,i)=>{
+    if(caged && i>=1){ const letter=CAGED_BY_POS[i-1]; const title=t('lbl_pos')+' '+i+' · '+cagedShapeName(letter); return {label:letter, title, aria:title}; }
+    return {label:lab, aria:lab};
   });
+  segButtons('sc-pos', items, scPos, i=>{ scPos=i; buildScPos(); renderScales(); saveState(); });
 }
 
 /* ===================== ALL NOTES ===================== */
 const NAT=['C','D','E','F','G','A','B'], SHARP=['C#','D#','F#','G#','A#'], FLAT=['Db','Eb','Gb','Ab','Bb'];
 let ntFilter='all', ntRoot='';
-function ntMatch(note){ if(!ntRoot) return false; if(note===ntRoot) return true; if(ENHARM[note]===ntRoot) return true; const rev=Object.entries(ENHARM).find(([k,v])=>v===ntRoot); return rev && rev[0]===note; }
+function ntMatch(note){ if(!ntRoot) return false; if(note===ntRoot) return true; if(ENHARM[note]===ntRoot) return true; const rev=Object.entries(ENHARM).find(([,v])=>v===ntRoot); return rev && rev[0]===note; }
 function renderNotes(){
   if(!isBoardMode('notes')) return;
   paintBoard((pc,si,f)=>{
@@ -3038,17 +3054,17 @@ function renderCircle(){
   COF.forEach(c=>{
     const i=c.i;
     let mfill='var(--bg-panel-2)', mtext='var(--text)', nfill='var(--bg-panel)', ntext='var(--text-dim)';
-    const setRole=(isMaj)=>{
+    const setRole=()=>{
       if(i===cofSel) return ['var(--root)','#0e1408'];
       if(i===dom) return ['var(--third)','#1f1405'];
       if(i===sub) return ['var(--fifth)','#07203a'];
       return null;
     };
     if(!cofMinor){
-      const r=setRole(true); if(r){mfill=r[0];mtext=r[1];}
+      const r=setRole(); if(r){mfill=r[0];mtext=r[1];}
       if(i===cofSel){nfill='var(--seventh)';ntext='#2a0a16';}
     } else {
-      const r=setRole(false); if(r){nfill=r[0];ntext=r[1];}
+      const r=setRole(); if(r){nfill=r[0];ntext=r[1];}
       if(i===cofSel){mfill='var(--seventh)';mtext='#2a0a16';}
     }
     const [mx,my]=cofXY(i,RO), [nx,ny]=cofXY(i,RI);
@@ -3620,7 +3636,7 @@ function qualMoreToggle(){ chQualsAdv=!chQualsAdv; buildChQuals(); buildArpQuals
 /* ---- changelog modal ---- */
 function renderChangelog(){
   const body=document.getElementById('cl-body'); if(!body) return;
-  body.innerHTML = CHANGELOG.map((r,i)=>{
+  body.innerHTML = CHANGELOG.map(r=>{
     const cur = r.v===APP_VERSION;
     const bullets=(r[lang]||r.en).map(li=>`<li>${li}</li>`).join('');
     return `<div class="cl-rel${cur?' current':''}"><div class="cl-rel-head">`+

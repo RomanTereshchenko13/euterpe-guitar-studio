@@ -19,7 +19,7 @@ function nearestFret(open, pc, ref){
   return best;
 }
 function triFuncClass(o, iv){ if(o===0)return'd-root'; if(o===iv[1])return'd-third'; return'd-fifth'; }
-function triLabel(o, iv, pc, flat){ return gMode==='names' ? spellNote(gRootLbl,pc,DEG_OF[o]) : (o===0?'1':(o===iv[1]?DEG_LABEL[iv[1]]:DEG_LABEL[iv[2]])); }
+function triLabel(o, iv, pc){ return gMode==='names' ? spellNote(gRootLbl,pc,DEG_OF[o]) : (o===0?'1':(o===iv[1]?DEG_LABEL[iv[1]]:DEG_LABEL[iv[2]])); }
 function triadCells(){
   const tri=TRIADS[trQual], iv=tri.iv, set=STRING_SETS[trSet];
   const invs = trInv===0 ? [0,1,2] : [trInv-1];
@@ -61,17 +61,8 @@ function currentTriadVoicing(){
    note; colours follow the chord function (root/third/fifth). */
 function triadCardSVG(notes, iv){
   const frets=notes.map(n=>n.fr);
-  const minF=Math.min(...frets), maxF=Math.max(...frets);
-  const baseFret=(maxF<=4?1:minF);
-  const span=Math.max(3, maxF-baseFret+1);
-  const W=82, H=120, padX=15, padTop=22, padBot=14;
-  const cols=3, rows=span;
-  const gw=(W-padX*2)/(cols-1), gh=(H-padTop-padBot)/rows;
-  const x=i=>padX+i*gw, y=r=>padTop+r*gh;
-  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
-  for(let r=0;r<=rows;r++){ const isNut=(baseFret===1 && r===0); s+=`<line class="${isNut?'cd-nut':'cd-fret'}" x1="${x(0)}" y1="${y(r)}" x2="${x(2)}" y2="${y(r)}"/>`; }
-  for(let i=0;i<3;i++){ s+=`<line class="cd-string" x1="${x(i)}" y1="${y(0)}" x2="${x(i)}" y2="${y(rows)}"/>`; }
-  if(baseFret>1){ s+=`<text class="cd-pos" x="${x(0)-8}" y="${y(0)+gh*0.7}" text-anchor="end">${baseFret}fr</text>`; }
+  const {svg, x, y, gh, baseFret, rows}=fretGrid(frets, 3, {W:82,H:120,padX:15,padTop:22,padBot:14,posDX:8});
+  let s=svg;
   const fing=chordFingers(frets);
   notes.forEach((n,col)=>{                 // col 0 = lowest string of the set
     const r=n.fr-baseFret; if(r<0||r>=rows) return;
@@ -94,20 +85,16 @@ function renderTriadCards(){
   }).join('');
 }
 function buildTrQuals(){
-  const c=document.getElementById('tr-quals'); c.innerHTML='';
-  TRIADS.forEach((q,i)=>{ const b=document.createElement('button'); b.className='btn'+(i===trQual?' active':''); b.textContent=qName(q); b.setAttribute('aria-pressed', i===trQual);
-    b.onclick=()=>{ trQual=i; buildTrQuals(); renderTriads(); saveState(); }; c.appendChild(b); });
+  segButtons('tr-quals', TRIADS.map(q=>({label:qName(q)})), trQual,
+    i=>{ trQual=i; buildTrQuals(); renderTriads(); saveState(); });
 }
 function buildTrSets(){
-  const c=document.getElementById('tr-sets'); c.innerHTML='';
-  STRING_SETS.forEach((s,i)=>{ const b=document.createElement('button'); b.className='btn'+(i===trSet?' active':''); b.textContent=s.label; b.setAttribute('aria-pressed', i===trSet);
-    b.onclick=()=>{ trSet=i; buildTrSets(); renderTriads(); saveState(); }; c.appendChild(b); });
+  segButtons('tr-sets', STRING_SETS.map(s=>({label:s.label})), trSet,
+    i=>{ trSet=i; buildTrSets(); renderTriads(); saveState(); });
 }
 function buildTrInvs(){
-  const c=document.getElementById('tr-invs'); c.innerHTML='';
-  const labels=[t('inv_all'),t('inv_root'),t('inv_1st'),t('inv_2nd')];
-  labels.forEach((lab,i)=>{ const b=document.createElement('button'); b.className='btn'+(i===trInv?' active':''); b.textContent=lab; b.setAttribute('aria-pressed', i===trInv);
-    b.onclick=()=>{ trInv=i; buildTrInvs(); renderTriads(); saveState(); }; c.appendChild(b); });
+  segButtons('tr-invs', [t('inv_all'),t('inv_root'),t('inv_1st'),t('inv_2nd')].map(label=>({label})), trInv,
+    i=>{ trInv=i; buildTrInvs(); renderTriads(); saveState(); });
 }
 function renderTriads(){
   const {cells,iv}=triadCells(), tri=TRIADS[trQual], set=STRING_SETS[trSet];

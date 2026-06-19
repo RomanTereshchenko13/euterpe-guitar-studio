@@ -112,15 +112,11 @@ function buildScSelect(){
   SCALES.forEach((s,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=sName(s); if(i===scIdx)o.selected=true; sel.appendChild(o); });
 }
 function buildScPos(){
-  const c=document.getElementById('sc-pos'); c.innerHTML='';
   const caged=isCAGEDScale();
-  const labels=[t('pos_all'),'1','2','3','4','5'];
-  labels.forEach((lab,i)=>{
-    const b=document.createElement('button'); b.className='btn'+(i===scPos?' active':'');
-    if(caged && i>=1){ const letter=CAGED_BY_POS[i-1]; const title=t('lbl_pos')+' '+i+' · '+cagedShapeName(letter); b.textContent=letter; b.title=title; b.setAttribute('aria-label', title); }
-    else { b.textContent=lab; b.setAttribute('aria-label', lab); }
-    b.setAttribute('aria-pressed', i===scPos);
-    b.onclick=()=>{ scPos=i; buildScPos(); renderScales(); saveState(); }; c.appendChild(b);
+  const items=[t('pos_all'),'1','2','3','4','5'].map((lab,i)=>{
+    if(caged && i>=1){ const letter=CAGED_BY_POS[i-1]; const title=t('lbl_pos')+' '+i+' · '+cagedShapeName(letter); return {label:letter, title, aria:title}; }
+    return {label:lab, aria:lab};
   });
+  segButtons('sc-pos', items, scPos, i=>{ scPos=i; buildScPos(); renderScales(); saveState(); });
 }
 

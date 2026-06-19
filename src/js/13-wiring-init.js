@@ -307,7 +307,7 @@ function qualMoreToggle(){ chQualsAdv=!chQualsAdv; buildChQuals(); buildArpQuals
 /* ---- changelog modal ---- */
 function renderChangelog(){
   const body=document.getElementById('cl-body'); if(!body) return;
-  body.innerHTML = CHANGELOG.map((r,i)=>{
+  body.innerHTML = CHANGELOG.map(r=>{
     const cur = r.v===APP_VERSION;
     const bullets=(r[lang]||r.en).map(li=>`<li>${li}</li>`).join('');
     return `<div class="cl-rel${cur?' current':''}"><div class="cl-rel-head">`+

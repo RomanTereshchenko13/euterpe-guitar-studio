@@ -1,6 +1,9 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'1.27.2', date:'2026-06-19',
+    en:['Landscape now matches portrait: the same compact colour key applies, and the chord-shapes card keeps its proper place beside the neck instead of dropping to the bottom of the page.'],
+    uk:['Альбомна орієнтація тепер відповідає книжковій: застосовується та сама компактна легенда, а картка форм акорду лишається на своєму місці поруч із грифом, а не падає в самий низ сторінки.'] },
   { v:'1.27.1', date:'2026-06-19',
     en:['The chord-shapes card now opens with just the first few shapes — the open shape and the nearest forms — and a "More shapes" button reveals the rest of the library when you want them, so the card no longer floods a phone with diagrams.',
         'The note-colour key under the neck is tidier on phones: it now fits a single clean row (the degree numbers tuck away on small screens) instead of wrapping into a second line that looked like part of the neck\'s scroll.'],

@@ -408,10 +408,14 @@
     .toolbar { margin-top: 8px; padding: 8px 12px; }
     .layout:has(#board-region:not([hidden])) {
       grid-template-columns: minmax(0,1fr) minmax(300px, 46%);
+      /* left column scrolls (main → shapes → suggester → chord reference), matching
+         the portrait stacking order; the board pins in the right column. #shapes-card
+         needs an explicit slot here or it auto-places to the very bottom out of order. */
       grid-template-areas:
         "main      board"
-        "extras    board"
+        "shapes    board"
         "aside     board"
+        "extras    board"
         "boardmeta boardmeta";
       column-gap: 16px;
       padding-top: 12px;
@@ -506,18 +510,21 @@
   }
 
   /* ---- mobile ---- */
-  @media (max-width: 600px) {
-    .wrap { padding: 0 14px; }
-    .brand h1 { font-size: 25px; }
-    /* phone legend: drop the degree detail and tighten so the colour key fits one
-       clean row right under the neck, instead of wrapping into a second line that
-       reads as part of the neck's horizontal scroll just above it */
+  /* phone declutter — applies to BOTH portrait phones (narrow) and landscape phones
+     (short, which are wider than 600px and so miss the portrait block below): compact
+     the note-colour legend to one tidy row, drop the degree hints, and hide the
+     "tap a card" pick-hint, so the two orientations read the same. (max-height:500px
+     is the same short-viewport proxy the landscape board-shell above uses.) */
+  @media (max-width: 600px), (max-height: 500px) {
     .legend { gap: 12px; margin-top: 13px; }
     .leg { font-size: 11.5px; gap: 5px; }
     .leg-deg { display: none; }
-    /* the "tap a card to pick the shape" hint is discovery help; on a phone the
-       cards already read as tappable (they highlight), so reclaim the row */
     #shapes-body .cd-hint { display: none; }
+  }
+
+  @media (max-width: 600px) {
+    .wrap { padding: 0 14px; }
+    .brand h1 { font-size: 25px; }
     /* un-box the View / Root / Display bar on phones: the desktop "horizontal context
        bar" panel becomes a tall, heavy box once it wraps. Drop the border/background
        and stack each control as a clean labelled row (label on its own line, buttons

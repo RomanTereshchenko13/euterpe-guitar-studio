@@ -117,6 +117,28 @@ function chordFingers(frets){
   }
   return map;
 }
+/* Shared chord/triad diagram scaffold: the SVG frame + fret/string lines, the nut
+   (drawn when the box starts at fret 1), and the "Nfr" position label, for a box of
+   `cols` strings. Returns the opening markup plus the coordinate helpers and the
+   resolved baseFret/rows/padTop so each caller draws its own dots — chord boxes mark
+   open/muted strings and colour by funcMap; triad cards draw only the three set
+   strings and colour by triad function. `dims.span` fixes the row count (chord boxes
+   use a constant 4); omit it to fit the rows to the shape (triad cards). */
+function fretGrid(frets, cols, dims){
+  const played=frets.filter(x=>x!=null && x>0);
+  const minF=played.length?Math.min(...played):0;
+  const maxF=played.length?Math.max(...played):0;
+  const baseFret=(maxF<=4?1:minF);
+  const rows=dims.span!=null ? dims.span : Math.max(3, maxF-baseFret+1);
+  const {W,H,padX,padTop,padBot,posDX}=dims;
+  const gw=(W-padX*2)/(cols-1), gh=(H-padTop-padBot)/rows;
+  const x=i=>padX+i*gw, y=r=>padTop+r*gh;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+  for(let r=0;r<=rows;r++){ const isNut=(baseFret===1 && r===0); svg+=`<line class="${isNut?'cd-nut':'cd-fret'}" x1="${x(0)}" y1="${y(r)}" x2="${x(cols-1)}" y2="${y(r)}"/>`; }
+  for(let i=0;i<cols;i++){ svg+=`<line class="cd-string" x1="${x(i)}" y1="${y(0)}" x2="${x(i)}" y2="${y(rows)}"/>`; }
+  if(baseFret>1){ svg+=`<text class="cd-pos" x="${x(0)-posDX}" y="${y(0)+gh*0.7}" text-anchor="end">${baseFret}fr</text>`; }
+  return {svg, x, y, gh, baseFret, rows, padTop};
+}
 function makeDot(cls,text,midi){
   const d=document.createElement('div'); d.className='dot '+cls; d.textContent=text;
   if(midi!=null){ d.dataset.midi=midi; d.tabIndex=0; d.setAttribute('role','button'); }
@@ -183,6 +205,24 @@ function buildRootBtns(container, current, onPick){
     const b=document.createElement('button'); b.className='btn'+(pc===current?' active':''); b.textContent=r; b.setAttribute('aria-pressed', pc===current);
     b.onclick=()=>{ [...container.children].forEach(x=>{x.classList.remove('active');x.setAttribute('aria-pressed','false');}); b.classList.add('active'); b.setAttribute('aria-pressed','true'); onPick(pc,r); };
     container.appendChild(b);
+  });
+}
+/* Shared segmented-button row: one `.btn` per item with the active index marked
+   (`active` class + aria-pressed) and each wired to onPick(i). `items` are
+   {label, title?, aria?} — title/aria are set only when provided, so callers that
+   want a bare button (just aria-pressed) match their old markup exactly. Backs the
+   arp-position, triad quality/string-set/inversion, and scale-position pickers. */
+function segButtons(containerId, items, activeIdx, onPick){
+  const c=document.getElementById(containerId); if(!c) return; c.innerHTML='';
+  items.forEach((it,i)=>{
+    const b=document.createElement('button');
+    b.className='btn'+(i===activeIdx?' active':'');
+    b.textContent=it.label;
+    if(it.title!=null) b.title=it.title;
+    if(it.aria!=null) b.setAttribute('aria-label', it.aria);
+    b.setAttribute('aria-pressed', i===activeIdx);
+    b.onclick=()=>onPick(i);
+    c.appendChild(b);
   });
 }
 

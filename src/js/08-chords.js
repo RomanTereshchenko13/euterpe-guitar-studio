@@ -35,7 +35,6 @@ const QUALITIES=[
   {short:'7♭9',  grp:'ext',     iv:[0,4,7,10,13],    lab:['1','3','5','♭7','♭9'],      deg:[1,3,5,7,2],     en:'7♭9',uk:'7♭9'},
   {short:'7♯9',  grp:'ext',     iv:[0,4,7,10,15],    lab:['1','3','5','♭7','♯9'],      deg:[1,3,5,7,2],     en:'7♯9 (Hendrix)',uk:'7♯9 (Гендрікс)'},
 ];
-const QUAL_GROUPS=['basic','seventh','ext'];
 function qName(q){ return lang==='en'?q.en:q.uk; }
 /* colour by degree label (label-driven, robust across the whole vocabulary) */
 function labClass(lab){
@@ -216,10 +215,8 @@ function buildArpQuals(){
   renderQualPicker('arp-quals','arp-quals-toggle', i=>{ chQual=i; chVoicing=0; chShapesExpanded=false; buildChQuals(); buildArpQuals(); renderArp(); saveState(); });
 }
 function buildArpPos(){
-  const c=document.getElementById('arp-pos'); if(!c) return; c.innerHTML='';
-  const labels=[t('pos_all'),'1','2','3','4','5'];
-  labels.forEach((lab,i)=>{ const b=document.createElement('button'); b.className='btn'+(i===arpPos?' active':''); b.textContent=lab; b.setAttribute('aria-pressed', i===arpPos);
-    b.onclick=()=>{ arpPos=i; buildArpPos(); renderArp(); saveState(); }; c.appendChild(b); });
+  segButtons('arp-pos', [t('pos_all'),'1','2','3','4','5'].map(label=>({label})), arpPos,
+    i=>{ arpPos=i; buildArpPos(); renderArp(); saveState(); });
 }
 function renderArp(){
   const q=QUALITIES[chQual];
@@ -297,7 +294,6 @@ const CHORD_SHAPES = {
   'dim':  { A:[null,0,1,2,1,null] },
   'aug':  { A:[null,0,3,2,2,1] },
 };
-const STD_OPEN = [4,11,7,2,9,4];        // standard tuning, high->low (board order)
 const STD_LOW6 = [4,9,2,7,11,4];        // string6..string1 pitch classes (low->high)
 /* curated open-position shapes (low6 -> high1; null = muted). Keyed pc_quality. */
 const OPEN_OVERRIDES = {
@@ -361,34 +357,41 @@ function currentChordVoicing(){
   const midis=voicingMidi(list[idx]);
   return {midis, pcs:[...new Set(midis.map(m=>mod(m,12)))], list, idx};
 }
+/* Scan one 4-fret window [base, base+3] for a root-in-bass voicing: on each string
+   take the lowest fret in the window that lands on a chord tone, then mute leading
+   strings until the bass note is the root. Returns the resolved frets (low6->high1)
+   with coverage stats {cov, count, span, width}, or null if no root sits in the
+   bass within this window. Shared by genVoicing (scores windows for the single best)
+   and upNeckVoicings (collects the playable ones) so the scan logic lives once. */
+function scanWindow(base, need, rootPc){
+  const frets=[];                                   // index 0..5 = string6..string1 (low->high)
+  for(let s=0;s<6;s++){
+    const openPc=mod(STD_LOW6[s],12); let chosen=null;
+    for(let f=Math.max(0,base); f<=base+3; f++){ if(need.includes(mod(openPc+f,12))){ chosen=f; break; } }
+    frets.push(chosen);
+  }
+  // mute leading strings until the bass note is the root
+  let lo=0; while(lo<6 && (frets[lo]==null || mod(STD_LOW6[lo]+frets[lo],12)!==rootPc)){ frets[lo]=null; lo++; }
+  if(lo>=6) return null;                             // no root in the bass within this window
+  const cov=new Set(); let count=0; const span=[];
+  for(let s=0;s<6;s++){ if(frets[s]!=null){ cov.add(mod(STD_LOW6[s]+frets[s],12)); count++; if(frets[s]>0) span.push(frets[s]); } }
+  const width=span.length?Math.max(...span)-Math.min(...span):0;
+  return {frets, cov, count, span, width};
+}
 /* Generalized voicing generator — removes the need to hand-curate a shape for
-   every quality. Given the chord's pitch classes, it scans 4-fret windows up
-   the neck and, on each string, takes the lowest fret in the window that lands
-   on a chord tone; it then mutes leading strings until the root sits in the
-   bass. Scored for coverage, string count, compactness and low position. Every
+   every quality. Scans 4-fret windows up the neck (scanWindow) and keeps the
+   single best by coverage, string count, compactness and low position. Every
    sounded note is a real chord tone by construction. Used only when no curated
    open/barre shape exists, and labelled as a computed voicing. */
 function genVoicing(rootPc, ivs){
   const need=[...new Set(ivs.map(i=>mod(rootPc+i,12)))];
   let best=null, bestScore=-1e9;
   for(let base=0; base<=12; base++){
-    const frets=[];                                   // index 0..5 = string6..string1 (low->high)
-    for(let s=0;s<6;s++){
-      const openPc=mod(STD_LOW6[s],12); let chosen=null;
-      for(let f=Math.max(0,base); f<=base+3; f++){ if(need.includes(mod(openPc+f,12))){ chosen=f; break; } }
-      frets.push(chosen);
-    }
-    // mute leading strings until the bass note is the root
-    let lo=0; while(lo<6 && (frets[lo]==null || mod(STD_LOW6[lo]+frets[lo],12)!==rootPc)){ frets[lo]=null; lo++; }
-    if(lo>=6) continue;                               // no root in the bass within this window
-    const cov=new Set(); let count=0; const span=[];
-    for(let s=0;s<6;s++){ if(frets[s]!=null){ cov.add(mod(STD_LOW6[s]+frets[s],12)); count++; if(frets[s]>0) span.push(frets[s]); } }
-    if(count<3) continue;                              // too thin to be a useful chord
-    const width=span.length?Math.max(...span)-Math.min(...span):0;
-    if(width>4) continue;
-    const missing=need.filter(pc=>!cov.has(pc)).length;
-    const score=-missing*100 + count*8 - base*1.5 - width*2;
-    if(score>bestScore){ bestScore=score; best={frets:frets.slice(), base}; }
+    const w=scanWindow(base, need, rootPc);
+    if(!w || w.count<3 || w.width>4) continue;        // no root-in-bass / too thin / too wide
+    const missing=need.filter(pc=>!w.cov.has(pc)).length;
+    const score=-missing*100 + w.count*8 - base*1.5 - w.width*2;
+    if(score>bestScore){ bestScore=score; best={frets:w.frets.slice(), base}; }
   }
   if(!best) return null;
   const played=best.frets.filter(x=>x!=null&&x>0);
@@ -408,23 +411,13 @@ function upNeckVoicings(rootPc, ivs){
   const need=[...new Set(ivs.map(i=>mod(rootPc+i,12)))];
   const out=[], seen={};
   for(let base=0; base<=9; base++){
-    const frets=[];
-    for(let s=0;s<6;s++){
-      const openPc=mod(STD_LOW6[s],12); let chosen=null;
-      for(let f=Math.max(0,base); f<=base+3; f++){ if(need.includes(mod(openPc+f,12))){ chosen=f; break; } }
-      frets.push(chosen);
-    }
-    let lo=0; while(lo<6 && (frets[lo]==null || mod(STD_LOW6[lo]+frets[lo],12)!==rootPc)){ frets[lo]=null; lo++; }
-    if(lo>=6) continue;                                  // no root in the bass within this window
-    const cov=new Set(); let count=0; const span=[];
-    for(let s=0;s<6;s++){ if(frets[s]!=null){ cov.add(mod(STD_LOW6[s]+frets[s],12)); count++; if(frets[s]>0) span.push(frets[s]); } }
-    if(count<4) continue;                                // a full-sounding shape, not a thin grip
-    if(need.some(pc=>!cov.has(pc))) continue;            // every chord tone present
-    const width=span.length?Math.max(...span)-Math.min(...span):0;
-    if(width>3) continue;                                // comfortably inside a 4-fret box
-    const key=frets.map(f=>f==null?'x':f).join(',');
+    const w=scanWindow(base, need, rootPc);
+    if(!w || w.count<4) continue;                        // no root-in-bass / a full-sounding shape, not a thin grip
+    if(need.some(pc=>!w.cov.has(pc))) continue;          // every chord tone present
+    if(w.width>3) continue;                              // comfortably inside a 4-fret box
+    const key=w.frets.map(f=>f==null?'x':f).join(',');
     if(seen[key]) continue; seen[key]=1;
-    out.push({frets:frets.slice(), barre:span.length?Math.min(...span):0, shape:'pos', generated:true});
+    out.push({frets:w.frets.slice(), barre:w.span.length?Math.min(...w.span):0, shape:'pos', generated:true});
   }
   return out.sort((a,b)=>a.barre-b.barre);
 }
@@ -433,18 +426,8 @@ function upNeckVoicings(rootPc, ivs){
    matching the fretboard. Each dot carries data-midi so a click sounds it. */
 function chordBoxSVG(v, funcMap){
   const frets=v.frets;                      // low6 .. high1
-  const played=frets.filter(x=>x!==null && x>0);
-  const minF=played.length?Math.min(...played):0;
-  const maxF=played.length?Math.max(...played):0;
-  const baseFret = (maxF<=4 ? 1 : minF);
-  const span=4, W=120, H=140, padX=16, padTop=26, padBot=18;
-  const cols=6, rows=span;
-  const gw=(W-padX*2)/(cols-1), gh=(H-padTop-padBot)/rows;
-  const x=i=>padX+i*gw, y=r=>padTop+r*gh;
-  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
-  for(let r=0;r<=rows;r++){ const isNut=(baseFret===1 && r===0); s+=`<line class="${isNut?'cd-nut':'cd-fret'}" x1="${x(0)}" y1="${y(r)}" x2="${x(5)}" y2="${y(r)}"/>`; }
-  for(let i=0;i<6;i++){ s+=`<line class="cd-string" x1="${x(i)}" y1="${y(0)}" x2="${x(i)}" y2="${y(rows)}"/>`; }
-  if(baseFret>1){ s+=`<text class="cd-pos" x="${x(0)-9}" y="${y(0)+gh*0.7}" text-anchor="end">${baseFret}fr</text>`; }
+  const {svg, x, y, gh, baseFret, rows, padTop}=fretGrid(frets, 6, {W:120,H:140,padX:16,padTop:26,padBot:18,span:4,posDX:9});
+  let s=svg;
   const fing=chordFingers(frets);
   frets.forEach((fr,li)=>{
     const sx=x(li);                          // low E at left

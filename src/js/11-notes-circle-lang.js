@@ -1,7 +1,7 @@
 /* ===================== ALL NOTES ===================== */
 const NAT=['C','D','E','F','G','A','B'], SHARP=['C#','D#','F#','G#','A#'], FLAT=['Db','Eb','Gb','Ab','Bb'];
 let ntFilter='all', ntRoot='';
-function ntMatch(note){ if(!ntRoot) return false; if(note===ntRoot) return true; if(ENHARM[note]===ntRoot) return true; const rev=Object.entries(ENHARM).find(([k,v])=>v===ntRoot); return rev && rev[0]===note; }
+function ntMatch(note){ if(!ntRoot) return false; if(note===ntRoot) return true; if(ENHARM[note]===ntRoot) return true; const rev=Object.entries(ENHARM).find(([,v])=>v===ntRoot); return rev && rev[0]===note; }
 function renderNotes(){
   if(!isBoardMode('notes')) return;
   paintBoard((pc,si,f)=>{
@@ -62,17 +62,17 @@ function renderCircle(){
   COF.forEach(c=>{
     const i=c.i;
     let mfill='var(--bg-panel-2)', mtext='var(--text)', nfill='var(--bg-panel)', ntext='var(--text-dim)';
-    const setRole=(isMaj)=>{
+    const setRole=()=>{
       if(i===cofSel) return ['var(--root)','#0e1408'];
       if(i===dom) return ['var(--third)','#1f1405'];
       if(i===sub) return ['var(--fifth)','#07203a'];
       return null;
     };
     if(!cofMinor){
-      const r=setRole(true); if(r){mfill=r[0];mtext=r[1];}
+      const r=setRole(); if(r){mfill=r[0];mtext=r[1];}
       if(i===cofSel){nfill='var(--seventh)';ntext='#2a0a16';}
     } else {
-      const r=setRole(false); if(r){nfill=r[0];ntext=r[1];}
+      const r=setRole(); if(r){nfill=r[0];ntext=r[1];}
       if(i===cofSel){mfill='var(--seventh)';mtext='#2a0a16';}
     }
     const [mx,my]=cofXY(i,RO), [nx,ny]=cofXY(i,RI);
