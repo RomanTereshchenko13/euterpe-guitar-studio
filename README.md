@@ -137,7 +137,7 @@ guitar-studio/
 │   ├── styles.css          all CSS
 │   ├── sw.template.js      service-worker source (@@VERSION@@ → cache name)
 │   ├── icons/icon.svg      the app icon, authored once (favicon + PNG source)
-│   └── js/                 ordered modules (01-version, 02-changelog … 14-pwa)
+│   └── js/                 ordered modules (01-version, 02-changelog … 16-pwa)
 ├── README.md               this file
 ├── ROADMAP.md              phased plan; current shipping version at the top
 ├── .gitignore
@@ -164,7 +164,7 @@ guitar-studio/
   (`sw.js`, generated from `src/sw.template.js`) make it installable and
   offline-first. The SW precaches the app shell + icons (cache-first, with the
   cached `index.html` served for navigations) and runtime-caches Google Fonts.
-  Registration ([`src/js/14-pwa.js`](./src/js/14-pwa.js)) is guarded to a no-op
+  Registration ([`src/js/16-pwa.js`](./src/js/16-pwa.js)) is guarded to a no-op
   off HTTPS, so `file://` and the jsdom tests are unaffected.
 - Web Audio API: Karplus-Strong synthesis, body-resonance EQ, compressor +
   convolution reverb, a lookahead scheduler for drift-free timing, and named

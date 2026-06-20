@@ -8,6 +8,21 @@ function renderActiveContext(){
   else if(currentTab==='scales'){ scView==='notes'?renderNotes():renderScales(); }
   markScrollables();
 }
+/* Practice progress readout (3b): the learner model's aggregate stats as chips, or
+   an empty state until a drill (3c) writes the first attempt. Re-run on mode switch
+   and language change. */
+function renderPractice(){
+  const host=document.getElementById('practice-progress'); if(!host) return;
+  const s=learnerStats();
+  if(!s.seen && !s.sessions){ host.innerHTML='<div class="pp-empty">'+t('prog_empty')+'</div>'; return; }
+  const stat=(val,lab)=>'<div class="pp-stat"><div class="pp-val">'+val+'</div><div class="pp-lab">'+lab+'</div></div>';
+  host.innerHTML='<div class="pp-stats">'+
+    stat(s.items, t('prog_tracked'))+
+    stat(Math.round(s.accuracy*100)+'%', t('prog_accuracy'))+
+    stat(s.bestStreak, t('prog_streak'))+
+    stat(s.sessions, t('prog_sessions'))+
+  '</div>';
+}
 
 /* ---- one musical context (spine #1, 1a) ----
    gRoot/gRootLbl (key center) and scIdx (mode = selected scale) are the single
@@ -262,6 +277,33 @@ function selectTab(name){
   renderActiveContext();
   saveState();
 }
+// Phase 3a — the mode axis. Orthogonal to selectTab (the reference sub-axis): a
+// body class drives the show/hide CSS, so reference content is untouched. Returning
+// to Reference re-applies the reference shell (idempotent if already correct);
+// playback persists across modes (the transport bar acts as a backing track, like
+// it does across tabs). Mirrors selectTab's button-state + ARIA + saveState shape.
+function setMode(mode){
+  currentMode = (mode==='practice') ? 'practice' : 'reference';
+  document.body.classList.toggle('mode-practice', currentMode==='practice');
+  document.body.classList.toggle('mode-reference', currentMode==='reference');
+  document.querySelectorAll('.modebtn').forEach(b=>{
+    const on=b.dataset.mode===currentMode; b.classList.toggle('active',on); b.setAttribute('aria-pressed',on?'true':'false');
+  });
+  if(currentMode==='reference'){
+    if(typeof drill!=='undefined' && drill) exitDrill();   // leaving Practice ends an active drill
+    applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
+  } else {
+    // entering Practice with no drill running: show the home view (drill starters
+    // call startDrill() right after, which swaps it for the active drill)
+    if(!(typeof drill!=='undefined' && drill)){
+      const home=document.getElementById('practice-home'), area=document.getElementById('drill-area');
+      if(home) home.hidden=false; if(area) area.hidden=true;
+    }
+    renderPractice();
+  }
+  updateGlobalPlay();
+  saveState();
+}
 (function initTabs(){
   const tablist=document.getElementById('tabs'); tablist.setAttribute('role','tablist');
   document.querySelectorAll('.tab').forEach(tb=>{ tb.setAttribute('role','tab'); tb.id='tab-'+tb.dataset.panel; tb.setAttribute('aria-controls','panel-'+tb.dataset.panel); const on=tb.classList.contains('active'); tb.setAttribute('aria-selected',on); tb.tabIndex=on?0:-1; });
@@ -277,6 +319,14 @@ document.getElementById('tabs').addEventListener('click',e=>{
   const tb=e.target.closest('.tab'); if(!tb) return;
   selectTab(tb.dataset.panel);
 });
+document.getElementById('modenav').addEventListener('click',e=>{
+  const b=e.target.closest('.modebtn'); if(!b) return;
+  setMode(b.dataset.mode);
+});
+// Practice: start the note-naming drill from its card (3c)
+{ const s=document.getElementById('start-notes'); if(s) s.onclick=startDrill; }
+// Seam (spine #2): jump from the reference Notes view into the drill on the same neck
+{ const d=document.getElementById('nt-drill'); if(d) d.onclick=function(){ setMode('practice'); startDrill(); }; }
 document.getElementById('tabs').addEventListener('scroll', syncTabsScroll, {passive:true});
 document.getElementById('lang-switch').addEventListener('click',e=>{
   const b=e.target.closest('.langbtn'); if(!b||b.dataset.lang===lang) return;
@@ -352,9 +402,9 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(k==='?'){ e.preventDefault(); openKbd(); return; }
-  if(k==='1'){ selectTab('harmony'); return; }
-  if(k==='2'){ selectTab('scales'); return; }
-  if(k==='3'){ selectTab('circle'); return; }
+  if(k==='1'){ setMode('reference'); selectTab('harmony'); return; }   // 1/2/3 also exit Practice
+  if(k==='2'){ setMode('reference'); selectTab('scales'); return; }
+  if(k==='3'){ setMode('reference'); selectTab('circle'); return; }
   if(k==='['){ transposeKey(-1); return; }
   if(k===']'){ transposeKey(1); return; }
   const lk = k.length===1 ? k.toLowerCase() : '';
@@ -394,6 +444,7 @@ ntRoot=gRootLbl;   // Notes highlight follows the shared root (#4); keep them in
 applyTuning();
 applyLang();
 selectTab(currentTab);
+setMode(currentMode);   // Phase 3a: apply the restored mode axis after the reference shell is up
 syncTabsScroll();
 markScrollables();
 // re-measure swipe-group overflow when the viewport changes (rotate / resize), and once
@@ -419,8 +470,13 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
     schedAdvance, clocks, beat,
-    selectTab, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
+    selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
     renderAllBoards,
+    // learner model (spine #3, 3b)
+    recordAttempt, dueItems, recordSession, learnerStats, srsInterval, normalizeLearner,
+    getLearner:()=>learner, resetLearner:()=>{ learner=newLearner(); }, LEARNER_V,
+    // note-naming drill (3c)
+    startDrill, drillAnswer, drillTargetsFor, exitDrill, DRILL_LEN, getDrill:()=>drill,
     CAGED_BY_POS, isCAGEDScale,
     setFret:(i)=>{ fretRangeIdx=i; },
     setCapo:(i)=>{ capo=i; }, getCapo:()=>capo,
@@ -428,7 +484,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     setTriad:(q,set,inv)=>{ trQual=q; trSet=set; trInv=inv; },
     initAudio:()=>audio(),
     setCtxNow:(t)=>{ if(actx) actx.currentTime=t; },
-    state:()=>({ gRoot, gRootLbl, scIdx, scView, chQual, chVoicing, currentTab, hView,
+    state:()=>({ gRoot, gRootLbl, scIdx, scView, chQual, chVoicing, currentTab, currentMode, hView,
                  loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo })
   };
 }

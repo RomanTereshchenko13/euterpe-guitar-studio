@@ -19,10 +19,16 @@
    With a tab token the file is `w{W}-{panel}.png`; without, `w{W}.png` (unchanged).
    This is how the visual review covers ALL tabs across orientations.
 
+   Mode axis (Phase 3): pass `practice` to capture the Practice surface, or `drill`
+   to start the note-naming drill (clicks the bottom-nav Practice button, then the
+   drill card, after load); the file gains a `-practice` / `-drill` suffix.
+   `reference` is the default and needs no token.
+
    Run:  node tools/shoot.js                       # default widths 390 768 1280, harmony
          node tools/shoot.js 360 414 820           # custom widths
          node tools/shoot.js 390x3200              # explicit width x height
-         node tools/shoot.js tabs 390x844 1280x800 # all 3 tabs at those viewports */
+         node tools/shoot.js tabs 390x844 1280x800 # all 3 tabs at those viewports
+         node tools/shoot.js practice 390x844 1280x800 # the Practice surface */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -47,9 +53,11 @@ if (!fs.existsSync(indexHtml)) { console.error('index.html not found — run `no
 const PANELS = ['harmony', 'scales', 'circle'];
 const tabArgs = [];
 const sizeArgs = [];
+let mode = null;                                  // null = reference (default), 'practice' = Practice surface
 for (const a of process.argv.slice(2)) {
   if (a === 'tabs') tabArgs.push(...PANELS);
   else if (PANELS.includes(a)) tabArgs.push(a);
+  else if (a === 'practice' || a === 'reference' || a === 'drill') mode = (a === 'reference') ? null : a;
   else sizeArgs.push(a);
 }
 const tabs = tabArgs.length ? [...new Set(tabArgs)] : [null];
@@ -65,8 +73,14 @@ const baseHtml = fs.readFileSync(indexHtml, 'utf8');
 // the app's HTML, with an optional tab-switch and a self-overflow probe appended
 // (both run in the app's OWN document, so they see the true iframe viewport).
 function appFor(panel) {
-  const switcher = panel
-    ? `<script>addEventListener('load',function(){try{var b=document.querySelector('.tab[data-panel="${panel}"]');if(b)b.click();}catch(e){}});</script>`
+  // click the tab first (sets the reference sub-view), then — if requested — the
+  // bottom-nav Practice button, so the shot lands on the Practice surface.
+  const clicks = [];
+  if (panel) clicks.push(`var b=document.querySelector('.tab[data-panel="${panel}"]');if(b)b.click();`);
+  if (mode === 'practice' || mode === 'drill') clicks.push(`var m=document.querySelector('.modebtn[data-mode="practice"]');if(m)m.click();`);
+  if (mode === 'drill') clicks.push(`var s=document.getElementById('start-notes');if(s)s.click();`);
+  const switcher = clicks.length
+    ? `<script>addEventListener('load',function(){try{${clicks.join('')}}catch(e){}});</script>`
     : '';
   return baseHtml.replace('</body>', `${switcher}
 <div id="__probe" style="position:fixed;left:6px;bottom:6px;z-index:99999;font:bold 12px monospace;padding:4px 7px;border-radius:5px"></div>
@@ -80,7 +94,7 @@ function appFor(panel) {
 
 for (const { w, h } of specs) {
   for (const panel of tabs) {
-    const tag = panel ? `${w}-${panel}` : `${w}`;
+    const tag = (panel ? `${w}-${panel}` : `${w}`) + (mode ? '-' + mode : '');
     const appCopy = path.join(outDir, `_app_${tag}.html`);
     const wrapper = path.join(outDir, `_wrap_${tag}.html`);
     fs.writeFileSync(appCopy, appFor(panel));

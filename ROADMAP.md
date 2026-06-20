@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-06-19 · shipping: v1.27.0_
+_Last updated: 2026-06-20 · shipping: v2.0.0_
 
 ---
 
@@ -358,6 +358,12 @@ smooth condense); screenshot passes at 390 / 1280 incl. condensed-header and Bac
 ## Phase 3 — Practice core  (where the spine pays off)
 
 **Size:** L · **Risk:** med — the learner model is net-new; pin its schema first (below).
+**✅ Shipped v2.0.0** as three steps: 3a two-axis navigation (Reference · Practice, bottom-nav
+on mobile), 3b learner model v1 (per-item SM-2-lite SRS + sessions ring buffer, bounds-checked
+persistence, progress readout), 3c the first drill — fretboard note-naming on its own board,
+scored on accuracy, writing the learner model, reachable via the seam from the Notes view.
+_Latency calibration was deferred to the first beat-locked drill (Phase 5/7) that consumes it —
+the note-naming drill is self-paced and has no scoring window._
 
 The **Practice** surface and the machinery every drill shares. **Settle the navigation model first**
 (recommendation below) — Practice is the tab count's tipping point, so the IA decision gates the shell:

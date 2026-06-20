@@ -34,7 +34,7 @@ Edit the sources, then run the build.
 ## Where things live (all editable sources under `src/`)
 
 - `src/js/NN-*.js` — ordered modules, concatenated alphabetically (zero-padded
-  `01`..`15`). Order matters; the number is the load order.
+  `01`..`16`). Order matters; the number is the load order.
   - `01-version.js` — `APP_VERSION`, the **single source of truth** for the version
   - `02-changelog.js` — release notes (EN/UK); drives the in-app modal AND `CHANGELOG.md`
   - `03-i18n.js` — translation strings · `04-constants.js` · `05-audio.js`
@@ -42,7 +42,9 @@ Edit the sources, then run the build.
   - `10-scales.js` · `11-notes-circle-lang.js` · `12-toolbar-state.js`
   - `13-learner.js` — learner model (spine #3): per-item SRS history + sessions ring
     buffer; persists via `12-toolbar-state.js`'s `saveState`/`loadState`
-  - `14-wiring-init.js` · `15-pwa.js`
+  - `14-drill-notes.js` — Practice note-naming drill (3c); reuses the board paint +
+    cue bus, and is the first writer to the learner model
+  - `15-wiring-init.js` · `16-pwa.js`
 - `src/styles.css` — all CSS
 - `src/index.template.html` — markup shell with `@@STYLES@@` / `@@SCRIPT@@` / `@@FAVICON@@` markers
 - `src/sw.template.js` — service worker (`@@VERSION@@` → cache name)

@@ -1,6 +1,15 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.0.0', date:'2026-06-20',
+    en:['Euterpe now has a Practice mode. A new navigation layer switches between Reference — the chords, scales and circle you already know — and Practice, so the reference tabs stay uncluttered as practice grows (on a phone it lives in a thumb-friendly bar along the bottom).',
+        'The first drill: fretboard note-naming. Euterpe names a note and you tap every place it lives on the neck — correct taps light up and sound, wrong ones buzz. It is scored on accuracy and timed only for pace.',
+        'Euterpe now remembers how you are doing. A learner model tracks each note you practise, resurfaces the ones you miss, and shows your progress — accuracy, best streak and sessions — on the Practice screen.',
+        'Jump straight from the Notes view into the drill with "Drill on the neck".'],
+    uk:['У Euterpe зʼявився режим «Практика». Новий рівень навігації перемикає між «Довідником» — акорди, гами й коло квінт, які ти вже знаєш — і «Практикою», тож вкладки довідника лишаються охайними, поки практика росте (на телефоні він живе у зручній для великого пальця смужці внизу).',
+        'Перша вправа: називання нот на грифі. Euterpe називає ноту, а ти позначаєш усі місця, де вона живе на грифі — правильні дотики світяться і звучать, хибні гудуть. Рахунок ведеться за точністю, а час — лише для темпу.',
+        'Euterpe тепер памʼятає твої успіхи. Модель учня відстежує кожну ноту, яку ти тренуєш, повертає ті, що даються важче, і показує прогрес — точність, найкращу серію та кількість сесій — на екрані «Практики».',
+        'Переходь просто з виду «Ноти» до вправи кнопкою «Тренувати на грифі».'] },
   { v:'1.27.2', date:'2026-06-19',
     en:['Landscape now matches portrait: the same compact colour key applies, and the chord-shapes card keeps its proper place beside the neck instead of dropping to the bottom of the page.'],
     uk:['Альбомна орієнтація тепер відповідає книжковій: застосовується та сама компактна легенда, а картка форм акорду лишається на своєму місці поруч із грифом, а не падає в самий низ сторінки.'] },

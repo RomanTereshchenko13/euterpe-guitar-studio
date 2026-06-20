@@ -151,8 +151,12 @@ if (T) {
   // 1b: the four per-tab boards collapsed into one shared #board
   ['ch-board','tr-board','sc-board','nt-board'].forEach(id =>
     ok('1b: old per-tab board gone: ' + id, !win.document.getElementById(id)));
-  ok('1b: exactly one fretboard in the DOM',
-     win.document.querySelectorAll('.fretboard').length === 1,
+  // 1b's single shared reference board (#board) is still exactly one; 3c adds the
+  // drill's own board (#drill-board) inside Practice, so two fretboards total now.
+  ok('1b: one shared reference board (#board)',
+     win.document.querySelectorAll('#board.fretboard').length === 1);
+  ok('3c: drill has its own board, two fretboards total',
+     win.document.querySelectorAll('.fretboard').length === 2 && !!win.document.getElementById('drill-board'),
      win.document.querySelectorAll('.fretboard').length + ' found');
   ok('1b: Notes tab folded away (3 tabs)', win.document.querySelectorAll('.tab').length === 3,
      win.document.querySelectorAll('.tab').length + ' tabs');
@@ -170,10 +174,184 @@ if (T) {
    'view_scale','view_notes','view_identify','suggest_title','suggest_scales',
    'id_near','id_missing','id_extra',
    'view_arp','arp_h','arp_p','arp_hint','arp_word','tb_capo','capo_off','caged_desc',
+   'mode_reference','mode_practice','practice_h','practice_intro','drill_notes','drill_notes_meta',
+   'drill_quit','drill_find_pre','drill_find_sub','drill_complete','drill_score','drill_clean',
+   'drill_misses','drill_time','drill_again','drill_done','seam_drill_notes',
+   'prog_title','prog_empty','prog_tracked','prog_accuracy','prog_streak','prog_sessions',
    'pwa_install','pwa_install_tip','pwa_update','pwa_update_btn','pwa_dismiss'].forEach(k => {
     ok('i18n new key present (uk+en): ' + k,
        T.I18N.uk[k] !== undefined && T.I18N.en[k] !== undefined);
   });
+
+  /* ---- 3a: the mode axis (Reference · Practice) ----
+     jsdom doesn't resolve the full stylesheet cascade, so the actual show/hide is a
+     visual check (screenshots); here we assert the reliable signals: the body class,
+     button state, the untouched reference shell, and persistence. */
+  (function modeAxis() {
+    const doc = win.document;
+    const nav = doc.getElementById('modenav');
+    ok('3a: modenav present', !!nav);
+    const modes = nav ? [...nav.querySelectorAll('.modebtn')].map(b => b.dataset.mode) : [];
+    ok('3a: modenav has reference + practice buttons',
+       modes.indexOf('reference') >= 0 && modes.indexOf('practice') >= 0, modes.join(','));
+    const pp = doc.getElementById('panel-practice');
+    ok('3a: practice panel present and NOT a .panel (off the .panel.active machinery)',
+       !!pp && !pp.classList.contains('panel'));
+    ok('3a: reference shell untouched (3 tabs, 3 reference panels)',
+       doc.querySelectorAll('.tab').length === 3 && doc.querySelectorAll('.main > .panel').length === 3);
+
+    // enter Practice
+    T.selectTab('harmony');
+    T.setMode('practice');
+    ok('3a: body marks practice mode',
+       doc.body.classList.contains('mode-practice') && !doc.body.classList.contains('mode-reference'));
+    const pBtn = nav.querySelector('.modebtn[data-mode="practice"]');
+    ok('3a: practice button active + aria-pressed',
+       pBtn.classList.contains('active') && pBtn.getAttribute('aria-pressed') === 'true');
+    ok('3a: reference sub-tab stays selected underneath', T.state().currentTab === 'harmony');
+    ok('3a: state() exposes mode', T.state().currentMode === 'practice');
+    ok('3a: mode persists to localStorage',
+       JSON.parse(win.localStorage.getItem('guitarStudio.v1') || '{}').mode === 'practice');
+
+    // back to Reference: body class + buttons flip back, mode persists
+    T.setMode('reference');
+    ok('3a: body marks reference mode',
+       doc.body.classList.contains('mode-reference') && !doc.body.classList.contains('mode-practice'));
+    const rBtn = nav.querySelector('.modebtn[data-mode="reference"]');
+    ok('3a: reference button active + aria-pressed',
+       rBtn.classList.contains('active') && rBtn.getAttribute('aria-pressed') === 'true');
+    ok('3a: reference active panel still .active underneath',
+       doc.getElementById('panel-harmony').classList.contains('active'));
+    ok('3a: mode reference persists',
+       JSON.parse(win.localStorage.getItem('guitarStudio.v1') || '{}').mode === 'reference');
+  })();
+
+  /* ---- 3b: learner model (spine #3) — SRS, ring buffer, bounds-checked restore ---- */
+  (function learnerModel() {
+    const NOW = 1000000000000;   // fixed epoch for deterministic due times
+    T.resetLearner();
+
+    // SM-2-lite: a correct attempt grows ease (2.5 -> 2.6) + pushes due out
+    let it = T.recordAttempt('note:E:str6', true, NOW);
+    ok('3b: correct increments seen+correct+streak', it.seen === 1 && it.correct === 1 && it.streak === 1);
+    ok('3b: correct grows ease to 2.6', Math.abs(it.ease - 2.6) < 1e-9);
+    ok('3b: correct schedules due in the future', it.due > NOW);
+
+    // a miss zeroes the streak, drops ease (2.6 -> 2.4), re-queues to relearn soon
+    it = T.recordAttempt('note:E:str6', false, NOW);
+    ok('3b: miss increments seen but not correct', it.seen === 2 && it.correct === 1);
+    ok('3b: miss resets streak', it.streak === 0);
+    ok('3b: miss lowers ease to 2.4', Math.abs(it.ease - 2.4) < 1e-9);
+    ok('3b: miss re-queues within the minute', it.due === NOW + 60000);
+
+    // ease floors at 1.3 after repeated misses
+    for (let i = 0; i < 10; i++) T.recordAttempt('note:E:str6', false, NOW);
+    ok('3b: ease floored at 1.3', Math.abs(T.getLearner().items['note:E:str6'].ease - 1.3) < 1e-9);
+
+    // due-queue: only past-due items surface, optionally namespaced by prefix
+    T.resetLearner();
+    T.recordAttempt('note:A:str5', false, NOW);   // due NOW+60000
+    T.recordAttempt('note:C:str5', true, NOW);    // due ~1 day out
+    const dueSoon = T.dueItems(NOW + 60000 + 1, 'note:');
+    ok('3b: dueItems surfaces only past-due', dueSoon.indexOf('note:A:str5') >= 0 && dueSoon.indexOf('note:C:str5') < 0, dueSoon.join(','));
+    ok('3b: dueItems prefix filter', T.dueItems(NOW + 2 * 86400000, 'interval:').length === 0);
+
+    // sessions ring buffer is bounded (cap 50, newest last)
+    T.resetLearner();
+    for (let i = 0; i < 60; i++) T.recordSession('notes', i, NOW + i);
+    const L = T.getLearner();
+    ok('3b: sessions ring buffer capped at 50', L.sessions.length === 50);
+    ok('3b: ring buffer keeps the newest', L.sessions[L.sessions.length - 1].score === 59 && L.sessions[0].score === 10);
+
+    // aggregate stats
+    T.resetLearner();
+    T.recordAttempt('a', true, NOW); T.recordAttempt('a', true, NOW); T.recordAttempt('b', false, NOW);
+    const st = T.learnerStats();
+    ok('3b: stats count items', st.items === 2);
+    ok('3b: stats accuracy = correct/seen', Math.abs(st.accuracy - 2 / 3) < 1e-9);
+    ok('3b: stats best streak', st.bestStreak === 2);
+
+    // normalizeLearner: a tampered blob degrades to a safe, valid model (never throws)
+    const bad = T.normalizeLearner({
+      v: T.LEARNER_V,
+      items: {
+        good: { seen: 5, correct: 3, streak: 2, ease: 2.4, due: 123 },
+        liar: { seen: 2, correct: 9, streak: -4, ease: 99, due: -5 },   // correct>seen, neg streak, ease oob, neg due
+        bad1: 'nope', bad2: null
+      },
+      sessions: [{ t: 1, drill: 'x', score: 1 }, { nope: true }, 'junk']
+    });
+    ok('3b: normalize keeps valid item', bad.items.good && bad.items.good.seen === 5 && bad.items.good.correct === 3);
+    ok('3b: normalize clamps correct<=seen', bad.items.liar.correct === 2);
+    ok('3b: normalize floors streak at 0', bad.items.liar.streak === 0);
+    ok('3b: normalize clamps ease into [1.3,3.0]', bad.items.liar.ease <= 3.0 && bad.items.liar.ease >= 1.3);
+    ok('3b: normalize floors due at 0', bad.items.liar.due === 0);
+    ok('3b: normalize drops non-object items', bad.items.bad1 === undefined && bad.items.bad2 === undefined);
+    ok('3b: normalize drops malformed sessions', bad.sessions.length === 1 && bad.sessions[0].drill === 'x');
+
+    // unknown version / garbage → fresh model (the only sanctioned reshape is v-bump + migrate)
+    const fresh = T.normalizeLearner({ v: 999, items: { z: { seen: 1 } } });
+    ok('3b: normalize rejects unknown version → fresh', fresh.v === T.LEARNER_V && Object.keys(fresh.items).length === 0);
+    ok('3b: normalize garbage → fresh', T.normalizeLearner(null).v === T.LEARNER_V && Object.keys(T.normalizeLearner('x').items).length === 0);
+
+    // persistence: learner rides saveState into localStorage
+    T.resetLearner();
+    T.recordAttempt('persist:test', true, NOW);
+    T.setMode('practice');   // any state-mutating call triggers saveState()
+    const saved = JSON.parse(win.localStorage.getItem('guitarStudio.v1') || '{}');
+    ok('3b: learner persists into saveState',
+       saved.learner && saved.learner.items && saved.learner.items['persist:test'] && saved.learner.items['persist:test'].correct === 1);
+    ok('3b: persisted learner carries version', saved.learner.v === T.LEARNER_V);
+    T.setMode('reference');   // restore mode
+    T.resetLearner();         // leave a clean model for later tests
+  })();
+
+  /* ---- 3c: note-naming drill — target positions, scoring, learner writes ---- */
+  (function noteDrill() {
+    // drillTargetsFor mirrors the board's cell set (open strings + window)
+    const eT = T.drillTargetsFor(4);   // pc 4 = E
+    ok('3c: targets include both open E strings', eT.has('0:0') && eT.has('5:0'));
+    ok('3c: targets find E on the A string at fret 7', eT.has('4:7'));
+    ok('3c: targets exclude a wrong position', !eT.has('1:0'));   // B string open = B, not E
+
+    T.resetLearner();
+    T.startDrill();
+    let d = T.getDrill();
+    ok('3c: drill starts active', !!d && !d.finished);
+    ok('3c: session length = DRILL_LEN', d.total === T.DRILL_LEN);
+    ok('3c: first prompt has a target pc', Number.isInteger(d.targetPc));
+
+    // a wrong tap (a position of a DIFFERENT note) registers a miss, never advances
+    const wrongPos = [...T.drillTargetsFor((d.targetPc + 1) % 12)][0];
+    const [wsi, wf] = wrongPos.split(':').map(Number);
+    const wrongBefore = T.getDrill().totalWrong;
+    T.drillAnswer(wsi, wf);
+    ok('3c: wrong tap counts a miss', T.getDrill().totalWrong === wrongBefore + 1);
+    ok('3c: wrong tap does not advance the prompt', T.getDrill().done === 0);
+
+    // drive the whole session correctly: answer every target of each prompt
+    let guard = 0;
+    while (!T.getDrill().finished && guard++ < 50) {
+      const cur = T.getDrill();
+      for (const key of T.drillTargetsFor(cur.targetPc)) { const [si, f] = key.split(':').map(Number); T.drillAnswer(si, f); }
+    }
+    const fin = T.getDrill();
+    ok('3c: drill finishes after all prompts', fin.finished);
+    ok('3c: every prompt scored', fin.done === fin.total);
+    // only the first prompt had a wrong tap, so exactly one prompt is non-clean
+    ok('3c: clean prompts = total - 1 (the one with a wrong tap)', fin.correctPrompts === fin.total - 1);
+
+    // learner writes: one item per distinct note prompt + one bounded session
+    ok('3c: per-note attempts recorded to learner', T.learnerStats().items === fin.total);
+    const sessions = T.getLearner().sessions;
+    ok('3c: a session was recorded', sessions.length === 1);
+    ok('3c: session score = clean-prompt accuracy %',
+       sessions[0].score === Math.round((fin.correctPrompts / fin.total) * 100));
+
+    T.exitDrill();
+    ok('3c: exit clears the active drill', T.getDrill() === null);
+    T.resetLearner();
+  })();
 
   /* ---- musical correctness: voicing fifths incl. ♭5 / ♯5 (Phase C bass) ---- */
   const byShort = {}; T.QUALITIES.forEach((q, i) => { byShort[q.short] = i; });

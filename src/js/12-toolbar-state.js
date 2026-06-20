@@ -153,19 +153,25 @@ if(typeof window!=='undefined'){
 
 const LS_KEY='guitarStudio.v1';
 let currentTab='harmony';
+// Phase 3a: the primary navigation axis (mode), orthogonal to currentTab. Reference
+// nests Harmony/Scales/Circle; Practice is its own surface. Defaults to reference so
+// older saves (no `mode`) and the existing reference behaviour are untouched.
+let currentMode='reference';
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
-  lang, tab:currentTab, tuningIdx, fretRangeIdx, tempo, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
+  lang, mode:currentMode, tab:currentTab, tuningIdx, fretRangeIdx, tempo, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
   gRoot, gRootLbl, gMode, hView, scView,
   chQual, arpPos, scIdx, scPos, scOverlay,
   chVoicing,
   trQual, trSet, trInv,
   ntRoot, ntFilter,
   seq, seqLoopOn,
-  bassOn, grooveOn
+  bassOn, grooveOn,
+  learner   // spine #3: learner model (13-learner.js); saved verbatim, restored via normalizeLearner
 })); }catch(e){ devWarn('state could not be saved (localStorage unavailable?)', e); } }
 function loadState(){ try{
   const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(!s) return false;
   if(s.lang==='uk'||s.lang==='en') lang=s.lang;
+  if(s.mode==='reference'||s.mode==='practice') currentMode=s.mode;   // Phase 3a mode axis (default reference)
   if(Number.isInteger(s.tuningIdx)&&TUNINGS[s.tuningIdx]) tuningIdx=s.tuningIdx;
   if(Number.isInteger(s.fretRangeIdx)&&FRET_RANGES[s.fretRangeIdx]) fretRangeIdx=s.fretRangeIdx;
   if(Number.isInteger(s.capo)&&s.capo>=0&&s.capo<=11) capo=s.capo;
@@ -199,6 +205,7 @@ function loadState(){ try{
   // simply ignored.
   if(s.ntFilter==='all'||s.ntFilter==='nat') ntFilter=s.ntFilter;
   if(s.ntRoot===''||NAT.includes(s.ntRoot)||SHARP.includes(s.ntRoot)||FLAT.includes(s.ntRoot)) ntRoot=s.ntRoot;
+  learner = normalizeLearner(s.learner);   // spine #3: bounds-checked restore (garbage → fresh model)
   if(typeof s.seqLoopOn==='boolean') seqLoopOn=s.seqLoopOn;
   if(typeof s.bassOn==='boolean') bassOn=s.bassOn;
   if(typeof s.grooveOn==='boolean') grooveOn=s.grooveOn;

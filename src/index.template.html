@@ -50,6 +50,14 @@
            Share → Add to Home Screen instead). -->
       <button class="install-btn" id="pwa-install" data-i18n="pwa_install" hidden>Встановити</button>
     </div>
+    <!-- Mode axis (Phase 3a): the primary Reference · Practice switch — a second
+         navigation axis ABOVE the reference sub-tabs (Harmony/Scales/Circle nest
+         inside Reference). Desktop renders it as an inline strip here in the header;
+         on a phone CSS pins it as a fixed bottom bar in the thumb zone. -->
+    <nav class="modenav" id="modenav" aria-label="Mode">
+      <button class="modebtn active" data-mode="reference" aria-pressed="true" data-i18n="mode_reference">Довідник</button>
+      <button class="modebtn" data-mode="practice" aria-pressed="false" data-i18n="mode_practice">Практика</button>
+    </nav>
     <nav class="tabs" id="tabs">
       <button class="tab active" data-panel="harmony" data-i18n="tab_harmony">Акорди / тріади</button>
       <button class="tab" data-panel="scales" data-i18n="tab_scales">Гами / моди</button>
@@ -218,6 +226,9 @@
         <button class="btn" id="nt-nat" aria-pressed="false" data-i18n="b_natonly">Тільки натуральні</button>
         <span class="cd-hint" data-i18n="nt_pick_hint">Підсвічена нота йде за тонікою вгорі · «Тільки натуральні» ховає дієзи й бемолі</span>
       </div>
+      <!-- seam (spine #2): jump straight from this reference view into the note-naming
+           drill on the same neck (switches to Practice mode + starts the session). -->
+      <div class="row"><button class="btn seam-btn" id="nt-drill" data-i18n="seam_drill_notes">Тренувати на грифі →</button></div>
     </div>
   </section>
 
@@ -241,6 +252,49 @@
           <div class="leg"><span class="leg-dot" style="background:var(--seventh)"></span><span data-i18n="leg_rel">Паралель</span></div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- Practice mode panel (Phase 3a stub). The mode axis lands here first with an
+       empty destination; the fretboard note-naming drill + session scoring + learner
+       model (spine #3) arrive in 3b/3c. NOT a .panel — those are the reference
+       sub-tabs — so it never collides with the .panel.active rule; shown only under
+       body.mode-practice. -->
+  <section class="practice-panel" id="panel-practice" aria-labelledby="practice-h">
+    <div class="panel-head">
+      <div class="ph-top"><h2 id="practice-h" data-i18n="practice_h">Практика</h2></div>
+    </div>
+    <!-- Practice home: the drill picker + the progress readout. Swapped out for the
+         active drill (#drill-area) while a session runs. -->
+    <div id="practice-home">
+      <p class="practice-soon" data-i18n="practice_intro">Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.</p>
+      <ul class="practice-list">
+        <li><button type="button" class="drill-card" id="start-notes">
+          <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span>
+          <span class="dc-meta" data-i18n="drill_notes_meta">Грифознавство · рахунок за точністю</span>
+        </button></li>
+      </ul>
+      <!-- Progress readout (3b): the learner model's aggregate stats; renderPractice()
+           fills #practice-progress, empty until the drill writes the first attempt. -->
+      <div class="practice-progress-card">
+        <div class="pp-title" data-i18n="prog_title">Прогрес</div>
+        <div id="practice-progress"></div>
+      </div>
+    </div>
+
+    <!-- Active drill (3c): note-naming. Its own board (painted by renderBoard into
+         #drill-board) so the shared reference board stays put. Hidden until started. -->
+    <div id="drill-area" hidden>
+      <div class="drill-head">
+        <button type="button" class="btn" id="drill-quit" data-i18n="drill_quit">Вийти</button>
+        <span class="drill-count" id="drill-count"></span>
+      </div>
+      <div id="drill-active">
+        <div class="drill-prompt" id="drill-prompt"></div>
+        <div class="drill-sub" id="drill-sub" data-i18n="drill_find_sub">Познач усі такі ноти на грифі</div>
+        <div class="scroll"><div class="board"><div class="fretboard" id="drill-board"></div></div><div class="fretnums" id="drill-nums"></div></div>
+      </div>
+      <div class="drill-summary" id="drill-summary" hidden></div>
     </div>
   </section>
 

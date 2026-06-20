@@ -145,6 +145,86 @@
   .ph-help.on { background: var(--accent); color: #07203a; border-color: var(--accent); }
   body.help-open .panel.active .panel-head p { display: block; margin-top: 6px; }
 
+  /* ===== Mode axis (Phase 3a): Reference · Practice ===== */
+  /* Desktop: an inline pill strip in the header, above the reference sub-tabs. */
+  .modenav { display: flex; gap: 6px; margin-top: 20px; }
+  .modebtn { font-family: inherit; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-dim); border: 1px solid var(--border); border-radius: 999px; padding: 7px 18px; cursor: pointer; transition: color 0.15s, background 0.15s, border-color 0.15s; }
+  .modebtn:hover:not(.active) { color: var(--text); }
+  .modebtn.active { background: var(--accent); color: #07203a; border-color: var(--accent); }
+  .modebtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* The Practice panel is a sibling of the reference panels inside .main, hidden until
+     the mode is Practice — kept OFF the .panel/.panel.active machinery so the two
+     navigation axes never fight. */
+  .practice-panel { display: none; animation: fade 0.25s ease; }
+  body.mode-practice .practice-panel { display: block; }
+  /* In Practice mode collapse the reference shell: hide the active reference panel,
+     the context bar, the shared board (+ meta), harmony extras, suggester, shapes card
+     and the reference sub-tab strip. Reference mode is the untouched default. */
+  body.mode-practice .panel.active,
+  body.mode-practice #context-bar,
+  body.mode-practice #board-region,
+  body.mode-practice .board-meta,
+  body.mode-practice #harmony-extras,
+  body.mode-practice .aside,
+  body.mode-practice #shapes-card,
+  body.mode-practice #tabs { display: none; }
+  /* with the board + suggester gone, let .main use the full width */
+  body.mode-practice .layout, body.mode-practice .layout.no-aside {
+    grid-template-columns: minmax(0,1fr); grid-template-areas: "main";
+  }
+  .practice-soon { color: var(--text-dim); font-size: 15px; max-width: 620px; }
+  .practice-list { list-style: none; margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .practice-list li { padding: 13px 16px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-weight: 500; }
+  /* Progress readout (3b): the learner model's aggregate stats as stat chips. */
+  .practice-progress-card { margin-top: 28px; padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); max-width: 620px; }
+  .pp-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; margin-bottom: 14px; }
+  .pp-empty { color: var(--text-dim); font-size: 14px; }
+  .pp-stats { display: flex; flex-wrap: wrap; gap: 12px; }
+  .pp-stat { flex: 1 1 110px; min-width: 92px; padding: 12px 14px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius); }
+  .pp-val { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: var(--text); }
+  .pp-lab { font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
+
+  /* ---- note-naming drill (3c) ---- */
+  .drill-card { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; padding: 15px 18px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); color: var(--text); cursor: pointer; font-family: inherit; transition: border-color 0.15s, background 0.15s; }
+  .drill-card:hover { border-color: var(--accent); background: var(--bg-panel-2); }
+  .dc-name { font-size: 16px; font-weight: 600; }
+  .dc-meta { font-size: 12.5px; color: var(--text-dim); }
+  .seam-btn { border-color: var(--accent); color: var(--accent); }
+
+  .drill-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .drill-count { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text-dim); }
+  .drill-prompt { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; display: flex; align-items: center; gap: 12px; }
+  .drill-target { font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 700; color: var(--accent); }
+  .drill-sub { font-size: 13.5px; color: var(--text-dim); margin: 4px 0 16px; }
+  /* blank tappable quiz dots; a hit reveals the note in green, a wrong tap flashes red */
+  .dot.quiz { background: rgba(220,200,160,0.14); border: 1px solid rgba(220,200,160,0.28); box-shadow: none; color: var(--text); }
+  .dot.quiz:hover { background: rgba(220,200,160,0.26); }
+  .dot.quiz.hit { background: var(--root); border-color: var(--root); color: #0e1408; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+  .dot.quiz.miss { background: #d64a4a; border-color: #d64a4a; color: #fff; }
+
+  .drill-summary { margin-top: 6px; }
+  .drill-done-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-bottom: 14px; }
+  .drill-actions { display: flex; gap: 10px; margin-top: 18px; }
+
+  /* Mobile: the mode nav becomes a fixed bottom bar in the thumb zone (the roadmap's
+     thumb-zone home). It escapes the sticky/condensing header — which is top-anchored
+     — by being position:fixed (sticky ancestors don't form a containing block for it),
+     so its DOM location inside the header is irrelevant here. */
+  @media (max-width: 940px) {
+    .modenav {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+      margin-top: 0; gap: 0;
+      background: var(--bg-panel-2); border-top: 1px solid var(--border-strong);
+      padding-bottom: env(safe-area-inset-bottom);
+      box-shadow: 0 -6px 18px -10px rgba(0,0,0,0.7);
+    }
+    .modebtn { flex: 1; border: none; border-radius: 0; background: transparent; padding: 13px 0; text-align: center; color: var(--text-dim); }
+    .modebtn.active { background: transparent; color: var(--accent); box-shadow: inset 0 2px 0 var(--accent); }
+    /* clear the fixed bar so the footer / last controls aren't hidden behind it */
+    body { padding-bottom: calc(58px + env(safe-area-inset-bottom)); }
+  }
+
   .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 13px; align-items: center; }
   .ctrl-label { font-size: 12px; color: var(--text-dim); margin-right: 4px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; }
   .group { display: flex; flex-wrap: wrap; gap: 6px; }

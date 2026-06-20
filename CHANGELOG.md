@@ -2,6 +2,13 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.0.0 — 2026-06-20
+
+- Euterpe now has a Practice mode. A new navigation layer switches between Reference — the chords, scales and circle you already know — and Practice, so the reference tabs stay uncluttered as practice grows (on a phone it lives in a thumb-friendly bar along the bottom).
+- The first drill: fretboard note-naming. Euterpe names a note and you tap every place it lives on the neck — correct taps light up and sound, wrong ones buzz. It is scored on accuracy and timed only for pace.
+- Euterpe now remembers how you are doing. A learner model tracks each note you practise, resurfaces the ones you miss, and shows your progress — accuracy, best streak and sessions — on the Practice screen.
+- Jump straight from the Notes view into the drill with "Drill on the neck".
+
 ## v1.27.2 — 2026-06-19
 
 - Landscape now matches portrait: the same compact colour key applies, and the chord-shapes card keeps its proper place beside the neck instead of dropping to the bottom of the page.
