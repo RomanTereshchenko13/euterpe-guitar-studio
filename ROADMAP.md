@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-06-20 · shipping: v2.0.0_
+_Last updated: 2026-06-21 · shipping: v2.1.0_
 
 ---
 
@@ -418,16 +418,23 @@ persistence of stats + streak/SRS state.
 ## Phase 4 — Ear  (foundation · parallel, independent)
 
 **Size:** S · **Risk:** low — multiple-choice on the existing audio buses; nothing new underneath.
+**✅ Shipped v2.1.0.** Ear lands as the **third primary mode** (Reference · Practice · Ear) the
+two-axis nav was built to hold — the bottom bar flexes to three on a phone. One shared
+recognition engine (prompt on the audio buses → multiple-choice → cue feedback → scored on
+accuracy) drives three drills, each writing the learner model (spine #3) under its own id
+namespace so due items resurface and the global progress card counts them.
 
-Recognition by sound — feeds both pillars, depends on nothing but the audio buses:
+- **Pitch:** ✅ **interval** recognition (`interval:P5`) — two notes played melodically, a fixed
+  12-button grid (m2…P8); and **chord-quality** recognition (`chordq:m7`) — the chord
+  arpeggiated then strummed, choose among the four triads + four common sevenths.
+- **Rhythm:** ✅ **rhythm** recognition (`rhythm:r3`) — a one-bar 4/4 figure clicked out over a
+  soft beat reference; pick the matching pattern from proportional rhythm strips. _Framed
+  honestly as recognition (the time-axis mirror of interval training), not tap-back: it's a
+  multiple-choice answer, never a timing window, so it's legitimately scorable on screen — a
+  real "tap/clap it back" tier waits on Phase 8's onset detection (F1)._
 
-- **Pitch:** interval and chord-quality recognition; prompt on the lead voice, multiple-choice
-  answer, cue feedback.
-- **Rhythm:** rhythmic dictation — hear a figure, clap/tap it back (the time-axis mirror of
-  interval training).
-
-Bilingual EN/UK like everything else. Low-risk, high value-per-effort; can run in parallel
-with Phases 1–3.
+Bilingual EN/UK like everything else; full-state persistence + bounds-checked restore extend to
+the new `ear` mode. Low-risk, high value-per-effort; ran independent of Phases 1–3.
 
 ---
 

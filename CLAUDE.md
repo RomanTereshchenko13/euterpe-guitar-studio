@@ -42,8 +42,11 @@ Edit the sources, then run the build.
   - `10-scales.js` · `11-notes-circle-lang.js` · `12-toolbar-state.js`
   - `13-learner.js` — learner model (spine #3): per-item SRS history + sessions ring
     buffer; persists via `12-toolbar-state.js`'s `saveState`/`loadState`
-  - `14-drill-notes.js` — Practice note-naming drill (3c); reuses the board paint +
-    cue bus, and is the first writer to the learner model
+  - `14-drill-ear.js` + `14-drill-notes.js` — the scored drills (both at load slot
+    14, before wiring). `14-drill-notes.js` is the Practice note-naming drill (3c);
+    `14-drill-ear.js` is Ear training (Phase 4) — interval / chord-quality / rhythm
+    recognition, multiple-choice on the audio buses. Both reuse the cue bus and write
+    the learner model; the shared progress readout (`renderProgressInto`) lives here.
   - `15-wiring-init.js` · `16-pwa.js`
 - `src/styles.css` — all CSS
 - `src/index.template.html` — markup shell with `@@STYLES@@` / `@@SCRIPT@@` / `@@FAVICON@@` markers

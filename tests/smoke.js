@@ -178,6 +178,9 @@ if (T) {
    'drill_quit','drill_find_pre','drill_find_sub','drill_complete','drill_score','drill_clean',
    'drill_misses','drill_time','drill_again','drill_done','seam_drill_notes',
    'prog_title','prog_empty','prog_tracked','prog_accuracy','prog_streak','prog_sessions',
+   'mode_ear','ear_h','ear_intro','ear_intervals','ear_intervals_meta','ear_chords','ear_chords_meta',
+   'ear_rhythm','ear_rhythm_meta','ear_int_prompt','ear_chord_prompt','ear_rhythm_prompt',
+   'ear_replay','ear_next','ear_right','ear_wrong','ear_got',
    'pwa_install','pwa_install_tip','pwa_update','pwa_update_btn','pwa_dismiss'].forEach(k => {
     ok('i18n new key present (uk+en): ' + k,
        T.I18N.uk[k] !== undefined && T.I18N.en[k] !== undefined);
@@ -350,6 +353,95 @@ if (T) {
 
     T.exitDrill();
     ok('3c: exit clears the active drill', T.getDrill() === null);
+    T.resetLearner();
+  })();
+
+  /* ---- Phase 4: Ear-training mode + three recognition drills ---- */
+  (function earMode() {
+    const doc = win.document;
+    const nav = doc.getElementById('modenav');
+    const modes = nav ? [...nav.querySelectorAll('.modebtn')].map(b => b.dataset.mode) : [];
+    ok('P4: modenav gains an ear button (3 modes)',
+       modes.length === 3 && modes.indexOf('ear') >= 0, modes.join(','));
+    const ep = doc.getElementById('panel-ear');
+    ok('P4: ear panel present, off the .panel machinery',
+       !!ep && !ep.classList.contains('panel') && ep.classList.contains('ear-panel'));
+    ok('P4: reference shell still 3 tabs / 3 reference panels',
+       doc.querySelectorAll('.tab').length === 3 && doc.querySelectorAll('.main > .panel').length === 3);
+    // three ear drill starters
+    ['start-interval', 'start-chordq', 'start-rhythm'].forEach(id =>
+      ok('P4: ear drill starter present: ' + id, !!doc.getElementById(id)));
+
+    // enter Ear mode: body classes + button state + persistence
+    T.setMode('ear');
+    ok('P4: body marks ear + activity mode',
+       doc.body.classList.contains('mode-ear') && doc.body.classList.contains('mode-activity')
+       && !doc.body.classList.contains('mode-practice') && !doc.body.classList.contains('mode-reference'));
+    const eBtn = nav.querySelector('.modebtn[data-mode="ear"]');
+    ok('P4: ear button active + aria-pressed',
+       eBtn.classList.contains('active') && eBtn.getAttribute('aria-pressed') === 'true');
+    ok('P4: state() / persistence carry mode ear',
+       T.state().currentMode === 'ear' &&
+       JSON.parse(win.localStorage.getItem('guitarStudio.v1') || '{}').mode === 'ear');
+
+    // ---- interval drill: ids namespaced interval:*, fixed 12-choice grid ----
+    T.resetLearner();
+    T.startEar('interval');
+    let e = T.getEar();
+    ok('P4: interval drill starts active', !!e && !e.finished && e.type === 'interval');
+    ok('P4: interval session length = 8', e.total === 8);
+    ok('P4: interval prompt has an interval + base midi',
+       e.cur && typeof e.cur.iv === 'object' && Number.isInteger(e.cur.base));
+    ok('P4: interval id is namespaced interval:*', /^interval:/.test(e.cur.key));
+    ok('P4: interval choices = all 12 intervals', T.earChoices().length === 12);
+
+    // a wrong guess records a miss and never the prompt's item as correct
+    const wrongKey = T.INTERVALS.map(iv => 'interval:' + iv.name).find(k => k !== e.cur.key);
+    T.earAnswer(wrongKey);
+    e = T.getEar();
+    ok('P4: wrong guess counts a miss + marks answered', e.totalWrong === 1 && e.answered === true);
+    ok('P4: a second guess on the same prompt is ignored', (T.earAnswer(e.cur.key), T.getEar().correctPrompts === 0));
+    T.earNext();
+    ok('P4: Next advances to a fresh prompt', T.getEar().answered === false && T.getEar().done === 1);
+
+    // drive the rest correctly
+    let guard = 0;
+    while (!T.getEar().finished && guard++ < 50) {
+      const cur = T.getEar().cur; T.earAnswer(cur.key); T.earNext();
+    }
+    const fin = T.getEar();
+    ok('P4: interval drill finishes after all prompts', fin.finished && fin.done === fin.total);
+    ok('P4: exactly one prompt was non-clean (the wrong guess)', fin.correctPrompts === fin.total - 1);
+    ok('P4: per-interval attempts written to the learner', T.learnerStats().items === fin.total);
+    const sess = T.getLearner().sessions;
+    ok('P4: an ear session was recorded with ear-interval label',
+       sess.length === 1 && sess[0].drill === 'ear-interval');
+    ok('P4: session score = correct-prompt accuracy %',
+       sess[0].score === Math.round((fin.correctPrompts / fin.total) * 100));
+
+    // ---- chord-quality drill: chordq:* ids, 8-choice grid ----
+    T.resetLearner();
+    T.startEar('chordq');
+    const ec = T.getEar();
+    ok('P4: chordq drill starts (8 qualities)', ec.type === 'chordq' && ec.total === 8);
+    ok('P4: chordq id is namespaced chordq:*', /^chordq:/.test(ec.cur.key));
+    ok('P4: chordq choices = 8 qualities', T.earChoices().length === 8);
+    ok('P4: chordq prompt carries a quality index + root', Number.isInteger(ec.cur.qi) && Number.isInteger(ec.cur.root));
+
+    // ---- rhythm drill: rhythm:* ids, 4 choices that include the answer ----
+    T.resetLearner();
+    T.startEar('rhythm');
+    const er = T.getEar();
+    ok('P4: rhythm drill starts (6 prompts)', er.type === 'rhythm' && er.total === 6);
+    ok('P4: rhythm id is namespaced rhythm:*', /^rhythm:/.test(er.cur.key));
+    const rc = T.earChoices();
+    ok('P4: rhythm offers 4 choices incl. the answer',
+       rc.length === 4 && rc.some(o => o.key === er.cur.key));
+    ok('P4: rhythm choice carries a visual strip', /class="rhythm"/.test(rc[0].html));
+
+    T.exitEar();
+    ok('P4: exit clears the active ear drill', T.getEar() === null);
+    T.setMode('reference');
     T.resetLearner();
   })();
 

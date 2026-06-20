@@ -171,7 +171,7 @@ function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
 function loadState(){ try{
   const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(!s) return false;
   if(s.lang==='uk'||s.lang==='en') lang=s.lang;
-  if(s.mode==='reference'||s.mode==='practice') currentMode=s.mode;   // Phase 3a mode axis (default reference)
+  if(s.mode==='reference'||s.mode==='practice'||s.mode==='ear') currentMode=s.mode;   // mode axis (3a; Ear added in Phase 4) — default reference
   if(Number.isInteger(s.tuningIdx)&&TUNINGS[s.tuningIdx]) tuningIdx=s.tuningIdx;
   if(Number.isInteger(s.fretRangeIdx)&&FRET_RANGES[s.fretRangeIdx]) fretRangeIdx=s.fretRangeIdx;
   if(Number.isInteger(s.capo)&&s.capo>=0&&s.capo<=11) capo=s.capo;

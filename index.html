@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 2.0.0  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 2.1.0  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="2.0.0">
+<meta name="version" content="2.1.0">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -184,24 +184,27 @@
   .modebtn.active { background: var(--accent); color: #07203a; border-color: var(--accent); }
   .modebtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  /* The Practice panel is a sibling of the reference panels inside .main, hidden until
-     the mode is Practice — kept OFF the .panel/.panel.active machinery so the two
-     navigation axes never fight. */
-  .practice-panel { display: none; animation: fade 0.25s ease; }
+  /* The Practice + Ear panels are siblings of the reference panels inside .main,
+     hidden until their mode is active — kept OFF the .panel/.panel.active machinery
+     so the two navigation axes never fight. */
+  .practice-panel, .ear-panel { display: none; animation: fade 0.25s ease; }
   body.mode-practice .practice-panel { display: block; }
-  /* In Practice mode collapse the reference shell: hide the active reference panel,
-     the context bar, the shared board (+ meta), harmony extras, suggester, shapes card
-     and the reference sub-tab strip. Reference mode is the untouched default. */
-  body.mode-practice .panel.active,
-  body.mode-practice #context-bar,
-  body.mode-practice #board-region,
-  body.mode-practice .board-meta,
-  body.mode-practice #harmony-extras,
-  body.mode-practice .aside,
-  body.mode-practice #shapes-card,
-  body.mode-practice #tabs { display: none; }
+  body.mode-ear .ear-panel { display: block; }
+  /* In any activity mode (Practice / Ear) collapse the reference shell: hide the
+     active reference panel, the context bar, the shared board (+ meta), harmony
+     extras, suggester, shapes card and the reference sub-tab strip. Driven by a
+     `mode-activity` body class (set whenever the mode isn't Reference) so the rule
+     stays one list across both activity modes. Reference is the untouched default. */
+  body.mode-activity .panel.active,
+  body.mode-activity #context-bar,
+  body.mode-activity #board-region,
+  body.mode-activity .board-meta,
+  body.mode-activity #harmony-extras,
+  body.mode-activity .aside,
+  body.mode-activity #shapes-card,
+  body.mode-activity #tabs { display: none; }
   /* with the board + suggester gone, let .main use the full width */
-  body.mode-practice .layout, body.mode-practice .layout.no-aside {
+  body.mode-activity .layout, body.mode-activity .layout.no-aside {
     grid-template-columns: minmax(0,1fr); grid-template-areas: "main";
   }
   .practice-soon { color: var(--text-dim); font-size: 15px; max-width: 620px; }
@@ -237,6 +240,31 @@
   .drill-summary { margin-top: 6px; }
   .drill-done-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-bottom: 14px; }
   .drill-actions { display: flex; gap: 10px; margin-top: 18px; }
+
+  /* ---- ear-training drills (Phase 4) ---- */
+  .ear-prompt { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; text-align: center; margin: 10px 0 16px; }
+  .ear-controls { display: flex; justify-content: center; margin-bottom: 20px; }
+  .ear-controls .btn.play { font-size: 14px; padding: 9px 22px; }
+  /* answer grid — big tappable targets in the thumb zone */
+  .ear-choices { display: grid; gap: 10px; max-width: 620px; margin: 0 auto; }
+  .ear-choices.ear-interval { grid-template-columns: repeat(4, 1fr); }
+  .ear-choices.ear-chordq { grid-template-columns: repeat(4, 1fr); }
+  .ear-choices.ear-rhythm { grid-template-columns: repeat(2, 1fr); }
+  .ear-choice { font-size: 15px; font-weight: 600; padding: 16px 8px; min-height: 52px; display: flex; align-items: center; justify-content: center; }
+  .ear-choice:disabled { cursor: default; opacity: 0.85; }
+  .ear-choice.correct { background: var(--root); border-color: var(--root); color: #0e1408; opacity: 1; font-weight: 700; }
+  .ear-choice.wrong { background: #d64a4a; border-color: #d64a4a; color: #fff; opacity: 1; }
+  /* rhythm option: a proportional one-bar strip with beat gridlines behind it */
+  .ear-choice .rhythm { display: flex; gap: 3px; width: 100%; height: 30px; padding: 3px;
+    background-image: repeating-linear-gradient(90deg, transparent, transparent calc(25% - 1px), var(--border-strong) calc(25% - 1px), var(--border-strong) 25%); }
+  .rseg { border-radius: 3px; }
+  .rseg.note { background: currentColor; }
+  .rseg.rest { background: repeating-linear-gradient(45deg, transparent, transparent 3px, var(--text-faint) 3px, var(--text-faint) 4px); border: 1px solid var(--border-strong); }
+  .ear-feedback { text-align: center; min-height: 22px; margin: 16px 0 6px; font-size: 14px; font-weight: 600; }
+  .ear-feedback.good { color: var(--root); }
+  .ear-feedback.bad { color: #e07a7a; }
+  .ear-next-row { display: flex; justify-content: center; }
+  .ear-next-row .btn.play { font-size: 14px; padding: 9px 26px; }
 
   /* Mobile: the mode nav becomes a fixed bottom bar in the thumb zone (the roadmap's
      thumb-zone home). It escapes the sticky/condensing header — which is top-anchored
@@ -750,6 +778,7 @@
     <nav class="modenav" id="modenav" aria-label="Mode">
       <button class="modebtn active" data-mode="reference" aria-pressed="true" data-i18n="mode_reference">Довідник</button>
       <button class="modebtn" data-mode="practice" aria-pressed="false" data-i18n="mode_practice">Практика</button>
+      <button class="modebtn" data-mode="ear" aria-pressed="false" data-i18n="mode_ear">Слух</button>
     </nav>
     <nav class="tabs" id="tabs">
       <button class="tab active" data-panel="harmony" data-i18n="tab_harmony">Акорди / тріади</button>
@@ -991,6 +1020,58 @@
     </div>
   </section>
 
+  <!-- Ear-training panel (Phase 4): the third primary mode (Reference · Practice ·
+       Ear). Recognition-by-sound drills — multiple-choice on the audio buses,
+       scored on accuracy, writing the same learner model (spine #3). A sibling of
+       the reference panels inside .main, off the .panel machinery (it's an
+       .ear-panel, shown only under body.mode-ear) so the two nav axes never fight. -->
+  <section class="ear-panel" id="panel-ear" aria-labelledby="ear-h">
+    <div class="panel-head">
+      <div class="ph-top"><h2 id="ear-h" data-i18n="ear_h">Тренування слуху</h2></div>
+    </div>
+    <!-- Ear home: the drill picker + the shared progress readout. Swapped out for
+         the active drill (#ear-area) while a session runs. -->
+    <div id="ear-home">
+      <p class="practice-soon" data-i18n="ear_intro">Розпізнавання на слух — почуй і обери відповідь. Кожна спроба йде в облік прогресу й повертає те, що даєш важче.</p>
+      <ul class="practice-list">
+        <li><button type="button" class="drill-card" id="start-interval">
+          <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span>
+          <span class="dc-meta" data-i18n="ear_intervals_meta">Почуй дві ноти · назви інтервал</span>
+        </button></li>
+        <li><button type="button" class="drill-card" id="start-chordq">
+          <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span>
+          <span class="dc-meta" data-i18n="ear_chords_meta">Почуй акорд · визнач його тип</span>
+        </button></li>
+        <li><button type="button" class="drill-card" id="start-rhythm">
+          <span class="dc-name" data-i18n="ear_rhythm">Ритм на слух</span>
+          <span class="dc-meta" data-i18n="ear_rhythm_meta">Почуй такт · обери ритмічний малюнок</span>
+        </button></li>
+      </ul>
+      <div class="practice-progress-card">
+        <div class="pp-title" data-i18n="prog_title">Прогрес</div>
+        <div id="ear-progress"></div>
+      </div>
+    </div>
+
+    <!-- Active ear drill: a central prompt, a Replay button, the multiple-choice
+         answer grid (thumb-zone), a feedback line and a Next button. Hidden until
+         started; swapped for #ear-summary at the end. -->
+    <div id="ear-area" hidden>
+      <div class="drill-head">
+        <button type="button" class="btn" id="ear-quit" data-i18n="drill_quit">Вийти</button>
+        <span class="drill-count" id="ear-count"></span>
+      </div>
+      <div id="ear-active">
+        <div class="ear-prompt" id="ear-prompt"></div>
+        <div class="ear-controls"><button type="button" class="btn play" id="ear-replay"></button></div>
+        <div class="ear-choices" id="ear-choices"></div>
+        <div class="ear-feedback" id="ear-feedback"></div>
+        <div class="ear-next-row"><button type="button" class="btn play" id="ear-next" hidden></button></div>
+      </div>
+      <div class="drill-summary" id="ear-summary" hidden></div>
+    </div>
+  </section>
+
 </div>
 
 <!-- One shared fretboard (1b): every board-bearing mode (chord tones, triads,
@@ -1102,10 +1183,21 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.1.0';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.1.0', date:'2026-06-21',
+    en:['Euterpe now has Ear training — a new mode beside Reference and Practice (in the bottom bar on a phone) with three by-ear drills.',
+        'Intervals by ear: hear two notes and name the interval, from a minor 2nd up to the octave.',
+        'Chord quality by ear: hear a chord and tell major from minor, diminished, augmented and the four common sevenths.',
+        'Rhythm by ear: hear a one-bar figure played over a soft beat and pick the matching rhythm.',
+        'Every ear drill is scored on accuracy and feeds the same progress tracking as the fretboard drill — the notes and intervals you miss come back around.'],
+    uk:['У Euterpe зʼявилося тренування слуху — новий режим поряд із «Довідником» і «Практикою» (на телефоні — у нижній смужці) із трьома вправами на слух.',
+        'Інтервали на слух: почуй дві ноти й назви інтервал — від малої секунди до октави.',
+        'Якість акорду на слух: почуй акорд і відрізни мажор від мінору, зменшеного, збільшеного та чотирьох поширених септакордів.',
+        'Ритм на слух: почуй одно­тактовий малюнок над тихим пульсом і обери відповідний ритм.',
+        'Кожна вправа зі слуху рахується за точністю й живить той самий облік прогресу, що й вправа на грифі — те, що ти даєш важче, повертається на повтор.'] },
   { v:'2.0.0', date:'2026-06-20',
     en:['Euterpe now has a Practice mode. A new navigation layer switches between Reference — the chords, scales and circle you already know — and Practice, so the reference tabs stay uncluttered as practice grows (on a phone it lives in a thumb-friendly bar along the bottom).',
         'The first drill: fretboard note-naming. Euterpe names a note and you tap every place it lives on the neck — correct taps light up and sound, wrong ones buzz. It is scored on accuracy and timed only for pace.',
@@ -1376,8 +1468,14 @@ const I18N = {
   uk: {
     brand:'Euterpe', brand_desc:'гітарна студія',
     tab_scales:'Гами / моди', tab_circle:'Коло квінт',
-    mode_reference:'Довідник', mode_practice:'Практика',
+    mode_reference:'Довідник', mode_practice:'Практика', mode_ear:'Слух',
     practice_h:'Практика', practice_intro:'Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.',
+    ear_h:'Тренування слуху', ear_intro:'Розпізнавання на слух — почуй і обери відповідь. Кожна спроба йде в облік прогресу й повертає те, що даєш важче.',
+    ear_intervals:'Інтервали на слух', ear_intervals_meta:'Почуй дві ноти · назви інтервал',
+    ear_chords:'Якість акорду на слух', ear_chords_meta:'Почуй акорд · визнач його тип',
+    ear_rhythm:'Ритм на слух', ear_rhythm_meta:'Почуй такт · обери ритмічний малюнок',
+    ear_int_prompt:'Який це інтервал?', ear_chord_prompt:'Який це акорд?', ear_rhythm_prompt:'Який це ритм?',
+    ear_replay:'Ще раз', ear_next:'Далі', ear_right:'Правильно!', ear_wrong:'Не зовсім', ear_got:'Правильно',
     drill_notes:'Назви ноти на грифі', drill_notes_meta:'Грифознавство · рахунок за точністю',
     drill_quit:'Вийти', drill_find_pre:'Знайди всі', drill_find_sub:'Познач усі такі ноти на грифі',
     drill_complete:'Сесію завершено', drill_score:'Рахунок', drill_clean:'Чисто', drill_misses:'Помилки', drill_time:'Час', drill_again:'Ще раз', drill_done:'Готово',
@@ -1460,8 +1558,14 @@ const I18N = {
   en: {
     brand:'Euterpe', brand_desc:'guitar studio',
     tab_scales:'Scales / modes', tab_circle:'Circle of fifths',
-    mode_reference:'Reference', mode_practice:'Practice',
+    mode_reference:'Reference', mode_practice:'Practice', mode_ear:'Ear',
     practice_h:'Practice', practice_intro:'Scored drills that track your progress and resurface what you miss.',
+    ear_h:'Ear training', ear_intro:'Recognition by sound — hear it, pick the answer. Every attempt counts toward your progress and resurfaces what you find hard.',
+    ear_intervals:'Intervals by ear', ear_intervals_meta:'Hear two notes · name the interval',
+    ear_chords:'Chord quality by ear', ear_chords_meta:'Hear a chord · name its quality',
+    ear_rhythm:'Rhythm by ear', ear_rhythm_meta:'Hear a bar · pick the rhythm',
+    ear_int_prompt:'Which interval?', ear_chord_prompt:'Which chord?', ear_rhythm_prompt:'Which rhythm?',
+    ear_replay:'Replay', ear_next:'Next', ear_right:'Correct!', ear_wrong:'Not quite', ear_got:'Correct',
     drill_notes:'Name notes on the fretboard', drill_notes_meta:'Fretboard knowledge · scored on accuracy',
     drill_quit:'Quit', drill_find_pre:'Find every', drill_find_sub:'Tap every one of them on the neck',
     drill_complete:'Session complete', drill_score:'Score', drill_clean:'Clean', drill_misses:'Wrong taps', drill_time:'Time', drill_again:'Again', drill_done:'Done',
@@ -3268,6 +3372,8 @@ function applyLang(){
   { const o=document.getElementById('cl-overlay'); if(o && !o.hidden) renderChangelog(); }
   renderChords(); renderArp(); renderTriads(); renderScales(); renderNotes(); renderCircle();
   if(typeof renderPractice==='function') renderPractice();   // 3b: re-localize the progress chips
+  if(typeof renderEar==='function') renderEar();             // Phase 4: ear progress chips
+  if(typeof refreshEarLang==='function') refreshEarLang();   // re-localize an in-flight ear prompt
   setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
   activateRoot(document.getElementById('g-roots'), gRoot);
@@ -3449,7 +3555,7 @@ function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
 function loadState(){ try{
   const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(!s) return false;
   if(s.lang==='uk'||s.lang==='en') lang=s.lang;
-  if(s.mode==='reference'||s.mode==='practice') currentMode=s.mode;   // Phase 3a mode axis (default reference)
+  if(s.mode==='reference'||s.mode==='practice'||s.mode==='ear') currentMode=s.mode;   // mode axis (3a; Ear added in Phase 4) — default reference
   if(Number.isInteger(s.tuningIdx)&&TUNINGS[s.tuningIdx]) tuningIdx=s.tuningIdx;
   if(Number.isInteger(s.fretRangeIdx)&&FRET_RANGES[s.fretRangeIdx]) fretRangeIdx=s.fretRangeIdx;
   if(Number.isInteger(s.capo)&&s.capo>=0&&s.capo<=11) capo=s.capo;
@@ -3611,6 +3717,261 @@ function normalizeLearner(raw){
   }
   return out;
 }
+/* ===================== Drill: Ear training (Phase 4) =====================
+   The EAR pillar: recognition by sound. Three multiple-choice drills sharing one
+   engine — hear a prompt on the audio buses, pick the answer, get cue feedback,
+   scored on accuracy and recorded to the learner model (13-learner.js):
+     • interval — two notes played melodically; name the interval.
+     • chordq   — a chord arpeggiated then strummed; name its quality.
+     • rhythm   — a one-bar figure clicked out over a soft beat; pick the matching
+                  rhythm (the time-axis mirror of interval training).
+
+   Honest framing (roadmap): these are RECOGNITION drills — a multiple-choice
+   answer, never a timing window — so they are legitimately scored on accuracy
+   without breaking the "never score tap timing" rule (the rhythm is *identified*,
+   not tapped back; a real play-it-back tier waits on Phase 8 onset detection).
+   Each prompt writes one learner item (interval:P5 / chordq:m7 / rhythm:r3), so
+   Ear feeds the SAME spaced-repetition model as the fretboard drills (spine #3):
+   due items resurface first, the session score lands in the ring buffer, and the
+   global progress card counts ear items alongside notes. Depends on nothing but
+   the audio buses (pluck on `backing`, blips on `cue`) — no new engine. */
+
+/* The twelve ascending intervals within an octave. `name` (m2…P8) is the compact,
+   language-neutral button label + the stable id tail (interval:P5); en/uk carry the
+   full name for the title/aria + the feedback line, inline like SCALES/QUALITIES so
+   the i18n symmetry check only ever guards the I18N dict. */
+const INTERVALS = [
+  {st:1,  name:'m2', en:'Minor 2nd',   uk:'Мала секунда'},
+  {st:2,  name:'M2', en:'Major 2nd',   uk:'Велика секунда'},
+  {st:3,  name:'m3', en:'Minor 3rd',   uk:'Мала терція'},
+  {st:4,  name:'M3', en:'Major 3rd',   uk:'Велика терція'},
+  {st:5,  name:'P4', en:'Perfect 4th', uk:'Чиста кварта'},
+  {st:6,  name:'TT', en:'Tritone',     uk:'Тритон'},
+  {st:7,  name:'P5', en:'Perfect 5th', uk:'Чиста квінта'},
+  {st:8,  name:'m6', en:'Minor 6th',   uk:'Мала секста'},
+  {st:9,  name:'M6', en:'Major 6th',   uk:'Велика секста'},
+  {st:10, name:'m7', en:'Minor 7th',   uk:'Мала септима'},
+  {st:11, name:'M7', en:'Major 7th',   uk:'Велика септима'},
+  {st:12, name:'P8', en:'Octave',      uk:'Октава'},
+];
+function earIvName(iv){ return lang==='en' ? iv.en : iv.uk; }
+
+/* The chord qualities the ear drill recognizes: the four triads + four common
+   sevenths, by index into QUALITIES (08-chords.js). The id uses the short symbol
+   ('maj' for the empty major suffix) so it stays stable + readable. */
+const EAR_QUAL_IDX = [0, 1, 10, 12, 6, 7, 8, 9];   // maj · m · dim · aug · 7 · maj7 · m7 · m7♭5
+function earQualKey(qi){ const q=QUALITIES[qi]; return 'chordq:'+(q.short||'maj'); }
+
+/* One-bar (4/4) rhythm figures, each a list of segments {d:beats, r:isRest}
+   summing to 4. The visual strip (rhythmStrip) and the audio (playRhythm) both
+   read this, so what you see matches what you hear. Distractors for a prompt are
+   other patterns from this pool. */
+function earRSeg(){ return [].slice.call(arguments).map(d => d<0 ? {d:-d, r:true} : {d, r:false}); }
+const RHYTHMS = [
+  {id:'r1', seg:earRSeg(1,1,1,1)},                 // ta ta ta ta
+  {id:'r2', seg:earRSeg(0.5,0.5,1,1,1)},           // ti-ti ta ta ta
+  {id:'r3', seg:earRSeg(1,0.5,0.5,1,1)},           // ta ti-ti ta ta
+  {id:'r4', seg:earRSeg(0.5,0.5,0.5,0.5,1,1)},     // ti-ti ti-ti ta ta
+  {id:'r5', seg:earRSeg(1.5,0.5,1,1)},             // dotted-quarter eighth, ta ta
+  {id:'r6', seg:earRSeg(1,1,0.5,0.5,1)},           // ta ta ti-ti ta
+  {id:'r7', seg:earRSeg(2,1,1)},                   // half ta ta
+  {id:'r8', seg:earRSeg(1,-1,1,1)},                // ta (rest) ta ta
+];
+const EAR_RHYTHM_BPM = 84;
+/* Play a rhythm: a soft beat-reference click on each of the four beats (so the
+   metre is audible) with the figure's onsets struck louder on top. All on the cue
+   bus, scheduled at absolute audio-clock times — short and one-shot, so it needs
+   no scheduler clock. */
+function playRhythm(r){
+  const ctx=audio(); if(!ctx) return;
+  const b=60/EAR_RHYTHM_BPM, start=ctx.currentTime+0.15;
+  for(let k=0;k<4;k++) cueBlip(start+k*b, 620, 0.06, 0.035, 'sine');           // soft metre reference
+  let pos=0;
+  r.seg.forEach(s=>{ if(!s.r) cueBlip(start+pos*b, 1320, 0.26, Math.min(0.13, s.d*b*0.8), 'square'); pos+=s.d; });
+}
+function rhythmStrip(r){
+  const segs=r.seg.map(s=>`<span class="rseg ${s.r?'rest':'note'}" style="flex:${s.d}"></span>`).join('');
+  return `<span class="rhythm">${segs}</span>`;
+}
+
+/* per-type config: how a prompt is built, played, and answered. The engine below
+   is type-agnostic — it just reads cfg.pool/make/play/choices/prompt. */
+const EAR = {
+  interval: {
+    len:8, sess:'ear-interval', prompt:()=>t('ear_int_prompt'),
+    pool:()=>INTERVALS.map(iv=>'interval:'+iv.name),
+    make(key){ const iv=INTERVALS.find(x=>'interval:'+x.name===key); const base=48+Math.floor(Math.random()*13); return {key, iv, base}; },
+    play(cur){ pluck(cur.base, 0, 1.5); pluck(cur.base+cur.iv.st, 0.6, 1.5); },                 // melodic, ascending
+    choices(){ return INTERVALS.map(iv=>({ key:'interval:'+iv.name, html:iv.name, label:earIvName(iv) })); }
+  },
+  chordq: {
+    len:8, sess:'ear-chordq', prompt:()=>t('ear_chord_prompt'),
+    pool:()=>EAR_QUAL_IDX.map(earQualKey),
+    make(key){ const qi=EAR_QUAL_IDX.find(i=>earQualKey(i)===key); const root=Math.floor(Math.random()*12); return {key, qi, root, base:48+root}; },
+    play(cur){ const q=QUALITIES[cur.qi], n=q.iv.length;
+      q.iv.forEach((iv,i)=>pluck(cur.base+iv, i*0.16, 1.6));                                    // arpeggio up
+      q.iv.forEach(iv=>pluck(cur.base+iv, n*0.16+0.28, 1.9)); },                                // then the block
+    choices(){ return EAR_QUAL_IDX.map(qi=>{ const q=QUALITIES[qi]; return { key:earQualKey(qi), html:(q.short||'maj'), label:qName(q) }; }); }
+  },
+  rhythm: {
+    len:6, sess:'ear-rhythm', prompt:()=>t('ear_rhythm_prompt'),
+    pool:()=>RHYTHMS.map(r=>'rhythm:'+r.id),
+    make(key){ const ans=RHYTHMS.find(r=>'rhythm:'+r.id===key);
+      const opts=earShuffle(earShuffle(RHYTHMS.filter(r=>r!==ans)).slice(0,3).concat([ans]));
+      return {key, ans, choiceList:opts.map(r=>({ key:'rhythm:'+r.id, html:rhythmStrip(r), label:t('ear_rhythm') })) }; },
+    play(cur){ playRhythm(cur.ans); },
+    choices(cur){ return cur.choiceList; }
+  }
+};
+
+let ear = null;
+// ear = { type, cfg, queue:[itemKey…], total, done, correctPrompts, totalWrong,
+//         startT, finished, cur, answered }
+
+function earShuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=a[i]; a[i]=a[j]; a[j]=tmp; } return a; }
+// SRS-weighted session queue: due items first (what you've missed resurfaces),
+// then the rest, each block shuffled, capped at the drill's length. Mirrors the
+// note drill's buildQueue (14-drill-notes.js).
+function buildEarQueue(keys, len){
+  const now=Date.now();
+  const due=keys.filter(k=>((learner.items[k]||{due:0}).due)<=now);
+  const rest=keys.filter(k=>due.indexOf(k)<0);
+  return earShuffle(due).concat(earShuffle(rest)).slice(0, len);
+}
+
+function startEar(type){
+  const cfg=EAR[type]; if(!cfg) return;
+  ear={ type, cfg, queue:buildEarQueue(cfg.pool(), cfg.len), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, cur:null, answered:false };
+  ear.total=ear.queue.length;
+  const home=document.getElementById('ear-home'), area=document.getElementById('ear-area'),
+        act=document.getElementById('ear-active'), sum=document.getElementById('ear-summary');
+  if(home) home.hidden=true; if(area) area.hidden=false; if(act) act.hidden=false; if(sum) sum.hidden=true;
+  nextEarPrompt();
+}
+function exitEar(){
+  ear=null;
+  const home=document.getElementById('ear-home'), area=document.getElementById('ear-area');
+  if(area) area.hidden=true; if(home) home.hidden=false;
+  if(typeof renderEar==='function') renderEar();
+}
+function nextEarPrompt(){
+  if(!ear.queue.length){ finishEar(); return; }
+  ear.answered=false;
+  ear.cur=ear.cfg.make(ear.queue.shift());
+  renderEarPrompt();
+  earReplay();                 // auto-play the prompt (rides the start/Next click gesture)
+}
+function earReplay(){ if(ear && ear.cur){ audio(); ear.cfg.play(ear.cur); } }
+
+// one answer (single guess): score, record to the learner, reveal the correct
+// choice + a Next button. earNext advances; the last Next finishes the session.
+function earAnswer(key){
+  if(!ear || ear.finished || ear.answered) return;
+  ear.answered=true;
+  const correct = key===ear.cur.key;
+  recordAttempt(ear.cur.key, correct);
+  ear.done++; if(correct) ear.correctPrompts++; else ear.totalWrong++;
+  playCue(correct?'correct':'wrong');
+  renderEarAnswered(key, correct);
+}
+function earNext(){ if(!ear || !ear.answered) return; nextEarPrompt(); }
+function finishEar(){
+  ear.finished=true;
+  const elapsed=Math.max(0, Math.round((Date.now()-ear.startT)/1000));
+  const acc=ear.total ? ear.correctPrompts/ear.total : 0;
+  recordSession(ear.cfg.sess, Math.round(acc*100));
+  saveState();
+  if(typeof renderEar==='function') renderEar();
+  renderEarSummary(elapsed, acc);
+}
+
+// human label of the current correct answer, for the feedback line
+function earAnswerLabel(){
+  if(!ear || !ear.cur) return '';
+  if(ear.type==='interval') return earIvName(ear.cur.iv);
+  if(ear.type==='chordq')   return ROOTS[ear.cur.root]+' '+qName(QUALITIES[ear.cur.qi]);
+  return '';
+}
+
+/* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
+// shared progress readout: the learner model's aggregate stats as chips, or an
+// empty state until a drill writes the first attempt. Used by both the Practice
+// home (#practice-progress) and the Ear home (#ear-progress) — one model (spine #3).
+function renderProgressInto(hostId){
+  const host=document.getElementById(hostId); if(!host) return;
+  const s=learnerStats();
+  if(!s.seen && !s.sessions){ host.innerHTML='<div class="pp-empty">'+t('prog_empty')+'</div>'; return; }
+  const stat=(val,lab)=>'<div class="pp-stat"><div class="pp-val">'+val+'</div><div class="pp-lab">'+lab+'</div></div>';
+  host.innerHTML='<div class="pp-stats">'+
+    stat(s.items, t('prog_tracked'))+
+    stat(Math.round(s.accuracy*100)+'%', t('prog_accuracy'))+
+    stat(s.bestStreak, t('prog_streak'))+
+    stat(s.sessions, t('prog_sessions'))+
+  '</div>';
+}
+function renderEar(){ renderProgressInto('ear-progress'); }
+function renderEarPrompt(){
+  const p=document.getElementById('ear-prompt'); if(p) p.textContent=ear.cfg.prompt();
+  const c=document.getElementById('ear-count'); if(c) c.textContent=Math.min(ear.done+1, ear.total)+' / '+ear.total;
+  const rp=document.getElementById('ear-replay'); if(rp){ rp.innerHTML='&#9654; '+t('ear_replay'); rp.setAttribute('aria-label', t('ear_replay')); }
+  const fb=document.getElementById('ear-feedback'); if(fb){ fb.textContent=''; fb.className='ear-feedback'; }
+  const nx=document.getElementById('ear-next'); if(nx) nx.hidden=true;
+  renderEarChoices();
+}
+function renderEarChoices(){
+  const host=document.getElementById('ear-choices'); if(!host) return;
+  const list=ear.cfg.choices(ear.cur);
+  host.className='ear-choices ear-'+ear.type;
+  host.innerHTML=list.map(o=>{
+    const aria=o.label || o.html;
+    return `<button type="button" class="btn ear-choice" data-key="${o.key}" aria-label="${aria}"${o.label?` title="${o.label}"`:''}>${o.html}</button>`;
+  }).join('');
+}
+function renderEarAnswered(chosenKey, correct){
+  const host=document.getElementById('ear-choices');
+  if(host) host.querySelectorAll('.ear-choice').forEach(b=>{
+    b.disabled=true;
+    if(b.dataset.key===ear.cur.key) b.classList.add('correct');
+    if(b.dataset.key===chosenKey && !correct) b.classList.add('wrong');
+  });
+  const fb=document.getElementById('ear-feedback');
+  if(fb){ fb.textContent = correct ? t('ear_right') : (t('ear_wrong')+' · '+earAnswerLabel()); fb.className='ear-feedback '+(correct?'good':'bad'); }
+  const nx=document.getElementById('ear-next');
+  if(nx){ nx.hidden=false; nx.innerHTML = ear.queue.length ? (t('ear_next')+' &rarr;') : t('drill_done'); }
+}
+function renderEarSummary(elapsed, acc){
+  const el=document.getElementById('ear-summary'); if(!el) return;
+  const act=document.getElementById('ear-active'); if(act) act.hidden=true;
+  const stat=(v,l)=>'<div class="pp-stat"><div class="pp-val">'+v+'</div><div class="pp-lab">'+l+'</div></div>';
+  el.innerHTML='<div class="drill-done-title">'+t('drill_complete')+'</div>'+
+    '<div class="pp-stats">'+
+      stat(Math.round(acc*100)+'%', t('drill_score'))+
+      stat(ear.correctPrompts+' / '+ear.total, t('ear_got'))+
+      stat(elapsed+'s', t('drill_time'))+
+    '</div>'+
+    '<div class="drill-actions"><button class="btn play" id="ear-again"></button><button class="btn" id="ear-done"></button></div>';
+  el.hidden=false;
+  const type=ear.type;
+  const ag=document.getElementById('ear-again'); if(ag){ ag.textContent=t('drill_again'); ag.onclick=()=>startEar(type); }
+  const dn=document.getElementById('ear-done');  if(dn){ dn.textContent=t('drill_done');  dn.onclick=exitEar; }
+}
+// re-localize an in-flight prompt on a language switch (called from applyLang)
+function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPrompt(); }
+
+/* drill-card starters + the in-drill controls — wired once at load (guarded so a
+   missing panel never throws, mirroring initDrill in 14-drill-notes.js). */
+(function initEar(){
+  const home=document.getElementById('ear-home'); if(!home) return;
+  const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
+  wire('start-interval', ()=>startEar('interval'));
+  wire('start-chordq',   ()=>startEar('chordq'));
+  wire('start-rhythm',   ()=>startEar('rhythm'));
+  wire('ear-quit',   exitEar);
+  wire('ear-replay', earReplay);
+  wire('ear-next',   earNext);
+  const ch=document.getElementById('ear-choices');
+  if(ch) ch.addEventListener('click', e=>{ const b=e.target.closest('.ear-choice'); if(b && !b.disabled) earAnswer(b.dataset.key); });
+})();
 /* ===================== Drill: fretboard note-naming (Phase 3c) =====================
    The first Practice drill and the first WRITER to the learner model (13-learner.js):
    the app names a note, you tap every instance of it on the neck. Reuses the shared
@@ -3776,19 +4137,9 @@ function renderActiveContext(){
 }
 /* Practice progress readout (3b): the learner model's aggregate stats as chips, or
    an empty state until a drill (3c) writes the first attempt. Re-run on mode switch
-   and language change. */
-function renderPractice(){
-  const host=document.getElementById('practice-progress'); if(!host) return;
-  const s=learnerStats();
-  if(!s.seen && !s.sessions){ host.innerHTML='<div class="pp-empty">'+t('prog_empty')+'</div>'; return; }
-  const stat=(val,lab)=>'<div class="pp-stat"><div class="pp-val">'+val+'</div><div class="pp-lab">'+lab+'</div></div>';
-  host.innerHTML='<div class="pp-stats">'+
-    stat(s.items, t('prog_tracked'))+
-    stat(Math.round(s.accuracy*100)+'%', t('prog_accuracy'))+
-    stat(s.bestStreak, t('prog_streak'))+
-    stat(s.sessions, t('prog_sessions'))+
-  '</div>';
-}
+   and language change. Shares renderProgressInto (14-drill-ear.js) with the Ear
+   home — one learner model (spine #3), one readout. */
+function renderPractice(){ renderProgressInto('practice-progress'); }
 
 /* ---- one musical context (spine #1, 1a) ----
    gRoot/gRootLbl (key center) and scIdx (mode = selected scale) are the single
@@ -4043,22 +4394,27 @@ function selectTab(name){
   renderActiveContext();
   saveState();
 }
-// Phase 3a — the mode axis. Orthogonal to selectTab (the reference sub-axis): a
-// body class drives the show/hide CSS, so reference content is untouched. Returning
-// to Reference re-applies the reference shell (idempotent if already correct);
-// playback persists across modes (the transport bar acts as a backing track, like
-// it does across tabs). Mirrors selectTab's button-state + ARIA + saveState shape.
+// Phase 3a — the mode axis, extended to three modes in Phase 4 (Reference ·
+// Practice · Ear). Orthogonal to selectTab (the reference sub-axis): body classes
+// drive the show/hide CSS, so reference content is untouched. `mode-activity` is
+// set for either activity mode so the "collapse the reference shell" rule stays one
+// list. Leaving an activity mode ends its running drill; playback persists across
+// modes (the transport bar acts as a backing track, like it does across tabs).
 function setMode(mode){
-  currentMode = (mode==='practice') ? 'practice' : 'reference';
-  document.body.classList.toggle('mode-practice', currentMode==='practice');
+  currentMode = (mode==='practice'||mode==='ear') ? mode : 'reference';
   document.body.classList.toggle('mode-reference', currentMode==='reference');
+  document.body.classList.toggle('mode-practice', currentMode==='practice');
+  document.body.classList.toggle('mode-ear', currentMode==='ear');
+  document.body.classList.toggle('mode-activity', currentMode!=='reference');
   document.querySelectorAll('.modebtn').forEach(b=>{
     const on=b.dataset.mode===currentMode; b.classList.toggle('active',on); b.setAttribute('aria-pressed',on?'true':'false');
   });
+  // end the other modes' running drills when we leave them
+  if(currentMode!=='practice' && typeof drill!=='undefined' && drill) exitDrill();
+  if(currentMode!=='ear' && typeof ear!=='undefined' && ear) exitEar();
   if(currentMode==='reference'){
-    if(typeof drill!=='undefined' && drill) exitDrill();   // leaving Practice ends an active drill
     applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
-  } else {
+  } else if(currentMode==='practice'){
     // entering Practice with no drill running: show the home view (drill starters
     // call startDrill() right after, which swaps it for the active drill)
     if(!(typeof drill!=='undefined' && drill)){
@@ -4066,6 +4422,12 @@ function setMode(mode){
       if(home) home.hidden=false; if(area) area.hidden=true;
     }
     renderPractice();
+  } else {   // ear
+    if(!(typeof ear!=='undefined' && ear)){
+      const home=document.getElementById('ear-home'), area=document.getElementById('ear-area');
+      if(home) home.hidden=false; if(area) area.hidden=true;
+    }
+    renderEar();
   }
   updateGlobalPlay();
   saveState();
@@ -4243,6 +4605,9 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     getLearner:()=>learner, resetLearner:()=>{ learner=newLearner(); }, LEARNER_V,
     // note-naming drill (3c)
     startDrill, drillAnswer, drillTargetsFor, exitDrill, DRILL_LEN, getDrill:()=>drill,
+    // ear-training drills (Phase 4)
+    startEar, earAnswer, earNext, earReplay, exitEar, getEar:()=>ear,
+    earChoices:()=>(ear?ear.cfg.choices(ear.cur):[]), INTERVALS, EAR_QUAL_IDX, RHYTHMS,
     CAGED_BY_POS, isCAGEDScale,
     setFret:(i)=>{ fretRangeIdx=i; },
     setCapo:(i)=>{ capo=i; }, getCapo:()=>capo,

@@ -1,6 +1,17 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.1.0', date:'2026-06-21',
+    en:['Euterpe now has Ear training — a new mode beside Reference and Practice (in the bottom bar on a phone) with three by-ear drills.',
+        'Intervals by ear: hear two notes and name the interval, from a minor 2nd up to the octave.',
+        'Chord quality by ear: hear a chord and tell major from minor, diminished, augmented and the four common sevenths.',
+        'Rhythm by ear: hear a one-bar figure played over a soft beat and pick the matching rhythm.',
+        'Every ear drill is scored on accuracy and feeds the same progress tracking as the fretboard drill — the notes and intervals you miss come back around.'],
+    uk:['У Euterpe зʼявилося тренування слуху — новий режим поряд із «Довідником» і «Практикою» (на телефоні — у нижній смужці) із трьома вправами на слух.',
+        'Інтервали на слух: почуй дві ноти й назви інтервал — від малої секунди до октави.',
+        'Якість акорду на слух: почуй акорд і відрізни мажор від мінору, зменшеного, збільшеного та чотирьох поширених септакордів.',
+        'Ритм на слух: почуй одно­тактовий малюнок над тихим пульсом і обери відповідний ритм.',
+        'Кожна вправа зі слуху рахується за точністю й живить той самий облік прогресу, що й вправа на грифі — те, що ти даєш важче, повертається на повтор.'] },
   { v:'2.0.0', date:'2026-06-20',
     en:['Euterpe now has a Practice mode. A new navigation layer switches between Reference — the chords, scales and circle you already know — and Practice, so the reference tabs stay uncluttered as practice grows (on a phone it lives in a thumb-friendly bar along the bottom).',
         'The first drill: fretboard note-naming. Euterpe names a note and you tap every place it lives on the neck — correct taps light up and sound, wrong ones buzz. It is scored on accuracy and timed only for pace.',

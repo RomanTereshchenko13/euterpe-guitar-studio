@@ -10,19 +10,9 @@ function renderActiveContext(){
 }
 /* Practice progress readout (3b): the learner model's aggregate stats as chips, or
    an empty state until a drill (3c) writes the first attempt. Re-run on mode switch
-   and language change. */
-function renderPractice(){
-  const host=document.getElementById('practice-progress'); if(!host) return;
-  const s=learnerStats();
-  if(!s.seen && !s.sessions){ host.innerHTML='<div class="pp-empty">'+t('prog_empty')+'</div>'; return; }
-  const stat=(val,lab)=>'<div class="pp-stat"><div class="pp-val">'+val+'</div><div class="pp-lab">'+lab+'</div></div>';
-  host.innerHTML='<div class="pp-stats">'+
-    stat(s.items, t('prog_tracked'))+
-    stat(Math.round(s.accuracy*100)+'%', t('prog_accuracy'))+
-    stat(s.bestStreak, t('prog_streak'))+
-    stat(s.sessions, t('prog_sessions'))+
-  '</div>';
-}
+   and language change. Shares renderProgressInto (14-drill-ear.js) with the Ear
+   home — one learner model (spine #3), one readout. */
+function renderPractice(){ renderProgressInto('practice-progress'); }
 
 /* ---- one musical context (spine #1, 1a) ----
    gRoot/gRootLbl (key center) and scIdx (mode = selected scale) are the single
@@ -277,22 +267,27 @@ function selectTab(name){
   renderActiveContext();
   saveState();
 }
-// Phase 3a — the mode axis. Orthogonal to selectTab (the reference sub-axis): a
-// body class drives the show/hide CSS, so reference content is untouched. Returning
-// to Reference re-applies the reference shell (idempotent if already correct);
-// playback persists across modes (the transport bar acts as a backing track, like
-// it does across tabs). Mirrors selectTab's button-state + ARIA + saveState shape.
+// Phase 3a — the mode axis, extended to three modes in Phase 4 (Reference ·
+// Practice · Ear). Orthogonal to selectTab (the reference sub-axis): body classes
+// drive the show/hide CSS, so reference content is untouched. `mode-activity` is
+// set for either activity mode so the "collapse the reference shell" rule stays one
+// list. Leaving an activity mode ends its running drill; playback persists across
+// modes (the transport bar acts as a backing track, like it does across tabs).
 function setMode(mode){
-  currentMode = (mode==='practice') ? 'practice' : 'reference';
-  document.body.classList.toggle('mode-practice', currentMode==='practice');
+  currentMode = (mode==='practice'||mode==='ear') ? mode : 'reference';
   document.body.classList.toggle('mode-reference', currentMode==='reference');
+  document.body.classList.toggle('mode-practice', currentMode==='practice');
+  document.body.classList.toggle('mode-ear', currentMode==='ear');
+  document.body.classList.toggle('mode-activity', currentMode!=='reference');
   document.querySelectorAll('.modebtn').forEach(b=>{
     const on=b.dataset.mode===currentMode; b.classList.toggle('active',on); b.setAttribute('aria-pressed',on?'true':'false');
   });
+  // end the other modes' running drills when we leave them
+  if(currentMode!=='practice' && typeof drill!=='undefined' && drill) exitDrill();
+  if(currentMode!=='ear' && typeof ear!=='undefined' && ear) exitEar();
   if(currentMode==='reference'){
-    if(typeof drill!=='undefined' && drill) exitDrill();   // leaving Practice ends an active drill
     applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
-  } else {
+  } else if(currentMode==='practice'){
     // entering Practice with no drill running: show the home view (drill starters
     // call startDrill() right after, which swaps it for the active drill)
     if(!(typeof drill!=='undefined' && drill)){
@@ -300,6 +295,12 @@ function setMode(mode){
       if(home) home.hidden=false; if(area) area.hidden=true;
     }
     renderPractice();
+  } else {   // ear
+    if(!(typeof ear!=='undefined' && ear)){
+      const home=document.getElementById('ear-home'), area=document.getElementById('ear-area');
+      if(home) home.hidden=false; if(area) area.hidden=true;
+    }
+    renderEar();
   }
   updateGlobalPlay();
   saveState();
@@ -477,6 +478,9 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     getLearner:()=>learner, resetLearner:()=>{ learner=newLearner(); }, LEARNER_V,
     // note-naming drill (3c)
     startDrill, drillAnswer, drillTargetsFor, exitDrill, DRILL_LEN, getDrill:()=>drill,
+    // ear-training drills (Phase 4)
+    startEar, earAnswer, earNext, earReplay, exitEar, getEar:()=>ear,
+    earChoices:()=>(ear?ear.cfg.choices(ear.cur):[]), INTERVALS, EAR_QUAL_IDX, RHYTHMS,
     CAGED_BY_POS, isCAGEDScale,
     setFret:(i)=>{ fretRangeIdx=i; },
     setCapo:(i)=>{ capo=i; }, getCapo:()=>capo,

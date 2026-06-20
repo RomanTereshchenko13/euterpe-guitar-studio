@@ -2,6 +2,14 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.1.0 — 2026-06-21
+
+- Euterpe now has Ear training — a new mode beside Reference and Practice (in the bottom bar on a phone) with three by-ear drills.
+- Intervals by ear: hear two notes and name the interval, from a minor 2nd up to the octave.
+- Chord quality by ear: hear a chord and tell major from minor, diminished, augmented and the four common sevenths.
+- Rhythm by ear: hear a one-bar figure played over a soft beat and pick the matching rhythm.
+- Every ear drill is scored on accuracy and feeds the same progress tracking as the fretboard drill — the notes and intervals you miss come back around.
+
 ## v2.0.0 — 2026-06-20
 
 - Euterpe now has a Practice mode. A new navigation layer switches between Reference — the chords, scales and circle you already know — and Practice, so the reference tabs stay uncluttered as practice grows (on a phone it lives in a thumb-friendly bar along the bottom).

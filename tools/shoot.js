@@ -22,7 +22,8 @@
    Mode axis (Phase 3): pass `practice` to capture the Practice surface, or `drill`
    to start the note-naming drill (clicks the bottom-nav Practice button, then the
    drill card, after load); the file gains a `-practice` / `-drill` suffix.
-   `reference` is the default and needs no token.
+   `reference` is the default and needs no token. Phase 4 Ear: pass `ear` for the
+   Ear home, or `ear-interval` / `ear-chordq` / `ear-rhythm` to start that drill.
 
    Run:  node tools/shoot.js                       # default widths 390 768 1280, harmony
          node tools/shoot.js 360 414 820           # custom widths
@@ -57,7 +58,9 @@ let mode = null;                                  // null = reference (default),
 for (const a of process.argv.slice(2)) {
   if (a === 'tabs') tabArgs.push(...PANELS);
   else if (PANELS.includes(a)) tabArgs.push(a);
-  else if (a === 'practice' || a === 'reference' || a === 'drill') mode = (a === 'reference') ? null : a;
+  else if (a === 'practice' || a === 'reference' || a === 'drill'
+           || a === 'ear' || a === 'ear-interval' || a === 'ear-chordq' || a === 'ear-rhythm')
+    mode = (a === 'reference') ? null : a;
   else sizeArgs.push(a);
 }
 const tabs = tabArgs.length ? [...new Set(tabArgs)] : [null];
@@ -79,6 +82,9 @@ function appFor(panel) {
   if (panel) clicks.push(`var b=document.querySelector('.tab[data-panel="${panel}"]');if(b)b.click();`);
   if (mode === 'practice' || mode === 'drill') clicks.push(`var m=document.querySelector('.modebtn[data-mode="practice"]');if(m)m.click();`);
   if (mode === 'drill') clicks.push(`var s=document.getElementById('start-notes');if(s)s.click();`);
+  if (mode && mode.indexOf('ear') === 0) clicks.push(`var m=document.querySelector('.modebtn[data-mode="ear"]');if(m)m.click();`);
+  const earStart = { 'ear-interval': 'start-interval', 'ear-chordq': 'start-chordq', 'ear-rhythm': 'start-rhythm' }[mode];
+  if (earStart) clicks.push(`var s=document.getElementById('${earStart}');if(s)s.click();`);
   const switcher = clicks.length
     ? `<script>addEventListener('load',function(){try{${clicks.join('')}}catch(e){}});</script>`
     : '';

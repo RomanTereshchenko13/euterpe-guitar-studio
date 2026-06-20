@@ -153,24 +153,27 @@
   .modebtn.active { background: var(--accent); color: #07203a; border-color: var(--accent); }
   .modebtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  /* The Practice panel is a sibling of the reference panels inside .main, hidden until
-     the mode is Practice — kept OFF the .panel/.panel.active machinery so the two
-     navigation axes never fight. */
-  .practice-panel { display: none; animation: fade 0.25s ease; }
+  /* The Practice + Ear panels are siblings of the reference panels inside .main,
+     hidden until their mode is active — kept OFF the .panel/.panel.active machinery
+     so the two navigation axes never fight. */
+  .practice-panel, .ear-panel { display: none; animation: fade 0.25s ease; }
   body.mode-practice .practice-panel { display: block; }
-  /* In Practice mode collapse the reference shell: hide the active reference panel,
-     the context bar, the shared board (+ meta), harmony extras, suggester, shapes card
-     and the reference sub-tab strip. Reference mode is the untouched default. */
-  body.mode-practice .panel.active,
-  body.mode-practice #context-bar,
-  body.mode-practice #board-region,
-  body.mode-practice .board-meta,
-  body.mode-practice #harmony-extras,
-  body.mode-practice .aside,
-  body.mode-practice #shapes-card,
-  body.mode-practice #tabs { display: none; }
+  body.mode-ear .ear-panel { display: block; }
+  /* In any activity mode (Practice / Ear) collapse the reference shell: hide the
+     active reference panel, the context bar, the shared board (+ meta), harmony
+     extras, suggester, shapes card and the reference sub-tab strip. Driven by a
+     `mode-activity` body class (set whenever the mode isn't Reference) so the rule
+     stays one list across both activity modes. Reference is the untouched default. */
+  body.mode-activity .panel.active,
+  body.mode-activity #context-bar,
+  body.mode-activity #board-region,
+  body.mode-activity .board-meta,
+  body.mode-activity #harmony-extras,
+  body.mode-activity .aside,
+  body.mode-activity #shapes-card,
+  body.mode-activity #tabs { display: none; }
   /* with the board + suggester gone, let .main use the full width */
-  body.mode-practice .layout, body.mode-practice .layout.no-aside {
+  body.mode-activity .layout, body.mode-activity .layout.no-aside {
     grid-template-columns: minmax(0,1fr); grid-template-areas: "main";
   }
   .practice-soon { color: var(--text-dim); font-size: 15px; max-width: 620px; }
@@ -206,6 +209,31 @@
   .drill-summary { margin-top: 6px; }
   .drill-done-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-bottom: 14px; }
   .drill-actions { display: flex; gap: 10px; margin-top: 18px; }
+
+  /* ---- ear-training drills (Phase 4) ---- */
+  .ear-prompt { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; text-align: center; margin: 10px 0 16px; }
+  .ear-controls { display: flex; justify-content: center; margin-bottom: 20px; }
+  .ear-controls .btn.play { font-size: 14px; padding: 9px 22px; }
+  /* answer grid — big tappable targets in the thumb zone */
+  .ear-choices { display: grid; gap: 10px; max-width: 620px; margin: 0 auto; }
+  .ear-choices.ear-interval { grid-template-columns: repeat(4, 1fr); }
+  .ear-choices.ear-chordq { grid-template-columns: repeat(4, 1fr); }
+  .ear-choices.ear-rhythm { grid-template-columns: repeat(2, 1fr); }
+  .ear-choice { font-size: 15px; font-weight: 600; padding: 16px 8px; min-height: 52px; display: flex; align-items: center; justify-content: center; }
+  .ear-choice:disabled { cursor: default; opacity: 0.85; }
+  .ear-choice.correct { background: var(--root); border-color: var(--root); color: #0e1408; opacity: 1; font-weight: 700; }
+  .ear-choice.wrong { background: #d64a4a; border-color: #d64a4a; color: #fff; opacity: 1; }
+  /* rhythm option: a proportional one-bar strip with beat gridlines behind it */
+  .ear-choice .rhythm { display: flex; gap: 3px; width: 100%; height: 30px; padding: 3px;
+    background-image: repeating-linear-gradient(90deg, transparent, transparent calc(25% - 1px), var(--border-strong) calc(25% - 1px), var(--border-strong) 25%); }
+  .rseg { border-radius: 3px; }
+  .rseg.note { background: currentColor; }
+  .rseg.rest { background: repeating-linear-gradient(45deg, transparent, transparent 3px, var(--text-faint) 3px, var(--text-faint) 4px); border: 1px solid var(--border-strong); }
+  .ear-feedback { text-align: center; min-height: 22px; margin: 16px 0 6px; font-size: 14px; font-weight: 600; }
+  .ear-feedback.good { color: var(--root); }
+  .ear-feedback.bad { color: #e07a7a; }
+  .ear-next-row { display: flex; justify-content: center; }
+  .ear-next-row .btn.play { font-size: 14px; padding: 9px 26px; }
 
   /* Mobile: the mode nav becomes a fixed bottom bar in the thumb zone (the roadmap's
      thumb-zone home). It escapes the sticky/condensing header — which is top-anchored
