@@ -181,10 +181,18 @@ if (T) {
    'mode_ear','ear_h','ear_intro','ear_intervals','ear_intervals_meta','ear_chords','ear_chords_meta',
    'ear_rhythm','ear_rhythm_meta','ear_int_prompt','ear_chord_prompt','ear_rhythm_prompt',
    'ear_replay','ear_next','ear_right','ear_wrong','ear_got',
-   'pwa_install','pwa_install_tip','pwa_update','pwa_update_btn','pwa_dismiss'].forEach(k => {
+   'pwa_install','pwa_install_tip','pwa_update','pwa_update_btn','pwa_dismiss',
+   'tb_volume','tb_tuner'].forEach(k => {
     ok('i18n new key present (uk+en): ' + k,
        T.I18N.uk[k] !== undefined && T.I18N.en[k] !== undefined);
   });
+
+  /* ---- 2.2.0: master volume + reference-tone tuner controls ---- */
+  ok('2.2: master volume slider present', !!win.document.getElementById('tb-vol'));
+  ok('2.2: volume value readout present', !!win.document.getElementById('tb-vol-val'));
+  ok('2.2: tuner string container present', !!win.document.getElementById('tb-tuner-strings'));
+  ok('2.2: tuner builds one button per string',
+     win.document.querySelectorAll('#tb-tuner-strings .tuner-str').length === 6);
 
   /* ---- 3a: the mode axis (Reference · Practice) ----
      jsdom doesn't resolve the full stylesheet cascade, so the actual show/hide is a

@@ -77,7 +77,9 @@ function hatHit(when, vel){
   g.gain.setValueAtTime(0.0001, when);
   g.gain.exponentialRampToValueAtTime(0.22*vel, when+0.002);
   g.gain.exponentialRampToValueAtTime(0.0001, when+0.05);
-  src.connect(hp).connect(g).connect(groove); src.start(when); src.stop(when+0.08);
+  const pan=makePanner(0.18);   // hats sit slightly off-centre (kick/snare/bass stay centred, as in a real mix)
+  src.connect(hp).connect(g); if(pan){ g.connect(pan); pan.connect(groove); } else { g.connect(groove); }
+  src.start(when); src.stop(when+0.08);
 }
 
 /* humanized chord comp: micro-timing jitter + per-note velocity variation and a

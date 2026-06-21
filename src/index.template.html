@@ -96,6 +96,13 @@
         <span class="tb-label" data-i18n="tb_tuning">Стрій</span>
         <select id="tb-tuning"></select>
       </div>
+      <!-- Reference-tone tuner (no mic): one button per open string of the current
+           tuning; tap to hold a sustained pitch and tune a real guitar against it.
+           Buttons are built from the live tuning by buildTuner(). -->
+      <div class="tb-group tb-tuner">
+        <span class="tb-label" data-i18n="tb_tuner">Тюнер</span>
+        <span class="tuner-strings" id="tb-tuner-strings"></span>
+      </div>
       <button class="btn" id="tb-lefty" aria-pressed="false" data-i18n="tb_lefty">Ліворукий</button>
       <div class="tb-group">
         <span class="tb-label" data-i18n="tb_frets">Лади</span>
@@ -110,6 +117,11 @@
          tap to reveal. The toggle tints green while any of them is active so you can
          see backing is running without expanding the panel. -->
     <div class="toolbar collapsed" id="backing-panel">
+      <div class="tb-group">
+        <span class="tb-label" data-i18n="tb_volume">Гучність</span>
+        <input type="range" id="tb-vol" min="0" max="100" step="1" value="100" aria-label="Volume">
+        <span class="bpm-val" id="tb-vol-val">100%</span>
+      </div>
       <div class="tb-group">
         <span class="tb-label" data-i18n="tb_backing">Супровід</span>
         <button class="btn metro" id="tb-metro" aria-pressed="false"></button>

@@ -5,7 +5,10 @@
    string — high strings fade faster than low ones, just like the real thing.
    Voices run through a shared bus: gentle compressor (keeps chords from
    clipping) + a small convolution reverb for body/room. All offline. */
-let actx, master, backing, leadTarget, cue, bass, groove, busReady=false;
+let actx, master, backing, leadTarget, cue, bass, groove, masterOut, busReady=false;
+/* user-facing master volume (whole-app output trim, 0..1). Persisted; read into
+   masterOut.gain when the bus is built (audio is lazy, created on first gesture). */
+let masterVol=1;
 function audio(){
   if(!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } setupBus(); }
   if(actx && actx.state==='suspended'){ actx.resume(); }
@@ -31,8 +34,14 @@ function setupBus(){
   const body=[ [100,1.1,4.0], [200,1.6,3.0], [430,2.2,2.6] ].map(([f,q,g])=>{
     const b=actx.createBiquadFilter(); b.type='peaking'; b.frequency.value=f; b.Q.value=q; b.gain.value=g; return b;
   });
+  // user master volume, then a final brickwall limiter so a loud volume or a dense
+  // extended chord can't clip the output (the comp above glues, this one catches peaks).
+  masterOut=actx.createGain(); masterOut.gain.value=masterVol;
+  const limiter=actx.createDynamicsCompressor();
+  limiter.threshold.value=-1.5; limiter.knee.value=0; limiter.ratio.value=20;
+  limiter.attack.value=0.002; limiter.release.value=0.12;
   master.connect(body[0]); body[0].connect(body[1]); body[1].connect(body[2]);  // dry, through the body
-  body[2].connect(comp); comp.connect(actx.destination);
+  body[2].connect(comp); comp.connect(masterOut); masterOut.connect(limiter); limiter.connect(actx.destination);
   master.connect(revGain); revGain.connect(rev); rev.connect(comp);             // wet (room)
   // Named buses (Phase B) so later features can balance/duck independently:
   //   backing    — the guitar voice (plucks, loop, sequencer); gets body + room.
@@ -47,6 +56,12 @@ function setupBus(){
   bass=actx.createGain();       bass.gain.value=0.9;       bass.connect(comp);
   groove=actx.createGain();     groove.gain.value=0.85;    groove.connect(comp);
 }
+/* stereo width: a guitar isn't a point source — spread the voice across the field by
+   register (low strings centred, trebles wider) so chords/scales gain width instead of
+   collapsing to mono. A tiny random jitter keeps repeated notes from stacking on one
+   spot. Degrades to mono where StereoPannerNode is missing (old browsers / jsdom). */
+function makePanner(p){ if(!actx.createStereoPanner) return null; const n=actx.createStereoPanner(); n.pan.value=Math.max(-1,Math.min(1,p)); return n; }
+function panForMidi(midi){ return Math.max(-0.35, Math.min(0.35, (midi-57)/55)) + (Math.random()*0.06-0.03); }
 /* Karplus-Strong buffer, cached per (pitch, string character). Fixed long render;
    the per-voice gain envelope decides how long each note actually rings.
    Adds: pick-position comb on the excitation, a fractional-delay allpass in the
@@ -108,8 +123,39 @@ function pluckAt(midi, when, dur, vel){
   g.gain.setValueAtTime(0.0001, now);
   g.gain.exponentialRampToValueAtTime(0.5*(0.4+0.6*vel), now+0.006);  // harder pluck = louder
   g.gain.exponentialRampToValueAtTime(0.0001, now+dur+0.35);
-  src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(backing);
+  const pan=makePanner(panForMidi(midi));
+  src.connect(hp); hp.connect(lp); lp.connect(g);
+  if(pan){ g.connect(pan); pan.connect(backing); } else { g.connect(backing); }
   src.start(now); src.stop(now+Math.min(dur+0.5, 2.7));
+}
+/* ---- tuner: a sustained reference tone per open string (no mic needed) ----
+   Plays the pitch of one open string of the current tuning so you can tune a real
+   guitar by ear against it. A clean triangle+sine with a soft attack/release, held
+   ~2.6 s, through the guitar bus so it shares the app's body/room colour and the
+   master volume. Mono-stable: a fresh tap fades out the previous tone (no pile-up). */
+let _tunerVoice=null;
+function tunerStop(){
+  if(!_tunerVoice) return;
+  const v=_tunerVoice; _tunerVoice=null;
+  try{ const now=actx.currentTime;
+    v.g.gain.cancelScheduledValues(now); v.g.gain.setValueAtTime(Math.max(0.0001, v.g.gain.value), now);
+    v.g.gain.exponentialRampToValueAtTime(0.0001, now+0.08);
+    v.o.stop(now+0.1); v.o2.stop(now+0.1);
+  }catch(e){ /* already stopped */ }
+}
+function tunerTone(midi){
+  const ctx=audio(); if(!ctx) return; tunerStop();
+  const now=ctx.currentTime, freq=440*Math.pow(2,(midi-69)/12), dur=2.6;
+  const o=ctx.createOscillator();  o.type='triangle'; o.frequency.setValueAtTime(freq, now);
+  const o2=ctx.createOscillator(); o2.type='sine';    o2.frequency.setValueAtTime(freq, now); o2.detune.value=3;  // faint shimmer
+  const g=ctx.createGain();
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.3, now+0.03);          // soft attack
+  g.gain.setValueAtTime(0.3, now+dur-0.4);
+  g.gain.exponentialRampToValueAtTime(0.0001, now+dur);        // soft release
+  o.connect(g); o2.connect(g); g.connect(backing);
+  o.start(now); o2.start(now); o.stop(now+dur+0.05); o2.stop(now+dur+0.05);
+  _tunerVoice={o, o2, g};
 }
 /* ---- synced visual highlighting ---- */
 let playTimers=[];

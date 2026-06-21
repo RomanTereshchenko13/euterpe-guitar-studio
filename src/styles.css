@@ -417,6 +417,8 @@
   input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
   input[type="range"]::-moz-range-thumb { width: 15px; height: 15px; border: none; border-radius: 50%; background: var(--accent); cursor: pointer; }
   .bpm-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--text); min-width: 56px; }
+  .tb-tuner .tuner-strings { display: flex; gap: 5px; flex-wrap: wrap; }
+  .btn.tuner-str { min-width: 30px; padding: 5px 8px; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
   .btn.metro.active { background: var(--root); color: #0e1408; border-color: var(--root); font-weight: 700; }
   .btn.band.active { background: var(--ext); color: #11071f; border-color: var(--ext); font-weight: 700; }
   .btn[disabled], .btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }

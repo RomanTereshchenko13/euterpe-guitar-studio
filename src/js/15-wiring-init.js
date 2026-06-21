@@ -335,7 +335,19 @@ document.getElementById('lang-switch').addEventListener('click',e=>{
 });
 
 /* ---- toolbar wiring ---- */
-document.getElementById('tb-tuning').onchange=function(){ tuningIdx=+this.value; applyTuning(); renderAllBoards(); saveState(); };
+document.getElementById('tb-tuning').onchange=function(){ tuningIdx=+this.value; applyTuning(); buildTuner(); renderAllBoards(); saveState(); };
+/* master volume: scales the whole-app output (masterOut, before the limiter). Audio is
+   lazy, so when the bus isn't up yet we just stash masterVol — setupBus reads it on
+   first sound. setTargetAtTime ramps the live gain so dragging is click-free. */
+{ const v=document.getElementById('tb-vol');
+  if(v){ v.oninput=function(){ masterVol=(+this.value)/100;
+      const vv=document.getElementById('tb-vol-val'); if(vv) vv.textContent=(+this.value)+'%';
+      if(masterOut && actx) masterOut.gain.setTargetAtTime(masterVol, actx.currentTime, 0.01);
+    };
+    v.onchange=function(){ saveState(); }; } }
+/* tuner: tap a string button to hold its reference pitch (05-audio tunerTone) */
+{ const ts=document.getElementById('tb-tuner-strings');
+  if(ts) ts.addEventListener('click', e=>{ const b=e.target.closest('[data-midi]'); if(b) tunerTone(+b.dataset.midi); }); }
 document.getElementById('tb-frets').onchange=function(){ fretRangeIdx=+this.value; renderAllBoards(); saveState(); };
 { const cp=document.getElementById('tb-capo'); if(cp) cp.onchange=function(){ capo=+this.value; renderAllBoards(); saveState(); }; }
 document.getElementById('tb-lefty').onclick=function(){ lefty=!lefty; this.classList.toggle('active',lefty); this.setAttribute('aria-pressed',lefty); renderAllBoards(); renderCircle(); saveState(); };

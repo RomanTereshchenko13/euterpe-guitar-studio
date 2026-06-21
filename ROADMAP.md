@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-06-21 · shipping: v2.1.0_
+_Last updated: 2026-06-21 · shipping: v2.2.0_
 
 ---
 
@@ -20,6 +20,11 @@ The reference app and audio engine are mature. Shipped so far (full detail in `C
 
 - **Tone** — a guitar-like Karplus-Strong voice (body resonance, pick position, velocity,
   fractional tuning, per-string timbre). _(v1.8)_
+- **Stereo + output stage** — the voice spreads across the stereo field by register
+  (trebles wider, bass centred; hats off-centre), a user master-volume trim, and a final
+  brickwall limiter so loud levels / dense chords can't clip. _(v2.2)_
+- **Reference-tone tuner** — a no-mic tuner: hold a sustained pitch per open string of the
+  current tuning (re-labels with Drop D / DADGAD / Open G). _(v2.2)_
 - **Audio engine** — lookahead "two-clocks" scheduler (no more timer drift), named buses,
   synth cue sounds. The gate for anything timed. _(v1.9)_
 - **Backing band** — synth bass, humanized comping, groove click + snare backbeat. _(v1.10, v1.14)_
@@ -271,6 +276,11 @@ _Lower priority:_ deeper voicings (full-chord inversions / drop-2 / slash chords
 intermediate+ players; modes shown as a *family* (relationship to the parent major) instead of
 a flat list of twelve scales.
 
+- **Custom tunings.** Today's tuning selector is a fixed list of four presets (standard, Drop D,
+  DADGAD, Open G). Add arbitrary per-string entry so any tuning works — the board/highlight math
+  is already tuning-driven (`applyTuning` → `OPEN_MIDI`), and the v2.2 tuner already re-labels off
+  it, so this is mostly a small input UI + a bounds-checked custom entry in `saveState`/`loadState`.
+
 ---
 
 ## Before Phase 3 — Mobile shell pass  (scroll & reachability · ships first)
@@ -493,6 +503,10 @@ own scale/triad content. A core improviser *and* rhythm-guitar skill; serves bot
 - **Coach tier (no mic):** pick a subdivision + tempo; accented click grid, visual pulse, and
   a chosen scale/triad walked note-by-note across the grid so there's something to play. A
   smart visual metronome — useful, *not scored*.
+- **Time signatures.** The metronome, backing band and bar math are hard-wired to 4/4 today
+  (`barSec = beat()*4`; kick on 1 & 3, snare on 2 & 4). Add a meter setting (3/4, 6/8, …) so the
+  click accent pattern, the backing groove and the sequencer's bar length all follow — the natural
+  home is here with subdivision, since both are "what the bar is made of."
 - **Scored tier (needs Phase 8 / F1):** score timing accuracy and evenness, flag rushing/
   dragging, and ladder the tempo (auto-bump BPM when consistently in the pocket).
 
@@ -535,9 +549,14 @@ product people find, adopt, and recommend — none of them DSP, all high-leverag
   content, riding the learner model (spine #3). Turns scattered tools into a sense of progress.
 - **Distribution & shareability.** Installable PWA (offline, "add to home screen"); shareable
   deep links that encode an app state (every share is a discovery channel); a few crawlable
-  landing pages for SEO. Currently absent and cheap.
+  landing pages for SEO. Currently absent and cheap. _Also here:_ **printable / exportable
+  chord & scale sheets** — a print stylesheet (and/or a one-page export) of the current
+  board + diagrams, useful for teachers and students and a low-effort offline artifact.
 - **Polish & feel.** Onboarding/first-run, drill responsiveness and animation, cue sound,
-  empty/error states — the bar "good" actually lives at, owned by no other phase.
+  empty/error states — the bar "good" actually lives at, owned by no other phase. _Includes_ a
+  **colour-blind / alternate palette** option: the function colours (root / third / fifth /
+  seventh) currently carry meaning by hue alone, so a high-contrast or shape-augmented palette
+  is the accessibility gap that belongs with the feel pass.
 
 **Honest scope.** Even complete, this wins its *niche* — the best free, private, no-login,
 install-free, bilingual tool unifying reference + jamming + practice — not a head-to-head win
@@ -613,5 +632,6 @@ Phase 9  Product layer                          (curriculum / distribution / pol
 - **Persistence:** the musical context, drill settings, and learner-model state all ride the
   full-state localStorage with bounds-checked restores — added through `saveState()` /
   `loadState()`, never as free-floating globals.
-- **Accessibility:** keep new interactive elements focusable and Enter/Space-activatable.
+- **Accessibility:** keep new interactive elements focusable and Enter/Space-activatable; don't
+  rely on hue alone to carry meaning (see the colour-blind palette in Phase 9 — Polish & feel).
 - **Tests are the release gate:** `npm test` green on every phase; the CI action runs on push.

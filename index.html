@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 2.1.0  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 2.2.0  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="2.1.0">
+<meta name="version" content="2.2.0">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -448,6 +448,8 @@
   input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
   input[type="range"]::-moz-range-thumb { width: 15px; height: 15px; border: none; border-radius: 50%; background: var(--accent); cursor: pointer; }
   .bpm-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--text); min-width: 56px; }
+  .tb-tuner .tuner-strings { display: flex; gap: 5px; flex-wrap: wrap; }
+  .btn.tuner-str { min-width: 30px; padding: 5px 8px; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
   .btn.metro.active { background: var(--root); color: #0e1408; border-color: var(--root); font-weight: 700; }
   .btn.band.active { background: var(--ext); color: #11071f; border-color: var(--ext); font-weight: 700; }
   .btn[disabled], .btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
@@ -817,6 +819,13 @@
         <span class="tb-label" data-i18n="tb_tuning">Стрій</span>
         <select id="tb-tuning"></select>
       </div>
+      <!-- Reference-tone tuner (no mic): one button per open string of the current
+           tuning; tap to hold a sustained pitch and tune a real guitar against it.
+           Buttons are built from the live tuning by buildTuner(). -->
+      <div class="tb-group tb-tuner">
+        <span class="tb-label" data-i18n="tb_tuner">Тюнер</span>
+        <span class="tuner-strings" id="tb-tuner-strings"></span>
+      </div>
       <button class="btn" id="tb-lefty" aria-pressed="false" data-i18n="tb_lefty">Ліворукий</button>
       <div class="tb-group">
         <span class="tb-label" data-i18n="tb_frets">Лади</span>
@@ -831,6 +840,11 @@
          tap to reveal. The toggle tints green while any of them is active so you can
          see backing is running without expanding the panel. -->
     <div class="toolbar collapsed" id="backing-panel">
+      <div class="tb-group">
+        <span class="tb-label" data-i18n="tb_volume">Гучність</span>
+        <input type="range" id="tb-vol" min="0" max="100" step="1" value="100" aria-label="Volume">
+        <span class="bpm-val" id="tb-vol-val">100%</span>
+      </div>
       <div class="tb-group">
         <span class="tb-label" data-i18n="tb_backing">Супровід</span>
         <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
@@ -1183,10 +1197,19 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.2.0';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.2.0', date:'2026-06-21',
+    en:['Sound is now in stereo. The guitar spreads across the stereo field by register — low strings centred, higher strings wider — so chords and scales open up instead of collapsing to one spot, and the hi-hats sit slightly off-centre like a real kit.',
+        'A master Volume slider in the Backing panel sets the overall output level (and is remembered between visits).',
+        'A built-in tuner: tap a string in Settings to hold its reference pitch and tune a real guitar by ear — it follows your current tuning, so Drop D and the others re-label automatically. No microphone needed.',
+        'A final limiter now guards the output, so loud volumes or dense extended chords no longer clip.'],
+    uk:['Звук тепер стерео. Гітара розкладається в стереополі за регістром — низькі струни в центрі, вищі ширше — тож акорди й гами розкриваються, а не збираються в одну точку; хай-хети ж сидять трохи збоку, як у справжній установці.',
+        'Повзунок гучності у панелі «Супровід» задає загальний рівень виходу (і памʼятається між візитами).',
+        'Вбудований тюнер: натисни струну в «Налаштуваннях», щоб утримати її еталонну висоту й налаштувати справжню гітару на слух — він іде за поточним строєм, тож Drop D та інші перепозначаються автоматично. Мікрофон не потрібен.',
+        'Фінальний лімітер тепер береже вихід, тож гучні рівні чи насичені розширені акорди більше не перевантажуються.'] },
   { v:'2.1.0', date:'2026-06-21',
     en:['Euterpe now has Ear training — a new mode beside Reference and Practice (in the bottom bar on a phone) with three by-ear drills.',
         'Intervals by ear: hear two notes and name the interval, from a minor 2nd up to the octave.',
@@ -1532,7 +1555,7 @@ const I18N = {
     inv_root_desc:'Основне положення — у басу тоніка',
     inv_1st_desc:'Перше обернення — у басу терція',
     inv_2nd_desc:'Друге обернення — у басу квінта',
-    tb_settings:'Налаштування',
+    tb_settings:'Налаштування', tb_volume:'Гучність', tb_tuner:'Тюнер',
     tb_tuning:'Стрій', tb_lefty:'Ліворукий', tb_frets:'Лади', tb_tempo:'Темп', tb_capo:'Каподастр', capo_off:'без',
     tb_metro_on:'Метроном', tb_metro_off:'Метроном',
     tb_bass:'Бас', tb_drums:'Ударні', tb_backing:'Супровід',
@@ -1622,7 +1645,7 @@ const I18N = {
     inv_root_desc:'Root position — root in the bass',
     inv_1st_desc:'First inversion — third in the bass',
     inv_2nd_desc:'Second inversion — fifth in the bass',
-    tb_settings:'Settings',
+    tb_settings:'Settings', tb_volume:'Volume', tb_tuner:'Tuner',
     tb_tuning:'Tuning', tb_lefty:'Left-handed', tb_frets:'Frets', tb_tempo:'Tempo', tb_capo:'Capo', capo_off:'off',
     tb_metro_on:'Metronome', tb_metro_off:'Metronome',
     tb_bass:'Bass', tb_drums:'Drums', tb_backing:'Backing',
@@ -1768,7 +1791,10 @@ function diatonicTriads(rootPc, sc){
    string — high strings fade faster than low ones, just like the real thing.
    Voices run through a shared bus: gentle compressor (keeps chords from
    clipping) + a small convolution reverb for body/room. All offline. */
-let actx, master, backing, leadTarget, cue, bass, groove, busReady=false;
+let actx, master, backing, leadTarget, cue, bass, groove, masterOut, busReady=false;
+/* user-facing master volume (whole-app output trim, 0..1). Persisted; read into
+   masterOut.gain when the bus is built (audio is lazy, created on first gesture). */
+let masterVol=1;
 function audio(){
   if(!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } setupBus(); }
   if(actx && actx.state==='suspended'){ actx.resume(); }
@@ -1794,8 +1820,14 @@ function setupBus(){
   const body=[ [100,1.1,4.0], [200,1.6,3.0], [430,2.2,2.6] ].map(([f,q,g])=>{
     const b=actx.createBiquadFilter(); b.type='peaking'; b.frequency.value=f; b.Q.value=q; b.gain.value=g; return b;
   });
+  // user master volume, then a final brickwall limiter so a loud volume or a dense
+  // extended chord can't clip the output (the comp above glues, this one catches peaks).
+  masterOut=actx.createGain(); masterOut.gain.value=masterVol;
+  const limiter=actx.createDynamicsCompressor();
+  limiter.threshold.value=-1.5; limiter.knee.value=0; limiter.ratio.value=20;
+  limiter.attack.value=0.002; limiter.release.value=0.12;
   master.connect(body[0]); body[0].connect(body[1]); body[1].connect(body[2]);  // dry, through the body
-  body[2].connect(comp); comp.connect(actx.destination);
+  body[2].connect(comp); comp.connect(masterOut); masterOut.connect(limiter); limiter.connect(actx.destination);
   master.connect(revGain); revGain.connect(rev); rev.connect(comp);             // wet (room)
   // Named buses (Phase B) so later features can balance/duck independently:
   //   backing    — the guitar voice (plucks, loop, sequencer); gets body + room.
@@ -1810,6 +1842,12 @@ function setupBus(){
   bass=actx.createGain();       bass.gain.value=0.9;       bass.connect(comp);
   groove=actx.createGain();     groove.gain.value=0.85;    groove.connect(comp);
 }
+/* stereo width: a guitar isn't a point source — spread the voice across the field by
+   register (low strings centred, trebles wider) so chords/scales gain width instead of
+   collapsing to mono. A tiny random jitter keeps repeated notes from stacking on one
+   spot. Degrades to mono where StereoPannerNode is missing (old browsers / jsdom). */
+function makePanner(p){ if(!actx.createStereoPanner) return null; const n=actx.createStereoPanner(); n.pan.value=Math.max(-1,Math.min(1,p)); return n; }
+function panForMidi(midi){ return Math.max(-0.35, Math.min(0.35, (midi-57)/55)) + (Math.random()*0.06-0.03); }
 /* Karplus-Strong buffer, cached per (pitch, string character). Fixed long render;
    the per-voice gain envelope decides how long each note actually rings.
    Adds: pick-position comb on the excitation, a fractional-delay allpass in the
@@ -1871,8 +1909,39 @@ function pluckAt(midi, when, dur, vel){
   g.gain.setValueAtTime(0.0001, now);
   g.gain.exponentialRampToValueAtTime(0.5*(0.4+0.6*vel), now+0.006);  // harder pluck = louder
   g.gain.exponentialRampToValueAtTime(0.0001, now+dur+0.35);
-  src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(backing);
+  const pan=makePanner(panForMidi(midi));
+  src.connect(hp); hp.connect(lp); lp.connect(g);
+  if(pan){ g.connect(pan); pan.connect(backing); } else { g.connect(backing); }
   src.start(now); src.stop(now+Math.min(dur+0.5, 2.7));
+}
+/* ---- tuner: a sustained reference tone per open string (no mic needed) ----
+   Plays the pitch of one open string of the current tuning so you can tune a real
+   guitar by ear against it. A clean triangle+sine with a soft attack/release, held
+   ~2.6 s, through the guitar bus so it shares the app's body/room colour and the
+   master volume. Mono-stable: a fresh tap fades out the previous tone (no pile-up). */
+let _tunerVoice=null;
+function tunerStop(){
+  if(!_tunerVoice) return;
+  const v=_tunerVoice; _tunerVoice=null;
+  try{ const now=actx.currentTime;
+    v.g.gain.cancelScheduledValues(now); v.g.gain.setValueAtTime(Math.max(0.0001, v.g.gain.value), now);
+    v.g.gain.exponentialRampToValueAtTime(0.0001, now+0.08);
+    v.o.stop(now+0.1); v.o2.stop(now+0.1);
+  }catch(e){ /* already stopped */ }
+}
+function tunerTone(midi){
+  const ctx=audio(); if(!ctx) return; tunerStop();
+  const now=ctx.currentTime, freq=440*Math.pow(2,(midi-69)/12), dur=2.6;
+  const o=ctx.createOscillator();  o.type='triangle'; o.frequency.setValueAtTime(freq, now);
+  const o2=ctx.createOscillator(); o2.type='sine';    o2.frequency.setValueAtTime(freq, now); o2.detune.value=3;  // faint shimmer
+  const g=ctx.createGain();
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.3, now+0.03);          // soft attack
+  g.gain.setValueAtTime(0.3, now+dur-0.4);
+  g.gain.exponentialRampToValueAtTime(0.0001, now+dur);        // soft release
+  o.connect(g); o2.connect(g); g.connect(backing);
+  o.start(now); o2.start(now); o.stop(now+dur+0.05); o2.stop(now+dur+0.05);
+  _tunerVoice={o, o2, g};
 }
 /* ---- synced visual highlighting ---- */
 let playTimers=[];
@@ -2049,7 +2118,9 @@ function hatHit(when, vel){
   g.gain.setValueAtTime(0.0001, when);
   g.gain.exponentialRampToValueAtTime(0.22*vel, when+0.002);
   g.gain.exponentialRampToValueAtTime(0.0001, when+0.05);
-  src.connect(hp).connect(g).connect(groove); src.start(when); src.stop(when+0.08);
+  const pan=makePanner(0.18);   // hats sit slightly off-centre (kick/snare/bass stay centred, as in a real mix)
+  src.connect(hp).connect(g); if(pan){ g.connect(pan); pan.connect(groove); } else { g.connect(groove); }
+  src.start(when); src.stop(when+0.08);
 }
 
 /* humanized chord comp: micro-timing jitter + per-note velocity variation and a
@@ -3392,8 +3463,21 @@ function buildToolbar(){
   if(cp) cp.innerHTML=Array.from({length:8},(_,i)=>`<option value="${i}"${i===capo?' selected':''}>${i===0?t('capo_off'):i}</option>`).join('');
   const tp=document.getElementById('tb-tempo'); tp.value=tempo;
   document.getElementById('tb-bpm').textContent=tempo+' BPM';
+  const vol=document.getElementById('tb-vol'); if(vol) vol.value=Math.round(masterVol*100);
+  const vv=document.getElementById('tb-vol-val'); if(vv) vv.textContent=Math.round(masterVol*100)+'%';
+  buildTuner();
   const lb=document.getElementById('tb-lefty'); lb.classList.toggle('active', lefty); lb.setAttribute('aria-pressed', lefty);
   applyToolbarState();
+}
+/* reference-tone tuner: one button per open string of the current tuning, low → high
+   (E A D G B e in standard), each holding a sustained pitch (tunerTone). Rebuilt from
+   the live OPEN_MIDI/SNAMES whenever the tuning changes (so a Drop-D switch re-labels). */
+function buildTuner(){
+  const ts=document.getElementById('tb-tuner-strings'); if(!ts) return;
+  // OPEN_MIDI / SNAMES are stored high → low (string 1 first); reverse for the
+  // conventional low-to-high reading order on the tuner.
+  ts.innerHTML = OPEN_MIDI.map((m,i)=>({m, nm:SNAMES[i]})).reverse()
+    .map(o=>`<button class="btn tuner-str" data-midi="${o.m}" aria-label="${o.nm}">${o.nm}</button>`).join('');
 }
 function applyToolbarState(){
   const tb=document.getElementById('toolbar'), tg=document.getElementById('tb-toggle');
@@ -3542,7 +3626,7 @@ let currentTab='harmony';
 // older saves (no `mode`) and the existing reference behaviour are untouched.
 let currentMode='reference';
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
-  lang, mode:currentMode, tab:currentTab, tuningIdx, fretRangeIdx, tempo, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
+  lang, mode:currentMode, tab:currentTab, tuningIdx, fretRangeIdx, tempo, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
   gRoot, gRootLbl, gMode, hView, scView,
   chQual, arpPos, scIdx, scPos, scOverlay,
   chVoicing,
@@ -3560,6 +3644,7 @@ function loadState(){ try{
   if(Number.isInteger(s.fretRangeIdx)&&FRET_RANGES[s.fretRangeIdx]) fretRangeIdx=s.fretRangeIdx;
   if(Number.isInteger(s.capo)&&s.capo>=0&&s.capo<=11) capo=s.capo;
   if(typeof s.tempo==='number'&&s.tempo>=40&&s.tempo<=200) tempo=s.tempo;
+  if(typeof s.masterVol==='number'&&s.masterVol>=0&&s.masterVol<=1) masterVol=s.masterVol;
   if(typeof s.lefty==='boolean') lefty=s.lefty;
   if(typeof s.toolbarOpen==='boolean') toolbarOpen=s.toolbarOpen;
   if(typeof s.backingOpen==='boolean') backingOpen=s.backingOpen;
@@ -4462,7 +4547,19 @@ document.getElementById('lang-switch').addEventListener('click',e=>{
 });
 
 /* ---- toolbar wiring ---- */
-document.getElementById('tb-tuning').onchange=function(){ tuningIdx=+this.value; applyTuning(); renderAllBoards(); saveState(); };
+document.getElementById('tb-tuning').onchange=function(){ tuningIdx=+this.value; applyTuning(); buildTuner(); renderAllBoards(); saveState(); };
+/* master volume: scales the whole-app output (masterOut, before the limiter). Audio is
+   lazy, so when the bus isn't up yet we just stash masterVol — setupBus reads it on
+   first sound. setTargetAtTime ramps the live gain so dragging is click-free. */
+{ const v=document.getElementById('tb-vol');
+  if(v){ v.oninput=function(){ masterVol=(+this.value)/100;
+      const vv=document.getElementById('tb-vol-val'); if(vv) vv.textContent=(+this.value)+'%';
+      if(masterOut && actx) masterOut.gain.setTargetAtTime(masterVol, actx.currentTime, 0.01);
+    };
+    v.onchange=function(){ saveState(); }; } }
+/* tuner: tap a string button to hold its reference pitch (05-audio tunerTone) */
+{ const ts=document.getElementById('tb-tuner-strings');
+  if(ts) ts.addEventListener('click', e=>{ const b=e.target.closest('[data-midi]'); if(b) tunerTone(+b.dataset.midi); }); }
 document.getElementById('tb-frets').onchange=function(){ fretRangeIdx=+this.value; renderAllBoards(); saveState(); };
 { const cp=document.getElementById('tb-capo'); if(cp) cp.onchange=function(){ capo=+this.value; renderAllBoards(); saveState(); }; }
 document.getElementById('tb-lefty').onclick=function(){ lefty=!lefty; this.classList.toggle('active',lefty); this.setAttribute('aria-pressed',lefty); renderAllBoards(); renderCircle(); saveState(); };

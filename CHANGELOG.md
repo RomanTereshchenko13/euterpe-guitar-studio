@@ -2,6 +2,13 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.2.0 — 2026-06-21
+
+- Sound is now in stereo. The guitar spreads across the stereo field by register — low strings centred, higher strings wider — so chords and scales open up instead of collapsing to one spot, and the hi-hats sit slightly off-centre like a real kit.
+- A master Volume slider in the Backing panel sets the overall output level (and is remembered between visits).
+- A built-in tuner: tap a string in Settings to hold its reference pitch and tune a real guitar by ear — it follows your current tuning, so Drop D and the others re-label automatically. No microphone needed.
+- A final limiter now guards the output, so loud volumes or dense extended chords no longer clip.
+
 ## v2.1.0 — 2026-06-21
 
 - Euterpe now has Ear training — a new mode beside Reference and Practice (in the bottom bar on a phone) with three by-ear drills.

@@ -8,8 +8,21 @@ function buildToolbar(){
   if(cp) cp.innerHTML=Array.from({length:8},(_,i)=>`<option value="${i}"${i===capo?' selected':''}>${i===0?t('capo_off'):i}</option>`).join('');
   const tp=document.getElementById('tb-tempo'); tp.value=tempo;
   document.getElementById('tb-bpm').textContent=tempo+' BPM';
+  const vol=document.getElementById('tb-vol'); if(vol) vol.value=Math.round(masterVol*100);
+  const vv=document.getElementById('tb-vol-val'); if(vv) vv.textContent=Math.round(masterVol*100)+'%';
+  buildTuner();
   const lb=document.getElementById('tb-lefty'); lb.classList.toggle('active', lefty); lb.setAttribute('aria-pressed', lefty);
   applyToolbarState();
+}
+/* reference-tone tuner: one button per open string of the current tuning, low → high
+   (E A D G B e in standard), each holding a sustained pitch (tunerTone). Rebuilt from
+   the live OPEN_MIDI/SNAMES whenever the tuning changes (so a Drop-D switch re-labels). */
+function buildTuner(){
+  const ts=document.getElementById('tb-tuner-strings'); if(!ts) return;
+  // OPEN_MIDI / SNAMES are stored high → low (string 1 first); reverse for the
+  // conventional low-to-high reading order on the tuner.
+  ts.innerHTML = OPEN_MIDI.map((m,i)=>({m, nm:SNAMES[i]})).reverse()
+    .map(o=>`<button class="btn tuner-str" data-midi="${o.m}" aria-label="${o.nm}">${o.nm}</button>`).join('');
 }
 function applyToolbarState(){
   const tb=document.getElementById('toolbar'), tg=document.getElementById('tb-toggle');
@@ -158,7 +171,7 @@ let currentTab='harmony';
 // older saves (no `mode`) and the existing reference behaviour are untouched.
 let currentMode='reference';
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
-  lang, mode:currentMode, tab:currentTab, tuningIdx, fretRangeIdx, tempo, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
+  lang, mode:currentMode, tab:currentTab, tuningIdx, fretRangeIdx, tempo, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
   gRoot, gRootLbl, gMode, hView, scView,
   chQual, arpPos, scIdx, scPos, scOverlay,
   chVoicing,
@@ -176,6 +189,7 @@ function loadState(){ try{
   if(Number.isInteger(s.fretRangeIdx)&&FRET_RANGES[s.fretRangeIdx]) fretRangeIdx=s.fretRangeIdx;
   if(Number.isInteger(s.capo)&&s.capo>=0&&s.capo<=11) capo=s.capo;
   if(typeof s.tempo==='number'&&s.tempo>=40&&s.tempo<=200) tempo=s.tempo;
+  if(typeof s.masterVol==='number'&&s.masterVol>=0&&s.masterVol<=1) masterVol=s.masterVol;
   if(typeof s.lefty==='boolean') lefty=s.lefty;
   if(typeof s.toolbarOpen==='boolean') toolbarOpen=s.toolbarOpen;
   if(typeof s.backingOpen==='boolean') backingOpen=s.backingOpen;
