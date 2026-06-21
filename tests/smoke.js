@@ -187,7 +187,8 @@ if (T) {
    'cm_pair','cm_dur','cm_sec','cm_click','cm_start','cm_stop','cm_setup_note',
    'cm_changes','cm_cpm','cm_best','cm_tap_hint','cm_undo','cm_newbest',
    'drill_strum','drill_strum_meta','sp_pattern','sp_chord','sp_play','sp_stop','sp_hint',
-   'drill_comp','drill_comp_meta','co_prog','co_now','co_next','co_hint'].forEach(k => {
+   'drill_comp','drill_comp_meta','co_prog','co_now','co_next','co_hint',
+   'drill_groove','drill_groove_meta','gf_swing','gf_accent','gf_mute','gf_hint'].forEach(k => {
     ok('i18n new key present (uk+en): ' + k,
        T.I18N.uk[k] !== undefined && T.I18N.en[k] !== undefined);
   });
@@ -613,6 +614,50 @@ if (T) {
     T.compPlay();
     T.setMode('reference');
     ok('5c: leaving Practice exits a running comp drill', T.getCo() === null);
+    T.setCtxNow(0);
+    T.resetLearner();
+  })();
+
+  /* ---- Phase 5d: groove & feel coach ---- */
+  (function grooveDrill() {
+    const doc = win.document;
+    ok('5d: groove drill card present (start-groove)', !!doc.getElementById('start-groove'));
+    ok('5d: groove area + beats present', !!doc.getElementById('gf-area') && !!doc.getElementById('gf-beats'));
+    ok('5d: four rhythm-group drill cards',
+       ['start-changes', 'start-strum', 'start-comp', 'start-groove'].every(id => !!doc.getElementById(id)));
+    // swing settings: straight → shuffle, each named in both languages, amount ascending
+    ok('5d: three swing feels (straight/swing/shuffle)', T.GF_SWINGS.length === 3);
+    ok('5d: swing feels carry en + uk names + an amount',
+       T.GF_SWINGS.every(s => s.en && s.uk && typeof s.amt === 'number'));
+    ok('5d: straight feel has zero swing', T.GF_SWINGS[0].amt === 0 && T.GF_SWINGS[T.GF_SWINGS.length - 1].amt > 0);
+
+    T.resetLearner();
+    T.initAudio();
+    T.setCtxNow(0);
+    T.setMode('practice');
+    T.startGroove();
+    ok('5d: startGroove opens the lab, not yet playing', !!T.getGf() && T.getGf().playing === false);
+    T.setGfSwing(2); T.setGfAccent(true); T.setGfMute(true);
+    T.groovePlay();
+    let gf = T.getGf();
+    ok('5d: play starts the groove loop', gf.playing === true);
+
+    // drive ~10s of the scheduler → the 8th-note playhead moves and a bar wraps
+    for (let s = 0; s <= 10; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
+    gf = T.getGf();
+    ok('5d: the 8th-note playhead stays in range', gf.slot >= 0 && gf.slot < 8);
+    ok('5d: at least one bar of groove elapses', gf.cycles >= 1);
+
+    T.grooveStop();
+    ok('5d: stop ends the loop', T.getGf().playing === false);
+    const ss = T.getLearner().sessions;
+    ok('5d: a practiced groove session is recorded',
+       ss.length >= 1 && /^groove:/.test(ss[ss.length - 1].drill) && ss[ss.length - 1].score >= 1);
+    ok('5d: groove coach mints no per-item SRS', T.learnerStats().items === 0);
+
+    T.groovePlay();
+    T.setMode('reference');
+    ok('5d: leaving Practice exits a running groove drill', T.getGf() === null);
     T.setCtxNow(0);
     T.resetLearner();
   })();

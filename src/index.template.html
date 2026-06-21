@@ -307,6 +307,10 @@
             <span class="dc-name" data-i18n="drill_comp">Акомпанемент прогресії</span>
             <span class="dc-meta" data-i18n="drill_comp_meta">Потрібний акорд вчасно · коуч</span>
           </button></li>
+          <li><button type="button" class="drill-card" id="start-groove">
+            <span class="dc-name" data-i18n="drill_groove">Грув і відчуття</span>
+            <span class="dc-meta" data-i18n="drill_groove_meta">Свінг, акценти, глушіння · коуч</span>
+          </button></li>
         </ul>
       </div>
       <!-- Progress readout (3b): the learner model's aggregate stats; renderPractice()
@@ -404,6 +408,26 @@
       <div class="cm-active-foot">
         <span class="drill-sub" id="co-hint"></span>
         <button type="button" class="btn play" id="co-play"></button>
+      </div>
+    </div>
+
+    <!-- Groove & feel (Phase 5d): loop a groove over the context chord and toggle
+         swing / backbeat accent / palm-mute to hear and play the feel. Hidden until
+         started. (The CC0 sample + convolution-IR "sound win" is a separate task.) -->
+    <div id="gf-area" hidden>
+      <div class="drill-head">
+        <button type="button" class="btn" id="gf-quit" data-i18n="drill_quit">Вийти</button>
+        <span class="drill-count" id="gf-chord"></span>
+      </div>
+      <div class="row"><span class="ctrl-label" data-i18n="gf_swing">Свінг</span><div class="group" id="gf-swings"></div></div>
+      <div class="row">
+        <button type="button" class="btn" id="gf-accent" aria-pressed="true"></button>
+        <button type="button" class="btn" id="gf-mute" aria-pressed="false"></button>
+      </div>
+      <div class="co-beats" id="gf-beats"></div>
+      <div class="cm-active-foot">
+        <span class="drill-sub" id="gf-hint"></span>
+        <button type="button" class="btn play" id="gf-play"></button>
       </div>
     </div>
 

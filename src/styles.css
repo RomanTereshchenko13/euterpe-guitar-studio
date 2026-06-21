@@ -290,6 +290,8 @@
   .co-beats { display: flex; justify-content: center; gap: 12px; margin: 10px 0; }
   .co-beat { width: 13px; height: 13px; border-radius: 50%; background: var(--bg-panel-2); border: 1px solid var(--border-strong); transition: background 0.06s, box-shadow 0.06s; }
   .co-beat.on { background: var(--root); border-color: var(--root); box-shadow: 0 0 0 3px rgba(107,165,58,0.3); }
+  /* groove (5d): a backbeat-accented beat reads bigger so 2 & 4 stand out */
+  .co-beat.accent { width: 17px; height: 17px; border-color: var(--text-faint); }
 
   /* Mobile: the mode nav becomes a fixed bottom bar in the thumb zone (the roadmap's
      thumb-zone home). It escapes the sticky/condensing header — which is top-anchored

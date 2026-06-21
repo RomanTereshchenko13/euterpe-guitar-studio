@@ -477,7 +477,15 @@ mode, to keep the bottom nav at three and leave slot 4 for Progress) under a **R
   on its own scheduler clock; a big **NOW** chord + a **NEXT** preview (reusing `cmChord`/`cmChordBox`)
   + a 4-beat indicator make the change land in time. Switch the progression live. A practiced run
   records a session (bars comped), minting no per-item SRS. _Coach tier — no timing score (Phase 8/F1)._
-- **Groove / feel** — accents, syncopation, palm-mute dynamics, swing.
+- **Groove / feel** ✅ **Built** (5d · ships with the Phase 5 release). A feel *lab*: loop a one-bar
+  groove (swung hats + kick/snare backbeat + bass + a down-up comp) over the context chord on one
+  8th-note scheduler clock, with swing baked into the off-beats, and toggle the things that make a
+  groove feel right — **swing** (straight → swing → shuffle), a **backbeat accent**, and **palm-mute**
+  dynamics — hearing each change live and playing along. Reuses the drum/bass primitives + a mute-able
+  `gfStrum`. A practiced run records a session (bars grooved). _Coach tier — no timing score (Phase 8/F1)._
+  - _Deferred (separate asset task, not a coach tier):_ the **CC0 drum one-shots + room convolution IR**
+    "sound win" still needs license-verified public-domain audio to base64-inline; the groove above is
+    fully synthesized. Revisit when the assets are sourced.
 
 Scored versions need Phase 8's onset detection — and a strum is a *big* transient, so onset
 scoring works **better** here than on single notes. The scored rhythm tier may arrive before
