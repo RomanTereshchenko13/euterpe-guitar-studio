@@ -277,6 +277,20 @@
   .sp-beat { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
   .sp-controls { display: inline-flex; gap: 8px; flex-shrink: 0; }
 
+  /* ---- comp-the-progression (Phase 5c) ---- */
+  .btn.co-prog { font-size: 12px; }
+  .co-stage { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 14px 0 6px; flex-wrap: wrap; }
+  .co-slot { text-align: center; }
+  .co-lab { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin-bottom: 6px; }
+  .co-now svg { width: 124px; height: auto; }
+  .co-next-slot { opacity: 0.65; }
+  .co-next .cm-chordname { font-size: 15px; }
+  .co-next svg { width: 86px; height: auto; }
+  .co-arrow { color: var(--text-dim); font-size: 24px; }
+  .co-beats { display: flex; justify-content: center; gap: 12px; margin: 10px 0; }
+  .co-beat { width: 13px; height: 13px; border-radius: 50%; background: var(--bg-panel-2); border: 1px solid var(--border-strong); transition: background 0.06s, box-shadow 0.06s; }
+  .co-beat.on { background: var(--root); border-color: var(--root); box-shadow: 0 0 0 3px rgba(107,165,58,0.3); }
+
   /* Mobile: the mode nav becomes a fixed bottom bar in the thumb zone (the roadmap's
      thumb-zone home). It escapes the sticky/condensing header — which is top-anchored
      — by being position:fixed (sticky ancestors don't form a containing block for it),

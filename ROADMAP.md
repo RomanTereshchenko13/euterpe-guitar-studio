@@ -471,8 +471,12 @@ mode, to keep the bottom nav at three and leave slot 4 for Progress) under a **R
   sweeps down (low→high) / up (high→low); optional beat-reference click. A practiced run (≥1 full bar)
   records a session (`strum:<id>`, bars played) so Practice progress reflects it, but mints no per-item SRS.
   _Honest coach framing: no timing score — mic onset scoring is Phase 8/F1._
-- **Comping the progression** — play the right chord at the right time as the progression
-  cycles (the rhythm-side mirror of chord-tone targeting).
+- **Comping the progression** ✅ **Built** (5c · ships with the Phase 5 release). The rhythm-side
+  mirror of chord-tone targeting: a chosen preset (`SEQ_PRESETS`, resolved to the context key, spine #1)
+  cycles with a forced backing band (bass + groove + a guide comp via `compStrum`/`scheduleBand(force)`)
+  on its own scheduler clock; a big **NOW** chord + a **NEXT** preview (reusing `cmChord`/`cmChordBox`)
+  + a 4-beat indicator make the change land in time. Switch the progression live. A practiced run
+  records a session (bars comped), minting no per-item SRS. _Coach tier — no timing score (Phase 8/F1)._
 - **Groove / feel** — accents, syncopation, palm-mute dynamics, swing.
 
 Scored versions need Phase 8's onset detection — and a strum is a *big* transient, so onset

@@ -186,7 +186,8 @@ if (T) {
    'practice_grp_fretboard','practice_grp_rhythm','drill_changes','drill_changes_meta',
    'cm_pair','cm_dur','cm_sec','cm_click','cm_start','cm_stop','cm_setup_note',
    'cm_changes','cm_cpm','cm_best','cm_tap_hint','cm_undo','cm_newbest',
-   'drill_strum','drill_strum_meta','sp_pattern','sp_chord','sp_play','sp_stop','sp_hint'].forEach(k => {
+   'drill_strum','drill_strum_meta','sp_pattern','sp_chord','sp_play','sp_stop','sp_hint',
+   'drill_comp','drill_comp_meta','co_prog','co_now','co_next','co_hint'].forEach(k => {
     ok('i18n new key present (uk+en): ' + k,
        T.I18N.uk[k] !== undefined && T.I18N.en[k] !== undefined);
   });
@@ -563,6 +564,55 @@ if (T) {
     T.spPlay();
     T.setMode('reference');
     ok('5b: leaving Practice exits a running strum trainer', T.getSp() === null);
+    T.setCtxNow(0);
+    T.resetLearner();
+  })();
+
+  /* ---- Phase 5c: comp-the-progression coach drill ---- */
+  (function compDrill() {
+    const doc = win.document;
+    ok('5c: comp drill card present (start-comp)', !!doc.getElementById('start-comp'));
+    ok('5c: comp area + stage present', !!doc.getElementById('co-area') && !!doc.getElementById('co-now') && !!doc.getElementById('co-next'));
+    // the rhythm group now lists three drills
+    ok('5c: three rhythm-group drill cards',
+       ['start-changes', 'start-strum', 'start-comp'].every(id => !!doc.getElementById(id)));
+
+    // compBuildBars expands a preset (offsets, qi, bars) into one chord per bar, in the key
+    T.setKey(0, 'C');                       // context root C → I–V–vi–IV = C G Am F
+    const bars = T.compBuildBars(T.SEQ_PRESETS[1]);
+    ok('5c: I–V–vi–IV expands to 4 bars', bars.length === 4);
+    ok('5c: bars are resolved to the context key (C G Am F)',
+       bars[0].pc === 0 && bars[1].pc === 7 && bars[2].pc === 9 && bars[3].pc === 5,
+       bars.map(b => b.pc).join(','));
+
+    T.resetLearner();
+    T.initAudio();
+    T.setCtxNow(0);
+    T.setMode('practice');
+    T.startComp();
+    ok('5c: startComp opens the drill, not yet playing', !!T.getCo() && T.getCo().playing === false);
+    T.setCompProg(2);                        // I–IV–V (3 bars)
+    T.compPlay();
+    let co = T.getCo();
+    ok('5c: play starts the progression loop', co.playing === true && co.presetIdx === 2 && co.bars.length === 3);
+
+    // drive ~10s of the scheduler → the bar index advances and at least one cycle wraps
+    for (let s = 0; s <= 10; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
+    co = T.getCo();
+    ok('5c: the bar pointer stays in range', co.bar >= 0 && co.bar < co.bars.length);
+    ok('5c: at least one full progression cycle elapses', co.cycles >= 1);
+
+    T.compStop();
+    ok('5c: stop ends the loop', T.getCo().playing === false);
+    const ss = T.getLearner().sessions;
+    ok('5c: a practiced comp session is recorded (bars comped)',
+       ss.length >= 1 && /^comp:/.test(ss[ss.length - 1].drill) && ss[ss.length - 1].score >= 1);
+    ok('5c: comp coach mints no per-item SRS', T.learnerStats().items === 0);
+
+    // leaving Practice stops + clears a running drill
+    T.compPlay();
+    T.setMode('reference');
+    ok('5c: leaving Practice exits a running comp drill', T.getCo() === null);
     T.setCtxNow(0);
     T.resetLearner();
   })();

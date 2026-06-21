@@ -94,14 +94,16 @@ function compStrum(base, ivs, when, vel, spread){
 }
 
 /* schedule one bar of the band (bass + groove) for a given chord at bar-start `when`.
-   Called from loopStrum / seqStrumStep so it always matches the bar and chord. */
-function scheduleBand(pc, qi, when){
-  const b=beat(), fifth=fifthInterval(qi), bassRoot=36+pc;
-  if(bassOn){
+   Called from loopStrum / seqStrumStep (no `force` → follows the user's bass/drums
+   toggles) and from the Phase 5c comping drill (`force` true → always lays the bed,
+   since comping NEEDS something to play over, without flipping the global toggles). */
+function scheduleBand(pc, qi, when, force){
+  const b=beat(), fifth=fifthInterval(qi), bassRoot=36+pc, bOn=force||bassOn, gOn=force||grooveOn;
+  if(bOn){
     bassNote(when,                                   bassRoot,       b*1.9, 0.95);  // root on beat 1
     bassNote(when+2*b + (Math.random()*0.012-0.006), bassRoot+fifth, b*1.7, 0.8);   // fifth on beat 3
   }
-  if(grooveOn){
+  if(gOn){
     for(let k=0;k<8;k++){                                                            // 8th-note hats
       const tt=when + k*(b/2) + (Math.random()*0.010-0.005);
       hatHit(tt, k===0 ? 1 : (k%2===0 ? 0.7 : 0.5));                                 // accent the downbeat

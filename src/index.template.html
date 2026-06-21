@@ -303,6 +303,10 @@
             <span class="dc-name" data-i18n="drill_strum">Малюнки боя</span>
             <span class="dc-meta" data-i18n="drill_strum_meta">Удари вниз/вгору по сітці · коуч</span>
           </button></li>
+          <li><button type="button" class="drill-card" id="start-comp">
+            <span class="dc-name" data-i18n="drill_comp">Акомпанемент прогресії</span>
+            <span class="dc-meta" data-i18n="drill_comp_meta">Потрібний акорд вчасно · коуч</span>
+          </button></li>
         </ul>
       </div>
       <!-- Progress readout (3b): the learner model's aggregate stats; renderPractice()
@@ -373,6 +377,33 @@
           <button type="button" class="btn" id="sp-click" aria-pressed="false"></button>
           <button type="button" class="btn play" id="sp-play"></button>
         </span>
+      </div>
+    </div>
+
+    <!-- Comp the progression (Phase 5c): a chosen progression cycles with a backing
+         band; play the right chord at the right time. NOW + NEXT diagrams + a 4-beat
+         indicator guide the change. Hidden until started. -->
+    <div id="co-area" hidden>
+      <div class="drill-head">
+        <button type="button" class="btn" id="co-quit" data-i18n="drill_quit">Вийти</button>
+        <span class="drill-count" id="co-cycles"></span>
+      </div>
+      <div class="row"><span class="ctrl-label" data-i18n="co_prog">Прогресія</span><div class="group" id="co-progs"></div></div>
+      <div class="co-stage">
+        <div class="co-slot">
+          <div class="co-lab" id="co-now-lab" data-i18n="co_now">Зараз</div>
+          <div class="co-chord co-now" id="co-now"></div>
+        </div>
+        <div class="co-arrow" aria-hidden="true">→</div>
+        <div class="co-slot co-next-slot">
+          <div class="co-lab" id="co-next-lab" data-i18n="co_next">Далі</div>
+          <div class="co-chord co-next" id="co-next"></div>
+        </div>
+      </div>
+      <div class="co-beats" id="co-beats"></div>
+      <div class="cm-active-foot">
+        <span class="drill-sub" id="co-hint"></span>
+        <button type="button" class="btn play" id="co-play"></button>
       </div>
     </div>
 
