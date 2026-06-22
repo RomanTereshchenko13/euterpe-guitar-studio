@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-06-22 · shipping: v2.4.0_
+_Last updated: 2026-06-22 · shipping: v2.5.0_
 
 ---
 
@@ -276,10 +276,11 @@ _Lower priority:_ deeper voicings (full-chord inversions / drop-2 / slash chords
 intermediate+ players; modes shown as a *family* (relationship to the parent major) instead of
 a flat list of twelve scales.
 
-- **Custom tunings.** Today's tuning selector is a fixed list of four presets (standard, Drop D,
-  DADGAD, Open G). Add arbitrary per-string entry so any tuning works — the board/highlight math
-  is already tuning-driven (`applyTuning` → `OPEN_MIDI`), and the v2.2 tuner already re-labels off
-  it, so this is mostly a small input UI + a bounds-checked custom entry in `saveState`/`loadState`.
+- **Custom tunings.** ✅ **Shipped v2.5.0.** A `Custom` entry joins the four presets; selecting it
+  reveals six per-string note selects (high → low, `TUNE_LO`..`TUNE_HI`) that drive a mutable
+  `customTuning` read by `applyTuning()` → `OPEN_MIDI`. Seeded from the tuning you were on, so it
+  starts where you are; the board/tuner/labels follow, and it's bounds-checked through
+  `saveState`/`loadState`. (The footer's "standard tuning" caption is static and unchanged.)
 
 ---
 
@@ -396,8 +397,12 @@ The **Practice** surface and the machinery every drill shares. **Settle the navi
   The SRS fields (`ease`/`due`) are an SM-2-lite the queue reads to decide what to resurface. The
   shape grows by adding item namespaces, never by reshaping; a `v` bump + migration is the only
   sanctioned way it changes.
-- **Latency calibration.** A one-time offset the scoring window reads — needed now for tap
-  windows, reused later by mic windows. Not a mic-only concern.
+- **Latency calibration.** ✅ **Shipped v2.5.0** (the deferred Phase-3 debt, built ahead of its
+  first consumer). A one-time round-trip offset (`calMs`) the scoring window reads via
+  `calOffsetSec()` — needed for tap windows, reused later by mic windows. Settings carries a
+  tap-test (steady click → tap along → `calcLatencyOffset` trims + means the nearest-beat deltas)
+  plus a manual slider; bounds-checked persistence. No scored tap drill consumes it yet — the
+  prerequisite is in place, not a feature with a UI elsewhere.
 - **First drill: fretboard note-naming.** App asks for a note; you tap every instance; timed
   and scored. Pure-screen, low-risk — the table-stakes floor of the tab.
 - **The seam** (spine #2) wired in: jump from any reference view into a drill on that content. The
@@ -482,9 +487,12 @@ mode, to keep the bottom nav at three and leave slot 4 for Progress) under a **R
   groove feel right — **swing** (straight → swing → shuffle), a **backbeat accent**, and **palm-mute**
   dynamics — hearing each change live and playing along. Reuses the drum/bass primitives + a mute-able
   `gfStrum`. A practiced run records a session (bars grooved). _Coach tier — no timing score (Phase 8/F1)._
-  - _Deferred (separate asset task, not a coach tier):_ the **CC0 drum one-shots + room convolution IR**
-    "sound win" still needs license-verified public-domain audio to base64-inline; the groove above is
-    fully synthesized. Revisit when the assets are sourced.
+  - _Synthesized realism pass shipped (v2.5.0):_ punchier hand-rolled drums — a high-passed beater
+    **click** on the kick, a brighter second noise band ("snap") on the snare, and a band-passed
+    **metallic edge** on the hi-hat. Still _deferred (separate asset task):_ the **CC0 drum one-shots
+    + room convolution IR** "sound win" needs license-verified public-domain audio to base64-inline
+    (verification must happen at selection time — see the dependency policy); revisit when the assets
+    are sourced. The groove remains fully synthesized for now.
 
 Scored versions need Phase 8's onset detection — and a strum is a *big* transient, so onset
 scoring works **better** here than on single notes. The scored rhythm tier may arrive before
@@ -570,11 +578,17 @@ product people find, adopt, and recommend — none of them DSP, all high-leverag
 
 - **Guided path (curriculum).** An opinionated "start here → next" thread that chains existing
   content, riding the learner model (spine #3). Turns scattered tools into a sense of progress.
-- **Distribution & shareability.** Installable PWA (offline, "add to home screen"); shareable
-  deep links that encode an app state (every share is a discovery channel); a few crawlable
-  landing pages for SEO. Currently absent and cheap. _Also here:_ **printable / exportable
-  chord & scale sheets** — a print stylesheet (and/or a one-page export) of the current
-  board + diagrams, useful for teachers and students and a low-effort offline artifact.
+  _First step shipped (v2.5.0):_ the Practice/Ear progress card now **closes the SRS loop** — a
+  **Due-for-review** count + **Active-days** stat (`learnerReview` / `learnerActivity`) and a
+  one-tap **Review** that routes into the drill for the most-overdue namespace (`startReview`).
+  Not yet a curriculum, but the "what to practice next" surface the curriculum will sit on.
+- **Distribution & shareability.** Installable PWA (offline, "add to home screen") ✅;
+  **shareable deep links** ✅ **(v2.5.0)** — a Settings *Share* button copies a URL whose hash
+  encodes the musical context (`encodeShareState`), applied once on load then stripped
+  (`applyShareHash`); every share is a discovery channel. _Still open:_ a few crawlable landing
+  pages for SEO, and **printable / exportable chord & scale sheets** — a print stylesheet (and/or
+  a one-page export) of the current board + diagrams, useful for teachers and a low-effort offline
+  artifact.
 - **Polish & feel.** Drill responsiveness and animation, cue sound, empty/error states —
   the bar "good" actually lives at, owned by no other phase. _Shipped early (v2.4.0):_ a
   **first-run welcome card** (lightweight onboarding for brand-new visitors, dismissed once

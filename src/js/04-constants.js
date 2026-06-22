@@ -12,16 +12,26 @@ let SNAMES = ['e','B','G','D','A','E'];
 const FRETS = 22;
 const DOTS = [3,5,7,9,12,15,17,19,21];
 
-/* Alternate tunings, defined by MIDI note per string (high -> low). */
+/* Alternate tunings, defined by MIDI note per string (high -> low). The last
+   entry is the user-editable Custom tuning (Phase 2): it carries no fixed `midi`,
+   reading the mutable `customTuning` below instead, so any per-string tuning works
+   without a new preset. The board/highlight math is already tuning-driven, so a
+   custom MIDI per string just flows through applyTuning like any preset. */
 const TUNINGS = [
   {id:'standard', en:'Standard (E A D G B e)', uk:'Стандартний (E A D G B e)', midi:[64,59,55,50,45,40]},
   {id:'dropd',    en:'Drop D (D A D G B e)',   uk:'Drop D (D A D G B e)',      midi:[64,59,55,50,45,38]},
   {id:'dadgad',   en:'DADGAD',                 uk:'DADGAD',                    midi:[62,57,55,50,45,38]},
   {id:'openg',    en:'Open G (D G D G B d)',   uk:'Open G (D G D G B d)',      midi:[62,59,55,50,43,38]},
+  {id:'custom',   en:'Custom',                 uk:'Власний',                   custom:true},
 ];
+/* the live custom tuning (high -> low MIDI), used when the Custom entry is selected.
+   Seeded from / clamped against the standard tuning; persisted via saveState. */
+let customTuning = [64,59,55,50,45,40];
+const TUNE_LO = 34, TUNE_HI = 69;   // editor range: Bb1 … A4 (covers every common guitar tuning)
 let tuningIdx = 0, lefty = false;
+function tuningMidi(){ return TUNINGS[tuningIdx].custom ? customTuning : TUNINGS[tuningIdx].midi; }
 function applyTuning(){
-  const m = TUNINGS[tuningIdx].midi;
+  const m = tuningMidi();
   OPEN_MIDI = m.slice();
   OPEN = m.map(x=>mod(x,12));
   SNAMES = m.map(x=>{ const n=NOTES[mod(x,12)]; return n.replace('#','♯'); });

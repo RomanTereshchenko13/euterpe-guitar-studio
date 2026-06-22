@@ -190,7 +190,9 @@ if (T) {
    'drill_comp','drill_comp_meta','co_prog','co_now','co_next','co_hint',
    'drill_groove','drill_groove_meta','gf_swing','gf_accent','gf_mute','gf_hint',
    'a11y_label','a11y_palette','a11y_shapes',
-   'wc_title','wc_lead','wc_ref','wc_practice','wc_ear','wc_got'].forEach(k => {
+   'wc_title','wc_lead','wc_ref','wc_practice','wc_ear','wc_got',
+   'tun_custom','cal_label','cal_test','cal_tapnow','cal_unit',
+   'prog_active','prog_due','prog_review','share_btn','share_copied'].forEach(k => {
     ok('i18n new key present (uk+en): ' + k,
        T.I18N.uk[k] !== undefined && T.I18N.en[k] !== undefined);
   });
@@ -1108,6 +1110,104 @@ if (T) {
     ok('starting Loop stops the progression', T.state().seq === false);
     T.loopToggle();
     ok('loop stopped after exclusivity check', T.state().loop === false);
+  })();
+
+  /* ---- 2.5: custom tuning (Phase 2) ---- */
+  (function customTuning() {
+    const ci = T.TUNINGS.findIndex(t => t.custom);
+    ok('custom tuning: a Custom entry exists', ci >= 0);
+    ok('custom tuning: Custom has bilingual labels',
+       ci >= 0 && !!T.TUNINGS[ci].en && !!T.TUNINGS[ci].uk && !T.TUNINGS[ci].midi);
+    // selecting Custom + setting a per-string MIDI flows through applyTuning → OPEN_MIDI
+    const want = [67, 62, 57, 52, 47, 43];   // an arbitrary valid custom tuning (all within TUNE_LO..HI)
+    T.setCustomTuning(want);
+    T.setTuningIdx(ci);
+    ok('custom tuning: applyTuning reads customTuning', JSON.stringify(T.getOpenMidi()) === JSON.stringify(want));
+    ok('custom tuning: tuningMidi returns the custom array when selected',
+       JSON.stringify(T.tuningMidi()) === JSON.stringify(want));
+    ok('custom tuning: editor range is a sane guitar span', T.TUNE_LO < T.TUNE_HI && T.TUNE_LO >= 24 && T.TUNE_HI <= 76);
+    // persistence: only a 6-length all-in-range array is restored
+    T.setTuningIdx(0); T.applyTuning();   // back to standard so later tests are unaffected
+  })();
+
+  /* ---- 2.5: timing calibration (Phase 3 debt) ---- */
+  (function calibration() {
+    // pure averaging: trims the single fastest + slowest, means the rest
+    ok('cal: empty deltas → 0', T.calcLatencyOffset([]) === 0);
+    ok('cal: trimmed mean ignores the extremes',
+       T.calcLatencyOffset([1000, 40, 50, 60, -1000]) === 50, String(T.calcLatencyOffset([1000, 40, 50, 60, -1000])));
+    ok('cal: result clamps to CAL_MAX', T.calcLatencyOffset([9999, 9999, 9999, 9999]) === T.CAL_MAX);
+    ok('cal: result clamps to CAL_MIN', T.calcLatencyOffset([-9999, -9999, -9999, -9999]) === T.CAL_MIN);
+    // setter clamps + calOffsetSec mirrors it in seconds
+    T.setCalMs(120);
+    ok('cal: setCalMs stores within bounds', T.getCalMs() === 120);
+    ok('cal: calOffsetSec is ms/1000', Math.abs(T.calOffsetSec() - 0.12) < 1e-9);
+    T.setCalMs(9999); ok('cal: setCalMs clamps high', T.getCalMs() === T.CAL_MAX);
+    T.setCalMs(0);
+    // live tap loop: nearest-beat matching produces a sensible offset, then resets
+    const c = T.calStart();
+    ok('cal: calStart returns a session', !!c && Array.isArray(c.deltas));
+    if (c) {
+      const AC = win.__AC;
+      c.beats = [10.0, 10.5, 11.0];                 // pretend three beats were scheduled
+      AC.__ctx.currentTime = 10.52; T.calTap();      // ~20ms late vs 10.5
+      AC.__ctx.currentTime = 11.03; T.calTap();      // ~30ms late vs 11.0
+      ok('cal: taps recorded against nearest beat', T.getCal().deltas.length === 2);
+      const off = T.calFinish();
+      ok('cal: calFinish stores a positive offset for late taps', off > 0 && off === T.getCalMs());
+      ok('cal: calFinish ends the session', T.getCal() === null);
+    }
+    T.calCancel(); T.setCalMs(0);
+  })();
+
+  /* ---- 2.5: learner review + activity (spine #3) ---- */
+  (function review() {
+    const NOW = 1000000000000;
+    T.resetLearner();
+    T.recordAttempt('note:A:str5', false, NOW);     // due NOW+60000 (overdue soon)
+    T.recordAttempt('interval:P5', false, NOW);     // due NOW+60000
+    T.recordAttempt('note:C:str5', true, NOW);      // due ~1 day out (not yet)
+    const rev = T.learnerReview(NOW + 60001);
+    ok('review: counts only past-due items', rev.total === 2, JSON.stringify(rev.by));
+    ok('review: splits by namespace', rev.by.note === 1 && rev.by.interval === 1);
+    ok('review: top is a due namespace', rev.top === 'note' || rev.top === 'interval');
+    ok('review: nothing due → total 0', T.learnerReview(NOW).total === 0);
+    // activity: distinct calendar days within the window
+    T.resetLearner();
+    const DAY = 86400000;
+    T.recordSession('notes', 1, NOW);
+    T.recordSession('notes', 1, NOW + 1000);        // same day → still 1
+    T.recordSession('notes', 1, NOW - DAY);         // prior day → 2
+    T.recordSession('notes', 1, NOW - 30 * DAY);    // outside the 7-day window → ignored
+    const act = T.learnerActivity(NOW);
+    ok('activity: distinct days in the window', act.days === 2, String(act.days));
+    ok('activity: reports the window size', act.window === 7);
+    T.resetLearner();
+  })();
+
+  /* ---- 2.5: shareable deep links (Phase 9) ---- */
+  (function deepLinks() {
+    // set a known context, encode it, scramble, then decode and assert it round-trips
+    T.setMode('reference'); T.selectTab('harmony'); T.setHView('chords');
+    T.setKey(9, 'A', 5);          // A, Aeolian
+    T.setChQual(8);               // some seventh quality (valid QUALITIES index)
+    const enc = T.encodeShareState();
+    ok('share: encodes the key + tab', /(^|&)k=9(&|$)/.test(enc) && /(^|&)t=harmony(&|$)/.test(enc), enc);
+    ok('share: shareURL includes the hash', T.shareURL().indexOf('#' + enc) >= 0);
+    // scramble the live context
+    T.setKey(0, 'C', 0); T.selectTab('scales'); T.setScView('scale');
+    // apply the encoded link via the hash and confirm the context comes back
+    win.location.hash = '#' + enc;
+    const applied = T.applyShareHash();
+    const s = T.state();
+    ok('share: applyShareHash reports success', applied === true);
+    ok('share: root restored from link', s.gRoot === 9);
+    ok('share: scale restored from link', s.scIdx === 5);
+    ok('share: tab restored from link', s.currentTab === 'harmony');
+    ok('share: chord quality restored from link', s.chQual === 8);
+    ok('share: hash stripped after applying', (win.location.hash || '') === '');
+    ok('share: a non-share hash is ignored', T.applyShareHash() === false);
+    T.setKey(0, 'C', 0); T.setMode('reference');   // clean slate for any later check
   })();
 }
 

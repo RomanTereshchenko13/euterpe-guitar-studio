@@ -183,12 +183,22 @@ function renderProgressInto(hostId){
   const s=learnerStats();
   if(!s.seen && !s.sessions){ host.innerHTML='<div class="pp-empty">'+t('prog_empty')+'</div>'; return; }
   const stat=(val,lab)=>'<div class="pp-stat"><div class="pp-val">'+val+'</div><div class="pp-lab">'+lab+'</div></div>';
-  host.innerHTML='<div class="pp-stats">'+
+  const act=learnerActivity();
+  let html='<div class="pp-stats">'+
     stat(s.items, t('prog_tracked'))+
     stat(Math.round(s.accuracy*100)+'%', t('prog_accuracy'))+
     stat(s.bestStreak, t('prog_streak'))+
+    stat(act.days, t('prog_active'))+
     stat(s.sessions, t('prog_sessions'))+
   '</div>';
+  // close the loop (spine #3): when the SRS says items are due, surface the count
+  // and a one-tap Review that drops into the namespace with the most overdue items.
+  const rev=learnerReview();
+  if(rev.total>0 && rev.top){
+    html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_due')+' · '+rev.total+'</span>'+
+      '<button type="button" class="btn play pp-review-btn" data-review="'+rev.top+'">'+t('prog_review')+'</button></div>';
+  }
+  host.innerHTML=html;
 }
 function renderEar(){ renderProgressInto('ear-progress'); }
 function renderEarPrompt(){

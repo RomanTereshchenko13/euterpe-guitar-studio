@@ -198,6 +198,62 @@ function visualDrain(){
   if(visualQ.length || clocks.size) visRAF=requestAnimationFrame(visualDrain);
 }
 
+/* ===================== TIMING CALIBRATION (Phase 3 debt) =====================
+   A one-time round-trip latency offset (ms) the scoring window will subtract so a
+   tap that *felt* on the beat scores on the beat. Built now (cheap) ahead of the
+   first scored/mic tier that consumes it — no scored tap drill exists yet, so this
+   only measures + stores the offset and exposes calOffsetSec() for later (the
+   roadmap calls it out as needed for tap windows now and reused by mic windows).
+
+   Measure: a steady click runs on the cue bus; the player taps along; each tap is
+   matched to its nearest scheduled beat and a trimmed mean of the deltas is the
+   offset. The averaging (calcLatencyOffset) is pure + unit-tested; the live tap
+   loop rides the same two-clocks scheduler as everything else. */
+let calMs = 0;                                       // stored offset, ms (positive = taps land late)
+const CAL_MIN = -100, CAL_MAX = 300, CAL_TAPS = 8;   // slider bounds + taps per test
+function calOffsetSec(){ return calMs/1000; }        // future scoring windows read this
+function clampCal(v){ return Math.max(CAL_MIN, Math.min(CAL_MAX, Math.round(v))); }
+// robust centre of the tap deltas: with enough taps, drop the single fastest +
+// slowest then mean the rest (kills one fumbled tap); otherwise mean them all.
+// Pure, so the harness can assert it directly.
+function calcLatencyOffset(deltas){
+  const a=(deltas||[]).filter(d=>typeof d==='number' && isFinite(d)).sort((x,y)=>x-y);
+  if(!a.length) return 0;
+  const trimmed = a.length>=4 ? a.slice(1, a.length-1) : a;
+  return clampCal(trimmed.reduce((s,d)=>s+d,0)/trimmed.length);
+}
+let cal=null;   // { beats:[audioTime…], deltas:[ms…], clock } while a tap test runs
+function calStart(){
+  const ctx=audio(); if(!ctx) return null;
+  calCancel();
+  cal={ beats:[], deltas:[], clock:null };
+  cal.clock={ interval:()=>beat(), tick:(time,count)=>{ cal.beats.push(time); if(typeof metroClick==='function') metroClick(time, count%4===0); if(cal.beats.length>32) cal.beats.shift(); } };
+  if(typeof addClock==='function') addClock(cal.clock);
+  return cal;
+}
+function calCancel(){ if(cal && cal.clock && typeof removeClock==='function') removeClock(cal.clock); cal=null; }
+// one tap: match it to the nearest scheduled beat, record the signed delta (ms).
+// Returns the running tap count so the UI can advance / finish at CAL_TAPS.
+function calTap(now){
+  if(!cal) return 0;
+  now = (typeof now==='number') ? now : (actx?actx.currentTime:0);
+  if(cal.beats.length){
+    let nearest=cal.beats[0];
+    for(let i=1;i<cal.beats.length;i++){ if(Math.abs(cal.beats[i]-now)<Math.abs(nearest-now)) nearest=cal.beats[i]; }
+    cal.deltas.push((now-nearest)*1000);
+  }
+  return cal.deltas.length;
+}
+// finish: compute + store the offset from the collected taps, stop the click.
+function calFinish(){
+  if(!cal) return calMs;
+  const off=calcLatencyOffset(cal.deltas);
+  calCancel();
+  calMs=off;
+  return calMs;
+}
+function setCalMs(v){ calMs=clampCal(typeof v==='number'?v:0); return calMs; }
+
 /* ---- cue sounds (cue bus): short synthesized UI feedback. The metronome uses
    the cue bus; correct / wrong / count-in are foundation primitives consumed by
    Practice, Ear-training and Rhythm modes (roadmap phases D, E, G). ---- */

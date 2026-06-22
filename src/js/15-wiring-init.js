@@ -341,7 +341,17 @@ document.getElementById('lang-switch').addEventListener('click',e=>{
 });
 
 /* ---- toolbar wiring ---- */
-document.getElementById('tb-tuning').onchange=function(){ tuningIdx=+this.value; applyTuning(); buildTuner(); renderAllBoards(); saveState(); };
+document.getElementById('tb-tuning').onchange=function(){
+  const prevMidi=OPEN_MIDI.slice();
+  tuningIdx=+this.value;
+  if(TUNINGS[tuningIdx].custom) customTuning=prevMidi;   // seed Custom from the tuning you were on
+  applyTuning(); buildTuner(); buildCustomTuning(); applyCustomTuningVis(); renderAllBoards(); saveState();
+};
+/* custom tuning: a per-string select changes one string's MIDI; re-apply so the
+   board, tuner and string labels follow immediately. */
+{ const cs=document.getElementById('tb-custom-strings');
+  if(cs) cs.addEventListener('change', e=>{ const s=e.target.closest('.custom-str'); if(!s) return;
+    customTuning[+s.dataset.i]=+s.value; applyTuning(); buildTuner(); renderAllBoards(); saveState(); }); }
 /* master volume: scales the whole-app output (masterOut, before the limiter). Audio is
    lazy, so when the bus isn't up yet we just stash masterVol — setupBus reads it on
    first sound. setTargetAtTime ramps the live gain so dragging is click-free. */
@@ -368,6 +378,58 @@ function applyA11y(){
 }
 { const p=document.getElementById('tb-cbpalette'); if(p) p.onclick=function(){ cbPalette=!cbPalette; applyA11y(); saveState(); };
   const s=document.getElementById('tb-shapes');    if(s) s.onclick=function(){ fnShapes=!fnShapes;  applyA11y(); saveState(); }; }
+
+/* ---- timing calibration (Phase 3 debt) ----
+   The Tap-test button is a tiny state machine: first click starts the click track,
+   each later click is a tap matched to the nearest beat; at CAL_TAPS it computes +
+   stores the offset (calMs). The slider sets it by hand. calOffsetSec() is the
+   value future scored/mic windows will read; nothing consumes it on screen yet. */
+function calBtnLabel(){
+  const b=document.getElementById('tb-cal-tap'); if(!b) return;
+  if(cal){ b.classList.add('active'); b.textContent=t('cal_tapnow')+' '+cal.deltas.length+'/'+CAL_TAPS; }
+  else { b.classList.remove('active'); b.textContent=t('cal_test'); }
+}
+function applyCal(){
+  const s=document.getElementById('tb-cal'); if(s) s.value=calMs;
+  const v=document.getElementById('tb-cal-val'); if(v) v.textContent=calMs+' '+t('cal_unit');
+  calBtnLabel();
+}
+{ const cb=document.getElementById('tb-cal-tap');
+  if(cb) cb.onclick=function(){
+    if(!cal){ calStart(); calBtnLabel(); return; }
+    const n=calTap();
+    if(n>=CAL_TAPS){ calFinish(); applyCal(); saveState(); }
+    else calBtnLabel();
+  };
+  const cs=document.getElementById('tb-cal');
+  if(cs){ cs.oninput=function(){ setCalMs(+this.value); applyCal(); }; cs.onchange=saveState; } }
+
+/* ---- share a deep link (Phase 9 distribution) ----
+   Copy a URL whose hash encodes the current key / scale / chord view; opening it
+   lands a new visitor on that exact context (applyShareHash on load). */
+function shareFallback(){ try{ location.hash=encodeShareState(); }catch(e){ /* ignore */ } }
+{ const sb=document.getElementById('tb-share');
+  if(sb) sb.onclick=function(){
+    const url=shareURL();
+    const flash=()=>{ sb.textContent=t('share_copied'); sb.classList.add('active'); setTimeout(()=>{ sb.textContent=t('share_btn'); sb.classList.remove('active'); }, 1400); };
+    try{
+      if(typeof navigator!=='undefined' && navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(url).then(flash).catch(()=>{ shareFallback(); flash(); });
+      else { shareFallback(); flash(); }
+    }catch(e){ shareFallback(); flash(); }
+  }; }
+
+/* ---- review routing (spine #3): the progress card's Review button drops into the
+   drill for the namespace with the most overdue items; the drills already prefer
+   due items, so this just opens the right one. */
+function startReview(ns){
+  if(ns==='note'){ setMode('practice'); startDrill(); }
+  else if(ns==='interval'){ setMode('ear'); startEar('interval'); }
+  else if(ns==='chordq'){ setMode('ear'); startEar('chordq'); }
+  else if(ns==='rhythm'){ setMode('ear'); startEar('rhythm'); }
+}
+['practice-progress','ear-progress'].forEach(id=>{ const h=document.getElementById(id);
+  if(h) h.addEventListener('click', e=>{ const b=e.target.closest('[data-review]'); if(b) startReview(b.dataset.review); }); });
 document.getElementById('tb-lefty').onclick=function(){ lefty=!lefty; this.classList.toggle('active',lefty); this.setAttribute('aria-pressed',lefty); renderAllBoards(); renderCircle(); saveState(); };
 /* the metronome / loop / sequencer clocks read beat() live, so the tempo glides
    without restarting — just update the value and the label here. */
@@ -496,10 +558,15 @@ window.addEventListener('resize', markScrollables);
 try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(markScrollables); }catch(_){}
 applyAudioAvailability();
 applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
+applyCal();    // reflect the restored timing-calibration offset in the toolbar
+// Deep link (Phase 9): if the URL hash carries a shared context, apply it over the
+// restored state now that the shell + setters are up, then strip the hash.
+const fromShare = (typeof applyShareHash==='function') && applyShareHash();
 document.getElementById('app-ver').textContent = 'v' + APP_VERSION;
 // First-run onboarding: only a genuinely first visit (no saved state) leaves
-// welcomeSeen false — returning users are grandfathered in loadState().
-if(!welcomeSeen) showWelcome();
+// welcomeSeen false — returning users are grandfathered in loadState(). A visitor
+// arriving via a share link goes straight to the shared view, not the welcome.
+if(!welcomeSeen && !fromShare) showWelcome();
 
 /* ---- test introspection hook (Phase C+) ----
    Built ONLY when a harness sets window.__GS_ALLOW_TEST__ before the page loads,
@@ -516,6 +583,17 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
     schedAdvance, clocks, beat,
+    // custom tuning (Phase 2)
+    TUNINGS, applyTuning, tuningMidi, TUNE_LO, TUNE_HI,
+    getOpenMidi:()=>OPEN_MIDI.slice(), getCustomTuning:()=>customTuning.slice(),
+    setCustomTuning:(arr)=>{ customTuning=arr.slice(); }, setTuningIdx:(i)=>{ tuningIdx=i; applyTuning(); },
+    // timing calibration (Phase 3 debt)
+    calcLatencyOffset, calOffsetSec, setCalMs, getCalMs:()=>calMs, CAL_MIN, CAL_MAX, CAL_TAPS,
+    calStart, calTap, calFinish, calCancel, getCal:()=>cal,
+    // learner review + activity (spine #3)
+    learnerReview, learnerActivity, startReview,
+    // shareable deep links (Phase 9)
+    encodeShareState, applyShareHash, shareURL,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
     renderAllBoards,
     // learner model (spine #3, 3b)

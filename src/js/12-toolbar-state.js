@@ -6,6 +6,7 @@ function buildToolbar(){
   fr.innerHTML=FRET_RANGES.map((r,i)=>`<option value="${i}"${i===fretRangeIdx?' selected':''}>${r.key?t(r.key):r.label}</option>`).join('');
   const cp=document.getElementById('tb-capo');
   if(cp) cp.innerHTML=Array.from({length:8},(_,i)=>`<option value="${i}"${i===capo?' selected':''}>${i===0?t('capo_off'):i}</option>`).join('');
+  buildCustomTuning(); applyCustomTuningVis();
   const tp=document.getElementById('tb-tempo'); tp.value=tempo;
   document.getElementById('tb-bpm').textContent=tempo+' BPM';
   const vol=document.getElementById('tb-vol'); if(vol) vol.value=Math.round(masterVol*100);
@@ -31,6 +32,20 @@ function applyToolbarState(){
   tg.classList.toggle('open', toolbarOpen);
   tg.setAttribute('aria-expanded', toolbarOpen);
 }
+/* custom tuning (Phase 2): six per-string note selects (high → low, matching the
+   board's top-to-bottom string order), shown only when the Custom tuning is picked.
+   Each option is a MIDI pitch labelled note+octave; the board/highlight math is
+   already tuning-driven, so changing one rebuilds customTuning and re-applies. */
+function midiLabel(m){ return NOTES[mod(m,12)].replace('#','♯') + (Math.floor(m/12)-1); }
+function buildCustomTuning(){
+  const host=document.getElementById('tb-custom-strings'); if(!host) return;
+  host.innerHTML = customTuning.map((m,i)=>{
+    let opts='';
+    for(let v=TUNE_HI; v>=TUNE_LO; v--) opts += `<option value="${v}"${v===m?' selected':''}>${midiLabel(v)}</option>`;
+    return `<select class="custom-str" data-i="${i}" aria-label="string ${i+1}">${opts}</select>`;
+  }).join('');
+}
+function applyCustomTuningVis(){ const g=document.getElementById('tb-custom'); if(g) g.hidden = !TUNINGS[tuningIdx].custom; }
 function applyBackingPanel(){
   const p=document.getElementById('backing-panel'), tg=document.getElementById('backing-toggle');
   if(p) p.classList.toggle('collapsed', !backingOpen);
@@ -172,8 +187,8 @@ let currentTab='harmony';
 // older saves (no `mode`) and the existing reference behaviour are untouched.
 let currentMode='reference';
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
-  lang, mode:currentMode, tab:currentTab, tuningIdx, fretRangeIdx, tempo, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
-  cbPalette, fnShapes, welcomeSeen,
+  lang, mode:currentMode, tab:currentTab, tuningIdx, customTuning, fretRangeIdx, tempo, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
+  calMs, cbPalette, fnShapes, welcomeSeen,
   gRoot, gRootLbl, gMode, hView, scView,
   chQual, arpPos, scIdx, scPos, scOverlay,
   chVoicing,
@@ -188,6 +203,8 @@ function loadState(){ try{
   if(s.lang==='uk'||s.lang==='en') lang=s.lang;
   if(s.mode==='reference'||s.mode==='practice'||s.mode==='ear') currentMode=s.mode;   // mode axis (3a; Ear added in Phase 4) — default reference
   if(Number.isInteger(s.tuningIdx)&&TUNINGS[s.tuningIdx]) tuningIdx=s.tuningIdx;
+  if(Array.isArray(s.customTuning)&&s.customTuning.length===6&&s.customTuning.every(m=>Number.isInteger(m)&&m>=TUNE_LO&&m<=TUNE_HI)) customTuning=s.customTuning.slice();
+  if(typeof s.calMs==='number'&&isFinite(s.calMs)) calMs=clampCal(s.calMs);   // 05-audio bounds (CAL_MIN..CAL_MAX)
   if(Number.isInteger(s.fretRangeIdx)&&FRET_RANGES[s.fretRangeIdx]) fretRangeIdx=s.fretRangeIdx;
   if(Number.isInteger(s.capo)&&s.capo>=0&&s.capo<=11) capo=s.capo;
   if(typeof s.tempo==='number'&&s.tempo>=40&&s.tempo<=200) tempo=s.tempo;
@@ -237,4 +254,47 @@ function loadState(){ try{
       .map(st=>({pc:st.pc, lbl:(typeof st.lbl==='string'?st.lbl:ROOTS[st.pc]), qi:st.qi, bars:([1,2,4].includes(st.bars)?st.bars:1)}));
   }
 }catch(e){ devWarn('saved state could not be restored; using defaults', e); return false; } return true; }
+
+/* ---- shareable deep links (Phase 9 distribution) ----
+   Encode the musical context (the things a "look at this" link should carry) into
+   the URL hash, so a backend-less single-file build is still addressable: open the
+   link and the app lands on that key / scale / chord view. Applied once on load via
+   applyShareHash() then stripped (so later navigation isn't re-pinned), and
+   persisted to localStorage from there on like any other state. The setters it
+   drives (setKey / setScView / setHView / selectTab / setMode) live in wiring-init
+   and exist by the time init calls this. */
+function encodeShareState(){
+  const p=new URLSearchParams();
+  p.set('m', currentMode);
+  p.set('t', currentTab);
+  p.set('k', String(gRoot));
+  p.set('r', gRootLbl);
+  p.set('s', String(scIdx));
+  if(currentTab==='harmony'){ p.set('hv', hView); p.set('q', String(chQual)); }
+  if(currentTab==='scales')  p.set('sv', scView);
+  return p.toString();
+}
+function shareURL(){
+  const base=(typeof location!=='undefined') ? (location.origin+location.pathname) : '';
+  return base + '#' + encodeShareState();
+}
+function applyShareHash(){
+  if(typeof location==='undefined') return false;
+  const h=(location.hash||'').replace(/^#/, ''); if(!h) return false;
+  let p; try{ p=new URLSearchParams(h); }catch(e){ devWarn('bad share hash', e); return false; }
+  if(!p.has('k') && !p.has('t') && !p.has('s')) return false;   // not one of ours
+  const k=parseInt(p.get('k'),10), r=p.get('r'), s=parseInt(p.get('s'),10);
+  if(Number.isInteger(k) && k>=0 && k<12){
+    const lbl=(typeof r==='string' && r) ? r : ROOTS[k];
+    setKey(k, lbl, (Number.isInteger(s) && SCALES[s]) ? s : undefined);
+  } else if(Number.isInteger(s) && SCALES[s]){ scIdx=s; }
+  const sv=p.get('sv'); if(sv==='scale'||sv==='notes') setScView(sv);
+  const hv=p.get('hv'); if(hv==='chords'||hv==='triads'||hv==='arp'||hv==='identify') setHView(hv);
+  const q=parseInt(p.get('q'),10); if(Number.isInteger(q) && QUALITIES[q]){ chQual=q; chVoicing=0; }
+  const tab=p.get('t'); if(tab==='harmony'||tab==='scales'||tab==='circle') selectTab(tab);
+  const m=p.get('m'); setMode(m==='practice'||m==='ear'?m:'reference');
+  // strip the hash so a reload / later nav isn't re-pinned to the shared state
+  try{ history.replaceState(null, '', location.pathname+location.search); }catch(e){ /* ignore */ }
+  return true;
+}
 

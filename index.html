@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 2.4.0  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 2.5.0  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="2.4.0">
+<meta name="version" content="2.5.0">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -218,6 +218,10 @@
   .pp-stat { flex: 1 1 110px; min-width: 92px; padding: 12px 14px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius); }
   .pp-val { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: var(--text); }
   .pp-lab { font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
+  /* due-for-review row (spine #3): surfaces the SRS queue + a one-tap Review CTA */
+  .pp-review { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .pp-review-n { font-size: 13.5px; color: var(--text-dim); }
+  .pp-review-btn { margin-left: auto; }
 
   /* ---- note-naming drill (3c) ---- */
   .drill-card { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; padding: 15px 18px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); color: var(--text); cursor: pointer; font-family: inherit; transition: border-color 0.15s, background 0.15s; }
@@ -496,11 +500,17 @@
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
   .toolbar.collapsed { display: none; }
   .toolbar .tb-group, .tb-bar .tb-group { display: flex; align-items: center; gap: 7px; }
+  /* the display:flex above outranks the UA [hidden]{display:none}, so a hidden group
+     (e.g. the custom-tuning editor on a non-custom tuning) would still show — re-assert it */
+  .toolbar .tb-group[hidden], .tb-bar .tb-group[hidden] { display: none; }
   /* the two tb-bar groups wrap their controls in .tbg-inner so they can fold via grid-rows on
      mobile (see the condensing-header block); the inner keeps the original horizontal layout. */
   .tbg-inner { display: flex; align-items: center; gap: 7px; min-width: 0; }
   .toolbar .tb-label, .tb-bar .tb-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
   .toolbar select { font-size: 12px; padding: 5px 9px; }
+  /* custom-tuning editor: six compact per-string selects on one wrapping row */
+  .custom-strings { display: flex; flex-wrap: wrap; gap: 4px; }
+  .toolbar .custom-str { font-size: 11px; padding: 3px 5px; }
   .toolbar .divider { height: 20px; }
   input[type="range"] { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 3px; background: var(--border-strong); outline: none; width: 116px; cursor: pointer; }
   input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
@@ -913,6 +923,13 @@
         <span class="tb-label" data-i18n="tb_tuning">Стрій</span>
         <select id="tb-tuning"></select>
       </div>
+      <!-- Custom tuning (Phase 2): six per-string note selects, shown only when the
+           Custom tuning preset is picked (applyCustomTuningVis). Built by
+           buildCustomTuning() from the live customTuning. -->
+      <div class="tb-group tb-custom" id="tb-custom" hidden>
+        <span class="tb-label" data-i18n="tun_custom">Власний стрій</span>
+        <span class="custom-strings" id="tb-custom-strings"></span>
+      </div>
       <!-- Reference-tone tuner (no mic): one button per open string of the current
            tuning; tap to hold a sustained pitch and tune a real guitar against it.
            Buttons are built from the live tuning by buildTuner(). -->
@@ -936,6 +953,20 @@
         <span class="tb-label" data-i18n="a11y_label">Доступність</span>
         <button class="btn" id="tb-cbpalette" aria-pressed="false" data-i18n="a11y_palette">Палітра для дальтоніків</button>
         <button class="btn" id="tb-shapes" aria-pressed="false" data-i18n="a11y_shapes">Форми на нотах</button>
+      </div>
+      <!-- Timing calibration (Phase 3 debt): a Tap-test that measures your round-trip
+           latency + a manual slider; the stored offset (calMs) feeds future scored /
+           mic timing windows via calOffsetSec(). -->
+      <div class="tb-group tb-cal">
+        <span class="tb-label" data-i18n="cal_label">Зсув часу</span>
+        <button class="btn" id="tb-cal-tap"></button>
+        <input type="range" id="tb-cal" min="-100" max="300" step="5" value="0" aria-label="Timing offset (ms)">
+        <span class="bpm-val" id="tb-cal-val">0 ms</span>
+      </div>
+      <!-- Share (Phase 9 distribution): copy a deep link encoding the current
+           key / scale / chord view (encodeShareState → URL hash). -->
+      <div class="tb-group">
+        <button class="btn" id="tb-share" data-i18n="share_btn">Поділитися</button>
       </div>
     </div>
     <!-- Backing band (metronome + synth bass/drums): secondary jam-along tools, one
@@ -1456,10 +1487,21 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '2.5.0';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.5.0', date:'2026-06-22',
+    en:['Practice now closes the loop: the progress card shows how many items are due for review and an Active-days count, with a one-tap Review that drops you into the right drill — the notes, intervals and chords you miss come back to you.',
+        'Custom tunings: pick "Custom" in Settings and set any note per string — the fretboard, tuner and labels follow, and it is remembered.',
+        'Timing calibration in Settings: a quick tap-test (or a manual slider) measures your device\'s audio latency, so timed practice can score fairly later on.',
+        'Share a view: a Share button copies a link that opens Euterpe on the exact key, scale or chord you are looking at.',
+        'Punchier backing drums — a clearer kick attack, more snare snap and a crisper hi-hat.'],
+    uk:['«Практика» тепер замикає коло: картка прогресу показує, скільки вправ час повторити, і кількість активних днів, а кнопка «Повторити» одразу веде до потрібної вправи — ноти, інтервали й акорди, що даються важче, повертаються.',
+        'Власні строї: обери «Власний» у «Налаштуваннях» і задай будь-яку ноту для кожної струни — гриф, тюнер і підписи підлаштуються, і це запамʼятається.',
+        'Калібрування часу в «Налаштуваннях»: швидкий тест на дотик (або повзунок) міряє затримку звуку твого пристрою, щоб згодом практика з рахунком оцінювалася чесно.',
+        'Поділись виглядом: кнопка «Поділитися» копіює посилання, що відкриває Euterpe саме на тій тональності, гамі чи акорді, які ти дивишся.',
+        'Соковитіші ударні супроводу — чіткіша атака бочки, більше «снепу» в малому барабані й дзвінкіший хай-хет.'] },
   { v:'2.4.0', date:'2026-06-22',
     en:['Practice\'s Rhythm section is now complete with three new coach drills you play along with over the backing band.',
         'Strumming patterns: common down/up patterns loop over your chord on an eighth-note grid, lit slot-by-slot in time — see it, hear it, strum along.',
@@ -1851,6 +1893,10 @@ const I18N = {
     tb_settings:'Налаштування', tb_volume:'Гучність', tb_tuner:'Тюнер',
     tb_tuning:'Стрій', tb_lefty:'Ліворукий', tb_frets:'Лади', tb_tempo:'Темп', tb_capo:'Каподастр', capo_off:'без',
     a11y_label:'Доступність', a11y_palette:'Палітра для дальтоніків', a11y_shapes:'Форми на нотах',
+    tun_custom:'Власний стрій',
+    cal_label:'Зсув часу', cal_test:'Тест ритму', cal_tapnow:'Тап!', cal_unit:'мс',
+    prog_active:'Активних днів', prog_due:'До повтору', prog_review:'Повторити',
+    share_btn:'Поділитися', share_copied:'Скопійовано!',
     wc_title:'Вітаємо в Euterpe',
     wc_lead:'Гітарна студія для теорії та практики. Три способи почати:',
     wc_ref:'обери тональність і досліджуй акорди, гами й гриф.',
@@ -1962,6 +2008,10 @@ const I18N = {
     tb_settings:'Settings', tb_volume:'Volume', tb_tuner:'Tuner',
     tb_tuning:'Tuning', tb_lefty:'Left-handed', tb_frets:'Frets', tb_tempo:'Tempo', tb_capo:'Capo', capo_off:'off',
     a11y_label:'Accessibility', a11y_palette:'Colour-blind palette', a11y_shapes:'Shapes on dots',
+    tun_custom:'Custom tuning',
+    cal_label:'Timing offset', cal_test:'Tap test', cal_tapnow:'Tap!', cal_unit:'ms',
+    prog_active:'Active days', prog_due:'Due to review', prog_review:'Review',
+    share_btn:'Share', share_copied:'Copied!',
     wc_title:'Welcome to Euterpe',
     wc_lead:'A guitar studio for theory and practice. Three ways in:',
     wc_ref:'pick a key and explore chords, scales and the fretboard.',
@@ -2007,16 +2057,26 @@ let SNAMES = ['e','B','G','D','A','E'];
 const FRETS = 22;
 const DOTS = [3,5,7,9,12,15,17,19,21];
 
-/* Alternate tunings, defined by MIDI note per string (high -> low). */
+/* Alternate tunings, defined by MIDI note per string (high -> low). The last
+   entry is the user-editable Custom tuning (Phase 2): it carries no fixed `midi`,
+   reading the mutable `customTuning` below instead, so any per-string tuning works
+   without a new preset. The board/highlight math is already tuning-driven, so a
+   custom MIDI per string just flows through applyTuning like any preset. */
 const TUNINGS = [
   {id:'standard', en:'Standard (E A D G B e)', uk:'Стандартний (E A D G B e)', midi:[64,59,55,50,45,40]},
   {id:'dropd',    en:'Drop D (D A D G B e)',   uk:'Drop D (D A D G B e)',      midi:[64,59,55,50,45,38]},
   {id:'dadgad',   en:'DADGAD',                 uk:'DADGAD',                    midi:[62,57,55,50,45,38]},
   {id:'openg',    en:'Open G (D G D G B d)',   uk:'Open G (D G D G B d)',      midi:[62,59,55,50,43,38]},
+  {id:'custom',   en:'Custom',                 uk:'Власний',                   custom:true},
 ];
+/* the live custom tuning (high -> low MIDI), used when the Custom entry is selected.
+   Seeded from / clamped against the standard tuning; persisted via saveState. */
+let customTuning = [64,59,55,50,45,40];
+const TUNE_LO = 34, TUNE_HI = 69;   // editor range: Bb1 … A4 (covers every common guitar tuning)
 let tuningIdx = 0, lefty = false;
+function tuningMidi(){ return TUNINGS[tuningIdx].custom ? customTuning : TUNINGS[tuningIdx].midi; }
 function applyTuning(){
-  const m = TUNINGS[tuningIdx].midi;
+  const m = tuningMidi();
   OPEN_MIDI = m.slice();
   OPEN = m.map(x=>mod(x,12));
   SNAMES = m.map(x=>{ const n=NOTES[mod(x,12)]; return n.replace('#','♯'); });
@@ -2313,6 +2373,62 @@ function visualDrain(){
   if(visualQ.length || clocks.size) visRAF=requestAnimationFrame(visualDrain);
 }
 
+/* ===================== TIMING CALIBRATION (Phase 3 debt) =====================
+   A one-time round-trip latency offset (ms) the scoring window will subtract so a
+   tap that *felt* on the beat scores on the beat. Built now (cheap) ahead of the
+   first scored/mic tier that consumes it — no scored tap drill exists yet, so this
+   only measures + stores the offset and exposes calOffsetSec() for later (the
+   roadmap calls it out as needed for tap windows now and reused by mic windows).
+
+   Measure: a steady click runs on the cue bus; the player taps along; each tap is
+   matched to its nearest scheduled beat and a trimmed mean of the deltas is the
+   offset. The averaging (calcLatencyOffset) is pure + unit-tested; the live tap
+   loop rides the same two-clocks scheduler as everything else. */
+let calMs = 0;                                       // stored offset, ms (positive = taps land late)
+const CAL_MIN = -100, CAL_MAX = 300, CAL_TAPS = 8;   // slider bounds + taps per test
+function calOffsetSec(){ return calMs/1000; }        // future scoring windows read this
+function clampCal(v){ return Math.max(CAL_MIN, Math.min(CAL_MAX, Math.round(v))); }
+// robust centre of the tap deltas: with enough taps, drop the single fastest +
+// slowest then mean the rest (kills one fumbled tap); otherwise mean them all.
+// Pure, so the harness can assert it directly.
+function calcLatencyOffset(deltas){
+  const a=(deltas||[]).filter(d=>typeof d==='number' && isFinite(d)).sort((x,y)=>x-y);
+  if(!a.length) return 0;
+  const trimmed = a.length>=4 ? a.slice(1, a.length-1) : a;
+  return clampCal(trimmed.reduce((s,d)=>s+d,0)/trimmed.length);
+}
+let cal=null;   // { beats:[audioTime…], deltas:[ms…], clock } while a tap test runs
+function calStart(){
+  const ctx=audio(); if(!ctx) return null;
+  calCancel();
+  cal={ beats:[], deltas:[], clock:null };
+  cal.clock={ interval:()=>beat(), tick:(time,count)=>{ cal.beats.push(time); if(typeof metroClick==='function') metroClick(time, count%4===0); if(cal.beats.length>32) cal.beats.shift(); } };
+  if(typeof addClock==='function') addClock(cal.clock);
+  return cal;
+}
+function calCancel(){ if(cal && cal.clock && typeof removeClock==='function') removeClock(cal.clock); cal=null; }
+// one tap: match it to the nearest scheduled beat, record the signed delta (ms).
+// Returns the running tap count so the UI can advance / finish at CAL_TAPS.
+function calTap(now){
+  if(!cal) return 0;
+  now = (typeof now==='number') ? now : (actx?actx.currentTime:0);
+  if(cal.beats.length){
+    let nearest=cal.beats[0];
+    for(let i=1;i<cal.beats.length;i++){ if(Math.abs(cal.beats[i]-now)<Math.abs(nearest-now)) nearest=cal.beats[i]; }
+    cal.deltas.push((now-nearest)*1000);
+  }
+  return cal.deltas.length;
+}
+// finish: compute + store the offset from the collected taps, stop the click.
+function calFinish(){
+  if(!cal) return calMs;
+  const off=calcLatencyOffset(cal.deltas);
+  calCancel();
+  calMs=off;
+  return calMs;
+}
+function setCalMs(v){ calMs=clampCal(typeof v==='number'?v:0); return calMs; }
+
 /* ---- cue sounds (cue bus): short synthesized UI feedback. The metronome uses
    the cue bus; correct / wrong / count-in are foundation primitives consumed by
    Practice, Ear-training and Rhythm modes (roadmap phases D, E, G). ---- */
@@ -2409,16 +2525,24 @@ function bassNote(when, midi, dur, vel){
   tri.connect(lp); sub.connect(subG); subG.connect(lp); lp.connect(g); g.connect(bass);
   tri.start(when); tri.stop(when+dur+0.2); sub.start(when); sub.stop(when+dur+0.2);
 }
-/* kick: a sine that drops in pitch with a fast amp decay */
+/* kick: a sine that drops in pitch with a fast amp decay, plus a short high-passed
+   noise "beater click" so the attack reads on small speakers (the realism pass — a
+   synthesized stand-in for the deferred CC0 one-shot; needs an ear check). */
 function kickHit(when, vel){
   const ctx=audio(); if(!ctx) return; vel=vel==null?1:vel;
   const o=ctx.createOscillator(); o.type='sine';
-  o.frequency.setValueAtTime(125, when); o.frequency.exponentialRampToValueAtTime(46, when+0.11);
+  o.frequency.setValueAtTime(130, when); o.frequency.exponentialRampToValueAtTime(45, when+0.1);   // a touch more punch
   const g=ctx.createGain();
   g.gain.setValueAtTime(0.0001, when);
   g.gain.exponentialRampToValueAtTime(0.9*vel, when+0.004);
   g.gain.exponentialRampToValueAtTime(0.0001, when+0.16);
   o.connect(g).connect(groove); o.start(when); o.stop(when+0.2);
+  const click=ctx.createBufferSource(); click.buffer=noiseBuf();
+  const chp=ctx.createBiquadFilter(); chp.type='highpass'; chp.frequency.value=1800;
+  const cg=ctx.createGain();
+  cg.gain.setValueAtTime(0.45*vel, when);
+  cg.gain.exponentialRampToValueAtTime(0.0001, when+0.02);
+  click.connect(chp).connect(cg).connect(groove); click.start(when); click.stop(when+0.03);
 }
 /* snare: a noise crack (bandpassed white noise) over a short tonal body — the
    backbeat on 2 & 4 is what turns the kick+hat pulse into something that grooves. */
@@ -2431,6 +2555,14 @@ function snareHit(when, vel){
   ng.gain.exponentialRampToValueAtTime(0.5*vel, when+0.002);
   ng.gain.exponentialRampToValueAtTime(0.0001, when+0.13);
   src.connect(bp).connect(ng).connect(groove); src.start(when); src.stop(when+0.16);
+  // a second, brighter high-passed noise layer for "snap" (realism pass)
+  const src2=ctx.createBufferSource(); src2.buffer=noiseBuf();
+  const hp2=ctx.createBiquadFilter(); hp2.type='highpass'; hp2.frequency.value=3500;
+  const ng2=ctx.createGain();
+  ng2.gain.setValueAtTime(0.0001, when);
+  ng2.gain.exponentialRampToValueAtTime(0.26*vel, when+0.002);
+  ng2.gain.exponentialRampToValueAtTime(0.0001, when+0.10);
+  src2.connect(hp2).connect(ng2).connect(groove); src2.start(when); src2.stop(when+0.12);
   const o=ctx.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(190, when);
   const og=ctx.createGain();
   og.gain.setValueAtTime(0.0001, when);
@@ -2443,12 +2575,13 @@ function hatHit(when, vel){
   const ctx=audio(); if(!ctx) return; vel=vel==null?0.6:vel;
   const src=ctx.createBufferSource(); src.buffer=noiseBuf();
   const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7200;
+  const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=10000; bp.Q.value=1.1;   // metallic edge, less pure-white (realism pass)
   const g=ctx.createGain();
   g.gain.setValueAtTime(0.0001, when);
   g.gain.exponentialRampToValueAtTime(0.22*vel, when+0.002);
   g.gain.exponentialRampToValueAtTime(0.0001, when+0.05);
   const pan=makePanner(0.18);   // hats sit slightly off-centre (kick/snare/bass stay centred, as in a real mix)
-  src.connect(hp).connect(g); if(pan){ g.connect(pan); pan.connect(groove); } else { g.connect(groove); }
+  src.connect(hp).connect(bp).connect(g); if(pan){ g.connect(pan); pan.connect(groove); } else { g.connect(groove); }
   src.start(when); src.stop(when+0.08);
 }
 
@@ -3796,6 +3929,7 @@ function buildToolbar(){
   fr.innerHTML=FRET_RANGES.map((r,i)=>`<option value="${i}"${i===fretRangeIdx?' selected':''}>${r.key?t(r.key):r.label}</option>`).join('');
   const cp=document.getElementById('tb-capo');
   if(cp) cp.innerHTML=Array.from({length:8},(_,i)=>`<option value="${i}"${i===capo?' selected':''}>${i===0?t('capo_off'):i}</option>`).join('');
+  buildCustomTuning(); applyCustomTuningVis();
   const tp=document.getElementById('tb-tempo'); tp.value=tempo;
   document.getElementById('tb-bpm').textContent=tempo+' BPM';
   const vol=document.getElementById('tb-vol'); if(vol) vol.value=Math.round(masterVol*100);
@@ -3821,6 +3955,20 @@ function applyToolbarState(){
   tg.classList.toggle('open', toolbarOpen);
   tg.setAttribute('aria-expanded', toolbarOpen);
 }
+/* custom tuning (Phase 2): six per-string note selects (high → low, matching the
+   board's top-to-bottom string order), shown only when the Custom tuning is picked.
+   Each option is a MIDI pitch labelled note+octave; the board/highlight math is
+   already tuning-driven, so changing one rebuilds customTuning and re-applies. */
+function midiLabel(m){ return NOTES[mod(m,12)].replace('#','♯') + (Math.floor(m/12)-1); }
+function buildCustomTuning(){
+  const host=document.getElementById('tb-custom-strings'); if(!host) return;
+  host.innerHTML = customTuning.map((m,i)=>{
+    let opts='';
+    for(let v=TUNE_HI; v>=TUNE_LO; v--) opts += `<option value="${v}"${v===m?' selected':''}>${midiLabel(v)}</option>`;
+    return `<select class="custom-str" data-i="${i}" aria-label="string ${i+1}">${opts}</select>`;
+  }).join('');
+}
+function applyCustomTuningVis(){ const g=document.getElementById('tb-custom'); if(g) g.hidden = !TUNINGS[tuningIdx].custom; }
 function applyBackingPanel(){
   const p=document.getElementById('backing-panel'), tg=document.getElementById('backing-toggle');
   if(p) p.classList.toggle('collapsed', !backingOpen);
@@ -3962,8 +4110,8 @@ let currentTab='harmony';
 // older saves (no `mode`) and the existing reference behaviour are untouched.
 let currentMode='reference';
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
-  lang, mode:currentMode, tab:currentTab, tuningIdx, fretRangeIdx, tempo, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
-  cbPalette, fnShapes, welcomeSeen,
+  lang, mode:currentMode, tab:currentTab, tuningIdx, customTuning, fretRangeIdx, tempo, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
+  calMs, cbPalette, fnShapes, welcomeSeen,
   gRoot, gRootLbl, gMode, hView, scView,
   chQual, arpPos, scIdx, scPos, scOverlay,
   chVoicing,
@@ -3978,6 +4126,8 @@ function loadState(){ try{
   if(s.lang==='uk'||s.lang==='en') lang=s.lang;
   if(s.mode==='reference'||s.mode==='practice'||s.mode==='ear') currentMode=s.mode;   // mode axis (3a; Ear added in Phase 4) — default reference
   if(Number.isInteger(s.tuningIdx)&&TUNINGS[s.tuningIdx]) tuningIdx=s.tuningIdx;
+  if(Array.isArray(s.customTuning)&&s.customTuning.length===6&&s.customTuning.every(m=>Number.isInteger(m)&&m>=TUNE_LO&&m<=TUNE_HI)) customTuning=s.customTuning.slice();
+  if(typeof s.calMs==='number'&&isFinite(s.calMs)) calMs=clampCal(s.calMs);   // 05-audio bounds (CAL_MIN..CAL_MAX)
   if(Number.isInteger(s.fretRangeIdx)&&FRET_RANGES[s.fretRangeIdx]) fretRangeIdx=s.fretRangeIdx;
   if(Number.isInteger(s.capo)&&s.capo>=0&&s.capo<=11) capo=s.capo;
   if(typeof s.tempo==='number'&&s.tempo>=40&&s.tempo<=200) tempo=s.tempo;
@@ -4027,6 +4177,49 @@ function loadState(){ try{
       .map(st=>({pc:st.pc, lbl:(typeof st.lbl==='string'?st.lbl:ROOTS[st.pc]), qi:st.qi, bars:([1,2,4].includes(st.bars)?st.bars:1)}));
   }
 }catch(e){ devWarn('saved state could not be restored; using defaults', e); return false; } return true; }
+
+/* ---- shareable deep links (Phase 9 distribution) ----
+   Encode the musical context (the things a "look at this" link should carry) into
+   the URL hash, so a backend-less single-file build is still addressable: open the
+   link and the app lands on that key / scale / chord view. Applied once on load via
+   applyShareHash() then stripped (so later navigation isn't re-pinned), and
+   persisted to localStorage from there on like any other state. The setters it
+   drives (setKey / setScView / setHView / selectTab / setMode) live in wiring-init
+   and exist by the time init calls this. */
+function encodeShareState(){
+  const p=new URLSearchParams();
+  p.set('m', currentMode);
+  p.set('t', currentTab);
+  p.set('k', String(gRoot));
+  p.set('r', gRootLbl);
+  p.set('s', String(scIdx));
+  if(currentTab==='harmony'){ p.set('hv', hView); p.set('q', String(chQual)); }
+  if(currentTab==='scales')  p.set('sv', scView);
+  return p.toString();
+}
+function shareURL(){
+  const base=(typeof location!=='undefined') ? (location.origin+location.pathname) : '';
+  return base + '#' + encodeShareState();
+}
+function applyShareHash(){
+  if(typeof location==='undefined') return false;
+  const h=(location.hash||'').replace(/^#/, ''); if(!h) return false;
+  let p; try{ p=new URLSearchParams(h); }catch(e){ devWarn('bad share hash', e); return false; }
+  if(!p.has('k') && !p.has('t') && !p.has('s')) return false;   // not one of ours
+  const k=parseInt(p.get('k'),10), r=p.get('r'), s=parseInt(p.get('s'),10);
+  if(Number.isInteger(k) && k>=0 && k<12){
+    const lbl=(typeof r==='string' && r) ? r : ROOTS[k];
+    setKey(k, lbl, (Number.isInteger(s) && SCALES[s]) ? s : undefined);
+  } else if(Number.isInteger(s) && SCALES[s]){ scIdx=s; }
+  const sv=p.get('sv'); if(sv==='scale'||sv==='notes') setScView(sv);
+  const hv=p.get('hv'); if(hv==='chords'||hv==='triads'||hv==='arp'||hv==='identify') setHView(hv);
+  const q=parseInt(p.get('q'),10); if(Number.isInteger(q) && QUALITIES[q]){ chQual=q; chVoicing=0; }
+  const tab=p.get('t'); if(tab==='harmony'||tab==='scales'||tab==='circle') selectTab(tab);
+  const m=p.get('m'); setMode(m==='practice'||m==='ear'?m:'reference');
+  // strip the hash so a reload / later nav isn't re-pinned to the shared state
+  try{ history.replaceState(null, '', location.pathname+location.search); }catch(e){ /* ignore */ }
+  return true;
+}
 
 /* ===================== Learner model (spine #3) =====================
    Phase 3b. The app's memory of what you know: per-item history + an SM-2-lite
@@ -4111,6 +4304,34 @@ function learnerStats(){
   let seen=0, correct=0, bestStreak=0;
   ids.forEach(id => { const it=learner.items[id]; seen+=it.seen; correct+=it.correct; if(it.streak>bestStreak) bestStreak=it.streak; });
   return { items: ids.length, seen, correct, accuracy: seen ? correct/seen : 0, bestStreak, sessions: learner.sessions.length };
+}
+
+// review queue summary for the progress card: how many items are due now, split by
+// id namespace (the prefix before ':'), plus the namespace with the most due. The
+// drills already bias toward due items internally; this surfaces the count so the
+// loop closes back to the user ("N due — review now"). Only the SRS-bearing
+// namespaces count (the rhythm coaches write sessions, not items).
+const REVIEW_NS = ['note','interval','chordq','rhythm'];
+function learnerReview(now){
+  now=(typeof now==='number')?now:Date.now();
+  const by={}; REVIEW_NS.forEach(ns=>by[ns]=0); let total=0;
+  Object.keys(learner.items).forEach(id=>{
+    if(learner.items[id].due>now) return;
+    const ns=id.slice(0, id.indexOf(':'));
+    if(by[ns]===undefined) return;
+    by[ns]++; total++;
+  });
+  let top=null, max=0; REVIEW_NS.forEach(ns=>{ if(by[ns]>max){ max=by[ns]; top=ns; } });
+  return { total, by, top };
+}
+// recent-activity readout: distinct calendar days practised within the last `win`
+// days (default 7), from the sessions ring buffer — powers the "active days" stat
+// that makes the unscored coach tiers feel rewarding without a score.
+function learnerActivity(now, win){
+  now=(typeof now==='number')?now:Date.now(); win=win||7;
+  const cutoff=now-win*DAY_MS, days={};
+  learner.sessions.forEach(s=>{ if(s.t>=cutoff) days[Math.floor(s.t/DAY_MS)]=1; });
+  return { days: Object.keys(days).length, window: win };
 }
 
 // ---- bounds-checked restore (mirrors loadState's defensive idiom) ----
@@ -4330,12 +4551,22 @@ function renderProgressInto(hostId){
   const s=learnerStats();
   if(!s.seen && !s.sessions){ host.innerHTML='<div class="pp-empty">'+t('prog_empty')+'</div>'; return; }
   const stat=(val,lab)=>'<div class="pp-stat"><div class="pp-val">'+val+'</div><div class="pp-lab">'+lab+'</div></div>';
-  host.innerHTML='<div class="pp-stats">'+
+  const act=learnerActivity();
+  let html='<div class="pp-stats">'+
     stat(s.items, t('prog_tracked'))+
     stat(Math.round(s.accuracy*100)+'%', t('prog_accuracy'))+
     stat(s.bestStreak, t('prog_streak'))+
+    stat(act.days, t('prog_active'))+
     stat(s.sessions, t('prog_sessions'))+
   '</div>';
+  // close the loop (spine #3): when the SRS says items are due, surface the count
+  // and a one-tap Review that drops into the namespace with the most overdue items.
+  const rev=learnerReview();
+  if(rev.total>0 && rev.top){
+    html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_due')+' · '+rev.total+'</span>'+
+      '<button type="button" class="btn play pp-review-btn" data-review="'+rev.top+'">'+t('prog_review')+'</button></div>';
+  }
+  host.innerHTML=html;
 }
 function renderEar(){ renderProgressInto('ear-progress'); }
 function renderEarPrompt(){
@@ -5424,7 +5655,17 @@ document.getElementById('lang-switch').addEventListener('click',e=>{
 });
 
 /* ---- toolbar wiring ---- */
-document.getElementById('tb-tuning').onchange=function(){ tuningIdx=+this.value; applyTuning(); buildTuner(); renderAllBoards(); saveState(); };
+document.getElementById('tb-tuning').onchange=function(){
+  const prevMidi=OPEN_MIDI.slice();
+  tuningIdx=+this.value;
+  if(TUNINGS[tuningIdx].custom) customTuning=prevMidi;   // seed Custom from the tuning you were on
+  applyTuning(); buildTuner(); buildCustomTuning(); applyCustomTuningVis(); renderAllBoards(); saveState();
+};
+/* custom tuning: a per-string select changes one string's MIDI; re-apply so the
+   board, tuner and string labels follow immediately. */
+{ const cs=document.getElementById('tb-custom-strings');
+  if(cs) cs.addEventListener('change', e=>{ const s=e.target.closest('.custom-str'); if(!s) return;
+    customTuning[+s.dataset.i]=+s.value; applyTuning(); buildTuner(); renderAllBoards(); saveState(); }); }
 /* master volume: scales the whole-app output (masterOut, before the limiter). Audio is
    lazy, so when the bus isn't up yet we just stash masterVol — setupBus reads it on
    first sound. setTargetAtTime ramps the live gain so dragging is click-free. */
@@ -5451,6 +5692,58 @@ function applyA11y(){
 }
 { const p=document.getElementById('tb-cbpalette'); if(p) p.onclick=function(){ cbPalette=!cbPalette; applyA11y(); saveState(); };
   const s=document.getElementById('tb-shapes');    if(s) s.onclick=function(){ fnShapes=!fnShapes;  applyA11y(); saveState(); }; }
+
+/* ---- timing calibration (Phase 3 debt) ----
+   The Tap-test button is a tiny state machine: first click starts the click track,
+   each later click is a tap matched to the nearest beat; at CAL_TAPS it computes +
+   stores the offset (calMs). The slider sets it by hand. calOffsetSec() is the
+   value future scored/mic windows will read; nothing consumes it on screen yet. */
+function calBtnLabel(){
+  const b=document.getElementById('tb-cal-tap'); if(!b) return;
+  if(cal){ b.classList.add('active'); b.textContent=t('cal_tapnow')+' '+cal.deltas.length+'/'+CAL_TAPS; }
+  else { b.classList.remove('active'); b.textContent=t('cal_test'); }
+}
+function applyCal(){
+  const s=document.getElementById('tb-cal'); if(s) s.value=calMs;
+  const v=document.getElementById('tb-cal-val'); if(v) v.textContent=calMs+' '+t('cal_unit');
+  calBtnLabel();
+}
+{ const cb=document.getElementById('tb-cal-tap');
+  if(cb) cb.onclick=function(){
+    if(!cal){ calStart(); calBtnLabel(); return; }
+    const n=calTap();
+    if(n>=CAL_TAPS){ calFinish(); applyCal(); saveState(); }
+    else calBtnLabel();
+  };
+  const cs=document.getElementById('tb-cal');
+  if(cs){ cs.oninput=function(){ setCalMs(+this.value); applyCal(); }; cs.onchange=saveState; } }
+
+/* ---- share a deep link (Phase 9 distribution) ----
+   Copy a URL whose hash encodes the current key / scale / chord view; opening it
+   lands a new visitor on that exact context (applyShareHash on load). */
+function shareFallback(){ try{ location.hash=encodeShareState(); }catch(e){ /* ignore */ } }
+{ const sb=document.getElementById('tb-share');
+  if(sb) sb.onclick=function(){
+    const url=shareURL();
+    const flash=()=>{ sb.textContent=t('share_copied'); sb.classList.add('active'); setTimeout(()=>{ sb.textContent=t('share_btn'); sb.classList.remove('active'); }, 1400); };
+    try{
+      if(typeof navigator!=='undefined' && navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(url).then(flash).catch(()=>{ shareFallback(); flash(); });
+      else { shareFallback(); flash(); }
+    }catch(e){ shareFallback(); flash(); }
+  }; }
+
+/* ---- review routing (spine #3): the progress card's Review button drops into the
+   drill for the namespace with the most overdue items; the drills already prefer
+   due items, so this just opens the right one. */
+function startReview(ns){
+  if(ns==='note'){ setMode('practice'); startDrill(); }
+  else if(ns==='interval'){ setMode('ear'); startEar('interval'); }
+  else if(ns==='chordq'){ setMode('ear'); startEar('chordq'); }
+  else if(ns==='rhythm'){ setMode('ear'); startEar('rhythm'); }
+}
+['practice-progress','ear-progress'].forEach(id=>{ const h=document.getElementById(id);
+  if(h) h.addEventListener('click', e=>{ const b=e.target.closest('[data-review]'); if(b) startReview(b.dataset.review); }); });
 document.getElementById('tb-lefty').onclick=function(){ lefty=!lefty; this.classList.toggle('active',lefty); this.setAttribute('aria-pressed',lefty); renderAllBoards(); renderCircle(); saveState(); };
 /* the metronome / loop / sequencer clocks read beat() live, so the tempo glides
    without restarting — just update the value and the label here. */
@@ -5579,10 +5872,15 @@ window.addEventListener('resize', markScrollables);
 try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(markScrollables); }catch(_){}
 applyAudioAvailability();
 applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
+applyCal();    // reflect the restored timing-calibration offset in the toolbar
+// Deep link (Phase 9): if the URL hash carries a shared context, apply it over the
+// restored state now that the shell + setters are up, then strip the hash.
+const fromShare = (typeof applyShareHash==='function') && applyShareHash();
 document.getElementById('app-ver').textContent = 'v' + APP_VERSION;
 // First-run onboarding: only a genuinely first visit (no saved state) leaves
-// welcomeSeen false — returning users are grandfathered in loadState().
-if(!welcomeSeen) showWelcome();
+// welcomeSeen false — returning users are grandfathered in loadState(). A visitor
+// arriving via a share link goes straight to the shared view, not the welcome.
+if(!welcomeSeen && !fromShare) showWelcome();
 
 /* ---- test introspection hook (Phase C+) ----
    Built ONLY when a harness sets window.__GS_ALLOW_TEST__ before the page loads,
@@ -5599,6 +5897,17 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
     schedAdvance, clocks, beat,
+    // custom tuning (Phase 2)
+    TUNINGS, applyTuning, tuningMidi, TUNE_LO, TUNE_HI,
+    getOpenMidi:()=>OPEN_MIDI.slice(), getCustomTuning:()=>customTuning.slice(),
+    setCustomTuning:(arr)=>{ customTuning=arr.slice(); }, setTuningIdx:(i)=>{ tuningIdx=i; applyTuning(); },
+    // timing calibration (Phase 3 debt)
+    calcLatencyOffset, calOffsetSec, setCalMs, getCalMs:()=>calMs, CAL_MIN, CAL_MAX, CAL_TAPS,
+    calStart, calTap, calFinish, calCancel, getCal:()=>cal,
+    // learner review + activity (spine #3)
+    learnerReview, learnerActivity, startReview,
+    // shareable deep links (Phase 9)
+    encodeShareState, applyShareHash, shareURL,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
     renderAllBoards,
     // learner model (spine #3, 3b)

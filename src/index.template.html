@@ -96,6 +96,13 @@
         <span class="tb-label" data-i18n="tb_tuning">Стрій</span>
         <select id="tb-tuning"></select>
       </div>
+      <!-- Custom tuning (Phase 2): six per-string note selects, shown only when the
+           Custom tuning preset is picked (applyCustomTuningVis). Built by
+           buildCustomTuning() from the live customTuning. -->
+      <div class="tb-group tb-custom" id="tb-custom" hidden>
+        <span class="tb-label" data-i18n="tun_custom">Власний стрій</span>
+        <span class="custom-strings" id="tb-custom-strings"></span>
+      </div>
       <!-- Reference-tone tuner (no mic): one button per open string of the current
            tuning; tap to hold a sustained pitch and tune a real guitar against it.
            Buttons are built from the live tuning by buildTuner(). -->
@@ -119,6 +126,20 @@
         <span class="tb-label" data-i18n="a11y_label">Доступність</span>
         <button class="btn" id="tb-cbpalette" aria-pressed="false" data-i18n="a11y_palette">Палітра для дальтоніків</button>
         <button class="btn" id="tb-shapes" aria-pressed="false" data-i18n="a11y_shapes">Форми на нотах</button>
+      </div>
+      <!-- Timing calibration (Phase 3 debt): a Tap-test that measures your round-trip
+           latency + a manual slider; the stored offset (calMs) feeds future scored /
+           mic timing windows via calOffsetSec(). -->
+      <div class="tb-group tb-cal">
+        <span class="tb-label" data-i18n="cal_label">Зсув часу</span>
+        <button class="btn" id="tb-cal-tap"></button>
+        <input type="range" id="tb-cal" min="-100" max="300" step="5" value="0" aria-label="Timing offset (ms)">
+        <span class="bpm-val" id="tb-cal-val">0 ms</span>
+      </div>
+      <!-- Share (Phase 9 distribution): copy a deep link encoding the current
+           key / scale / chord view (encodeShareState → URL hash). -->
+      <div class="tb-group">
+        <button class="btn" id="tb-share" data-i18n="share_btn">Поділитися</button>
       </div>
     </div>
     <!-- Backing band (metronome + synth bass/drums): secondary jam-along tools, one

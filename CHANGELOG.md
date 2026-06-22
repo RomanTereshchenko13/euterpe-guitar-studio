@@ -2,6 +2,14 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.5.0 — 2026-06-22
+
+- Practice now closes the loop: the progress card shows how many items are due for review and an Active-days count, with a one-tap Review that drops you into the right drill — the notes, intervals and chords you miss come back to you.
+- Custom tunings: pick "Custom" in Settings and set any note per string — the fretboard, tuner and labels follow, and it is remembered.
+- Timing calibration in Settings: a quick tap-test (or a manual slider) measures your device's audio latency, so timed practice can score fairly later on.
+- Share a view: a Share button copies a link that opens Euterpe on the exact key, scale or chord you are looking at.
+- Punchier backing drums — a clearer kick attack, more snare snap and a crisper hi-hat.
+
 ## v2.4.0 — 2026-06-22
 
 - Practice's Rhythm section is now complete with three new coach drills you play along with over the backing band.

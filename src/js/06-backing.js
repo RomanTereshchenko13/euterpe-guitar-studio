@@ -39,16 +39,24 @@ function bassNote(when, midi, dur, vel){
   tri.connect(lp); sub.connect(subG); subG.connect(lp); lp.connect(g); g.connect(bass);
   tri.start(when); tri.stop(when+dur+0.2); sub.start(when); sub.stop(when+dur+0.2);
 }
-/* kick: a sine that drops in pitch with a fast amp decay */
+/* kick: a sine that drops in pitch with a fast amp decay, plus a short high-passed
+   noise "beater click" so the attack reads on small speakers (the realism pass — a
+   synthesized stand-in for the deferred CC0 one-shot; needs an ear check). */
 function kickHit(when, vel){
   const ctx=audio(); if(!ctx) return; vel=vel==null?1:vel;
   const o=ctx.createOscillator(); o.type='sine';
-  o.frequency.setValueAtTime(125, when); o.frequency.exponentialRampToValueAtTime(46, when+0.11);
+  o.frequency.setValueAtTime(130, when); o.frequency.exponentialRampToValueAtTime(45, when+0.1);   // a touch more punch
   const g=ctx.createGain();
   g.gain.setValueAtTime(0.0001, when);
   g.gain.exponentialRampToValueAtTime(0.9*vel, when+0.004);
   g.gain.exponentialRampToValueAtTime(0.0001, when+0.16);
   o.connect(g).connect(groove); o.start(when); o.stop(when+0.2);
+  const click=ctx.createBufferSource(); click.buffer=noiseBuf();
+  const chp=ctx.createBiquadFilter(); chp.type='highpass'; chp.frequency.value=1800;
+  const cg=ctx.createGain();
+  cg.gain.setValueAtTime(0.45*vel, when);
+  cg.gain.exponentialRampToValueAtTime(0.0001, when+0.02);
+  click.connect(chp).connect(cg).connect(groove); click.start(when); click.stop(when+0.03);
 }
 /* snare: a noise crack (bandpassed white noise) over a short tonal body — the
    backbeat on 2 & 4 is what turns the kick+hat pulse into something that grooves. */
@@ -61,6 +69,14 @@ function snareHit(when, vel){
   ng.gain.exponentialRampToValueAtTime(0.5*vel, when+0.002);
   ng.gain.exponentialRampToValueAtTime(0.0001, when+0.13);
   src.connect(bp).connect(ng).connect(groove); src.start(when); src.stop(when+0.16);
+  // a second, brighter high-passed noise layer for "snap" (realism pass)
+  const src2=ctx.createBufferSource(); src2.buffer=noiseBuf();
+  const hp2=ctx.createBiquadFilter(); hp2.type='highpass'; hp2.frequency.value=3500;
+  const ng2=ctx.createGain();
+  ng2.gain.setValueAtTime(0.0001, when);
+  ng2.gain.exponentialRampToValueAtTime(0.26*vel, when+0.002);
+  ng2.gain.exponentialRampToValueAtTime(0.0001, when+0.10);
+  src2.connect(hp2).connect(ng2).connect(groove); src2.start(when); src2.stop(when+0.12);
   const o=ctx.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(190, when);
   const og=ctx.createGain();
   og.gain.setValueAtTime(0.0001, when);
@@ -73,12 +89,13 @@ function hatHit(when, vel){
   const ctx=audio(); if(!ctx) return; vel=vel==null?0.6:vel;
   const src=ctx.createBufferSource(); src.buffer=noiseBuf();
   const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7200;
+  const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=10000; bp.Q.value=1.1;   // metallic edge, less pure-white (realism pass)
   const g=ctx.createGain();
   g.gain.setValueAtTime(0.0001, when);
   g.gain.exponentialRampToValueAtTime(0.22*vel, when+0.002);
   g.gain.exponentialRampToValueAtTime(0.0001, when+0.05);
   const pan=makePanner(0.18);   // hats sit slightly off-centre (kick/snare/bass stay centred, as in a real mix)
-  src.connect(hp).connect(g); if(pan){ g.connect(pan); pan.connect(groove); } else { g.connect(groove); }
+  src.connect(hp).connect(bp).connect(g); if(pan){ g.connect(pan); pan.connect(groove); } else { g.connect(groove); }
   src.start(when); src.stop(when+0.08);
 }
 

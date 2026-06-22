@@ -83,6 +83,34 @@ function learnerStats(){
   return { items: ids.length, seen, correct, accuracy: seen ? correct/seen : 0, bestStreak, sessions: learner.sessions.length };
 }
 
+// review queue summary for the progress card: how many items are due now, split by
+// id namespace (the prefix before ':'), plus the namespace with the most due. The
+// drills already bias toward due items internally; this surfaces the count so the
+// loop closes back to the user ("N due — review now"). Only the SRS-bearing
+// namespaces count (the rhythm coaches write sessions, not items).
+const REVIEW_NS = ['note','interval','chordq','rhythm'];
+function learnerReview(now){
+  now=(typeof now==='number')?now:Date.now();
+  const by={}; REVIEW_NS.forEach(ns=>by[ns]=0); let total=0;
+  Object.keys(learner.items).forEach(id=>{
+    if(learner.items[id].due>now) return;
+    const ns=id.slice(0, id.indexOf(':'));
+    if(by[ns]===undefined) return;
+    by[ns]++; total++;
+  });
+  let top=null, max=0; REVIEW_NS.forEach(ns=>{ if(by[ns]>max){ max=by[ns]; top=ns; } });
+  return { total, by, top };
+}
+// recent-activity readout: distinct calendar days practised within the last `win`
+// days (default 7), from the sessions ring buffer — powers the "active days" stat
+// that makes the unscored coach tiers feel rewarding without a score.
+function learnerActivity(now, win){
+  now=(typeof now==='number')?now:Date.now(); win=win||7;
+  const cutoff=now-win*DAY_MS, days={};
+  learner.sessions.forEach(s=>{ if(s.t>=cutoff) days[Math.floor(s.t/DAY_MS)]=1; });
+  return { days: Object.keys(days).length, window: win };
+}
+
 // ---- bounds-checked restore (mirrors loadState's defensive idiom) ----
 function lInt(v, def){ return (Number.isFinite(v) && Math.floor(v)===v) ? v : (def||0); }
 function lClampNum(v, lo, hi, def){ return (typeof v==='number' && isFinite(v)) ? Math.min(hi, Math.max(lo, v)) : def; }

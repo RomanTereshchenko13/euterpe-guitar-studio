@@ -1,6 +1,17 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.5.0', date:'2026-06-22',
+    en:['Practice now closes the loop: the progress card shows how many items are due for review and an Active-days count, with a one-tap Review that drops you into the right drill — the notes, intervals and chords you miss come back to you.',
+        'Custom tunings: pick "Custom" in Settings and set any note per string — the fretboard, tuner and labels follow, and it is remembered.',
+        'Timing calibration in Settings: a quick tap-test (or a manual slider) measures your device\'s audio latency, so timed practice can score fairly later on.',
+        'Share a view: a Share button copies a link that opens Euterpe on the exact key, scale or chord you are looking at.',
+        'Punchier backing drums — a clearer kick attack, more snare snap and a crisper hi-hat.'],
+    uk:['«Практика» тепер замикає коло: картка прогресу показує, скільки вправ час повторити, і кількість активних днів, а кнопка «Повторити» одразу веде до потрібної вправи — ноти, інтервали й акорди, що даються важче, повертаються.',
+        'Власні строї: обери «Власний» у «Налаштуваннях» і задай будь-яку ноту для кожної струни — гриф, тюнер і підписи підлаштуються, і це запамʼятається.',
+        'Калібрування часу в «Налаштуваннях»: швидкий тест на дотик (або повзунок) міряє затримку звуку твого пристрою, щоб згодом практика з рахунком оцінювалася чесно.',
+        'Поділись виглядом: кнопка «Поділитися» копіює посилання, що відкриває Euterpe саме на тій тональності, гамі чи акорді, які ти дивишся.',
+        'Соковитіші ударні супроводу — чіткіша атака бочки, більше «снепу» в малому барабані й дзвінкіший хай-хет.'] },
   { v:'2.4.0', date:'2026-06-22',
     en:['Practice\'s Rhythm section is now complete with three new coach drills you play along with over the backing band.',
         'Strumming patterns: common down/up patterns loop over your chord on an eighth-note grid, lit slot-by-slot in time — see it, hear it, strum along.',

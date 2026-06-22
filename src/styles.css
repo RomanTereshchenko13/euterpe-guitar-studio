@@ -187,6 +187,10 @@
   .pp-stat { flex: 1 1 110px; min-width: 92px; padding: 12px 14px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius); }
   .pp-val { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: var(--text); }
   .pp-lab { font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
+  /* due-for-review row (spine #3): surfaces the SRS queue + a one-tap Review CTA */
+  .pp-review { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .pp-review-n { font-size: 13.5px; color: var(--text-dim); }
+  .pp-review-btn { margin-left: auto; }
 
   /* ---- note-naming drill (3c) ---- */
   .drill-card { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; padding: 15px 18px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); color: var(--text); cursor: pointer; font-family: inherit; transition: border-color 0.15s, background 0.15s; }
@@ -465,11 +469,17 @@
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
   .toolbar.collapsed { display: none; }
   .toolbar .tb-group, .tb-bar .tb-group { display: flex; align-items: center; gap: 7px; }
+  /* the display:flex above outranks the UA [hidden]{display:none}, so a hidden group
+     (e.g. the custom-tuning editor on a non-custom tuning) would still show — re-assert it */
+  .toolbar .tb-group[hidden], .tb-bar .tb-group[hidden] { display: none; }
   /* the two tb-bar groups wrap their controls in .tbg-inner so they can fold via grid-rows on
      mobile (see the condensing-header block); the inner keeps the original horizontal layout. */
   .tbg-inner { display: flex; align-items: center; gap: 7px; min-width: 0; }
   .toolbar .tb-label, .tb-bar .tb-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
   .toolbar select { font-size: 12px; padding: 5px 9px; }
+  /* custom-tuning editor: six compact per-string selects on one wrapping row */
+  .custom-strings { display: flex; flex-wrap: wrap; gap: 4px; }
+  .toolbar .custom-str { font-size: 11px; padding: 3px 5px; }
   .toolbar .divider { height: 20px; }
   input[type="range"] { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 3px; background: var(--border-strong); outline: none; width: 116px; cursor: pointer; }
   input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }

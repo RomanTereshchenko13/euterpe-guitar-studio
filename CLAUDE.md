@@ -37,11 +37,15 @@ Edit the sources, then run the build.
   `01`..`16`). Order matters; the number is the load order.
   - `01-version.js` — `APP_VERSION`, the **single source of truth** for the version
   - `02-changelog.js` — release notes (EN/UK); drives the in-app modal AND `CHANGELOG.md`
-  - `03-i18n.js` — translation strings · `04-constants.js` · `05-audio.js`
+  - `03-i18n.js` — translation strings · `04-constants.js` (incl. custom-tuning state:
+    `customTuning` + `tuningMidi()`) · `05-audio.js` (incl. timing calibration:
+    `calMs`/`calOffsetSec`/`calcLatencyOffset` + the tap-test `calStart`/`calTap`/`calFinish`)
   - `06-backing.js` · `07-render-shared.js` · `08-chords.js` · `09-triads.js`
-  - `10-scales.js` · `11-notes-circle-lang.js` · `12-toolbar-state.js`
+  - `10-scales.js` · `11-notes-circle-lang.js` · `12-toolbar-state.js` (state save/load +
+    the custom-tuning editor + the share-link codec `encodeShareState`/`applyShareHash`)
   - `13-learner.js` — learner model (spine #3): per-item SRS history + sessions ring
-    buffer; persists via `12-toolbar-state.js`'s `saveState`/`loadState`
+    buffer; persists via `12-toolbar-state.js`'s `saveState`/`loadState`. Exposes the
+    progress-card readouts `learnerReview` (due-for-review queue) + `learnerActivity` (active days)
   - `14-drill-ear.js` + `14-drill-notes.js` + `14-drill-rhythm-{1-changes,2-strum,3-comp,4-groove}.js`
     — the drills (all at load slot 14, before wiring). `14-drill-notes.js` is the Practice
     note-naming drill (3c); `14-drill-ear.js` is Ear training (Phase 4) — interval /
