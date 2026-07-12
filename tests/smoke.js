@@ -151,13 +151,13 @@ if (T) {
   // 1b: the four per-tab boards collapsed into one shared #board
   ['ch-board','tr-board','sc-board','nt-board'].forEach(id =>
     ok('1b: old per-tab board gone: ' + id, !win.document.getElementById(id)));
-  // 1b's single shared reference board (#board) is still exactly one; 3c adds the
-  // note-naming drill's own board (#drill-board) and 6a the targeting board
-  // (#tg-board) inside Practice, so three fretboards total now.
+  // 1b's single shared reference board (#board) is still exactly one; the Practice
+  // drills add their own boards — note-naming (#drill-board), targeting (#tg-board, 6a)
+  // and call-response (#cr-board, 6c) — so four fretboards total now.
   ok('1b: one shared reference board (#board)',
      win.document.querySelectorAll('#board.fretboard').length === 1);
-  ok('3c: drill has its own board, three fretboards total',
-     win.document.querySelectorAll('.fretboard').length === 3 && !!win.document.getElementById('drill-board'),
+  ok('3c: drill has its own board, four fretboards total',
+     win.document.querySelectorAll('.fretboard').length === 4 && !!win.document.getElementById('drill-board'),
      win.document.querySelectorAll('.fretboard').length + ' found');
   ok('1b: Notes tab folded away (3 tabs)', win.document.querySelectorAll('.tab').length === 3,
      win.document.querySelectorAll('.tab').length + ' tabs');
@@ -191,6 +191,7 @@ if (T) {
    'drill_comp','drill_comp_meta','co_prog','co_now','co_next','co_hint',
    'drill_groove','drill_groove_meta','gf_swing','gf_accent','gf_mute','gf_hint',
    'practice_grp_lead','drill_target','drill_target_meta','tg_prog','tg_pos','tg_deg','tg_hits','tg_acc','tg_hint',
+   'drill_callresp','drill_callresp_meta','cr_listen','cr_your_turn','cr_replay','cr_echoed','cr_rounds','cr_hint',
    'a11y_label','a11y_palette','a11y_shapes',
    'wc_title','wc_lead','wc_ref','wc_practice','wc_ear','wc_got',
    'tun_custom','cal_label','cal_test','cal_tapnow','cal_unit',
@@ -473,8 +474,8 @@ if (T) {
     ok('5a: chord-change area present (cm-area)', !!doc.getElementById('cm-area'));
     ok('5a: practice home grouped by pillar', doc.querySelectorAll('#practice-home .practice-section').length >= 2);
     // the drill uses chord-diagram SVGs, not a fretboard, so the board count is unchanged
-    // (3 total: reference #board, note-naming #drill-board, targeting #tg-board)
-    ok('5a: no extra fretboard added', doc.querySelectorAll('.fretboard').length === 3);
+    // (4 total: reference #board + note-naming/targeting/call-response drill boards)
+    ok('5a: no extra fretboard added', doc.querySelectorAll('.fretboard').length === 4);
 
     // presets + durations are sane
     ok('5a: at least 6 chord pairs', T.CM_PAIRS.length >= 6);
@@ -835,6 +836,62 @@ if (T) {
     T.targetStop();
     T.setTargetDeg(0);
     T.setMode('reference');
+    T.setCtxNow(0);
+    T.resetLearner();
+  })();
+
+  /* ---- Phase 6c: call & response (motif echo — closes the Lead pillar) ---- */
+  (function callResp() {
+    const doc = win.document;
+    ok('6c: call-response card + area + board present',
+       !!doc.getElementById('start-callresp') && !!doc.getElementById('cr-area') && !!doc.getElementById('cr-board'));
+    ok('6c: the Lead group has two cards',
+       !!doc.getElementById('start-target') && !!doc.getElementById('start-callresp'));
+
+    T.resetLearner();
+    T.initAudio();
+    T.setCtxNow(0);
+    T.setMode('practice');
+    T.setKey(0, 'C');
+    T.setCrPos(1);
+    T.startCallResp();
+    let c = T.getCr();
+    ok('6c: start builds a call motif from the scale box', c && c.phase === 'call' && c.motif.length === 3 && c.pool.length > 0);
+    ok('6c: motif notes all come from the box palette', c.motif.every(i => i >= 0 && i < c.pool.length));
+
+    // response: a wrong echo buzzes (no advance, not scored); the right pitch advances
+    T.crToResponse();
+    c = T.getCr();
+    ok('6c: after the call it is your turn', c.phase === 'response' && c.respIdx === 0);
+    const first = c.pool[c.motif[0]];
+    const wrong = c.pool.find(p => p.midi !== first.midi);
+    if (wrong) T.crAnswer(wrong.si, wrong.f);
+    c = T.getCr();
+    ok('6c: a wrong echo does not advance and is not scored', c.respIdx === 0 && c.total === 0 && c.wrongNote >= 1);
+
+    // echo the whole motif correctly → the round scores and advances
+    for (const pi of c.motif.slice()) { const p = c.pool[pi]; T.crAnswer(p.si, p.f); }
+    c = T.getCr();
+    ok('6c: echoing the motif advances the round and counts every note', c.round === 1 && c.total === 3);
+    ok('6c: the note flubbed once is not counted clean', c.correct === 2);
+
+    // drive the remaining rounds cleanly to finish + record a session
+    T.crNextRoundNow();
+    for (let r = 1; r < T.CR_ROUNDS; r++) {
+      T.crToResponse();
+      c = T.getCr();
+      for (const pi of c.motif.slice()) { const p = c.pool[pi]; T.crAnswer(p.si, p.f); }
+      if (r < T.CR_ROUNDS - 1) T.crNextRoundNow();
+    }
+    c = T.getCr();
+    ok('6c: finishing all rounds ends the session', c.phase === 'done');
+    const ss = T.getLearner().sessions;
+    ok('6c: a call-response session is recorded (accuracy)',
+       ss.length >= 1 && /^callresp:/.test(ss[ss.length - 1].drill));
+    ok('6c: call-response mints no per-item SRS', T.learnerStats().items === 0);
+
+    T.setMode('reference');
+    ok('6c: leaving Practice exits the call-response drill', T.getCr() === null);
     T.setCtxNow(0);
     T.resetLearner();
   })();

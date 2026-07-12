@@ -2,6 +2,10 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.10.0 — 2026-07-12
+
+- New Lead drill — Call & response: the app plays a short phrase from the key's scale in one neck box, then you echo it back on the fretboard in the same order. Listen while it plays, answer in the space it leaves — the turn structure itself trains soloing phrasing (when to play, when to leave space). Scored on how cleanly you echo each phrase; the phrases grow as you go. This completes the Lead pillar's coach tiers.
+
 ## v2.9.0 — 2026-07-12
 
 - Target-note soloing: the Chord-tones drill gains a Target picker — instead of all the chord tones, light up just the root, 3rd, 5th or 7th and aim to land on that one tone as the chords change (the heart of melodic phrasing). Other chord tones just sound (they are fair game in a solo); only off-chord notes miss.

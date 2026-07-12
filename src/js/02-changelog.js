@@ -1,6 +1,9 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.10.0', date:'2026-07-12',
+    en:['New Lead drill — Call & response: the app plays a short phrase from the key\'s scale in one neck box, then you echo it back on the fretboard in the same order. Listen while it plays, answer in the space it leaves — the turn structure itself trains soloing phrasing (when to play, when to leave space). Scored on how cleanly you echo each phrase; the phrases grow as you go. This completes the Lead pillar\'s coach tiers.'],
+    uk:['Нова соло-вправа — «Запитання-відповідь»: застосунок грає коротку фразу з гами тональності в одній позиції на грифі, а ти повторюєш її на грифі в тому ж порядку. Слухай, поки грає, і відповідай у паузі — сама структура «запит-відповідь» тренує фразування (коли грати, а коли лишити тишу). Рахунок — наскільки чисто ти повторюєш кожну фразу; фрази довшають по ходу. Це завершує коуч-рівні соло-пілона.'] },
   { v:'2.9.0', date:'2026-07-12',
     en:['Target-note soloing: the Chord-tones drill gains a Target picker — instead of all the chord tones, light up just the root, 3rd, 5th or 7th and aim to land on that one tone as the chords change (the heart of melodic phrasing). Other chord tones just sound (they are fair game in a solo); only off-chord notes miss.'],
     uk:['Соло по цільових тонах: у вправі «Тони акорду» зʼявився вибір цілі — замість усіх тонів акорду підсвічується лише тоніка, терція, квінта чи септима, і ти щоразу «приземляєшся» саме на неї, поки акорди змінюються (основа мелодичної фрази). Інші тони акорду просто звучать (у соло вони доречні); промах — лише на позаакордових нотах.'] },

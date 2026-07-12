@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 2.9.0  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 2.10.0  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="2.9.0">
+<meta name="version" content="2.10.0">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -244,6 +244,11 @@
   .dot.quiz.target { background: rgba(220,200,160,0.34); border-color: var(--accent); box-shadow: 0 0 0 2px rgba(200,168,110,0.28); }
   .dot.quiz.target.hit { box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
   .tg-acc { margin-left: auto; align-self: center; font-size: 13px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  /* call & response (6c): the app's playing note pulses cyan during the CALL */
+  .dot.quiz.call { background: var(--accent); border-color: var(--accent); color: #0e1408; box-shadow: 0 0 0 4px rgba(90,200,180,0.28); }
+  .cr-stage { display: flex; align-items: baseline; gap: 12px; margin: 12px 0 10px; }
+  .cr-status { font-family: 'Fraunces', serif; font-size: 21px; font-weight: 500; }
+  .cr-scale { font-size: 13px; color: var(--text-dim); margin-left: auto; }
 
   .drill-summary { margin-top: 6px; }
   .drill-done-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-bottom: 14px; }
@@ -1184,6 +1189,10 @@
             <span class="dc-name" data-i18n="drill_target">Тони акорду в прогресії</span>
             <span class="dc-meta" data-i18n="drill_target_meta">Влучай у тони акорду під гурт · коуч</span>
           </button></li>
+          <li><button type="button" class="drill-card" id="start-callresp">
+            <span class="dc-name" data-i18n="drill_callresp">Запитання-відповідь</span>
+            <span class="dc-meta" data-i18n="drill_callresp_meta">Почуй фразу · повтори її на грифі · коуч</span>
+          </button></li>
         </ul>
       </div>
       <!-- Progress readout (3b): the learner model's aggregate stats; renderPractice()
@@ -1338,6 +1347,31 @@
         <span class="drill-sub" id="tg-hint"></span>
         <button type="button" class="btn play" id="tg-play"></button>
       </div>
+    </div>
+
+    <!-- Call & response (Phase 6c): the app plays a lick from the key's scale in one
+         box (LISTEN), then you echo it back on the neck (YOUR TURN). Turn-based, self-
+         paced, scored on echo accuracy — its listen/answer structure is the play-vs-rest
+         phrasing lesson. Its own board so the reference board stays put. Hidden until started. -->
+    <div id="cr-area" hidden>
+      <div class="drill-head">
+        <button type="button" class="btn" id="cr-quit" data-i18n="drill_quit">Вийти</button>
+        <span class="drill-count" id="cr-round"></span>
+      </div>
+      <div id="cr-active">
+        <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="cr-key"></div></div>
+        <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="cr-pos"></div></div>
+        <div class="cr-stage">
+          <div class="cr-status" id="cr-status"></div>
+          <div class="cr-scale" id="cr-scale"></div>
+        </div>
+        <div class="scroll"><div class="board"><div class="fretboard" id="cr-board"></div></div><div class="fretnums" id="cr-nums"></div></div>
+        <div class="cm-active-foot">
+          <span class="drill-sub" id="cr-hint"></span>
+          <button type="button" class="btn play" id="cr-replay"></button>
+        </div>
+      </div>
+      <div class="drill-summary" id="cr-summary" hidden></div>
     </div>
 
     <!-- Active drill (3c): note-naming. Its own board (painted by renderBoard into
@@ -1540,10 +1574,13 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '2.9.0';
+const APP_VERSION = '2.10.0';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.10.0', date:'2026-07-12',
+    en:['New Lead drill — Call & response: the app plays a short phrase from the key\'s scale in one neck box, then you echo it back on the fretboard in the same order. Listen while it plays, answer in the space it leaves — the turn structure itself trains soloing phrasing (when to play, when to leave space). Scored on how cleanly you echo each phrase; the phrases grow as you go. This completes the Lead pillar\'s coach tiers.'],
+    uk:['Нова соло-вправа — «Запитання-відповідь»: застосунок грає коротку фразу з гами тональності в одній позиції на грифі, а ти повторюєш її на грифі в тому ж порядку. Слухай, поки грає, і відповідай у паузі — сама структура «запит-відповідь» тренує фразування (коли грати, а коли лишити тишу). Рахунок — наскільки чисто ти повторюєш кожну фразу; фрази довшають по ходу. Це завершує коуч-рівні соло-пілона.'] },
   { v:'2.9.0', date:'2026-07-12',
     en:['Target-note soloing: the Chord-tones drill gains a Target picker — instead of all the chord tones, light up just the root, 3rd, 5th or 7th and aim to land on that one tone as the chords change (the heart of melodic phrasing). Other chord tones just sound (they are fair game in a solo); only off-chord notes miss.'],
     uk:['Соло по цільових тонах: у вправі «Тони акорду» зʼявився вибір цілі — замість усіх тонів акорду підсвічується лише тоніка, терція, квінта чи септима, і ти щоразу «приземляєшся» саме на неї, поки акорди змінюються (основа мелодичної фрази). Інші тони акорду просто звучать (у соло вони доречні); промах — лише на позаакордових нотах.'] },
@@ -1912,6 +1949,9 @@ const I18N = {
     practice_grp_lead:'Соло', drill_target:'Тони акорду в прогресії', drill_target_meta:'Влучай у тони акорду під гурт · коуч',
     tg_prog:'Прогресія', tg_pos:'Позиція', tg_deg:'Ціль', tg_hits:'Влучань', tg_acc:'Точність',
     tg_hint:'Гурт веде прогресію — влучай у підсвічені тони поточного акорду. Обери позицію, щоб грати одну форму арпеджіо крізь зміни, або ціль (1·3·5·7), щоб щоразу «приземлятися» на один тон. Це тренує, де лежать тони акорду (не звук гітари — оцінку з мікрофоном додамо згодом).',
+    drill_callresp:'Запитання-відповідь', drill_callresp_meta:'Почуй фразу · повтори її на грифі · коуч',
+    cr_listen:'Слухай…', cr_your_turn:'Твоя черга', cr_replay:'Ще раз', cr_echoed:'Повторено', cr_rounds:'Фраз',
+    cr_hint:'Застосунок грає фразу з гами — повтори її на грифі в тому ж порядку. Слухай, поки грає, і відповідай у паузі: саме так будується фразування.',
     prog_title:'Прогрес', prog_empty:'Ще немає практики — статистика з’явиться, щойно почнеш вправи.',
     prog_tracked:'Вивчається', prog_accuracy:'Точність', prog_streak:'Найкраща серія', prog_sessions:'Сесій',
     tab_harmony:'Акорди / тріади', lbl_view:'Вид', view_chords:'Тони акорду', view_triads:'Форми тріад',
@@ -2031,6 +2071,9 @@ const I18N = {
     practice_grp_lead:'Lead', drill_target:'Chord tones over changes', drill_target_meta:'Target the chord tones over a band · coach',
     tg_prog:'Progression', tg_pos:'Position', tg_deg:'Target', tg_hits:'Hits', tg_acc:'Accuracy',
     tg_hint:'The band cycles the progression — hit the lit tones of the current chord. Pick a position to play one arpeggio shape through the changes, or a target (1·3·5·7) to land on a single tone each time. This trains where the chord tones are (not your guitar — mic scoring comes later).',
+    drill_callresp:'Call & response', drill_callresp_meta:'Hear a phrase · echo it on the neck · coach',
+    cr_listen:'Listen…', cr_your_turn:'Your turn', cr_replay:'Replay', cr_echoed:'Echoed', cr_rounds:'Phrases',
+    cr_hint:'The app plays a phrase from the scale — echo it back on the neck in the same order. Listen while it plays, answer in the space it leaves: that is how phrasing is built.',
     prog_title:'Progress', prog_empty:'No practice yet — your stats will appear once you start a drill.',
     prog_tracked:'Tracked', prog_accuracy:'Accuracy', prog_streak:'Best streak', prog_sessions:'Sessions',
     tab_harmony:'Chords / triads', lbl_view:'View', view_chords:'Chord tones', view_triads:'Triad shapes',
@@ -4012,6 +4055,7 @@ function applyLang(){
   if(typeof refreshCompLang==='function') refreshCompLang();         // re-localize an in-flight comping drill (5c)
   if(typeof refreshGrooveLang==='function') refreshGrooveLang();     // re-localize an in-flight groove drill (5d)
   if(typeof refreshTargetLang==='function') refreshTargetLang();     // re-localize an in-flight targeting drill (6a)
+  if(typeof refreshCallRespLang==='function') refreshCallRespLang(); // re-localize an in-flight call-response drill (6c)
   setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
   activateRoot(document.getElementById('g-roots'), gRoot);
@@ -4946,6 +4990,205 @@ function refreshTargetLang(){ if(tgDrill) renderTarget(); }
   const b=document.getElementById('tg-board');
   if(b){
     const fire=d=>{ if(d) targetAnswer(parseInt(d.dataset.si,10), parseInt(d.dataset.f,10)); };
+    b.addEventListener('click', e=>fire(e.target.closest('.dot.quiz')));
+    b.addEventListener('keydown', e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const d=e.target.closest('.dot.quiz'); if(!d) return; e.preventDefault(); fire(d); });
+  }
+})();
+/* ===================== Drill: Call & response (Phase 6c) =====================
+   The Lead pillar's phrasing tier — motif call-and-response. The app plays a short
+   lick (the CALL) from the current key's scale inside one neck box; you echo it back
+   (the RESPONSE) by tapping the pitches in order. The turn structure itself teaches
+   the core of soloing phrasing — LISTEN while it plays, then answer in the space it
+   leaves — so "play vs. leave space" is baked into the loop, not a separate coach.
+
+   Honest framing (roadmap): tap input, so it is scored on ACCURACY (did you echo the
+   right pitches), never on timing — a re-tap of a wrong note just buzzes and you try
+   again; the elapsed pace is not the score. Real "play it back on your guitar and get
+   scored" waits on Phase 8/F2. Self-paced (no scheduler clock, no scoring window), so
+   it needs no latency offset. A finished session records one accuracy score to the
+   sessions ring buffer (13), minting no per-item SRS — like the other Lead/Rhythm
+   coaches, the pinned item shape stays untouched.
+
+   Reuses the shared board paint (renderBoard, 07) on its OWN board, the current scale
+   context (SCALES[scIdx] rooted at gRoot, spine #1) inside a Phase-2 boxWindow, an
+   in-drill key + position picker, pluck() for the call playback + correct echoes, and
+   the cue bus (05) for right/wrong feedback. */
+
+const CR_ROUNDS = 4;         // motifs per session
+let crPos = 1;               // neck box (1–5, Phase 2 boxWindow); no "all" — a lick needs one shape
+let cr = null;
+// cr = { phase:'call'|'response'|'done', pool:[{si,f,midi}], motif:[poolIdx…], respIdx,
+//        round, correct, total, wrongNote, timers:[], scaleName }
+
+/* the scale-note positions of the current key inside the chosen box → the lick's palette */
+function crPool(){
+  const s=SCALES[scIdx], win=boxWindow(crPos)||[0,4], lo=win[0], hi=win[1];
+  const scPcs=new Set(s.iv.map(iv=>mod(gRoot+iv,12))), pool=[];
+  for(let si=0; si<6; si++) for(let f=lo; f<=hi; f++){ const midi=OPEN_MIDI[si]+f; if(scPcs.has(midi%12)) pool.push({si, f, midi}); }
+  return pool;
+}
+/* a melodic motif of n notes: a stepwise walk through the box palette sorted by pitch,
+   so consecutive notes are near neighbours (a phrase, not leaps). Returns pool indices. */
+function crMakeMotif(pool, n){
+  if(pool.length<2) return [0];
+  const order=pool.map((p,i)=>i).sort((a,b)=>pool[a].midi-pool[b].midi);
+  let cur=Math.floor(Math.random()*order.length); const motif=[order[cur]];
+  for(let k=1;k<n;k++){ const step=[-2,-1,1,2][Math.floor(Math.random()*4)]; cur=Math.max(0, Math.min(order.length-1, cur+step)); motif.push(order[cur]); }
+  return motif;
+}
+function crMotifLen(round){ return Math.min(3 + Math.floor(round/2), 5); }   // 3 → 5 as rounds pass
+
+/* ---- lifecycle ---- */
+function startCallResp(){
+  cr={ phase:'call', pool:[], motif:[], respIdx:0, round:0, correct:0, total:0, wrongNote:0, timers:[], scaleName:'' };
+  const home=document.getElementById('practice-home'), area=document.getElementById('cr-area');
+  if(home) home.hidden=true; if(area) area.hidden=false;
+  crRenderBoard();
+  crNewRound();
+}
+function exitCallResp(){
+  crClearTimers();
+  cr=null;
+  const home=document.getElementById('practice-home'), area=document.getElementById('cr-area');
+  if(area) area.hidden=true; if(home) home.hidden=false;
+  if(typeof renderPractice==='function') renderPractice();
+}
+function crClearTimers(){ if(cr){ cr.timers.forEach(clearTimeout); cr.timers=[]; } }
+
+// build the round's motif and play the call. Growing length as rounds advance.
+function crNewRound(){
+  if(!cr) return;
+  crClearTimers();
+  cr.pool=crPool(); cr.scaleName=sName(SCALES[scIdx]);
+  cr.motif=crMakeMotif(cr.pool, crMotifLen(cr.round));
+  cr.phase='call'; cr.respIdx=0; cr.wrongNote=0;
+  crPlayCall();
+  renderCr();
+}
+// play the lick: pluck each note in turn + light its dot, then open the response window
+function crPlayCall(){
+  if(!cr) return;
+  audio();
+  crClearTimers();
+  crClearMarks();
+  const dur=0.44;
+  cr.motif.forEach((pi,i)=>{
+    const p=cr.pool[pi];
+    pluck(p.midi, i*dur, dur*0.95);
+    cr.timers.push(setTimeout(()=>crLightDot(p.si, p.f, 'call'), Math.round(i*dur*1000)));
+    cr.timers.push(setTimeout(()=>crUnlight(p.si, p.f), Math.round((i*dur+dur*0.85)*1000)));
+  });
+  // after the last note + a breath, it's your turn
+  cr.timers.push(setTimeout(()=>{ if(cr){ cr.phase='response'; cr.respIdx=0; cr.wrongNote=0; renderCr(); } }, Math.round((cr.motif.length*dur+0.35)*1000)));
+}
+function crReplay(){ if(cr && cr.phase!=='done') crPlayCall(); }
+
+// one tap during the response. Correct next-in-order pitch → light + sound + advance;
+// finishing the motif scores the round (clean = no wrong tap on any note) and moves on.
+// A wrong pitch buzzes and you retry the same note (marks the note un-clean).
+function crAnswer(si, f){
+  if(!cr || cr.phase!=='response') return;
+  const midi=OPEN_MIDI[si]+f, want=cr.pool[cr.motif[cr.respIdx]].midi;
+  if(midi===want){
+    crLightDot(si, f, 'hit'); pluck(midi);
+    cr.total++; if(cr.wrongNote===0) cr.correct++;
+    cr.respIdx++; cr.wrongNote=0;
+    if(cr.respIdx>=cr.motif.length){ crFinishRound(); return; }
+    renderCr();
+  } else {
+    cr.wrongNote++;
+    crLightDot(si, f, 'miss');
+    playCue('wrong');
+  }
+}
+function crFinishRound(){
+  if(!cr) return;
+  playCue('correct');
+  cr.round++;
+  if(cr.round>=CR_ROUNDS){ crFinish(); return; }
+  cr.timers.push(setTimeout(()=>{ if(cr) crNewRound(); }, 650));   // brief beat, then the next call
+  cr.phase='call'; renderCr();
+}
+function crFinish(){
+  if(!cr) return;
+  cr.phase='done';
+  const acc=cr.total ? cr.correct/cr.total : 0;
+  recordSession('callresp:'+gRootLbl, Math.round(acc*100));
+  saveState();
+  if(typeof renderPractice==='function') renderPractice();
+  crRenderSummary(acc);
+}
+
+/* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
+function crRenderBoard(){
+  const el=document.getElementById('cr-board'); if(!el) return;
+  renderBoard(el, (pc,si,f)=>{
+    const d=document.createElement('div'); d.className='dot quiz';
+    d.dataset.si=si; d.dataset.f=f; d.dataset.midi=OPEN_MIDI[si]+f; d.tabIndex=0; d.setAttribute('role','button');
+    d.setAttribute('aria-label', SNAMES[si]+' '+f);
+    return d;
+  });
+  renderNums(document.getElementById('cr-nums'));
+}
+function crClearMarks(){ document.querySelectorAll('#cr-board .dot.quiz').forEach(d=>{ d.classList.remove('hit','miss','call','target'); }); }
+// during the response, dim-light the box palette so you see where the notes live
+function crMarkPalette(){
+  const on=cr && cr.phase==='response', box=new Set(cr?cr.pool.map(p=>p.si+':'+p.f):[]);
+  document.querySelectorAll('#cr-board .dot.quiz').forEach(d=>d.classList.toggle('target', on && box.has(d.dataset.si+':'+d.dataset.f)));
+}
+function crLightDot(si, f, kind){
+  const d=document.querySelector('#cr-board .dot.quiz[data-si="'+si+'"][data-f="'+f+'"]'); if(!d) return;
+  if(kind==='miss'){ d.classList.add('miss'); setTimeout(()=>{ if(d) d.classList.remove('miss'); }, 420); return; }
+  d.classList.add(kind); if(kind==='hit') rippleDot(d);
+}
+function crUnlight(si, f){ const d=document.querySelector('#cr-board .dot.quiz[data-si="'+si+'"][data-f="'+f+'"]'); if(d) d.classList.remove('call'); }
+function crRenderSummary(acc){
+  const el=document.getElementById('cr-summary'); if(!el) return;
+  const act=document.getElementById('cr-active'); if(act) act.hidden=true;
+  const stat=(v,l)=>'<div class="pp-stat"><div class="pp-val">'+v+'</div><div class="pp-lab">'+l+'</div></div>';
+  el.innerHTML='<div class="drill-done-title">'+t('drill_complete')+'</div>'+
+    '<div class="pp-stats">'+stat(Math.round(acc*100)+'%', t('drill_score'))+stat(cr.correct+' / '+cr.total, t('cr_echoed'))+stat(CR_ROUNDS, t('cr_rounds'))+'</div>'+
+    '<div class="drill-actions"><button class="btn play" id="cr-again"></button><button class="btn" id="cr-done2"></button></div>';
+  el.hidden=false;
+  const ag=document.getElementById('cr-again'); if(ag){ ag.textContent=t('drill_again'); ag.onclick=startCallResp; }
+  const dn=document.getElementById('cr-done2'); if(dn){ dn.textContent=t('drill_done'); dn.onclick=exitCallResp; }
+}
+function crRenderControls(){
+  const keyc=document.getElementById('cr-key');
+  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); if(cr) crNewRound(); });
+  segButtons('cr-pos', ['1','2','3','4','5'].map(label=>({label})), crPos-1, i=>{ crPos=i+1; if(cr) crNewRound(); });
+}
+function crRenderStatus(){
+  const st=document.getElementById('cr-status');
+  if(st) st.textContent = cr.phase==='call' ? t('cr_listen') : cr.phase==='response' ? t('cr_your_turn') : '';
+  const rl=document.getElementById('cr-round'); if(rl) rl.textContent=(Math.min(cr.round+1,CR_ROUNDS))+' / '+CR_ROUNDS;
+  const sc=document.getElementById('cr-scale'); if(sc) sc.textContent=cr.scaleName;
+}
+function renderCr(){
+  if(!cr) return;
+  const act=document.getElementById('cr-active'), sum=document.getElementById('cr-summary');
+  if(act) act.hidden = cr.phase==='done';
+  if(sum) sum.hidden = cr.phase!=='done';
+  if(cr.phase==='done') return;
+  crRenderControls();
+  crRenderStatus();
+  crMarkPalette();
+  const rb=document.getElementById('cr-replay'); if(rb){ rb.innerHTML='&#9654; '+t('cr_replay'); rb.disabled = cr.phase!=='response' && cr.phase!=='call'; }
+  const hint=document.getElementById('cr-hint'); if(hint) hint.textContent=t('cr_hint');
+}
+// re-localize an in-flight call-response drill on a language switch (called from applyLang)
+function refreshCallRespLang(){ if(cr) renderCr(); }
+
+/* card starter + in-drill controls — wired once at load (guarded, mirroring initTarget). */
+(function initCallResp(){
+  const card=document.getElementById('start-callresp'); if(!card) return;
+  card.onclick=startCallResp;
+  const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
+  wire('cr-quit', exitCallResp);
+  wire('cr-replay', crReplay);
+  const b=document.getElementById('cr-board');
+  if(b){
+    const fire=d=>{ if(d) crAnswer(parseInt(d.dataset.si,10), parseInt(d.dataset.f,10)); };
     b.addEventListener('click', e=>fire(e.target.closest('.dot.quiz')));
     b.addEventListener('keydown', e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const d=e.target.closest('.dot.quiz'); if(!d) return; e.preventDefault(); fire(d); });
   }
@@ -5928,17 +6171,18 @@ function setMode(mode){
   if(currentMode!=='practice' && typeof coDrill!=='undefined' && coDrill) exitComp();
   if(currentMode!=='practice' && typeof gfDrill!=='undefined' && gfDrill) exitGroove();
   if(currentMode!=='practice' && typeof tgDrill!=='undefined' && tgDrill) exitTarget();
+  if(currentMode!=='practice' && typeof cr!=='undefined' && cr) exitCallResp();
   if(currentMode!=='ear' && typeof ear!=='undefined' && ear) exitEar();
   if(currentMode==='reference'){
     applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
   } else if(currentMode==='practice'){
     // entering Practice with no drill running: show the home view (drill starters
     // swap it for the active drill area right after)
-    const anyDrill=(typeof drill!=='undefined' && drill) || (typeof cmDrill!=='undefined' && cmDrill) || (typeof spDrill!=='undefined' && spDrill) || (typeof coDrill!=='undefined' && coDrill) || (typeof gfDrill!=='undefined' && gfDrill) || (typeof tgDrill!=='undefined' && tgDrill);
+    const anyDrill=(typeof drill!=='undefined' && drill) || (typeof cmDrill!=='undefined' && cmDrill) || (typeof spDrill!=='undefined' && spDrill) || (typeof coDrill!=='undefined' && coDrill) || (typeof gfDrill!=='undefined' && gfDrill) || (typeof tgDrill!=='undefined' && tgDrill) || (typeof cr!=='undefined' && cr);
     if(!anyDrill){
       const home=document.getElementById('practice-home');
       if(home) home.hidden=false;
-      ['drill-area','cm-area','sp-area','co-area','gf-area','tg-area'].forEach(id=>{ const a=document.getElementById(id); if(a) a.hidden=true; });
+      ['drill-area','cm-area','sp-area','co-area','gf-area','tg-area','cr-area'].forEach(id=>{ const a=document.getElementById(id); if(a) a.hidden=true; });
     }
     renderPractice();
   } else {   // ear
@@ -6262,6 +6506,10 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     tgBuildBars, tgAccuracy, setTargetProg:(i)=>{ tgIdx=i; if(tgDrill){ tgDrill.presetIdx=i; tgDrill.bars=tgBuildBars(SEQ_PRESETS[i]); } },
     setTargetPos:(i)=>{ tgPos=i; if(tgDrill) tgDrill.win = i ? boxWindow(i) : null; },
     setTargetDeg:(i)=>{ tgDeg=i; if(tgDrill){ const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); } },
+    // call & response drill (Phase 6c)
+    startCallResp, crAnswer, crReplay, exitCallResp, getCr:()=>cr, CR_ROUNDS, crPool, crMakeMotif,
+    crToResponse:()=>{ if(cr){ cr.phase='response'; cr.respIdx=0; cr.wrongNote=0; } }, setCrPos:(i)=>{ crPos=i; },
+    crNextRoundNow:()=>{ if(cr) crNewRound(); },   // test hook: skip the inter-round wait
     CAGED_BY_POS, isCAGEDScale,
     setFret:(i)=>{ fretRangeIdx=i; },
     setCapo:(i)=>{ capo=i; }, getCapo:()=>capo,

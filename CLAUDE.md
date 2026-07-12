@@ -46,7 +46,7 @@ Edit the sources, then run the build.
   - `13-learner.js` — learner model (spine #3): per-item SRS history + sessions ring
     buffer; persists via `12-toolbar-state.js`'s `saveState`/`loadState`. Exposes the
     progress-card readouts `learnerReview` (due-for-review queue) + `learnerActivity` (active days)
-  - `14-drill-ear.js` + `14-drill-notes.js` + `14-drill-lead-1-target.js` +
+  - `14-drill-ear.js` + `14-drill-notes.js` + `14-drill-lead-{1-target,2-callresponse}.js` +
     `14-drill-rhythm-{1-changes,2-strum,3-comp,4-groove}.js`
     — the drills (all at load slot 14, before wiring). `14-drill-notes.js` is the Practice
     note-naming drill (3c); `14-drill-ear.js` is Ear training (Phase 4) — interval /
@@ -56,13 +56,16 @@ Edit the sources, then run the build.
     strumming-pattern trainer (5b, `sp*`) + comp-the-progression (5c, `co*`) + the
     groove/feel lab (5d, `gf*`), each a setup→timed run→summary flow living as a card in
     the Practice home (the `-1/-2/-3/-4` suffix preserves the cm→sp→co→gf concat order);
-    `14-drill-lead-1-target.js` is the Lead pillar (Phase 6, `tg*`) — one drill covering 6a/6b/6c:
-    a progression loops with a forced backing band (reusing `SEQ_PRESETS`/`scheduleBand`/
-    `compStrum` like 5c) while the current chord's tones light on a tappable neck (its own
-    board, like the note-naming drill) that you aim for — accuracy-scored, honest coach tier.
-    A **Position** picker windows the lit targets to one arpeggio box (6b, reusing Phase 2's
-    `boxWindow`) and a **Target** picker narrows them to a single degree (6c target-note soloing:
-    other chord tones stay neutral, only off-chord notes miss).
+    the two `14-drill-lead-*.js` files are the Lead pillar (Phase 6). `14-drill-lead-1-target.js`
+    (`tg*`) covers 6a/6b/6c-targeting: a progression loops with a forced backing band (reusing
+    `SEQ_PRESETS`/`scheduleBand`/`compStrum` like 5c) while the current chord's tones light on a
+    tappable neck (its own board) that you aim for — accuracy-scored, honest coach tier; a
+    **Position** picker windows the targets to one arpeggio box (6b, reusing Phase 2's `boxWindow`)
+    and a **Target** picker narrows them to a single degree (6c target-note soloing: other chord
+    tones stay neutral, only off-chord notes miss). `14-drill-lead-2-callresponse.js` (`cr*`) is
+    6c call-and-response — the app plays a scale-box motif (LISTEN) and you echo it back on its own
+    board (YOUR TURN); self-paced, scored on echo accuracy, its listen/answer turns being the
+    play-vs-rest phrasing lesson.
     They reuse the cue bus and the
     learner model; the shared progress readout (`renderProgressInto`) lives in the ear module.
     The note/ear drills write per-item SRS; the rhythm + lead coaches write only a sessions entry

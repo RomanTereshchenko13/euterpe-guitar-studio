@@ -350,6 +350,10 @@
             <span class="dc-name" data-i18n="drill_target">Тони акорду в прогресії</span>
             <span class="dc-meta" data-i18n="drill_target_meta">Влучай у тони акорду під гурт · коуч</span>
           </button></li>
+          <li><button type="button" class="drill-card" id="start-callresp">
+            <span class="dc-name" data-i18n="drill_callresp">Запитання-відповідь</span>
+            <span class="dc-meta" data-i18n="drill_callresp_meta">Почуй фразу · повтори її на грифі · коуч</span>
+          </button></li>
         </ul>
       </div>
       <!-- Progress readout (3b): the learner model's aggregate stats; renderPractice()
@@ -504,6 +508,31 @@
         <span class="drill-sub" id="tg-hint"></span>
         <button type="button" class="btn play" id="tg-play"></button>
       </div>
+    </div>
+
+    <!-- Call & response (Phase 6c): the app plays a lick from the key's scale in one
+         box (LISTEN), then you echo it back on the neck (YOUR TURN). Turn-based, self-
+         paced, scored on echo accuracy — its listen/answer structure is the play-vs-rest
+         phrasing lesson. Its own board so the reference board stays put. Hidden until started. -->
+    <div id="cr-area" hidden>
+      <div class="drill-head">
+        <button type="button" class="btn" id="cr-quit" data-i18n="drill_quit">Вийти</button>
+        <span class="drill-count" id="cr-round"></span>
+      </div>
+      <div id="cr-active">
+        <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="cr-key"></div></div>
+        <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="cr-pos"></div></div>
+        <div class="cr-stage">
+          <div class="cr-status" id="cr-status"></div>
+          <div class="cr-scale" id="cr-scale"></div>
+        </div>
+        <div class="scroll"><div class="board"><div class="fretboard" id="cr-board"></div></div><div class="fretnums" id="cr-nums"></div></div>
+        <div class="cm-active-foot">
+          <span class="drill-sub" id="cr-hint"></span>
+          <button type="button" class="btn play" id="cr-replay"></button>
+        </div>
+      </div>
+      <div class="drill-summary" id="cr-summary" hidden></div>
     </div>
 
     <!-- Active drill (3c): note-naming. Its own board (painted by renderBoard into

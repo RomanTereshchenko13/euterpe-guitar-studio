@@ -289,17 +289,18 @@ function setMode(mode){
   if(currentMode!=='practice' && typeof coDrill!=='undefined' && coDrill) exitComp();
   if(currentMode!=='practice' && typeof gfDrill!=='undefined' && gfDrill) exitGroove();
   if(currentMode!=='practice' && typeof tgDrill!=='undefined' && tgDrill) exitTarget();
+  if(currentMode!=='practice' && typeof cr!=='undefined' && cr) exitCallResp();
   if(currentMode!=='ear' && typeof ear!=='undefined' && ear) exitEar();
   if(currentMode==='reference'){
     applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
   } else if(currentMode==='practice'){
     // entering Practice with no drill running: show the home view (drill starters
     // swap it for the active drill area right after)
-    const anyDrill=(typeof drill!=='undefined' && drill) || (typeof cmDrill!=='undefined' && cmDrill) || (typeof spDrill!=='undefined' && spDrill) || (typeof coDrill!=='undefined' && coDrill) || (typeof gfDrill!=='undefined' && gfDrill) || (typeof tgDrill!=='undefined' && tgDrill);
+    const anyDrill=(typeof drill!=='undefined' && drill) || (typeof cmDrill!=='undefined' && cmDrill) || (typeof spDrill!=='undefined' && spDrill) || (typeof coDrill!=='undefined' && coDrill) || (typeof gfDrill!=='undefined' && gfDrill) || (typeof tgDrill!=='undefined' && tgDrill) || (typeof cr!=='undefined' && cr);
     if(!anyDrill){
       const home=document.getElementById('practice-home');
       if(home) home.hidden=false;
-      ['drill-area','cm-area','sp-area','co-area','gf-area','tg-area'].forEach(id=>{ const a=document.getElementById(id); if(a) a.hidden=true; });
+      ['drill-area','cm-area','sp-area','co-area','gf-area','tg-area','cr-area'].forEach(id=>{ const a=document.getElementById(id); if(a) a.hidden=true; });
     }
     renderPractice();
   } else {   // ear
@@ -623,6 +624,10 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     tgBuildBars, tgAccuracy, setTargetProg:(i)=>{ tgIdx=i; if(tgDrill){ tgDrill.presetIdx=i; tgDrill.bars=tgBuildBars(SEQ_PRESETS[i]); } },
     setTargetPos:(i)=>{ tgPos=i; if(tgDrill) tgDrill.win = i ? boxWindow(i) : null; },
     setTargetDeg:(i)=>{ tgDeg=i; if(tgDrill){ const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); } },
+    // call & response drill (Phase 6c)
+    startCallResp, crAnswer, crReplay, exitCallResp, getCr:()=>cr, CR_ROUNDS, crPool, crMakeMotif,
+    crToResponse:()=>{ if(cr){ cr.phase='response'; cr.respIdx=0; cr.wrongNote=0; } }, setCrPos:(i)=>{ crPos=i; },
+    crNextRoundNow:()=>{ if(cr) crNewRound(); },   // test hook: skip the inter-round wait
     CAGED_BY_POS, isCAGEDScale,
     setFret:(i)=>{ fretRangeIdx=i; },
     setCapo:(i)=>{ capo=i; }, getCapo:()=>capo,

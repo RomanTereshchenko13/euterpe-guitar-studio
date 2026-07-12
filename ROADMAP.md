@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-07-12 · shipping: v2.9.0_
+_Last updated: 2026-07-12 · shipping: v2.10.0_
 
 ---
 
@@ -569,11 +569,19 @@ The improviser's half — turning fretboard knowledge into melody:
     stay neutral (they just sound — fair game in a solo), only off-chord notes miss; if a chord lacks
     the degree (a 7th on a triad) nothing lights that bar — an honest "lay out". Composes with Position
     (target the 3rd, in one box).
-  - _Still open:_ **motif / call-and-response** (app plays a lick → you echo it) and a **phrasing/rest**
-    rhythm coach — the bigger, less mechanical slices; each independently shippable on the same engine.
+    (target the 3rd, in one box).
+  - **Motif / call-and-response** ✅ **Shipped v2.10.0** (6c, `14-drill-lead-2-callresponse.js`, `cr*`).
+    A separate card (a genuinely different turn-based interaction, not the continuous targeting loop):
+    the app plays a short stepwise motif from the key's scale (`SCALES[scIdx]`, spine #1) inside one
+    Phase-2 box (LISTEN — plays each note via `pluck` + lights it), then you echo it back on its own
+    `#cr-board` in order (YOUR TURN). Self-paced (no scheduler clock, so no latency offset needed),
+    scored on echo accuracy (a clean note = no wrong tap before it); motifs grow 3→5 notes over
+    `CR_ROUNDS`. A finished session records `callresp:<key>` (no per-item SRS). The listen/answer turn
+    structure **is** the phrasing / play-vs-rest lesson, so it also closes that slice — a metronomic
+    rest-coach, if ever wanted, belongs with Phase 7 (timing), not here.
 
-Coach/recognition tiers ship on screen; the real "play your guitar and get scored" version
-needs Phase 8 (F2 pitch).
+**Phase 6 complete** (coach tiers). Coach/recognition tiers ship on screen; the real "play your guitar
+and get scored" version needs Phase 8 (F2 pitch).
 
 ---
 
