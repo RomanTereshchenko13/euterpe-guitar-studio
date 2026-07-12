@@ -190,7 +190,7 @@ if (T) {
    'drill_strum','drill_strum_meta','sp_pattern','sp_chord','sp_play','sp_stop','sp_hint',
    'drill_comp','drill_comp_meta','co_prog','co_now','co_next','co_hint',
    'drill_groove','drill_groove_meta','gf_swing','gf_accent','gf_mute','gf_hint',
-   'practice_grp_lead','drill_target','drill_target_meta','tg_prog','tg_hits','tg_acc','tg_hint',
+   'practice_grp_lead','drill_target','drill_target_meta','tg_prog','tg_pos','tg_hits','tg_acc','tg_hint',
    'a11y_label','a11y_palette','a11y_shapes',
    'wc_title','wc_lead','wc_ref','wc_practice','wc_ear','wc_got',
    'tun_custom','cal_label','cal_test','cal_tapnow','cal_unit',
@@ -732,6 +732,53 @@ if (T) {
     T.targetPlay();
     T.setMode('reference');
     ok('6a: leaving Practice exits a running targeting drill', T.getTg() === null);
+    T.setCtxNow(0);
+    T.resetLearner();
+  })();
+
+  /* ---- Phase 6b: arpeggios over changes (a box windows the targets to one shape) ---- */
+  (function targetArp() {
+    const doc = win.document;
+    ok('6b: target drill has a position picker (tg-pos)', !!doc.getElementById('tg-pos'));
+
+    T.resetLearner();
+    T.initAudio();
+    T.setCtxNow(0);
+    T.setMode('practice');
+    T.setKey(0, 'C');
+    T.setFret(0);                  // all frets, so the box window (frets 8–12 in C) is on the board
+    T.setTargetProg(2);
+    T.startTarget();
+    T.targetPlay();
+    for (let s = 0; s <= 4; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
+
+    // whole-neck default: no window
+    let tg = T.getTg();
+    ok('6b: default position is the whole neck (no window)', tg.win === null);
+
+    // pick a box → a 5-fret window; only tones inside it are drillable
+    T.setTargetPos(1);
+    tg = T.getTg();
+    ok('6b: choosing a position sets a 5-fret window', Array.isArray(tg.win) && tg.win[1] - tg.win[0] === 4);
+    const [lo, hi] = tg.win;
+
+    // a target pc tapped OUTSIDE the box is ignored (not scored); INSIDE it scores a hit
+    const tpc = [...tg.targetPcs][0];
+    const dots = [...doc.querySelectorAll('#tg-board .dot.quiz')].map(d => ({
+      si: +d.dataset.si, f: +d.dataset.f, pc: +d.dataset.pc }));
+    const inBox = dots.find(d => d.pc === tpc && d.f >= lo && d.f <= hi);
+    const outBox = dots.find(d => d.pc === tpc && (d.f < lo || d.f > hi));
+    const h0 = tg.hits, m0 = tg.misses;
+    if (outBox) T.targetAnswer(outBox.si, outBox.f);
+    tg = T.getTg();
+    ok('6b: a chord tone tapped outside the shape is ignored', tg.hits === h0 && tg.misses === m0);
+    if (inBox) T.targetAnswer(inBox.si, inBox.f);
+    tg = T.getTg();
+    ok('6b: a chord tone tapped inside the shape scores a hit', inBox ? tg.hits === h0 + 1 : true);
+
+    T.targetStop();
+    T.setTargetPos(0);
+    T.setMode('reference');
     T.setCtxNow(0);
     T.resetLearner();
   })();

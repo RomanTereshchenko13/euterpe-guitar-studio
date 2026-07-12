@@ -21,7 +21,9 @@
 let tgIdx = 1;          // selected progression (default I–V–vi–IV)
 let tgDrill = null;
 // tgDrill = { presetIdx, bars:[{pc,qi}…], bar, cycles, clock, playing,
-//             hits, misses, targetPcs:Set(pc), degMap:{pc:lab}, found:Set("si:f") }
+//             hits, misses, targetPcs:Set(pc), degMap:{pc:lab}, found:Set("si:f"), win:[lo,hi]|null }
+
+let tgPos = 0;         // 0 = whole neck (6a targeting); 1–5 = one arpeggio box (6b, reuses Phase 2 boxWindow)
 
 // expand a preset's steps (offset, qi, bars) into one chord per bar, in the context key
 function tgBuildBars(preset){
@@ -29,9 +31,17 @@ function tgBuildBars(preset){
   preset.steps.forEach(([off,qi,b])=>{ const pc=mod(r+off,12); for(let k=0;k<Math.max(1,b);k++) out.push({pc, qi}); });
   return out;
 }
+// the current chord's tones + degree map → the bar's targets. Kept in one place so the
+// idle board (before Play) and each tick light the same set. Does not touch `found`.
+function tgSetTargets(chord){
+  const pcs=new Set(), deg={}, q=QUALITIES[chord.qi];
+  q.lab.forEach((lab,idx)=>{ const pc=mod(chord.pc+q.iv[idx],12); pcs.add(pc); deg[pc]=lab; });
+  tgDrill.targetPcs=pcs; tgDrill.degMap=deg;
+}
 function startTarget(){
   tgDrill={ presetIdx:tgIdx, bars:tgBuildBars(SEQ_PRESETS[tgIdx]), bar:0, cycles:0, clock:null, playing:false,
-            hits:0, misses:0, targetPcs:new Set(), degMap:{}, found:new Set() };
+            hits:0, misses:0, targetPcs:new Set(), degMap:{}, found:new Set(), win:null };
+  tgSetTargets(tgDrill.bars[0]);          // light the first chord on the idle board
   const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
   if(home) home.hidden=true; if(area) area.hidden=false;
   renderTargetBoard();
@@ -51,7 +61,7 @@ function targetPlay(){
   if(typeof stopLoop==='function') stopLoop();       // don't fight the reference loop / progression
   if(typeof seqStop==='function') seqStop();
   tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
-  tgDrill.bar=0; tgDrill.cycles=0; tgDrill.hits=0; tgDrill.misses=0; tgDrill.playing=true;
+  tgDrill.bar=0; tgDrill.cycles=0; tgDrill.hits=0; tgDrill.misses=0; tgDrill.found=new Set(); tgDrill.playing=true;
   tgDrill.clock={ interval:()=>beat()*4, tick:(time,count)=>targetTick(time,count) };
   if(typeof addClock==='function') addClock(tgDrill.clock);
   renderTarget();
@@ -78,28 +88,32 @@ function targetTick(when, count){
   // the SCORING state (which tones are targets this bar) is set synchronously in the
   // tick so a tap always reads the current chord — only the DOM guides ride the visual
   // queue (which may lag/skip a frame). Reset the found set for the new bar.
-  const pcs=new Set(), deg={};
-  QUALITIES[cur.qi].lab.forEach((lab,idx)=>{ const pc=mod(cur.pc+ivs[idx],12); pcs.add(pc); deg[pc]=lab; });
-  tgDrill.targetPcs=pcs; tgDrill.degMap=deg; tgDrill.found=new Set();
+  tgSetTargets(cur); tgDrill.found=new Set();
   compStrum(base, ivs, when, 0.62, 0.03);                    // light guide comp under your targeting
   scheduleBand(cur.pc, cur.qi, when, true);                  // forced bass + groove bed
   for(let k=0;k<4;k++) enqueueVisual(when+k*b, ()=>tgPulseBeat(k));
   enqueueVisual(when, ()=>{ markTargets(); renderTargetStage(cur, nxt); });
 }
-// paint/refresh which dots are lit targets, clearing the previous bar's hit/miss marks
+// whether fret f is inside the drilled shape (always true on the whole-neck 6a mode)
+function tgInWin(f){ const w=tgDrill&&tgDrill.win; return !w || (f>=w[0] && f<=w[1]); }
+// paint/refresh which dots are lit targets, clearing the previous bar's hit/miss marks.
+// In a box (6b) only the tones INSIDE the window light, so you drill one moveable shape.
 function markTargets(){
   if(!tgDrill) return;
   document.querySelectorAll('#tg-board .dot.quiz').forEach(d=>{
     const pc=+d.dataset.pc;
     d.classList.remove('hit','miss'); d.textContent='';
-    d.classList.toggle('target', tgDrill.targetPcs.has(pc));
+    d.classList.toggle('target', tgDrill.targetPcs.has(pc) && tgInWin(+d.dataset.f));
   });
 }
 
 // one tap at (string,fret) while the loop runs. A chord tone not yet found this bar →
 // hit (light its degree + sound it); an off-chord note → miss (buzz); a re-tap → ignored.
+// In box mode (6b) taps OUTSIDE the shape are ignored (not scored) — you're drilling the
+// one position, so only what's inside the box counts either way.
 function targetAnswer(si, f){
   if(!tgDrill || !tgDrill.playing) return;
+  if(!tgInWin(f)) return;                                    // 6b: outside the shape → ignore
   const pc=(OPEN_MIDI[si]+f)%12, key=si+':'+f;
   if(tgDrill.targetPcs.has(pc)){
     if(tgDrill.found.has(key)) return;                       // already landed
@@ -131,10 +145,15 @@ function renderTarget(){
   if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); if(tgDrill){ tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]); if(tgDrill.bar>=tgDrill.bars.length) tgDrill.bar=0; } renderTarget(); });
   const chips=document.getElementById('tg-progs');
   if(chips) chips.innerHTML=SEQ_PRESETS.map((p,i)=>`<button type="button" class="btn tg-prog${i===tgIdx?' active':''}" data-i="${i}" aria-pressed="${i===tgIdx}">${p.name}</button>`).join('');
+  // arpeggio-position picker (6b): All (whole neck) + boxes 1–5, reusing Phase 2's boxWindow
+  segButtons('tg-pos', [t('pos_all'),'1','2','3','4','5'].map(label=>({label})), tgPos,
+    i=>{ tgPos=i; renderTarget(); });
+  tgDrill.win = tgPos ? boxWindow(tgPos) : null;
   const beats=document.getElementById('tg-beats');
   if(beats) beats.innerHTML=[0,1,2,3].map(k=>`<span class="co-beat" data-k="${k}"></span>`).join('');
   const cur=tgDrill.bars[tgDrill.bar], nxt=tgDrill.bars[(tgDrill.bar+1)%tgDrill.bars.length];
   renderTargetStage(cur, nxt);
+  markTargets();                                     // reflect current chord + shape on the board
   renderTargetStats();
   const pb=document.getElementById('tg-play'); if(pb){ pb.innerHTML=(tgDrill.playing?'&#9632; ':'&#9654; ')+t(tgDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', tgDrill.playing); pb.setAttribute('aria-pressed', tgDrill.playing?'true':'false'); }
   const hint=document.getElementById('tg-hint'); if(hint) hint.textContent=t('tg_hint');

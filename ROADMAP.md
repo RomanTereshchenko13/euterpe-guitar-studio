@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-07-12 · shipping: v2.7.0_
+_Last updated: 2026-07-12 · shipping: v2.8.0_
 
 ---
 
@@ -556,8 +556,12 @@ The improviser's half — turning fretboard knowledge into melody:
   minting no per-item SRS (derived from the ring buffer like the Rhythm coaches). *Honest framing:*
   without a mic this trains *where the chord tones are* (recognition/location), not soloing — a
   theory/rhythm game, not guitar practice. Don't market it as the latter; real scoring needs Phase 8/F2.
-- **Arpeggios over changes** — play the right arpeggio shape through a progression (reuses
-  Phase 2 content).
+- **Arpeggios over changes** ✅ **Shipped v2.8.0** (6b). Delivered as a **Position** picker on the
+  targeting drill rather than a separate card (DRY — same loop/scoring): "All" is the whole-neck 6a
+  targeting; positions 1–5 window the lit targets to one arpeggio box (reusing Phase 2's `boxWindow`,
+  key-anchored so the shape stays put), so you play a single moveable shape through the whole
+  progression. Taps outside the box are ignored; only the shape is scored. The idle board now also
+  lights the first chord so the neck isn't blank before Play.
 - **Guided improvisation** — phrasing, motif/call-and-response, target-note soloing prompts.
 
 Coach/recognition tiers ship on screen; the real "play your guitar and get scored" version

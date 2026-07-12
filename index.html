@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 2.7.0  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 2.8.0  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="2.7.0">
+<meta name="version" content="2.8.0">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -1318,6 +1318,7 @@
       </div>
       <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="tg-key"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="tg_prog">Прогресія</span><div class="group" id="tg-progs"></div></div>
+      <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="tg-pos"></div></div>
       <div class="co-stage">
         <div class="co-slot">
           <div class="co-lab" id="tg-now-lab" data-i18n="co_now">Зараз</div>
@@ -1538,10 +1539,13 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '2.7.0';
+const APP_VERSION = '2.8.0';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.8.0', date:'2026-07-12',
+    en:['Arpeggios over changes: the Chord-tones drill gains a Position picker — choose one of the five neck boxes and only that arpeggio shape lights up, so you play a single moveable shape through the whole progression instead of chasing tones all over the neck. "All" keeps the full-neck targeting.'],
+    uk:['Арпеджіо крізь зміни: у вправі «Тони акорду» зʼявився вибір позиції — обери одну з пʼяти форм на грифі, і підсвічуватиметься лише вона, тож ти граєш одну рухому форму арпеджіо крізь усю прогресію, а не ловиш тони по всьому грифу. «Усі» лишає прицілювання по всьому грифу.'] },
   { v:'2.7.0', date:'2026-07-12',
     en:['Practice gains its first Lead drill — Chord tones over changes: a progression loops with a full backing band, and the tones of the chord playing now light up on a tappable neck for you to target. Hit the lit tones, dodge the rest; it tracks your accuracy as you follow the changes through any key or progression.',
         'An honest coach, like the Rhythm drills: it trains where the chord tones live under a real progression — playing your actual guitar and getting scored arrives with microphone input later.'],
@@ -1902,8 +1906,8 @@ const I18N = {
     gf_swing:'Свінг', gf_accent:'Бекбіт', gf_mute:'Глушіння',
     gf_hint:'Грай разом і відчуй біт — спробуй свінг, бекбіт-акцент і приглушені удари.',
     practice_grp_lead:'Соло', drill_target:'Тони акорду в прогресії', drill_target_meta:'Влучай у тони акорду під гурт · коуч',
-    tg_prog:'Прогресія', tg_hits:'Влучань', tg_acc:'Точність',
-    tg_hint:'Гурт веде прогресію — влучай у підсвічені тони поточного акорду. Це тренує, де лежать тони акорду (не звук гітари — оцінку з мікрофоном додамо згодом).',
+    tg_prog:'Прогресія', tg_pos:'Позиція', tg_hits:'Влучань', tg_acc:'Точність',
+    tg_hint:'Гурт веде прогресію — влучай у підсвічені тони поточного акорду. Обери позицію, щоб грати одну форму арпеджіо крізь зміни. Це тренує, де лежать тони акорду (не звук гітари — оцінку з мікрофоном додамо згодом).',
     prog_title:'Прогрес', prog_empty:'Ще немає практики — статистика з’явиться, щойно почнеш вправи.',
     prog_tracked:'Вивчається', prog_accuracy:'Точність', prog_streak:'Найкраща серія', prog_sessions:'Сесій',
     tab_harmony:'Акорди / тріади', lbl_view:'Вид', view_chords:'Тони акорду', view_triads:'Форми тріад',
@@ -2021,8 +2025,8 @@ const I18N = {
     gf_swing:'Swing', gf_accent:'Backbeat', gf_mute:'Palm mute',
     gf_hint:'Play along and feel the beat — try swing, the backbeat accent, and muted strums.',
     practice_grp_lead:'Lead', drill_target:'Chord tones over changes', drill_target_meta:'Target the chord tones over a band · coach',
-    tg_prog:'Progression', tg_hits:'Hits', tg_acc:'Accuracy',
-    tg_hint:'The band cycles the progression — hit the lit tones of the current chord. This trains where the chord tones are (not your guitar — mic scoring comes later).',
+    tg_prog:'Progression', tg_pos:'Position', tg_hits:'Hits', tg_acc:'Accuracy',
+    tg_hint:'The band cycles the progression — hit the lit tones of the current chord. Pick a position to play one arpeggio shape through the changes. This trains where the chord tones are (not your guitar — mic scoring comes later).',
     prog_title:'Progress', prog_empty:'No practice yet — your stats will appear once you start a drill.',
     prog_tracked:'Tracked', prog_accuracy:'Accuracy', prog_streak:'Best streak', prog_sessions:'Sessions',
     tab_harmony:'Chords / triads', lbl_view:'View', view_chords:'Chord tones', view_triads:'Triad shapes',
@@ -4745,7 +4749,9 @@ function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPr
 let tgIdx = 1;          // selected progression (default I–V–vi–IV)
 let tgDrill = null;
 // tgDrill = { presetIdx, bars:[{pc,qi}…], bar, cycles, clock, playing,
-//             hits, misses, targetPcs:Set(pc), degMap:{pc:lab}, found:Set("si:f") }
+//             hits, misses, targetPcs:Set(pc), degMap:{pc:lab}, found:Set("si:f"), win:[lo,hi]|null }
+
+let tgPos = 0;         // 0 = whole neck (6a targeting); 1–5 = one arpeggio box (6b, reuses Phase 2 boxWindow)
 
 // expand a preset's steps (offset, qi, bars) into one chord per bar, in the context key
 function tgBuildBars(preset){
@@ -4753,9 +4759,17 @@ function tgBuildBars(preset){
   preset.steps.forEach(([off,qi,b])=>{ const pc=mod(r+off,12); for(let k=0;k<Math.max(1,b);k++) out.push({pc, qi}); });
   return out;
 }
+// the current chord's tones + degree map → the bar's targets. Kept in one place so the
+// idle board (before Play) and each tick light the same set. Does not touch `found`.
+function tgSetTargets(chord){
+  const pcs=new Set(), deg={}, q=QUALITIES[chord.qi];
+  q.lab.forEach((lab,idx)=>{ const pc=mod(chord.pc+q.iv[idx],12); pcs.add(pc); deg[pc]=lab; });
+  tgDrill.targetPcs=pcs; tgDrill.degMap=deg;
+}
 function startTarget(){
   tgDrill={ presetIdx:tgIdx, bars:tgBuildBars(SEQ_PRESETS[tgIdx]), bar:0, cycles:0, clock:null, playing:false,
-            hits:0, misses:0, targetPcs:new Set(), degMap:{}, found:new Set() };
+            hits:0, misses:0, targetPcs:new Set(), degMap:{}, found:new Set(), win:null };
+  tgSetTargets(tgDrill.bars[0]);          // light the first chord on the idle board
   const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
   if(home) home.hidden=true; if(area) area.hidden=false;
   renderTargetBoard();
@@ -4775,7 +4789,7 @@ function targetPlay(){
   if(typeof stopLoop==='function') stopLoop();       // don't fight the reference loop / progression
   if(typeof seqStop==='function') seqStop();
   tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
-  tgDrill.bar=0; tgDrill.cycles=0; tgDrill.hits=0; tgDrill.misses=0; tgDrill.playing=true;
+  tgDrill.bar=0; tgDrill.cycles=0; tgDrill.hits=0; tgDrill.misses=0; tgDrill.found=new Set(); tgDrill.playing=true;
   tgDrill.clock={ interval:()=>beat()*4, tick:(time,count)=>targetTick(time,count) };
   if(typeof addClock==='function') addClock(tgDrill.clock);
   renderTarget();
@@ -4802,28 +4816,32 @@ function targetTick(when, count){
   // the SCORING state (which tones are targets this bar) is set synchronously in the
   // tick so a tap always reads the current chord — only the DOM guides ride the visual
   // queue (which may lag/skip a frame). Reset the found set for the new bar.
-  const pcs=new Set(), deg={};
-  QUALITIES[cur.qi].lab.forEach((lab,idx)=>{ const pc=mod(cur.pc+ivs[idx],12); pcs.add(pc); deg[pc]=lab; });
-  tgDrill.targetPcs=pcs; tgDrill.degMap=deg; tgDrill.found=new Set();
+  tgSetTargets(cur); tgDrill.found=new Set();
   compStrum(base, ivs, when, 0.62, 0.03);                    // light guide comp under your targeting
   scheduleBand(cur.pc, cur.qi, when, true);                  // forced bass + groove bed
   for(let k=0;k<4;k++) enqueueVisual(when+k*b, ()=>tgPulseBeat(k));
   enqueueVisual(when, ()=>{ markTargets(); renderTargetStage(cur, nxt); });
 }
-// paint/refresh which dots are lit targets, clearing the previous bar's hit/miss marks
+// whether fret f is inside the drilled shape (always true on the whole-neck 6a mode)
+function tgInWin(f){ const w=tgDrill&&tgDrill.win; return !w || (f>=w[0] && f<=w[1]); }
+// paint/refresh which dots are lit targets, clearing the previous bar's hit/miss marks.
+// In a box (6b) only the tones INSIDE the window light, so you drill one moveable shape.
 function markTargets(){
   if(!tgDrill) return;
   document.querySelectorAll('#tg-board .dot.quiz').forEach(d=>{
     const pc=+d.dataset.pc;
     d.classList.remove('hit','miss'); d.textContent='';
-    d.classList.toggle('target', tgDrill.targetPcs.has(pc));
+    d.classList.toggle('target', tgDrill.targetPcs.has(pc) && tgInWin(+d.dataset.f));
   });
 }
 
 // one tap at (string,fret) while the loop runs. A chord tone not yet found this bar →
 // hit (light its degree + sound it); an off-chord note → miss (buzz); a re-tap → ignored.
+// In box mode (6b) taps OUTSIDE the shape are ignored (not scored) — you're drilling the
+// one position, so only what's inside the box counts either way.
 function targetAnswer(si, f){
   if(!tgDrill || !tgDrill.playing) return;
+  if(!tgInWin(f)) return;                                    // 6b: outside the shape → ignore
   const pc=(OPEN_MIDI[si]+f)%12, key=si+':'+f;
   if(tgDrill.targetPcs.has(pc)){
     if(tgDrill.found.has(key)) return;                       // already landed
@@ -4855,10 +4873,15 @@ function renderTarget(){
   if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); if(tgDrill){ tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]); if(tgDrill.bar>=tgDrill.bars.length) tgDrill.bar=0; } renderTarget(); });
   const chips=document.getElementById('tg-progs');
   if(chips) chips.innerHTML=SEQ_PRESETS.map((p,i)=>`<button type="button" class="btn tg-prog${i===tgIdx?' active':''}" data-i="${i}" aria-pressed="${i===tgIdx}">${p.name}</button>`).join('');
+  // arpeggio-position picker (6b): All (whole neck) + boxes 1–5, reusing Phase 2's boxWindow
+  segButtons('tg-pos', [t('pos_all'),'1','2','3','4','5'].map(label=>({label})), tgPos,
+    i=>{ tgPos=i; renderTarget(); });
+  tgDrill.win = tgPos ? boxWindow(tgPos) : null;
   const beats=document.getElementById('tg-beats');
   if(beats) beats.innerHTML=[0,1,2,3].map(k=>`<span class="co-beat" data-k="${k}"></span>`).join('');
   const cur=tgDrill.bars[tgDrill.bar], nxt=tgDrill.bars[(tgDrill.bar+1)%tgDrill.bars.length];
   renderTargetStage(cur, nxt);
+  markTargets();                                     // reflect current chord + shape on the board
   renderTargetStats();
   const pb=document.getElementById('tg-play'); if(pb){ pb.innerHTML=(tgDrill.playing?'&#9632; ':'&#9654; ')+t(tgDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', tgDrill.playing); pb.setAttribute('aria-pressed', tgDrill.playing?'true':'false'); }
   const hint=document.getElementById('tg-hint'); if(hint) hint.textContent=t('tg_hint');
@@ -6213,6 +6236,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     // chord-tone targeting drill (Phase 6a)
     startTarget, targetPlay, targetStop, targetToggle, targetAnswer, exitTarget, getTg:()=>tgDrill,
     tgBuildBars, tgAccuracy, setTargetProg:(i)=>{ tgIdx=i; if(tgDrill){ tgDrill.presetIdx=i; tgDrill.bars=tgBuildBars(SEQ_PRESETS[i]); } },
+    setTargetPos:(i)=>{ tgPos=i; if(tgDrill) tgDrill.win = i ? boxWindow(i) : null; },
     CAGED_BY_POS, isCAGEDScale,
     setFret:(i)=>{ fretRangeIdx=i; },
     setCapo:(i)=>{ capo=i; }, getCapo:()=>capo,

@@ -1,6 +1,9 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.8.0', date:'2026-07-12',
+    en:['Arpeggios over changes: the Chord-tones drill gains a Position picker — choose one of the five neck boxes and only that arpeggio shape lights up, so you play a single moveable shape through the whole progression instead of chasing tones all over the neck. "All" keeps the full-neck targeting.'],
+    uk:['Арпеджіо крізь зміни: у вправі «Тони акорду» зʼявився вибір позиції — обери одну з пʼяти форм на грифі, і підсвічуватиметься лише вона, тож ти граєш одну рухому форму арпеджіо крізь усю прогресію, а не ловиш тони по всьому грифу. «Усі» лишає прицілювання по всьому грифу.'] },
   { v:'2.7.0', date:'2026-07-12',
     en:['Practice gains its first Lead drill — Chord tones over changes: a progression loops with a full backing band, and the tones of the chord playing now light up on a tappable neck for you to target. Hit the lit tones, dodge the rest; it tracks your accuracy as you follow the changes through any key or progression.',
         'An honest coach, like the Rhythm drills: it trains where the chord tones live under a real progression — playing your actual guitar and getting scored arrives with microphone input later.'],

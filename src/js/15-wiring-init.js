@@ -621,6 +621,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     // chord-tone targeting drill (Phase 6a)
     startTarget, targetPlay, targetStop, targetToggle, targetAnswer, exitTarget, getTg:()=>tgDrill,
     tgBuildBars, tgAccuracy, setTargetProg:(i)=>{ tgIdx=i; if(tgDrill){ tgDrill.presetIdx=i; tgDrill.bars=tgBuildBars(SEQ_PRESETS[i]); } },
+    setTargetPos:(i)=>{ tgPos=i; if(tgDrill) tgDrill.win = i ? boxWindow(i) : null; },
     CAGED_BY_POS, isCAGEDScale,
     setFret:(i)=>{ fretRangeIdx=i; },
     setCapo:(i)=>{ capo=i; }, getCapo:()=>capo,

@@ -2,6 +2,10 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.8.0 — 2026-07-12
+
+- Arpeggios over changes: the Chord-tones drill gains a Position picker — choose one of the five neck boxes and only that arpeggio shape lights up, so you play a single moveable shape through the whole progression instead of chasing tones all over the neck. "All" keeps the full-neck targeting.
+
 ## v2.7.0 — 2026-07-12
 
 - Practice gains its first Lead drill — Chord tones over changes: a progression loops with a full backing band, and the tones of the chord playing now light up on a tappable neck for you to target. Hit the lit tones, dodge the rest; it tracks your accuracy as you follow the changes through any key or progression.
