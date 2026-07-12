@@ -190,7 +190,7 @@ if (T) {
    'drill_strum','drill_strum_meta','sp_pattern','sp_chord','sp_play','sp_stop','sp_hint',
    'drill_comp','drill_comp_meta','co_prog','co_now','co_next','co_hint',
    'drill_groove','drill_groove_meta','gf_swing','gf_accent','gf_mute','gf_hint',
-   'practice_grp_lead','drill_target','drill_target_meta','tg_prog','tg_pos','tg_hits','tg_acc','tg_hint',
+   'practice_grp_lead','drill_target','drill_target_meta','tg_prog','tg_pos','tg_deg','tg_hits','tg_acc','tg_hint',
    'a11y_label','a11y_palette','a11y_shapes',
    'wc_title','wc_lead','wc_ref','wc_practice','wc_ear','wc_got',
    'tun_custom','cal_label','cal_test','cal_tapnow','cal_unit',
@@ -778,6 +778,62 @@ if (T) {
 
     T.targetStop();
     T.setTargetPos(0);
+    T.setMode('reference');
+    T.setCtxNow(0);
+    T.resetLearner();
+  })();
+
+  /* ---- Phase 6c: target-note soloing (light ONE degree; other chord tones neutral) ---- */
+  (function targetNote() {
+    const doc = win.document;
+    ok('6c: target drill has a target-note picker (tg-deg)', !!doc.getElementById('tg-deg'));
+
+    T.resetLearner();
+    T.initAudio();
+    T.setCtxNow(0);
+    T.setMode('practice');
+    T.setKey(0, 'C');
+    T.setFret(0);
+    T.setTargetProg(2);         // I–IV–V, all major triads → root/3rd/5th present, no 7th
+    T.startTarget();
+    T.targetPlay();
+    for (let s = 0; s <= 4; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
+
+    let tg = T.getTg();
+    const allTones = tg.targetPcs.size;
+    ok('6c: default lights the whole chord', allTones >= 3 && tg.chordPcs.size === allTones);
+
+    // pick "the 3rd" → exactly one lit target, but the full chord is still known
+    T.setTargetDeg(2);
+    tg = T.getTg();
+    ok('6c: choosing a degree narrows the lit target to one tone', tg.targetPcs.size === 1);
+    ok('6c: the full chord is still tracked (for neutral notes)', tg.chordPcs.size >= 3);
+    const thirdPc = [...tg.targetPcs][0];
+    ok('6c: the lit tone is the third of the chord', tg.degMap[thirdPc] === '3' || tg.degMap[thirdPc] === '♭3');
+
+    // scoring: the target tone → hit; another chord tone → neutral (no hit, no miss);
+    // an off-chord tone → miss.
+    const dots = [...doc.querySelectorAll('#tg-board .dot.quiz')].map(d => ({
+      si: +d.dataset.si, f: +d.dataset.f, pc: +d.dataset.pc }));
+    const otherChordPc = [...tg.chordPcs].find(pc => !tg.targetPcs.has(pc));
+    const offPc = [0,1,2,3,4,5,6,7,8,9,10,11].find(pc => !tg.chordPcs.has(pc));
+    const hit = dots.find(d => d.pc === thirdPc);
+    const neutral = dots.find(d => d.pc === otherChordPc);
+    const off = dots.find(d => d.pc === offPc);
+    let h0 = tg.hits, m0 = tg.misses;
+    if (neutral) T.targetAnswer(neutral.si, neutral.f);
+    tg = T.getTg();
+    ok('6c: another chord tone is neutral (no hit, no miss)', tg.hits === h0 && tg.misses === m0);
+    if (off) T.targetAnswer(off.si, off.f);
+    tg = T.getTg();
+    ok('6c: an off-chord note misses', off ? tg.misses === m0 + 1 : true);
+    h0 = tg.hits;
+    if (hit) T.targetAnswer(hit.si, hit.f);
+    tg = T.getTg();
+    ok('6c: landing on the target tone scores a hit', hit ? tg.hits === h0 + 1 : true);
+
+    T.targetStop();
+    T.setTargetDeg(0);
     T.setMode('reference');
     T.setCtxNow(0);
     T.resetLearner();

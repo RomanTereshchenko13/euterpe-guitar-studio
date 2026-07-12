@@ -20,10 +20,13 @@
 
 let tgIdx = 1;          // selected progression (default I–V–vi–IV)
 let tgDrill = null;
-// tgDrill = { presetIdx, bars:[{pc,qi}…], bar, cycles, clock, playing,
-//             hits, misses, targetPcs:Set(pc), degMap:{pc:lab}, found:Set("si:f"), win:[lo,hi]|null }
+// tgDrill = { presetIdx, bars:[{pc,qi}…], bar, cycles, clock, playing, hits, misses,
+//             targetPcs:Set(pc), chordPcs:Set(pc), degMap:{pc:lab}, found:Set("si:f"), win:[lo,hi]|null }
 
 let tgPos = 0;         // 0 = whole neck (6a targeting); 1–5 = one arpeggio box (6b, reuses Phase 2 boxWindow)
+let tgDeg = 0;         // 0 = all chord tones; else a target degree (6c: land on ONE tone through the changes)
+// target-degree families → the labClass they match (index = tgDeg): root / third / fifth / seventh
+const TG_DEG_CLASS = [null, 'd-root', 'd-third', 'd-fifth', 'd-sev'];
 
 // expand a preset's steps (offset, qi, bars) into one chord per bar, in the context key
 function tgBuildBars(preset){
@@ -31,16 +34,25 @@ function tgBuildBars(preset){
   preset.steps.forEach(([off,qi,b])=>{ const pc=mod(r+off,12); for(let k=0;k<Math.max(1,b);k++) out.push({pc, qi}); });
   return out;
 }
-// the current chord's tones + degree map → the bar's targets. Kept in one place so the
-// idle board (before Play) and each tick light the same set. Does not touch `found`.
+// the current chord's tones → the bar's SCORED targets + the full chord set. Kept in one
+// place so the idle board (before Play) and each tick agree. In target-note mode (6c,
+// tgDeg>0) only the chosen degree lights/scores as a hit; the other chord tones stay
+// `chordPcs` so tapping them is neutral (a valid solo note), not a miss. Doesn't touch `found`.
 function tgSetTargets(chord){
-  const pcs=new Set(), deg={}, q=QUALITIES[chord.qi];
-  q.lab.forEach((lab,idx)=>{ const pc=mod(chord.pc+q.iv[idx],12); pcs.add(pc); deg[pc]=lab; });
-  tgDrill.targetPcs=pcs; tgDrill.degMap=deg;
+  const q=QUALITIES[chord.qi], chordPcs=new Set(), targetPcs=new Set(), deg={};
+  const want=TG_DEG_CLASS[tgDeg];
+  q.lab.forEach((lab,idx)=>{
+    const pc=mod(chord.pc+q.iv[idx],12);
+    chordPcs.add(pc);
+    if(!want || labClass(lab)===want){ targetPcs.add(pc); deg[pc]=lab; }
+  });
+  // if the chord lacks the chosen degree (e.g. a 7th on a triad), nothing lights that bar
+  // — an honest "lay out" rest, itself a phrasing lesson.
+  tgDrill.targetPcs=targetPcs; tgDrill.chordPcs=chordPcs; tgDrill.degMap=deg;
 }
 function startTarget(){
   tgDrill={ presetIdx:tgIdx, bars:tgBuildBars(SEQ_PRESETS[tgIdx]), bar:0, cycles:0, clock:null, playing:false,
-            hits:0, misses:0, targetPcs:new Set(), degMap:{}, found:new Set(), win:null };
+            hits:0, misses:0, targetPcs:new Set(), chordPcs:new Set(), degMap:{}, found:new Set(), win:null };
   tgSetTargets(tgDrill.bars[0]);          // light the first chord on the idle board
   const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
   if(home) home.hidden=true; if(area) area.hidden=false;
@@ -107,10 +119,12 @@ function markTargets(){
   });
 }
 
-// one tap at (string,fret) while the loop runs. A chord tone not yet found this bar →
+// one tap at (string,fret) while the loop runs. A target tone not yet found this bar →
 // hit (light its degree + sound it); an off-chord note → miss (buzz); a re-tap → ignored.
-// In box mode (6b) taps OUTSIDE the shape are ignored (not scored) — you're drilling the
-// one position, so only what's inside the box counts either way.
+// In box mode (6b) taps OUTSIDE the shape are ignored. In target-note mode (6c) a chord
+// tone that isn't the chosen target is NEUTRAL — a valid solo note that just sounds, no
+// score either way — so only landing on the prompted tone is rewarded and only off-chord
+// notes buzz.
 function targetAnswer(si, f){
   if(!tgDrill || !tgDrill.playing) return;
   if(!tgInWin(f)) return;                                    // 6b: outside the shape → ignore
@@ -120,6 +134,8 @@ function targetAnswer(si, f){
     tgDrill.found.add(key); tgDrill.hits++;
     markTargetDot(si,f,'hit');
     pluck(OPEN_MIDI[si]+f);
+  } else if(tgDrill.chordPcs.has(pc)){
+    pluck(OPEN_MIDI[si]+f);                                  // 6c: another chord tone — neutral, just sounds
   } else {
     tgDrill.misses++;
     markTargetDot(si,f,'miss');
@@ -149,6 +165,10 @@ function renderTarget(){
   segButtons('tg-pos', [t('pos_all'),'1','2','3','4','5'].map(label=>({label})), tgPos,
     i=>{ tgPos=i; renderTarget(); });
   tgDrill.win = tgPos ? boxWindow(tgPos) : null;
+  // target-note picker (6c): All chord tones, or land on ONE degree through the changes
+  segButtons('tg-deg', [{label:t('pos_all')},{label:'1',aria:t('leg_root')},{label:'3',aria:t('leg_third')},
+                        {label:'5',aria:t('leg_fifth')},{label:'7',aria:t('leg_seventh')}], tgDeg,
+    i=>{ tgDeg=i; const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); renderTarget(); });
   const beats=document.getElementById('tg-beats');
   if(beats) beats.innerHTML=[0,1,2,3].map(k=>`<span class="co-beat" data-k="${k}"></span>`).join('');
   const cur=tgDrill.bars[tgDrill.bar], nxt=tgDrill.bars[(tgDrill.bar+1)%tgDrill.bars.length];

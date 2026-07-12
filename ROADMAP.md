@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-07-12 · shipping: v2.8.0_
+_Last updated: 2026-07-12 · shipping: v2.9.0_
 
 ---
 
@@ -563,6 +563,14 @@ The improviser's half — turning fretboard knowledge into melody:
   progression. Taps outside the box are ignored; only the shape is scored. The idle board now also
   lights the first chord so the neck isn't blank before Play.
 - **Guided improvisation** — phrasing, motif/call-and-response, target-note soloing prompts.
+  - **Target-note soloing** ✅ **Shipped v2.9.0** (6c, first slice). A **Target** picker on the same
+    drill: "All" lights the whole chord; 1/3/5/7 light only that degree per chord, so you drill
+    *landing on one tone* through the changes (the core of melodic phrasing). The other chord tones
+    stay neutral (they just sound — fair game in a solo), only off-chord notes miss; if a chord lacks
+    the degree (a 7th on a triad) nothing lights that bar — an honest "lay out". Composes with Position
+    (target the 3rd, in one box).
+  - _Still open:_ **motif / call-and-response** (app plays a lick → you echo it) and a **phrasing/rest**
+    rhythm coach — the bigger, less mechanical slices; each independently shippable on the same engine.
 
 Coach/recognition tiers ship on screen; the real "play your guitar and get scored" version
 needs Phase 8 (F2 pitch).

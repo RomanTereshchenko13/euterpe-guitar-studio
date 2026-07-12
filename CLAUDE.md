@@ -56,10 +56,13 @@ Edit the sources, then run the build.
     strumming-pattern trainer (5b, `sp*`) + comp-the-progression (5c, `co*`) + the
     groove/feel lab (5d, `gf*`), each a setup→timed run→summary flow living as a card in
     the Practice home (the `-1/-2/-3/-4` suffix preserves the cm→sp→co→gf concat order);
-    `14-drill-lead-1-target.js` is the Lead pillar (Phase 6a, `tg*`) — chord-tone targeting:
+    `14-drill-lead-1-target.js` is the Lead pillar (Phase 6, `tg*`) — one drill covering 6a/6b/6c:
     a progression loops with a forced backing band (reusing `SEQ_PRESETS`/`scheduleBand`/
     `compStrum` like 5c) while the current chord's tones light on a tappable neck (its own
     board, like the note-naming drill) that you aim for — accuracy-scored, honest coach tier.
+    A **Position** picker windows the lit targets to one arpeggio box (6b, reusing Phase 2's
+    `boxWindow`) and a **Target** picker narrows them to a single degree (6c target-note soloing:
+    other chord tones stay neutral, only off-chord notes miss).
     They reuse the cue bus and the
     learner model; the shared progress readout (`renderProgressInto`) lives in the ear module.
     The note/ear drills write per-item SRS; the rhythm + lead coaches write only a sessions entry

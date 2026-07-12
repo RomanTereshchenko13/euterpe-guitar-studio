@@ -1,6 +1,9 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.9.0', date:'2026-07-12',
+    en:['Target-note soloing: the Chord-tones drill gains a Target picker — instead of all the chord tones, light up just the root, 3rd, 5th or 7th and aim to land on that one tone as the chords change (the heart of melodic phrasing). Other chord tones just sound (they are fair game in a solo); only off-chord notes miss.'],
+    uk:['Соло по цільових тонах: у вправі «Тони акорду» зʼявився вибір цілі — замість усіх тонів акорду підсвічується лише тоніка, терція, квінта чи септима, і ти щоразу «приземляєшся» саме на неї, поки акорди змінюються (основа мелодичної фрази). Інші тони акорду просто звучать (у соло вони доречні); промах — лише на позаакордових нотах.'] },
   { v:'2.8.0', date:'2026-07-12',
     en:['Arpeggios over changes: the Chord-tones drill gains a Position picker — choose one of the five neck boxes and only that arpeggio shape lights up, so you play a single moveable shape through the whole progression instead of chasing tones all over the neck. "All" keeps the full-neck targeting.'],
     uk:['Арпеджіо крізь зміни: у вправі «Тони акорду» зʼявився вибір позиції — обери одну з пʼяти форм на грифі, і підсвічуватиметься лише вона, тож ти граєш одну рухому форму арпеджіо крізь усю прогресію, а не ловиш тони по всьому грифу. «Усі» лишає прицілювання по всьому грифу.'] },
