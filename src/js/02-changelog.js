@@ -1,6 +1,9 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.6.0', date:'2026-07-12',
+    en:['Choose the key right inside the Rhythm coaches: the strumming, comping and groove drills now have their own key picker, so you can move a progression or a chord to any key without leaving Practice.'],
+    uk:['Обирай тональність просто у ритм-коучах: вправи на бій, акомпанемент і грув тепер мають власний вибір тональності, тож можна перенести прогресію чи акорд у будь-яку тональність, не виходячи з «Практики».'] },
   { v:'2.5.1', date:'2026-07-12',
     en:['Warmer reverb: the built-in room now sounds like a small wooden room — early reflections and a tail that darkens as it fades — instead of a flat hiss, so plucks and chords ring more naturally.'],
     uk:['Тепліша реверберація: вбудована «кімната» тепер звучить як невелика деревʼяна кімната — з раннім відлунням і хвостом, що темнішає, згасаючи, — замість плаского шипіння, тож ноти й акорди звучать природніше.'] },

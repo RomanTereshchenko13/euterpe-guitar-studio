@@ -89,6 +89,8 @@ function grooveTick(when, count){
 /* ---- DOM paint ---- */
 function renderGroove(){
   if(!gfDrill) return;
+  const keyc=document.getElementById('gf-key');
+  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); renderGroove(); });
   const sw=document.getElementById('gf-swings');
   if(sw) sw.innerHTML=GF_SWINGS.map((s,i)=>`<button type="button" class="btn gf-swing${i===gfSwing?' active':''}" data-i="${i}" aria-pressed="${i===gfSwing}">${gfSwingName(s)}</button>`).join('');
   const ac=document.getElementById('gf-accent'); if(ac){ ac.textContent=t('gf_accent'); ac.classList.toggle('active', gfAccent); ac.setAttribute('aria-pressed', gfAccent?'true':'false'); }

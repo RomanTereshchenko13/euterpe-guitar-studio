@@ -73,6 +73,8 @@ function spTick(time, count){
 /* ---- DOM paint ---- */
 function renderStrum(){
   if(!spDrill) return;
+  const keyc=document.getElementById('sp-key');
+  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); renderStrum(); });
   const chips=document.getElementById('sp-patterns');
   if(chips) chips.innerHTML=STRUM_PATTERNS.map((p,i)=>`<button type="button" class="btn sp-pat${i===spIdx?' active':''}" data-i="${i}" aria-pressed="${i===spIdx}" title="${spName(p)}" aria-label="${spName(p)}">${p.seg.map(d=>d?strumArrow(d):'·').join('')}</button>`).join('');
   const nm=document.getElementById('sp-name'); if(nm) nm.textContent=spName(STRUM_PATTERNS[spIdx]);

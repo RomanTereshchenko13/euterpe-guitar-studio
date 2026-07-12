@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-07-12 · shipping: v2.5.1_
+_Last updated: 2026-07-12 · shipping: v2.6.0_
 
 ---
 
@@ -502,6 +502,41 @@ _Sound win (per the dependency policy):_ the groove is currently fully synthesiz
 small **CC0 drum one-shots** (kick / snare / hat) and one **guitar-body or room convolution IR**
 (via `ConvolverNode`), base64-inlined, are the cheapest jump in realism here — assets, not
 libraries, so the single-file guarantee holds.
+
+---
+
+## Before Phase 6 — Practice flexibility pass  (in-drill context control · ships first)
+
+**Size:** S · **Risk:** low · **✅ Shipped v2.6.0** (first increment).
+
+A flexibility pass on the *existing* Practice drills, landed **before** the Lead pillar stacks more
+progression-looping UI on top — Phase 6 loops these same `SEQ_PRESETS` progressions with backing, so
+the in-drill context controls built here are exactly what it inherits (the same "build the shared
+surface before the phase that reuses it" move as the pre-Phase-3 mobile pass and the two-axis nav).
+
+The gap it closes: the Rhythm coaches were *sinks* of the shared musical context (spine #1) — they
+reflected `gRoot`/`chQual` but gave no way to change it without leaving Practice for a Reference tab.
+
+- **In-drill key picker.** ✅ **Shipped v2.6.0.** The strumming (5b), comping (5c) and groove (5d)
+  drills each gain a compact root strip (`sp-key`/`co-key`/`gf-key`, built by the shared
+  `buildRootBtns` and wired to the one `setKey`), so you can move a progression or a chord to any key
+  without leaving Practice. Still one shared context — you're just *setting* it from inside the drill,
+  not only from Reference — so spine #1 is intact; comp re-resolves its bars (`compBuildBars`) live on
+  a key change. Symmetric EN/UK (`dr_key`), no new persisted state (rides the existing context).
+
+_Still open (the rest of "make practice flexible as a whole"):_
+- **In-drill chord *quality*** for the single-chord coaches (5b/5d) — pick maj/min/7 inline, not just
+  the root, so the feel lab can explore a chord's colour without a Reference round-trip.
+- **Custom progressions in comp (5c)** — today the progression is one of five fixed `SEQ_PRESETS`;
+  let the user build/edit a progression (reusing the Harmony sequencer's chord list) so comping isn't
+  limited to the canned set.
+- **Free chord pairs in one-minute changes (5a)** — the change coach is locked to classic open-chord
+  pairs; allow any two chords for players drilling their own trouble spots.
+- **Tempo reachability** — the coaches lean on the shared transport tempo; confirm every timed coach
+  exposes tempo inline so speed is adjustable mid-practice.
+
+These extend the same principle (practice is flexible, context is settable where you're practicing);
+they can trickle alongside Phase 6 or land as small follow-ups, each independently shippable.
 
 ---
 

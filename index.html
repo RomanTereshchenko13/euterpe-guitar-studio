@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 2.5.1  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 2.6.0  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="2.5.1">
+<meta name="version" content="2.6.0">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -748,6 +748,9 @@
        wrapping so all 12 roots stay visible. */
     .row > .group { flex-wrap: nowrap; overflow-x: auto; min-width: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
     .row > .group::-webkit-scrollbar { display: none; }
+    /* the in-drill key pickers (comp/strum/groove) keep wrapping so all 12 roots stay
+       visible, matching the reference root picker rather than swiping off-screen. */
+    .row > .group.root-row { flex-wrap: wrap; overflow-x: visible; }
     /* the tiered chord/arp quality pickers: stack the basic/seventh/extended tiers
        vertically, each tier's buttons swiping horizontally, instead of one tall wrap */
     #ch-quals, #arp-quals { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 10px; overflow: visible; }
@@ -1228,6 +1231,7 @@
         <button type="button" class="btn" id="sp-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="sp-chord"></span>
       </div>
+      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="sp-key"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="sp_pattern">Малюнок</span><div class="group" id="sp-patterns"></div></div>
       <div class="sp-name" id="sp-name"></div>
       <div class="sp-grid" id="sp-grid"></div>
@@ -1248,6 +1252,7 @@
         <button type="button" class="btn" id="co-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="co-cycles"></span>
       </div>
+      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="co-key"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="co_prog">Прогресія</span><div class="group" id="co-progs"></div></div>
       <div class="co-stage">
         <div class="co-slot">
@@ -1275,6 +1280,7 @@
         <button type="button" class="btn" id="gf-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="gf-chord"></span>
       </div>
+      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="gf-key"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="gf_swing">Свінг</span><div class="group" id="gf-swings"></div></div>
       <div class="row">
         <button type="button" class="btn" id="gf-accent" aria-pressed="true"></button>
@@ -1487,10 +1493,13 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '2.5.1';
+const APP_VERSION = '2.6.0';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.6.0', date:'2026-07-12',
+    en:['Choose the key right inside the Rhythm coaches: the strumming, comping and groove drills now have their own key picker, so you can move a progression or a chord to any key without leaving Practice.'],
+    uk:['Обирай тональність просто у ритм-коучах: вправи на бій, акомпанемент і грув тепер мають власний вибір тональності, тож можна перенести прогресію чи акорд у будь-яку тональність, не виходячи з «Практики».'] },
   { v:'2.5.1', date:'2026-07-12',
     en:['Warmer reverb: the built-in room now sounds like a small wooden room — early reflections and a tail that darkens as it fades — instead of a flat hiss, so plucks and chords ring more naturally.'],
     uk:['Тепліша реверберація: вбудована «кімната» тепер звучить як невелика деревʼяна кімната — з раннім відлунням і хвостом, що темнішає, згасаючи, — замість плаского шипіння, тож ноти й акорди звучать природніше.'] },
@@ -1833,6 +1842,7 @@ const I18N = {
     cm_setup_note:'Перемикайся між акордами якомога чистіше й натискай велику кнопку на кожній чистій зміні. Лічильник рахує твої натискання, а не звук гітари — оцінку з мікрофоном додамо згодом.',
     cm_changes:'Зміни', cm_cpm:'За хвилину', cm_best:'Рекорд', cm_tap_hint:'Натискай на кожній чистій зміні', cm_undo:'Скасувати', cm_newbest:'Новий рекорд!',
     drill_strum:'Малюнки боя', drill_strum_meta:'Удари вниз/вгору по сітці · коуч',
+    dr_key:'Тональність',
     sp_pattern:'Малюнок', sp_chord:'Акорд', sp_play:'Грати', sp_stop:'Стоп',
     sp_hint:'Грай разом — ↓ вниз, ↑ вгору; над порожніми клітинами рука рухається, але струн не торкається.',
     drill_comp:'Акомпанемент прогресії', drill_comp_meta:'Потрібний акорд вчасно · коуч',
@@ -1948,6 +1958,7 @@ const I18N = {
     cm_setup_note:'Switch between the chords as cleanly as you can and tap the big button on each clean change. The counter counts your taps, not your guitar — mic scoring comes later.',
     cm_changes:'Changes', cm_cpm:'Per minute', cm_best:'Best', cm_tap_hint:'Tap on each clean change', cm_undo:'Undo', cm_newbest:'New best!',
     drill_strum:'Strumming patterns', drill_strum_meta:'Down/up patterns on the beat grid · coach',
+    dr_key:'Key',
     sp_pattern:'Pattern', sp_chord:'Chord', sp_play:'Play', sp_stop:'Stop',
     sp_hint:'Strum along — ↓ down, ↑ up; over the empty slots your hand keeps moving but misses the strings.',
     drill_comp:'Comp the progression', drill_comp_meta:'Right chord, right time · coach',
@@ -5080,6 +5091,8 @@ function spTick(time, count){
 /* ---- DOM paint ---- */
 function renderStrum(){
   if(!spDrill) return;
+  const keyc=document.getElementById('sp-key');
+  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); renderStrum(); });
   const chips=document.getElementById('sp-patterns');
   if(chips) chips.innerHTML=STRUM_PATTERNS.map((p,i)=>`<button type="button" class="btn sp-pat${i===spIdx?' active':''}" data-i="${i}" aria-pressed="${i===spIdx}" title="${spName(p)}" aria-label="${spName(p)}">${p.seg.map(d=>d?strumArrow(d):'·').join('')}</button>`).join('');
   const nm=document.getElementById('sp-name'); if(nm) nm.textContent=spName(STRUM_PATTERNS[spIdx]);
@@ -5186,6 +5199,8 @@ function compTick(when, count){
 /* ---- DOM paint ---- */
 function renderComp(){
   if(!coDrill) return;
+  const keyc=document.getElementById('co-key');
+  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); if(coDrill){ coDrill.bars=compBuildBars(SEQ_PRESETS[coIdx]); if(coDrill.bar>=coDrill.bars.length) coDrill.bar=0; } renderComp(); });
   const chips=document.getElementById('co-progs');
   if(chips) chips.innerHTML=SEQ_PRESETS.map((p,i)=>`<button type="button" class="btn co-prog${i===coIdx?' active':''}" data-i="${i}" aria-pressed="${i===coIdx}">${p.name}</button>`).join('');
   const beats=document.getElementById('co-beats');
@@ -5308,6 +5323,8 @@ function grooveTick(when, count){
 /* ---- DOM paint ---- */
 function renderGroove(){
   if(!gfDrill) return;
+  const keyc=document.getElementById('gf-key');
+  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); renderGroove(); });
   const sw=document.getElementById('gf-swings');
   if(sw) sw.innerHTML=GF_SWINGS.map((s,i)=>`<button type="button" class="btn gf-swing${i===gfSwing?' active':''}" data-i="${i}" aria-pressed="${i===gfSwing}">${gfSwingName(s)}</button>`).join('');
   const ac=document.getElementById('gf-accent'); if(ac){ ac.textContent=t('gf_accent'); ac.classList.toggle('active', gfAccent); ac.setAttribute('aria-pressed', gfAccent?'true':'false'); }

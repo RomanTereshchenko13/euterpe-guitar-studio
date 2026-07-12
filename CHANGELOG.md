@@ -2,6 +2,10 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.6.0 — 2026-07-12
+
+- Choose the key right inside the Rhythm coaches: the strumming, comping and groove drills now have their own key picker, so you can move a progression or a chord to any key without leaving Practice.
+
 ## v2.5.1 — 2026-07-12
 
 - Warmer reverb: the built-in room now sounds like a small wooden room — early reflections and a tail that darkens as it fades — instead of a flat hiss, so plucks and chords ring more naturally.

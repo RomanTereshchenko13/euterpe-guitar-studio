@@ -717,6 +717,9 @@
        wrapping so all 12 roots stay visible. */
     .row > .group { flex-wrap: nowrap; overflow-x: auto; min-width: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
     .row > .group::-webkit-scrollbar { display: none; }
+    /* the in-drill key pickers (comp/strum/groove) keep wrapping so all 12 roots stay
+       visible, matching the reference root picker rather than swiping off-screen. */
+    .row > .group.root-row { flex-wrap: wrap; overflow-x: visible; }
     /* the tiered chord/arp quality pickers: stack the basic/seventh/extended tiers
        vertically, each tier's buttons swiping horizontally, instead of one tall wrap */
     #ch-quals, #arp-quals { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 10px; overflow: visible; }

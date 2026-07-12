@@ -69,6 +69,8 @@ function compTick(when, count){
 /* ---- DOM paint ---- */
 function renderComp(){
   if(!coDrill) return;
+  const keyc=document.getElementById('co-key');
+  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); if(coDrill){ coDrill.bars=compBuildBars(SEQ_PRESETS[coIdx]); if(coDrill.bar>=coDrill.bars.length) coDrill.bar=0; } renderComp(); });
   const chips=document.getElementById('co-progs');
   if(chips) chips.innerHTML=SEQ_PRESETS.map((p,i)=>`<button type="button" class="btn co-prog${i===coIdx?' active':''}" data-i="${i}" aria-pressed="${i===coIdx}">${p.name}</button>`).join('');
   const beats=document.getElementById('co-beats');
