@@ -2,6 +2,11 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.7.0 — 2026-07-12
+
+- Practice gains its first Lead drill — Chord tones over changes: a progression loops with a full backing band, and the tones of the chord playing now light up on a tappable neck for you to target. Hit the lit tones, dodge the rest; it tracks your accuracy as you follow the changes through any key or progression.
+- An honest coach, like the Rhythm drills: it trains where the chord tones live under a real progression — playing your actual guitar and getting scored arrives with microphone input later.
+
 ## v2.6.0 — 2026-07-12
 
 - Choose the key right inside the Rhythm coaches: the strumming, comping and groove drills now have their own key picker, so you can move a progression or a chord to any key without leaving Practice.

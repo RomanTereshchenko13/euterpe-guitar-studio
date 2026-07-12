@@ -123,6 +123,7 @@ function applyLang(){
   if(typeof refreshStrumLang==='function') refreshStrumLang();       // re-localize an in-flight strum trainer (5b)
   if(typeof refreshCompLang==='function') refreshCompLang();         // re-localize an in-flight comping drill (5c)
   if(typeof refreshGrooveLang==='function') refreshGrooveLang();     // re-localize an in-flight groove drill (5d)
+  if(typeof refreshTargetLang==='function') refreshTargetLang();     // re-localize an in-flight targeting drill (6a)
   setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
   activateRoot(document.getElementById('g-roots'), gRoot);

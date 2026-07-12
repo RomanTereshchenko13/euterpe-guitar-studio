@@ -342,6 +342,16 @@
           </button></li>
         </ul>
       </div>
+      <!-- Lead pillar (Phase 6): playing OVER the changes. -->
+      <div class="practice-section">
+        <div class="ps-label" data-i18n="practice_grp_lead">Соло</div>
+        <ul class="practice-list">
+          <li><button type="button" class="drill-card" id="start-target">
+            <span class="dc-name" data-i18n="drill_target">Тони акорду в прогресії</span>
+            <span class="dc-meta" data-i18n="drill_target_meta">Влучай у тони акорду під гурт · коуч</span>
+          </button></li>
+        </ul>
+      </div>
       <!-- Progress readout (3b): the learner model's aggregate stats; renderPractice()
            fills #practice-progress, empty until the drill writes the first attempt. -->
       <div class="practice-progress-card">
@@ -460,6 +470,37 @@
       <div class="cm-active-foot">
         <span class="drill-sub" id="gf-hint"></span>
         <button type="button" class="btn play" id="gf-play"></button>
+      </div>
+    </div>
+
+    <!-- Chord-tone targeting (Phase 6a): a progression loops with a backing band; the
+         current chord's tones light up as targets on a tappable neck and you aim for
+         them. Location/recognition coach — accuracy, not timing (mic scoring is Phase
+         8/F2). Its own board so the reference board stays put. Hidden until started. -->
+    <div id="tg-area" hidden>
+      <div class="drill-head">
+        <button type="button" class="btn" id="tg-quit" data-i18n="drill_quit">Вийти</button>
+        <span class="drill-count" id="tg-hits"></span>
+      </div>
+      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="tg-key"></div></div>
+      <div class="row"><span class="ctrl-label" data-i18n="tg_prog">Прогресія</span><div class="group" id="tg-progs"></div></div>
+      <div class="co-stage">
+        <div class="co-slot">
+          <div class="co-lab" id="tg-now-lab" data-i18n="co_now">Зараз</div>
+          <div class="co-chord co-now" id="tg-now"></div>
+        </div>
+        <div class="co-arrow" aria-hidden="true">→</div>
+        <div class="co-slot co-next-slot">
+          <div class="co-lab" id="tg-next-lab" data-i18n="co_next">Далі</div>
+          <div class="co-chord co-next" id="tg-next"></div>
+        </div>
+        <div class="tg-acc" id="tg-acc"></div>
+      </div>
+      <div class="co-beats" id="tg-beats"></div>
+      <div class="scroll"><div class="board"><div class="fretboard" id="tg-board"></div></div><div class="fretnums" id="tg-nums"></div></div>
+      <div class="cm-active-foot">
+        <span class="drill-sub" id="tg-hint"></span>
+        <button type="button" class="btn play" id="tg-play"></button>
       </div>
     </div>
 

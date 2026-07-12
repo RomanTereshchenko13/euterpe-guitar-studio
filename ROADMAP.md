@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-07-12 · shipping: v2.6.0_
+_Last updated: 2026-07-12 · shipping: v2.7.0_
 
 ---
 
@@ -546,10 +546,16 @@ they can trickle alongside Phase 6 or land as small follow-ups, each independent
 
 The improviser's half — turning fretboard knowledge into melody:
 
-- **Chord-tone targeting** — the progression loops with backing; target tones light per chord;
-  you hit them inside a scoring window. *Honest framing:* without a mic this trains *where the
-  chord tones are* (recognition/location), not soloing — a theory/rhythm game, not guitar
-  practice. Don't market it as the latter.
+- **Chord-tone targeting** ✅ **Shipped v2.7.0** (6a). The progression loops with a forced backing
+  band (reusing `SEQ_PRESETS`/`scheduleBand`/`compStrum` like the comp coach, resolved to the context
+  key, spine #1) on its own scheduler clock; each bar the current chord's tones (`tgNewBar` recomputes
+  the pitch-class + degree map synchronously in the tick) light as targets on a tappable neck (its own
+  `#tg-board`, like the note-naming drill), and you aim for them — a chord tone lands (lights its degree
+  + sounds), an off-chord tap buzzes. Accuracy-scored (`tgAccuracy`), in-drill key + progression pickers,
+  a NOW/NEXT stage + 4-beat indicator. A practiced run records a session (`target:<prog>`, accuracy %),
+  minting no per-item SRS (derived from the ring buffer like the Rhythm coaches). *Honest framing:*
+  without a mic this trains *where the chord tones are* (recognition/location), not soloing — a
+  theory/rhythm game, not guitar practice. Don't market it as the latter; real scoring needs Phase 8/F2.
 - **Arpeggios over changes** — play the right arpeggio shape through a progression (reuses
   Phase 2 content).
 - **Guided improvisation** — phrasing, motif/call-and-response, target-note soloing prompts.

@@ -209,6 +209,10 @@
   .dot.quiz:hover { background: rgba(220,200,160,0.26); }
   .dot.quiz.hit { background: var(--root); border-color: var(--root); color: #0e1408; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
   .dot.quiz.miss { background: #d64a4a; border-color: #d64a4a; color: #fff; }
+  /* chord-tone targeting (6a): the current chord's tones glow as guides to aim for */
+  .dot.quiz.target { background: rgba(220,200,160,0.34); border-color: var(--accent); box-shadow: 0 0 0 2px rgba(200,168,110,0.28); }
+  .dot.quiz.target.hit { box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+  .tg-acc { margin-left: auto; align-self: center; font-size: 13px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 
   .drill-summary { margin-top: 6px; }
   .drill-done-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-bottom: 14px; }

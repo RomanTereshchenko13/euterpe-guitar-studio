@@ -46,7 +46,8 @@ Edit the sources, then run the build.
   - `13-learner.js` — learner model (spine #3): per-item SRS history + sessions ring
     buffer; persists via `12-toolbar-state.js`'s `saveState`/`loadState`. Exposes the
     progress-card readouts `learnerReview` (due-for-review queue) + `learnerActivity` (active days)
-  - `14-drill-ear.js` + `14-drill-notes.js` + `14-drill-rhythm-{1-changes,2-strum,3-comp,4-groove}.js`
+  - `14-drill-ear.js` + `14-drill-notes.js` + `14-drill-lead-1-target.js` +
+    `14-drill-rhythm-{1-changes,2-strum,3-comp,4-groove}.js`
     — the drills (all at load slot 14, before wiring). `14-drill-notes.js` is the Practice
     note-naming drill (3c); `14-drill-ear.js` is Ear training (Phase 4) — interval /
     chord-quality / rhythm recognition, multiple-choice on the audio buses; the four
@@ -54,11 +55,15 @@ Edit the sources, then run the build.
     load order — the "one-minute changes" chord-change coach (5a, `cm*`) + the
     strumming-pattern trainer (5b, `sp*`) + comp-the-progression (5c, `co*`) + the
     groove/feel lab (5d, `gf*`), each a setup→timed run→summary flow living as a card in
-    the Practice home (the `-1/-2/-3/-4` suffix preserves the cm→sp→co→gf concat order).
+    the Practice home (the `-1/-2/-3/-4` suffix preserves the cm→sp→co→gf concat order);
+    `14-drill-lead-1-target.js` is the Lead pillar (Phase 6a, `tg*`) — chord-tone targeting:
+    a progression loops with a forced backing band (reusing `SEQ_PRESETS`/`scheduleBand`/
+    `compStrum` like 5c) while the current chord's tones light on a tappable neck (its own
+    board, like the note-naming drill) that you aim for — accuracy-scored, honest coach tier.
     They reuse the cue bus and the
     learner model; the shared progress readout (`renderProgressInto`) lives in the ear module.
-    The note/ear drills write per-item SRS; the rhythm coaches write only a sessions entry
-    (best-per-pair / bars-played is derived from the ring buffer, so the pinned item shape stays untouched).
+    The note/ear drills write per-item SRS; the rhythm + lead coaches write only a sessions entry
+    (best-per-pair / bars-played / accuracy is derived from the ring buffer, so the pinned item shape stays untouched).
   - `15-wiring-init.js` · `16-pwa.js`
 - `src/styles.css` — all CSS
 - `src/index.template.html` — markup shell with `@@STYLES@@` / `@@SCRIPT@@` / `@@FAVICON@@` markers

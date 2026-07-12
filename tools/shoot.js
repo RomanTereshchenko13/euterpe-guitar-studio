@@ -29,6 +29,8 @@
    trainer, or `strum-run` to also press Play and land on the looping grid; `comp` for the
    comp-the-progression drill, or `comp-run` to also press Play and land on the cycling now/next;
    `groove` for the groove/feel lab, or `groove-run` to also press Play and land on the looping groove.
+   Phase 6 Lead: `target` for the chord-tone-targeting drill, or `target-run` to also press Play and
+   land on the lit-tones neck with the band cycling.
 
    Run:  node tools/shoot.js                       # default widths 390 768 1280, harmony
          node tools/shoot.js 360 414 820           # custom widths
@@ -67,7 +69,7 @@ for (const a of process.argv.slice(2)) {
   else if (a === 'cbpalette' || a === 'shapes' || a === 'a11y') a11yArgs.push(a);
   else if (a === 'practice' || a === 'reference' || a === 'drill' || a === 'changes' || a === 'changes-run'
            || a === 'strum' || a === 'strum-run' || a === 'comp' || a === 'comp-run'
-           || a === 'groove' || a === 'groove-run'
+           || a === 'groove' || a === 'groove-run' || a === 'target' || a === 'target-run'
            || a === 'ear' || a === 'ear-interval' || a === 'ear-chordq' || a === 'ear-rhythm')
     mode = (a === 'reference') ? null : a;
   else sizeArgs.push(a);
@@ -89,7 +91,7 @@ function appFor(panel) {
   // bottom-nav Practice button, so the shot lands on the Practice surface.
   const clicks = [];
   if (panel) clicks.push(`var b=document.querySelector('.tab[data-panel="${panel}"]');if(b)b.click();`);
-  if (mode === 'practice' || mode === 'drill' || mode === 'changes' || mode === 'changes-run' || mode === 'strum' || mode === 'strum-run' || mode === 'comp' || mode === 'comp-run' || mode === 'groove' || mode === 'groove-run') clicks.push(`var m=document.querySelector('.modebtn[data-mode="practice"]');if(m)m.click();`);
+  if (mode === 'practice' || mode === 'drill' || mode === 'changes' || mode === 'changes-run' || mode === 'strum' || mode === 'strum-run' || mode === 'comp' || mode === 'comp-run' || mode === 'groove' || mode === 'groove-run' || mode === 'target' || mode === 'target-run') clicks.push(`var m=document.querySelector('.modebtn[data-mode="practice"]');if(m)m.click();`);
   if (mode === 'drill') clicks.push(`var s=document.getElementById('start-notes');if(s)s.click();`);
   if (mode === 'changes' || mode === 'changes-run') clicks.push(`var s=document.getElementById('start-changes');if(s)s.click();`);
   if (mode === 'changes-run') clicks.push(`var g=document.getElementById('cm-start-btn');if(g)g.click();`);
@@ -99,6 +101,8 @@ function appFor(panel) {
   if (mode === 'comp-run') clicks.push(`var g=document.getElementById('co-play');if(g)g.click();`);
   if (mode === 'groove' || mode === 'groove-run') clicks.push(`var s=document.getElementById('start-groove');if(s)s.click();`);
   if (mode === 'groove-run') clicks.push(`var g=document.getElementById('gf-play');if(g)g.click();`);
+  if (mode === 'target' || mode === 'target-run') clicks.push(`var s=document.getElementById('start-target');if(s)s.click();`);
+  if (mode === 'target-run') clicks.push(`var g=document.getElementById('tg-play');if(g)g.click();`);
   if (mode && mode.indexOf('ear') === 0) clicks.push(`var m=document.querySelector('.modebtn[data-mode="ear"]');if(m)m.click();`);
   const earStart = { 'ear-interval': 'start-interval', 'ear-chordq': 'start-chordq', 'ear-rhythm': 'start-rhythm' }[mode];
   if (earStart) clicks.push(`var s=document.getElementById('${earStart}');if(s)s.click();`);

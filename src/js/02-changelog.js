@@ -1,6 +1,11 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.7.0', date:'2026-07-12',
+    en:['Practice gains its first Lead drill — Chord tones over changes: a progression loops with a full backing band, and the tones of the chord playing now light up on a tappable neck for you to target. Hit the lit tones, dodge the rest; it tracks your accuracy as you follow the changes through any key or progression.',
+        'An honest coach, like the Rhythm drills: it trains where the chord tones live under a real progression — playing your actual guitar and getting scored arrives with microphone input later.'],
+    uk:['У «Практиці» зʼявилася перша соло-вправа — «Тони акорду в прогресії»: прогресія крутиться з повним гуртом супроводу, а тони акорду, що звучить зараз, підсвічуються на грифі, у який можна тицяти. Влучай у підсвічені тони, оминай решту — вправа веде облік твоєї точності, поки ти йдеш за змінами в будь-якій тональності чи прогресії.',
+        'Чесний коуч, як і ритм-вправи: він тренує, де лежать тони акорду під справжньою прогресією — а гру на власній гітарі з оцінкою додамо згодом разом зі входом із мікрофона.'] },
   { v:'2.6.0', date:'2026-07-12',
     en:['Choose the key right inside the Rhythm coaches: the strumming, comping and groove drills now have their own key picker, so you can move a progression or a chord to any key without leaving Practice.'],
     uk:['Обирай тональність просто у ритм-коучах: вправи на бій, акомпанемент і грув тепер мають власний вибір тональності, тож можна перенести прогресію чи акорд у будь-яку тональність, не виходячи з «Практики».'] },

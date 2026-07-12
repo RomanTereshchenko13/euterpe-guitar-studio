@@ -152,11 +152,12 @@ if (T) {
   ['ch-board','tr-board','sc-board','nt-board'].forEach(id =>
     ok('1b: old per-tab board gone: ' + id, !win.document.getElementById(id)));
   // 1b's single shared reference board (#board) is still exactly one; 3c adds the
-  // drill's own board (#drill-board) inside Practice, so two fretboards total now.
+  // note-naming drill's own board (#drill-board) and 6a the targeting board
+  // (#tg-board) inside Practice, so three fretboards total now.
   ok('1b: one shared reference board (#board)',
      win.document.querySelectorAll('#board.fretboard').length === 1);
-  ok('3c: drill has its own board, two fretboards total',
-     win.document.querySelectorAll('.fretboard').length === 2 && !!win.document.getElementById('drill-board'),
+  ok('3c: drill has its own board, three fretboards total',
+     win.document.querySelectorAll('.fretboard').length === 3 && !!win.document.getElementById('drill-board'),
      win.document.querySelectorAll('.fretboard').length + ' found');
   ok('1b: Notes tab folded away (3 tabs)', win.document.querySelectorAll('.tab').length === 3,
      win.document.querySelectorAll('.tab').length + ' tabs');
@@ -189,6 +190,7 @@ if (T) {
    'drill_strum','drill_strum_meta','sp_pattern','sp_chord','sp_play','sp_stop','sp_hint',
    'drill_comp','drill_comp_meta','co_prog','co_now','co_next','co_hint',
    'drill_groove','drill_groove_meta','gf_swing','gf_accent','gf_mute','gf_hint',
+   'practice_grp_lead','drill_target','drill_target_meta','tg_prog','tg_hits','tg_acc','tg_hint',
    'a11y_label','a11y_palette','a11y_shapes',
    'wc_title','wc_lead','wc_ref','wc_practice','wc_ear','wc_got',
    'tun_custom','cal_label','cal_test','cal_tapnow','cal_unit',
@@ -471,7 +473,8 @@ if (T) {
     ok('5a: chord-change area present (cm-area)', !!doc.getElementById('cm-area'));
     ok('5a: practice home grouped by pillar', doc.querySelectorAll('#practice-home .practice-section').length >= 2);
     // the drill uses chord-diagram SVGs, not a fretboard, so the board count is unchanged
-    ok('5a: no extra fretboard added', doc.querySelectorAll('.fretboard').length === 2);
+    // (3 total: reference #board, note-naming #drill-board, targeting #tg-board)
+    ok('5a: no extra fretboard added', doc.querySelectorAll('.fretboard').length === 3);
 
     // presets + durations are sane
     ok('5a: at least 6 chord pairs', T.CM_PAIRS.length >= 6);
@@ -662,6 +665,73 @@ if (T) {
     T.groovePlay();
     T.setMode('reference');
     ok('5d: leaving Practice exits a running groove drill', T.getGf() === null);
+    T.setCtxNow(0);
+    T.resetLearner();
+  })();
+
+  /* ---- Phase 6a: chord-tone targeting (Lead pillar) ---- */
+  (function targetDrill() {
+    const doc = win.document;
+    ok('6a: target drill card present (start-target)', !!doc.getElementById('start-target'));
+    ok('6a: target area + board + stage present',
+       !!doc.getElementById('tg-area') && !!doc.getElementById('tg-board') &&
+       !!doc.getElementById('tg-now') && !!doc.getElementById('tg-next') && !!doc.getElementById('tg-beats'));
+    ok('6a: Lead group adds a fifth practice card',
+       ['start-changes', 'start-strum', 'start-comp', 'start-groove', 'start-target'].every(id => !!doc.getElementById(id)));
+
+    // bars resolve the preset to the CURRENT key (spine #1): in C, I–V–vi–IV starts on C(0)
+    T.resetLearner();
+    T.initAudio();
+    T.setCtxNow(0);
+    T.setMode('practice');
+    T.setKey(0, 'C');
+    T.setTargetProg(2);            // I–IV–V (3 bars, so a cycle wraps within the 10s drive)
+    T.startTarget();
+    let tg = T.getTg();
+    ok('6a: startTarget opens the drill, not yet playing', !!tg && tg.playing === false);
+    ok('6a: bars expand to one chord per bar in the key', tg.bars.length === 3 && tg.bars[0].pc === 0);
+
+    T.targetPlay();
+    tg = T.getTg();
+    ok('6a: play starts the progression loop', tg.playing === true);
+
+    // drive ~10s of the scheduler → bars advance and the target set fills synchronously
+    for (let s = 0; s <= 10; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
+    tg = T.getTg();
+    ok('6a: the bar playhead stays in range', tg.bar >= 0 && tg.bar < tg.bars.length);
+    ok('6a: at least one cycle of the progression elapses', tg.cycles >= 1);
+    ok('6a: the current chord lights its tones as targets', tg.targetPcs.size >= 3);
+
+    // a tap on a target pc scores a hit; a tap off the chord scores a miss
+    const targetPc = [...tg.targetPcs][0];
+    const offPc = [0,1,2,3,4,5,6,7,8,9,10,11].find(pc => !tg.targetPcs.has(pc));
+    const h0 = tg.hits, m0 = tg.misses;
+    // tap every board dot matching the target pc → at least one hit registered
+    doc.querySelectorAll('#tg-board .dot.quiz').forEach(d => {
+      if (+d.dataset.pc === targetPc) T.targetAnswer(+d.dataset.si, +d.dataset.f);
+    });
+    tg = T.getTg();
+    ok('6a: tapping a chord tone scores a hit', tg.hits > h0);
+    // tap an off-chord dot → a miss
+    let tapped = false;
+    doc.querySelectorAll('#tg-board .dot.quiz').forEach(d => {
+      if (!tapped && +d.dataset.pc === offPc) { T.targetAnswer(+d.dataset.si, +d.dataset.f); tapped = true; }
+    });
+    tg = T.getTg();
+    ok('6a: tapping off the chord scores a miss', tapped && tg.misses > m0);
+    ok('6a: accuracy is hits / all taps as a percent', T.tgAccuracy() === Math.round(100 * tg.hits / (tg.hits + tg.misses)));
+
+    T.targetStop();
+    tg = T.getTg();
+    ok('6a: stop ends the loop', tg.playing === false);
+    const ts = T.getLearner().sessions;
+    ok('6a: a practiced targeting session is recorded (accuracy)',
+       ts.length >= 1 && /^target:/.test(ts[ts.length - 1].drill));
+    ok('6a: targeting coach mints no per-item SRS', T.learnerStats().items === 0);
+
+    T.targetPlay();
+    T.setMode('reference');
+    ok('6a: leaving Practice exits a running targeting drill', T.getTg() === null);
     T.setCtxNow(0);
     T.resetLearner();
   })();
