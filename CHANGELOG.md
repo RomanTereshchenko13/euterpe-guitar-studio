@@ -2,6 +2,10 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.5.1 — 2026-07-12
+
+- Warmer reverb: the built-in room now sounds like a small wooden room — early reflections and a tail that darkens as it fades — instead of a flat hiss, so plucks and chords ring more naturally.
+
 ## v2.5.0 — 2026-06-22
 
 - Practice now closes the loop: the progress card shows how many items are due for review and an Active-days count, with a one-tap Review that drops you into the right drill — the notes, intervals and chords you miss come back to you.

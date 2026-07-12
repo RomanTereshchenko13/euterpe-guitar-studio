@@ -14,11 +14,31 @@ function audio(){
   if(actx && actx.state==='suspended'){ actx.resume(); }
   return actx;
 }
+/* Room/body impulse response for the convolution reverb. Not flat white noise (that
+   fizzes and reads as "fake reverb") but a shaped space: a sparse cluster of early
+   reflections — the size/shape cue of a small wooden room — over a diffuse noise tail
+   that decays exponentially AND darkens over time via a progressive one-pole low-pass,
+   because air + surface absorption damp the highs first, like a real space. Early
+   reflections are sign-flipped + sample-skewed per channel for a natural stereo image.
+   `decay` is now the exponential rate (e-foldings across the IR), not a polynomial
+   exponent. The ConvolverNode normalizes by default, so this only shapes the colour —
+   the wet amount stays set by revGain. Built once at setup. */
 function makeIR(dur, decay){
   const rate=actx.sampleRate, len=Math.max(1,Math.floor(rate*dur));
   const buf=actx.createBuffer(2,len,rate);
-  for(let ch=0; ch<2; ch++){ const d=buf.getChannelData(ch);
-    for(let i=0;i<len;i++){ d[i]=(Math.random()*2-1)*Math.pow(1-i/len, decay); } }
+  const ER=[[7,0.30],[13,0.26],[19,0.20],[29,0.15],[41,0.10],[55,0.07]];   // [delayMs, gain]
+  for(let ch=0; ch<2; ch++){
+    const d=buf.getChannelData(ch), sign=ch?-1:1, skew=ch?Math.round(rate*0.0006):0;
+    let lp=0;
+    for(let i=0;i<len;i++){
+      const t=i/len;
+      const env=Math.exp(-decay*t);                         // exponential diffuse decay
+      const a=0.06+0.5*t;                                   // LP coeff grows with t → tail loses treble
+      lp += a*((Math.random()*2-1)*env - lp);
+      d[i]=lp;
+    }
+    ER.forEach(([ms,g],k)=>{ const idx=Math.floor(rate*ms/1000)+skew; if(idx<len) d[idx]+=sign*g*(k%2?0.85:1); });
+  }
   return buf;
 }
 function setupBus(){
@@ -27,7 +47,7 @@ function setupBus(){
   const comp=actx.createDynamicsCompressor();
   comp.threshold.value=-16; comp.knee.value=22; comp.ratio.value=3.2;
   comp.attack.value=0.003; comp.release.value=0.25;
-  const rev=actx.createConvolver(); rev.buffer=makeIR(1.5, 2.4);
+  const rev=actx.createConvolver(); rev.buffer=makeIR(1.3, 5.5);   // ~1.3s small-room tail, exponential decay
   const revGain=actx.createGain(); revGain.gain.value=0.14;
   // body resonance: fixed peaking modes color every note like a guitar box
   // (air/Helmholtz ~100 Hz, top plate ~200 Hz, mid cluster ~430 Hz)

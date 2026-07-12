@@ -1,6 +1,9 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.5.1', date:'2026-07-12',
+    en:['Warmer reverb: the built-in room now sounds like a small wooden room — early reflections and a tail that darkens as it fades — instead of a flat hiss, so plucks and chords ring more naturally.'],
+    uk:['Тепліша реверберація: вбудована «кімната» тепер звучить як невелика деревʼяна кімната — з раннім відлунням і хвостом, що темнішає, згасаючи, — замість плаского шипіння, тож ноти й акорди звучать природніше.'] },
   { v:'2.5.0', date:'2026-06-22',
     en:['Practice now closes the loop: the progress card shows how many items are due for review and an Active-days count, with a one-tap Review that drops you into the right drill — the notes, intervals and chords you miss come back to you.',
         'Custom tunings: pick "Custom" in Settings and set any note per string — the fretboard, tuner and labels follow, and it is remembered.',
