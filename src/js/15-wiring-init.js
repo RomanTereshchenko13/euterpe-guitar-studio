@@ -290,6 +290,7 @@ function setMode(mode){
   if(currentMode!=='practice' && typeof gfDrill!=='undefined' && gfDrill) exitGroove();
   if(currentMode!=='practice' && typeof tgDrill!=='undefined' && tgDrill) exitTarget();
   if(currentMode!=='practice' && typeof cr!=='undefined' && cr) exitCallResp();
+  if(currentMode!=='practice' && typeof sd!=='undefined' && sd) exitTiming();
   if(currentMode!=='ear' && typeof ear!=='undefined' && ear) exitEar();
   if(currentMode==='reference'){
     applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
@@ -368,6 +369,7 @@ document.getElementById('tb-tuning').onchange=function(){
   if(ts) ts.addEventListener('click', e=>{ const b=e.target.closest('[data-midi]'); if(b) tunerTone(+b.dataset.midi); }); }
 document.getElementById('tb-frets').onchange=function(){ fretRangeIdx=+this.value; renderAllBoards(); saveState(); };
 { const cp=document.getElementById('tb-capo'); if(cp) cp.onchange=function(){ capo=+this.value; renderAllBoards(); saveState(); }; }
+{ const mt=document.getElementById('tb-meter'); if(mt) mt.onchange=function(){ setMeter(+this.value); if(typeof refreshTimingLang==='function') refreshTimingLang(); saveState(); }; }
 /* accessibility toggles (Phase 9 feel pass): a colour-blind-safe palette + distinct
    per-function dot shapes. Both are pure body-class switches — the CSS does the work
    (see styles.css), so there's nothing to repaint — and both persist. */
@@ -628,9 +630,16 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     startCallResp, crAnswer, crReplay, exitCallResp, getCr:()=>cr, CR_ROUNDS, crPool, crMakeMotif,
     crToResponse:()=>{ if(cr){ cr.phase='response'; cr.respIdx=0; cr.wrongNote=0; } }, setCrPos:(i)=>{ crPos=i; },
     crNextRoundNow:()=>{ if(cr) crNewRound(); },   // test hook: skip the inter-round wait
+    // subdivision & timing drill (Phase 7a)
+    startTiming, sdToggle, exitTiming, getSd:()=>sd, SUBDIVS, SD_BEATS, sdPath,
+    setSdSub:(i)=>{ sdSub=i; }, setSdPos:(i)=>{ sdPos=i; }, setSdNotes:(v)=>{ sdNotes=!!v; },
+    sdTickNow:(t,c)=>sdTick(t,c),
     CAGED_BY_POS, isCAGEDScale,
     setFret:(i)=>{ fretRangeIdx=i; },
     setCapo:(i)=>{ capo=i; }, getCapo:()=>capo,
+    // time signature / meter (Phase 7b)
+    METERS, setMeter, curMeter, barBeats, pulseSec, barSec, midPulseSec,
+    meterGroupStarts:()=>[...meterGroupStarts()], getMeterIdx:()=>meterIdx,
     // accessibility + onboarding (Phase 9 feel pass)
     applyA11y, showWelcome, dismissWelcome,
     setCbPalette:(v)=>{ cbPalette=!!v; }, setFnShapes:(v)=>{ fnShapes=!!v; }, setWelcomeSeen:(v)=>{ welcomeSeen=!!v; },

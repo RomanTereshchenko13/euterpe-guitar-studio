@@ -38,16 +38,20 @@ Edit the sources, then run the build.
   - `01-version.js` — `APP_VERSION`, the **single source of truth** for the version
   - `02-changelog.js` — release notes (EN/UK); drives the in-app modal AND `CHANGELOG.md`
   - `03-i18n.js` — translation strings · `04-constants.js` (incl. custom-tuning state:
-    `customTuning` + `tuningMidi()`) · `05-audio.js` (incl. timing calibration:
+    `customTuning` + `tuningMidi()`; and the meter model `METERS`/`meterIdx` +
+    `barBeats`/`pulseSec`/`barSec`/`midPulseSec`/`meterGroupStarts`/`setMeter`, Phase 7b — 4/4 is
+    byte-identical to the old `beat()*4`) · `05-audio.js` (incl. timing calibration:
     `calMs`/`calOffsetSec`/`calcLatencyOffset` + the tap-test `calStart`/`calTap`/`calFinish`)
-  - `06-backing.js` · `07-render-shared.js` · `08-chords.js` · `09-triads.js`
+  - `06-backing.js` — the backing band + metronome + sequencer, all **meter-aware** (they read
+    `barSec()`/`pulseSec()`/`barBeats()` instead of hard-wired 4/4); the comp (5c) + targeting (6a)
+    drills follow the same meter · `07-render-shared.js` · `08-chords.js` · `09-triads.js`
   - `10-scales.js` · `11-notes-circle-lang.js` · `12-toolbar-state.js` (state save/load +
     the custom-tuning editor + the share-link codec `encodeShareState`/`applyShareHash`)
   - `13-learner.js` — learner model (spine #3): per-item SRS history + sessions ring
     buffer; persists via `12-toolbar-state.js`'s `saveState`/`loadState`. Exposes the
     progress-card readouts `learnerReview` (due-for-review queue) + `learnerActivity` (active days)
   - `14-drill-ear.js` + `14-drill-notes.js` + `14-drill-lead-{1-target,2-callresponse}.js` +
-    `14-drill-rhythm-{1-changes,2-strum,3-comp,4-groove}.js`
+    `14-drill-rhythm-{1-changes,2-strum,3-comp,4-groove}.js` + `14-drill-timing.js`
     — the drills (all at load slot 14, before wiring). `14-drill-notes.js` is the Practice
     note-naming drill (3c); `14-drill-ear.js` is Ear training (Phase 4) — interval /
     chord-quality / rhythm recognition, multiple-choice on the audio buses; the four
@@ -66,6 +70,12 @@ Edit the sources, then run the build.
     6c call-and-response — the app plays a scale-box motif (LISTEN) and you echo it back on its own
     board (YOUR TURN); self-paced, scored on echo accuracy, its listen/answer turns being the
     play-vs-rest phrasing lesson.
+    `14-drill-timing.js` (`sd*`) is the Foundations subdivision & timing coach (Phase 7a):
+    a smart visual metronome — a subdivision picker (`SUBDIVS`, `div` per beat) + tempo drive a
+    3-level accented click + a `SD_BEATS·div` grid on its own scheduler clock, while the context
+    scale is walked note-by-note across the grid inside one Phase-2 `boxWindow` on its own display
+    board; in-drill key/position/tempo, records a `timing:<subdiv>` session (no SRS). Coach tier
+    (serves both pillars) — mic scoring is Phase 8/F1.
     They reuse the cue bus and the
     learner model; the shared progress readout (`renderProgressInto`) lives in the ear module.
     The note/ear drills write per-item SRS; the rhythm + lead coaches write only a sessions entry

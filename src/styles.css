@@ -290,6 +290,21 @@
   .sp-beat { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
   .sp-controls { display: inline-flex; gap: 8px; flex-shrink: 0; }
 
+  /* ---- subdivision & timing (Phase 7a) ---- */
+  .sd-grid { display: grid; gap: 5px; max-width: 620px; margin: 12px 0 6px; }
+  .sd-cell { display: flex; align-items: flex-end; justify-content: center; min-height: 34px; padding: 5px 0 4px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-panel); transition: border-color 0.08s, box-shadow 0.08s, background 0.08s; }
+  .sd-cell.beat { background: var(--bg-panel-2); border-color: var(--border-strong); }
+  .sd-cell.down { background: var(--bg-panel-2); border-color: var(--text-faint); }
+  .sd-cell.on { border-color: var(--root); box-shadow: 0 0 0 2px rgba(107,165,58,0.4); }
+  .sd-lab { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); line-height: 1; }
+  .sd-cell.on .sd-lab { color: var(--root); }
+  .sd-tempo { display: inline-flex; align-items: center; gap: 8px; }
+  .sd-bpm { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); min-width: 62px; text-align: center; }
+  .sd-dot { opacity: 0.22; transition: opacity 0.1s, transform 0.1s; }
+  .sd-dot.pal { opacity: 1; background: var(--sc-other); }
+  .sd-dot.pal.on { background: var(--root); transform: scale(1.12); box-shadow: 0 0 0 3px rgba(107,165,58,0.3); }
+  .sd-dot.on { opacity: 1; background: var(--root); }
+
   /* ---- comp-the-progression (Phase 5c) ---- */
   .btn.co-prog { font-size: 12px; }
   .co-stage { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 14px 0 6px; flex-wrap: wrap; }

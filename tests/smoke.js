@@ -152,12 +152,13 @@ if (T) {
   ['ch-board','tr-board','sc-board','nt-board'].forEach(id =>
     ok('1b: old per-tab board gone: ' + id, !win.document.getElementById(id)));
   // 1b's single shared reference board (#board) is still exactly one; the Practice
-  // drills add their own boards — note-naming (#drill-board), targeting (#tg-board, 6a)
-  // and call-response (#cr-board, 6c) — so four fretboards total now.
+  // drills add their own boards — note-naming (#drill-board), targeting (#tg-board, 6a),
+  // call-response (#cr-board, 6c) and subdivision/timing (#sd-board, 7a) — so five
+  // fretboards total now.
   ok('1b: one shared reference board (#board)',
      win.document.querySelectorAll('#board.fretboard').length === 1);
-  ok('3c: drill has its own board, four fretboards total',
-     win.document.querySelectorAll('.fretboard').length === 4 && !!win.document.getElementById('drill-board'),
+  ok('3c: drill has its own board, five fretboards total',
+     win.document.querySelectorAll('.fretboard').length === 5 && !!win.document.getElementById('drill-board'),
      win.document.querySelectorAll('.fretboard').length + ' found');
   ok('1b: Notes tab folded away (3 tabs)', win.document.querySelectorAll('.tab').length === 3,
      win.document.querySelectorAll('.tab').length + ' tabs');
@@ -474,8 +475,8 @@ if (T) {
     ok('5a: chord-change area present (cm-area)', !!doc.getElementById('cm-area'));
     ok('5a: practice home grouped by pillar', doc.querySelectorAll('#practice-home .practice-section').length >= 2);
     // the drill uses chord-diagram SVGs, not a fretboard, so the board count is unchanged
-    // (4 total: reference #board + note-naming/targeting/call-response drill boards)
-    ok('5a: no extra fretboard added', doc.querySelectorAll('.fretboard').length === 4);
+    // (5 total: reference #board + note-naming/targeting/call-response/timing drill boards)
+    ok('5a: no extra fretboard added', doc.querySelectorAll('.fretboard').length === 5);
 
     // presets + durations are sane
     ok('5a: at least 6 chord pairs', T.CM_PAIRS.length >= 6);
@@ -894,6 +895,86 @@ if (T) {
     ok('6c: leaving Practice exits the call-response drill', T.getCr() === null);
     T.setCtxNow(0);
     T.resetLearner();
+  })();
+
+  /* ---- Phase 7a: subdivision & timing (Foundations coach) ---- */
+  (function timing() {
+    const doc = win.document;
+    ok('7a: timing card + area + board present',
+       !!doc.getElementById('start-timing') && !!doc.getElementById('sd-area') && !!doc.getElementById('sd-board'));
+    ok('7a: a Timing group card sits in the practice home',
+       !!doc.querySelector('#practice-home .practice-section [data-i18n="drill_timing"]'));
+    ok('7a: four subdivisions (quarter → sixteenth) with the right per-beat divisions',
+       T.SUBDIVS.length === 4 && T.SUBDIVS.map(s => s.div).join(',') === '1,2,3,4');
+
+    T.resetLearner();
+    T.initAudio();
+    T.setCtxNow(0);
+    T.setMode('practice');
+    T.setKey(0, 'C');       // C Aeolian by default context
+    T.setSdPos(1);
+    T.setSdSub(1);          // eighths
+    T.startTiming();
+    let s = T.getSd();
+    ok('7a: start opens the drill (paused)', s && s.playing === false);
+
+    // the walked path is the box scale ascended then descended (a smooth run, no leaps)
+    const path = T.sdPath();
+    ok('7a: the walk builds a note path from the scale box', path.length >= 4);
+    let asc = true; for (let i = 1; i < path.length; i++) { if (path[i].midi < path[i-1].midi) { asc = false; break; } }
+    ok('7a: the path is not strictly ascending (it turns around)', !asc);
+
+    // play, then drive one full 4/4 bar of eighths (8 ticks) + the downbeat of the next
+    T.sdToggle();
+    s = T.getSd();
+    ok('7a: play arms the clock and captures div = 2 for eighths', s.playing === true && s.div === 2);
+    for (let c = 0; c <= 8; c++) T.sdTickNow(0.01 * c, c);
+    s = T.getSd();
+    ok('7a: a full bar of subdivisions counts one bar', s.bars === 1);
+
+    // stopping after ≥1 bar records a coach session and mints no per-item SRS
+    T.sdToggle();
+    const ss = T.getLearner().sessions;
+    ok('7a: a timing session is recorded (bars played)',
+       ss.length >= 1 && /^timing:eighth$/.test(ss[ss.length - 1].drill));
+    ok('7a: timing mints no per-item SRS', T.learnerStats().items === 0);
+
+    T.setMode('reference');
+    ok('7a: leaving Practice exits the timing drill', T.getSd() === null);
+    T.setCtxNow(0);
+    T.resetLearner();
+  })();
+
+  /* ---- Phase 7b: time signatures / meter ---- */
+  (function meter() {
+    const doc = win.document;
+    const near = (a, b) => Math.abs(a - b) < 1e-9;
+    ok('7b: meter select present with all presets',
+       !!doc.getElementById('tb-meter') && T.METERS.length === 5);
+    ok('7b: default meter is 4/4', T.curMeter().id === '4/4' && T.getMeterIdx() === 2);
+
+    // 4/4 must reproduce the OLD hard-wired bar math EXACTLY (no backing-band regression)
+    T.setMeter(2);
+    ok('7b: 4/4 bar = beat()*4 (unchanged bar math)', near(T.barSec(), T.beat() * 4));
+    ok('7b: 4/4 pulse = a quarter', near(T.pulseSec(), T.beat()));
+    ok('7b: 4/4 mid-bar push = beat 3', near(T.midPulseSec(), 2 * T.beat()));
+    ok('7b: 4/4 accents the downbeat only', T.meterGroupStarts().join(',') === '0');
+    ok('7b: 4/4 keeps kick 1&3 / snare 2&4',
+       T.METERS[2].kick.join(',') === '0,2' && T.METERS[2].snare.join(',') === '1,3');
+
+    // 3/4 (simple): three quarter pulses, bar shrinks to 3 beats
+    T.setMeter(1);
+    ok('7b: 3/4 has three quarter pulses', T.barBeats() === 3 && near(T.pulseSec(), T.beat()) && near(T.barSec(), 3 * T.beat()));
+
+    // 6/8 (compound): six eighth pulses, bar = 3 quarters, felt in 2 (accents 0 & 3)
+    T.setMeter(3);
+    ok('7b: 6/8 pulse = an eighth', near(T.pulseSec(), T.beat() / 2));
+    ok('7b: 6/8 bar = three quarters', T.barBeats() === 6 && near(T.barSec(), 3 * T.beat()));
+    ok('7b: 6/8 accents the two dotted beats', T.meterGroupStarts().join(',') === '0,3');
+
+    ok('7b: setMeter is bounds-checked', (T.setMeter(99), T.getMeterIdx() === 3));   // out-of-range ignored
+    T.setMeter(2);   // restore 4/4 for the rest of the suite
+    ok('7b: restored to 4/4', T.curMeter().id === '4/4');
   })();
 
   /* ---- Accessibility + onboarding (Phase 9 feel pass) ---- */

@@ -58,6 +58,30 @@ let capo = 0;
 let tempo = 90;
 function beat(){ return 60/tempo; }
 
+/* time signature / meter (Phase 7b): beats per bar + the note value that gets the
+   pulse. 4/4 is the default and reproduces the old hard-wired bar math EXACTLY (the
+   backing band, sequencer and metronome were all `beat()*4` / `count%4`). A pulse is
+   a note of value `unit`, so a quarter (unit 4) = beat(), an eighth (unit 8) = beat()/2.
+   `groups` splits the bar into accent groups — a strong bar-start + a medium group-
+   start — driving the metronome accent + the drum feel; `kick`/`snare` are drum hits
+   in PULSE indices so each meter grooves sensibly (4/4 keeps kick 1&3 / snare 2&4). */
+const METERS = [
+  { id:'2/4',  beats:2,  unit:4, groups:[2],       kick:[0],   snare:[1] },
+  { id:'3/4',  beats:3,  unit:4, groups:[3],       kick:[0],   snare:[1,2] },
+  { id:'4/4',  beats:4,  unit:4, groups:[4],       kick:[0,2], snare:[1,3] },
+  { id:'6/8',  beats:6,  unit:8, groups:[3,3],     kick:[0,3], snare:[3] },
+  { id:'12/8', beats:12, unit:8, groups:[3,3,3,3], kick:[0,6], snare:[3,9] },
+];
+let meterIdx = 2;                                          // default 4/4
+function curMeter(){ return METERS[meterIdx]; }
+function barBeats(){ return curMeter().beats; }            // pulses per bar
+function pulseSec(){ return beat()*(4/curMeter().unit); }  // one pulse (unit-note) duration
+function barSec(){ return pulseSec()*curMeter().beats; }   // whole bar (== beat()*4 for 4/4)
+function midPulseSec(){ return Math.floor(barBeats()/2)*pulseSec(); }   // the mid-bar "push" (beat 3 in 4/4)
+/* pulse indices that start an accent group (0, 3 for 6/8 …) → metronome + beat accents */
+function meterGroupStarts(){ const g=curMeter().groups, s=new Set(); let a=0; for(const n of g){ s.add(a); a+=n; } return s; }
+function setMeter(i){ if(Number.isInteger(i) && i>=0 && i<METERS.length) meterIdx=i; }
+
 /* collapsible toolbar; default open on wide screens, collapsed on phones — and also
    collapsed on a short (landscape-phone) viewport, where every row above the neck counts */
 let toolbarOpen = (typeof window!=='undefined' && window.innerWidth>700 && window.innerHeight>500);

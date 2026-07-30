@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 2.10.0  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 2.11.0  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="2.10.0">
+<meta name="version" content="2.11.0">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -320,6 +320,21 @@
   .sp-cell.on .sp-dir.has { color: var(--root); }
   .sp-beat { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
   .sp-controls { display: inline-flex; gap: 8px; flex-shrink: 0; }
+
+  /* ---- subdivision & timing (Phase 7a) ---- */
+  .sd-grid { display: grid; gap: 5px; max-width: 620px; margin: 12px 0 6px; }
+  .sd-cell { display: flex; align-items: flex-end; justify-content: center; min-height: 34px; padding: 5px 0 4px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-panel); transition: border-color 0.08s, box-shadow 0.08s, background 0.08s; }
+  .sd-cell.beat { background: var(--bg-panel-2); border-color: var(--border-strong); }
+  .sd-cell.down { background: var(--bg-panel-2); border-color: var(--text-faint); }
+  .sd-cell.on { border-color: var(--root); box-shadow: 0 0 0 2px rgba(107,165,58,0.4); }
+  .sd-lab { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); line-height: 1; }
+  .sd-cell.on .sd-lab { color: var(--root); }
+  .sd-tempo { display: inline-flex; align-items: center; gap: 8px; }
+  .sd-bpm { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); min-width: 62px; text-align: center; }
+  .sd-dot { opacity: 0.22; transition: opacity 0.1s, transform 0.1s; }
+  .sd-dot.pal { opacity: 1; background: var(--sc-other); }
+  .sd-dot.pal.on { background: var(--root); transform: scale(1.12); box-shadow: 0 0 0 3px rgba(107,165,58,0.3); }
+  .sd-dot.on { opacity: 1; background: var(--root); }
 
   /* ---- comp-the-progression (Phase 5c) ---- */
   .btn.co-prog { font-size: 12px; }
@@ -958,6 +973,12 @@
         <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
         <select id="tb-capo"></select>
       </div>
+      <!-- Meter / time signature (Phase 7b): the metronome accent, backing groove and
+           progression bar length all follow it; 4/4 is the default. -->
+      <div class="tb-group">
+        <span class="tb-label" data-i18n="tb_meter">Розмір</span>
+        <select id="tb-meter"></select>
+      </div>
       <!-- Accessibility (Phase 9 feel pass): the function colours carry meaning by
            hue alone, so offer a colour-blind-safe palette + distinct per-function
            dot shapes. Both are body-class toggles (applyA11y) and persisted. -->
@@ -1157,6 +1178,16 @@
           <li><button type="button" class="drill-card" id="start-notes">
             <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span>
             <span class="dc-meta" data-i18n="drill_notes_meta">Грифознавство · рахунок за точністю</span>
+          </button></li>
+        </ul>
+      </div>
+      <!-- Foundations (Phase 7): subdivision & timing — serves both pillars. -->
+      <div class="practice-section">
+        <div class="ps-label" data-i18n="practice_grp_timing">Тайминг</div>
+        <ul class="practice-list">
+          <li><button type="button" class="drill-card" id="start-timing">
+            <span class="dc-name" data-i18n="drill_timing">Поділ і тайминг</span>
+            <span class="dc-meta" data-i18n="drill_timing_meta">Вісімки · тріолі · шістнадцятки · коуч</span>
           </button></li>
         </ul>
       </div>
@@ -1374,6 +1405,37 @@
       <div class="drill-summary" id="cr-summary" hidden></div>
     </div>
 
+    <!-- Subdivision & timing (Phase 7a): a smart visual metronome — pick a subdivision
+         + tempo, an accented click + grid tick it out, and the context scale is walked
+         note-by-note across the grid in one box so there's something to play. No score
+         (coach tier; mic-scored timing is Phase 8/F1). Its own display board. Hidden
+         until started. -->
+    <div id="sd-area" hidden>
+      <div class="drill-head">
+        <button type="button" class="btn" id="sd-quit" data-i18n="drill_quit">Вийти</button>
+        <span class="drill-count" id="sd-title"></span>
+      </div>
+      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="sd-key"></div></div>
+      <div class="row"><span class="ctrl-label" data-i18n="sd_subdiv">Поділ</span><div class="group" id="sd-subs"></div></div>
+      <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="sd-pos"></div></div>
+      <div class="row">
+        <span class="ctrl-label" data-i18n="sd_tempo">Темп</span>
+        <div class="group sd-tempo">
+          <button type="button" class="btn" id="sd-slower" aria-label="−5 BPM">&#8722;</button>
+          <span class="sd-bpm" id="sd-bpm"></span>
+          <button type="button" class="btn" id="sd-faster" aria-label="+5 BPM">&#43;</button>
+        </div>
+        <div class="divider"></div>
+        <button type="button" class="btn" id="sd-notes" aria-pressed="true"></button>
+      </div>
+      <div class="sd-grid" id="sd-grid"></div>
+      <div class="scroll"><div class="board"><div class="fretboard" id="sd-board"></div></div><div class="fretnums" id="sd-nums"></div></div>
+      <div class="cm-active-foot">
+        <span class="drill-sub" id="sd-hint"></span>
+        <button type="button" class="btn play" id="sd-play"></button>
+      </div>
+    </div>
+
     <!-- Active drill (3c): note-naming. Its own board (painted by renderBoard into
          #drill-board) so the shared reference board stays put. Hidden until started. -->
     <div id="drill-area" hidden>
@@ -1574,10 +1636,15 @@
 <script>
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
-const APP_VERSION = '2.10.0';
+const APP_VERSION = '2.11.0';
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.11.0', date:'2026-07-12',
+    en:['New Foundations drill — Subdivision & timing: a smart visual metronome for locking in your time. Pick a subdivision (quarter notes → eighths → triplets → sixteenths) and a tempo; an accented click and a grid tick out the bar (a strong beat 1, softer subdivisions), and the current key\'s scale is walked note-by-note across the grid in one neck box so you always have something to play. Change key, box or tempo without leaving Practice. A coach that serves both the Rhythm and Lead pillars — mic-scored timing arrives with microphone input later.',
+        'Time signatures: a new Meter picker in Settings (2/4, 3/4, 4/4, 6/8, 12/8). The metronome accent, the backing groove (kick/snare pattern), the bass, the single-chord loop and the whole progression / comping / targeting bar length all follow the meter — so you can jam a waltz in 3/4 or a 6/8 feel, not just 4/4.'],
+    uk:['Нова вправа-основа — «Поділ і тайминг»: розумний візуальний метроном, щоб тримати час. Обери поділ (чвертки → вісімки → тріолі → шістнадцятки) і темп; акцентоване клацання й сітка відбивають такт (сильний «раз», тихіші поділи), а гама поточної тональності «прокрокує» по сітці нота за нотою в одній позиції на грифі — тож завжди є що грати. Змінюй тональність, позицію чи темп, не виходячи з «Практики». Коуч, що працює і на ритм-, і на соло-пілон — оцінку тайминга з мікрофоном додамо згодом.',
+        'Розміри такту: у «Налаштуваннях» зʼявився вибір розміру (2/4, 3/4, 4/4, 6/8, 12/8). Акцент метронома, грув супроводу (малюнок бочки/малого), бас, луп одного акорду й довжина такту всієї прогресії / акомпанементу / прицілювання — усе слідує за розміром, тож можна зіграти вальс у 3/4 чи відчуття 6/8, а не лише 4/4.'] },
   { v:'2.10.0', date:'2026-07-12',
     en:['New Lead drill — Call & response: the app plays a short phrase from the key\'s scale in one neck box, then you echo it back on the fretboard in the same order. Listen while it plays, answer in the space it leaves — the turn structure itself trains soloing phrasing (when to play, when to leave space). Scored on how cleanly you echo each phrase; the phrases grow as you go. This completes the Lead pillar\'s coach tiers.'],
     uk:['Нова соло-вправа — «Запитання-відповідь»: застосунок грає коротку фразу з гами тональності в одній позиції на грифі, а ти повторюєш її на грифі в тому ж порядку. Слухай, поки грає, і відповідай у паузі — сама структура «запит-відповідь» тренує фразування (коли грати, а коли лишити тишу). Рахунок — наскільки чисто ти повторюєш кожну фразу; фрази довшають по ходу. Це завершує коуч-рівні соло-пілона.'] },
@@ -1938,6 +2005,9 @@ const I18N = {
     cm_changes:'Зміни', cm_cpm:'За хвилину', cm_best:'Рекорд', cm_tap_hint:'Натискай на кожній чистій зміні', cm_undo:'Скасувати', cm_newbest:'Новий рекорд!',
     drill_strum:'Малюнки боя', drill_strum_meta:'Удари вниз/вгору по сітці · коуч',
     dr_key:'Тональність',
+    practice_grp_timing:'Тайминг', drill_timing:'Поділ і тайминг', drill_timing_meta:'Вісімки · тріолі · шістнадцятки · коуч',
+    sd_subdiv:'Поділ', sd_tempo:'Темп', sd_notes:'Ноти',
+    sd_hint:'Тримайся клацання — акцентований удар це «раз», тихі — поділи долі. Грай підсвічені ноти гами рівно по сітці. Це коуч: оцінку тайминга з мікрофоном додамо згодом.',
     sp_pattern:'Малюнок', sp_chord:'Акорд', sp_play:'Грати', sp_stop:'Стоп',
     sp_hint:'Грай разом — ↓ вниз, ↑ вгору; над порожніми клітинами рука рухається, але струн не торкається.',
     drill_comp:'Акомпанемент прогресії', drill_comp_meta:'Потрібний акорд вчасно · коуч',
@@ -2005,7 +2075,7 @@ const I18N = {
     inv_1st_desc:'Перше обернення — у басу терція',
     inv_2nd_desc:'Друге обернення — у басу квінта',
     tb_settings:'Налаштування', tb_volume:'Гучність', tb_tuner:'Тюнер',
-    tb_tuning:'Стрій', tb_lefty:'Ліворукий', tb_frets:'Лади', tb_tempo:'Темп', tb_capo:'Каподастр', capo_off:'без',
+    tb_tuning:'Стрій', tb_lefty:'Ліворукий', tb_frets:'Лади', tb_tempo:'Темп', tb_capo:'Каподастр', capo_off:'без', tb_meter:'Розмір',
     a11y_label:'Доступність', a11y_palette:'Палітра для дальтоніків', a11y_shapes:'Форми на нотах',
     tun_custom:'Власний стрій',
     cal_label:'Зсув часу', cal_test:'Тест ритму', cal_tapnow:'Тап!', cal_unit:'мс',
@@ -2060,6 +2130,9 @@ const I18N = {
     cm_changes:'Changes', cm_cpm:'Per minute', cm_best:'Best', cm_tap_hint:'Tap on each clean change', cm_undo:'Undo', cm_newbest:'New best!',
     drill_strum:'Strumming patterns', drill_strum_meta:'Down/up patterns on the beat grid · coach',
     dr_key:'Key',
+    practice_grp_timing:'Timing', drill_timing:'Subdivision & timing', drill_timing_meta:'Eighths · triplets · sixteenths · coach',
+    sd_subdiv:'Subdivision', sd_tempo:'Tempo', sd_notes:'Notes',
+    sd_hint:'Lock to the click — the accented tick is beat 1, the soft ticks are the subdivisions. Play the lit scale notes evenly across the grid. A coach: mic-scored timing arrives later.',
     sp_pattern:'Pattern', sp_chord:'Chord', sp_play:'Play', sp_stop:'Stop',
     sp_hint:'Strum along — ↓ down, ↑ up; over the empty slots your hand keeps moving but misses the strings.',
     drill_comp:'Comp the progression', drill_comp_meta:'Right chord, right time · coach',
@@ -2127,7 +2200,7 @@ const I18N = {
     inv_1st_desc:'First inversion — third in the bass',
     inv_2nd_desc:'Second inversion — fifth in the bass',
     tb_settings:'Settings', tb_volume:'Volume', tb_tuner:'Tuner',
-    tb_tuning:'Tuning', tb_lefty:'Left-handed', tb_frets:'Frets', tb_tempo:'Tempo', tb_capo:'Capo', capo_off:'off',
+    tb_tuning:'Tuning', tb_lefty:'Left-handed', tb_frets:'Frets', tb_tempo:'Tempo', tb_capo:'Capo', capo_off:'off', tb_meter:'Meter',
     a11y_label:'Accessibility', a11y_palette:'Colour-blind palette', a11y_shapes:'Shapes on dots',
     tun_custom:'Custom tuning',
     cal_label:'Timing offset', cal_test:'Tap test', cal_tapnow:'Tap!', cal_unit:'ms',
@@ -2223,6 +2296,30 @@ let capo = 0;
 /* tempo (BPM) drives all playback timing + the metronome. */
 let tempo = 90;
 function beat(){ return 60/tempo; }
+
+/* time signature / meter (Phase 7b): beats per bar + the note value that gets the
+   pulse. 4/4 is the default and reproduces the old hard-wired bar math EXACTLY (the
+   backing band, sequencer and metronome were all `beat()*4` / `count%4`). A pulse is
+   a note of value `unit`, so a quarter (unit 4) = beat(), an eighth (unit 8) = beat()/2.
+   `groups` splits the bar into accent groups — a strong bar-start + a medium group-
+   start — driving the metronome accent + the drum feel; `kick`/`snare` are drum hits
+   in PULSE indices so each meter grooves sensibly (4/4 keeps kick 1&3 / snare 2&4). */
+const METERS = [
+  { id:'2/4',  beats:2,  unit:4, groups:[2],       kick:[0],   snare:[1] },
+  { id:'3/4',  beats:3,  unit:4, groups:[3],       kick:[0],   snare:[1,2] },
+  { id:'4/4',  beats:4,  unit:4, groups:[4],       kick:[0,2], snare:[1,3] },
+  { id:'6/8',  beats:6,  unit:8, groups:[3,3],     kick:[0,3], snare:[3] },
+  { id:'12/8', beats:12, unit:8, groups:[3,3,3,3], kick:[0,6], snare:[3,9] },
+];
+let meterIdx = 2;                                          // default 4/4
+function curMeter(){ return METERS[meterIdx]; }
+function barBeats(){ return curMeter().beats; }            // pulses per bar
+function pulseSec(){ return beat()*(4/curMeter().unit); }  // one pulse (unit-note) duration
+function barSec(){ return pulseSec()*curMeter().beats; }   // whole bar (== beat()*4 for 4/4)
+function midPulseSec(){ return Math.floor(barBeats()/2)*pulseSec(); }   // the mid-bar "push" (beat 3 in 4/4)
+/* pulse indices that start an accent group (0, 3 for 6/8 …) → metronome + beat accents */
+function meterGroupStarts(){ const g=curMeter().groups, s=new Set(); let a=0; for(const n of g){ s.add(a); a+=n; } return s; }
+function setMeter(i){ if(Number.isInteger(i) && i>=0 && i<METERS.length) meterIdx=i; }
 
 /* collapsible toolbar; default open on wide screens, collapsed on phones — and also
    collapsed on a short (landscape-phone) viewport, where every row above the neck counts */
@@ -2729,11 +2826,11 @@ function hatHit(when, vel){
 /* humanized chord comp: micro-timing jitter + per-note velocity variation and a
    slight roll-off down the strum, so repeated bars don't sound machine-stamped. */
 function compStrum(base, ivs, when, vel, spread){
-  const barSec=beat()*4;
+  const bs=barSec();
   ivs.forEach((iv,i)=>{
     const tt=when + i*spread + (Math.random()*0.006-0.003);
     const v=vel*(0.9+Math.random()*0.16) - i*0.015;
-    pluckAt(base+iv, tt, Math.min(barSec+0.4,2.4), Math.max(0.4, v));
+    pluckAt(base+iv, tt, Math.min(bs+0.4,2.4), Math.max(0.4, v));
   });
 }
 
@@ -2742,20 +2839,19 @@ function compStrum(base, ivs, when, vel, spread){
    toggles) and from the Phase 5c comping drill (`force` true → always lays the bed,
    since comping NEEDS something to play over, without flipping the global toggles). */
 function scheduleBand(pc, qi, when, force){
-  const b=beat(), fifth=fifthInterval(qi), bassRoot=36+pc, bOn=force||bassOn, gOn=force||grooveOn;
+  const b=beat(), p=pulseSec(), m=curMeter(), fifth=fifthInterval(qi), bassRoot=36+pc, bOn=force||bassOn, gOn=force||grooveOn;
   if(bOn){
-    bassNote(when,                                   bassRoot,       b*1.9, 0.95);  // root on beat 1
-    bassNote(when+2*b + (Math.random()*0.012-0.006), bassRoot+fifth, b*1.7, 0.8);   // fifth on beat 3
+    bassNote(when,                                     bassRoot,       p*1.9, 0.95);  // root on beat 1
+    bassNote(when+midPulseSec()+(Math.random()*0.012-0.006), bassRoot+fifth, p*1.7, 0.8);  // fifth mid-bar (beat 3 in 4/4)
   }
   if(gOn){
-    for(let k=0;k<8;k++){                                                            // 8th-note hats
-      const tt=when + k*(b/2) + (Math.random()*0.010-0.005);
-      hatHit(tt, k===0 ? 1 : (k%2===0 ? 0.7 : 0.5));                                 // accent the downbeat
+    const half=b/2, nEighths=Math.max(1, Math.round(barSec()/half));                 // 8th-note hats across the bar
+    for(let k=0;k<nEighths;k++){
+      const tt=when + k*half + (Math.random()*0.010-0.005);
+      hatHit(tt, k===0 ? 1 : (k%2===0 ? 0.7 : 0.5));                                  // accent the downbeat
     }
-    kickHit(when,     1);                                                            // kick on 1
-    kickHit(when+2*b, 0.9);                                                          // kick on 3
-    snareHit(when+b,   0.9);                                                         // backbeat on 2
-    snareHit(when+3*b, 0.9);                                                         // backbeat on 4
+    m.kick.forEach(pi=>kickHit(when+pi*p, pi===0 ? 1 : 0.9));                         // kick pattern per meter (1&3 in 4/4)
+    m.snare.forEach(pi=>snareHit(when+pi*p, 0.9));                                    // backbeat per meter (2&4 in 4/4)
   }
 }
 function bandActive(){ return bassOn || grooveOn; }
@@ -2775,7 +2871,7 @@ function metroToggle(){
   const btn=document.getElementById('tb-metro');
   if(metroClock){ removeClock(metroClock); metroClock=null; btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); setMetroLabel(); setBackingToggle(); syncWakeLock(); return; }
   audio();
-  metroClock={ interval:()=>beat(), tick:(time,count)=>metroClick(time, count%4===0) };
+  metroClock={ interval:()=>pulseSec(), tick:(time,count)=>metroClick(time, meterGroupStarts().has(count%barBeats())) };
   addClock(metroClock);
   btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setMetroLabel(); setBackingToggle(); syncWakeLock();
 }
@@ -2808,7 +2904,7 @@ function drumsToggle(){ audio(); grooveOn=!grooveOn; if(grooveOn) ensureBacking(
 let loopClock=null, loopMode='chord';
 function loopStrum(when){
   const ctx=audio(); if(!ctx) return;
-  const barSec=beat()*4;
+  const bs=barSec();
   let midis, pcs, boardId='board', pc, qi;     // one shared board (1b)
   if(loopMode==='triad'){
     const v=currentTriadVoicing();
@@ -2818,11 +2914,11 @@ function loopStrum(when){
     midis=v.midis; pcs=v.pcs; pc=gRoot; qi=chQual;
   }
   strumMidi(midis, when, 0.9, 0.026, +1);                 // humanized downstrum
-  if(bandActive()) strumMidi(midis, when+2*beat(), 0.55, 0.02, +1);   // softer push on beat 3
+  if(bandActive()) strumMidi(midis, when+midPulseSec(), 0.55, 0.02, +1);   // softer push mid-bar (beat 3 in 4/4)
   scheduleBand(pc, qi, when);                             // bass + groove bed (no-op if both off)
   enqueueBeats(when);                                     // 1d: transport beat pulse
   enqueueVisual(when, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, true)); updateGlobalTransport(); });
-  enqueueVisual(when+barSec*0.85, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, false)); });
+  enqueueVisual(when+bs*0.85, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, false)); });
 }
 function stopLoopVisual(){ document.querySelectorAll('#board .dot.playing').forEach(d=>d.classList.remove('playing')); }
 function loopToggle(){
@@ -2832,7 +2928,7 @@ function loopToggle(){
   if(typeof seqStop==='function') seqStop();
   loopMode = (currentTab==='harmony' && hView==='triads') ? 'triad' : 'chord';
   audio();
-  loopClock={ interval:()=>beat()*4, tick:(time)=>loopStrum(time) };
+  loopClock={ interval:()=>barSec(), tick:(time)=>loopStrum(time) };
   addClock(loopClock);
   btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setLoopLabel();
 }
@@ -2853,7 +2949,7 @@ function pulseTransport(strong){
   d.classList.remove('bp','bp-strong'); void d.offsetWidth;     // restart the animation
   d.classList.add(strong?'bp-strong':'bp');
 }
-function enqueueBeats(when){ const b=beat(); for(let k=0;k<4;k++) enqueueVisual(when+k*b, ()=>pulseTransport(k===0)); }
+function enqueueBeats(when){ const p=pulseSec(), n=barBeats(), starts=meterGroupStarts(); for(let k=0;k<n;k++) enqueueVisual(when+k*p, ()=>pulseTransport(k===0 || starts.has(k))); }
 function loopChordLabel(){ return loopMode==='triad' ? gRootLbl+TRIADS[trQual].short : gRootLbl+QUALITIES[chQual].short; }
 function updateGlobalTransport(){
   const wrap=document.getElementById('tb-transport'); if(!wrap) return;
@@ -2928,9 +3024,9 @@ function seqAddCurrent(){ seq.push({pc:gRoot, lbl:gRootLbl, qi:chQual, bars:1});
 function seqBuildMap(){ seqBarMap=[]; seq.forEach((st,i)=>{ for(let b=0;b<Math.max(1,st.bars);b++) seqBarMap.push(i); }); }
 function seqStrumStep(i, when){
   const st=seq[i]; if(!st) return;
-  const ivs=QUALITIES[st.qi].iv, base=48+st.pc, barSec=beat()*4;
+  const ivs=QUALITIES[st.qi].iv, base=48+st.pc, bs=barSec();
   compStrum(base, ivs, when, 0.9, 0.028);                 // humanized downbeat strum
-  if(bandActive()) compStrum(base, ivs, when+2*beat(), 0.55, 0.022);   // softer push on beat 3
+  if(bandActive()) compStrum(base, ivs, when+midPulseSec(), 0.55, 0.022);   // softer push mid-bar (beat 3 in 4/4)
   scheduleBand(st.pc, st.qi, when);                       // bass + groove follow the step's chord
   enqueueBeats(when);                                     // 1d: transport beat pulse
   const pcs=ivs.map(iv=>mod(base+iv,12));
@@ -2941,7 +3037,7 @@ function seqStrumStep(i, when){
     if(i!==seqStepIdx){ seqStepIdx=i; _boardStagger=false; setChord(st.pc, st.lbl, st.qi); _boardStagger=true; renderSeq(); updateGlobalTransport(); }
     const b=document.getElementById('board'); pcs.forEach(pc=>setDotPlaying(b, pc, true));
   });
-  enqueueVisual(when+barSec*0.85, ()=>{ const b=document.getElementById('board'); pcs.forEach(pc=>setDotPlaying(b, pc, false)); });
+  enqueueVisual(when+bs*0.85, ()=>{ const b=document.getElementById('board'); pcs.forEach(pc=>setDotPlaying(b, pc, false)); });
 }
 function seqTick(when){
   if(!seqBarMap.length){ seqStop(); return; }
@@ -2949,7 +3045,7 @@ function seqTick(when){
   seqBar++;
   if(seqBar>=seqBarMap.length){
     if(seqLoopOn){ seqBar=0; }
-    else { removeClock(seqClock); seqClock=null; setSeqTransport(); enqueueVisual(when+beat()*4, ()=>seqStop()); }  // stop after the final bar rings
+    else { removeClock(seqClock); seqClock=null; setSeqTransport(); enqueueVisual(when+barSec(), ()=>seqStop()); }  // stop after the final bar rings
   }
 }
 function seqPlay(){
@@ -2958,7 +3054,7 @@ function seqPlay(){
   stopLoop(); audio();
   seqSaved={pc:gRoot, lbl:gRootLbl, qi:chQual};
   seqBuildMap(); seqBar=0; seqStepIdx=-1;
-  seqClock={ interval:()=>beat()*4, tick:(time)=>seqTick(time) };
+  seqClock={ interval:()=>barSec(), tick:(time)=>seqTick(time) };
   addClock(seqClock);
   setSeqTransport();
 }
@@ -4056,6 +4152,7 @@ function applyLang(){
   if(typeof refreshGrooveLang==='function') refreshGrooveLang();     // re-localize an in-flight groove drill (5d)
   if(typeof refreshTargetLang==='function') refreshTargetLang();     // re-localize an in-flight targeting drill (6a)
   if(typeof refreshCallRespLang==='function') refreshCallRespLang(); // re-localize an in-flight call-response drill (6c)
+  if(typeof refreshTimingLang==='function') refreshTimingLang();     // re-localize an in-flight subdivision/timing drill (7a)
   setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
   activateRoot(document.getElementById('g-roots'), gRoot);
@@ -4072,6 +4169,8 @@ function buildToolbar(){
   fr.innerHTML=FRET_RANGES.map((r,i)=>`<option value="${i}"${i===fretRangeIdx?' selected':''}>${r.key?t(r.key):r.label}</option>`).join('');
   const cp=document.getElementById('tb-capo');
   if(cp) cp.innerHTML=Array.from({length:8},(_,i)=>`<option value="${i}"${i===capo?' selected':''}>${i===0?t('capo_off'):i}</option>`).join('');
+  const mt=document.getElementById('tb-meter');
+  if(mt) mt.innerHTML=METERS.map((m,i)=>`<option value="${i}"${i===meterIdx?' selected':''}>${m.id}</option>`).join('');
   buildCustomTuning(); applyCustomTuningVis();
   const tp=document.getElementById('tb-tempo'); tp.value=tempo;
   document.getElementById('tb-bpm').textContent=tempo+' BPM';
@@ -4253,7 +4352,7 @@ let currentTab='harmony';
 // older saves (no `mode`) and the existing reference behaviour are untouched.
 let currentMode='reference';
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
-  lang, mode:currentMode, tab:currentTab, tuningIdx, customTuning, fretRangeIdx, tempo, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
+  lang, mode:currentMode, tab:currentTab, tuningIdx, customTuning, fretRangeIdx, tempo, meterIdx, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
   calMs, cbPalette, fnShapes, welcomeSeen,
   gRoot, gRootLbl, gMode, hView, scView,
   chQual, arpPos, scIdx, scPos, scOverlay,
@@ -4274,6 +4373,7 @@ function loadState(){ try{
   if(Number.isInteger(s.fretRangeIdx)&&FRET_RANGES[s.fretRangeIdx]) fretRangeIdx=s.fretRangeIdx;
   if(Number.isInteger(s.capo)&&s.capo>=0&&s.capo<=11) capo=s.capo;
   if(typeof s.tempo==='number'&&s.tempo>=40&&s.tempo<=200) tempo=s.tempo;
+  if(Number.isInteger(s.meterIdx)&&METERS[s.meterIdx]) meterIdx=s.meterIdx;   // 7b time signature
   if(typeof s.masterVol==='number'&&s.masterVol>=0&&s.masterVol<=1) masterVol=s.masterVol;
   if(typeof s.lefty==='boolean') lefty=s.lefty;
   if(typeof s.toolbarOpen==='boolean') toolbarOpen=s.toolbarOpen;
@@ -4850,7 +4950,7 @@ function targetPlay(){
   if(typeof seqStop==='function') seqStop();
   tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
   tgDrill.bar=0; tgDrill.cycles=0; tgDrill.hits=0; tgDrill.misses=0; tgDrill.found=new Set(); tgDrill.playing=true;
-  tgDrill.clock={ interval:()=>beat()*4, tick:(time,count)=>targetTick(time,count) };
+  tgDrill.clock={ interval:()=>barSec(), tick:(time,count)=>targetTick(time,count) };
   if(typeof addClock==='function') addClock(tgDrill.clock);
   renderTarget();
 }
@@ -4871,7 +4971,7 @@ function targetTick(when, count){
   const i=count%bars.length;
   if(i===0 && count>0) tgDrill.cycles++;
   tgDrill.bar=i;
-  const cur=bars[i], nxt=bars[(i+1)%bars.length], b=beat();
+  const cur=bars[i], nxt=bars[(i+1)%bars.length], p=pulseSec();
   const ivs=QUALITIES[cur.qi].iv, base=48+cur.pc;
   // the SCORING state (which tones are targets this bar) is set synchronously in the
   // tick so a tap always reads the current chord — only the DOM guides ride the visual
@@ -4879,7 +4979,7 @@ function targetTick(when, count){
   tgSetTargets(cur); tgDrill.found=new Set();
   compStrum(base, ivs, when, 0.62, 0.03);                    // light guide comp under your targeting
   scheduleBand(cur.pc, cur.qi, when, true);                  // forced bass + groove bed
-  for(let k=0;k<4;k++) enqueueVisual(when+k*b, ()=>tgPulseBeat(k));
+  for(let k=0;k<barBeats();k++) enqueueVisual(when+k*p, ()=>tgPulseBeat(k));
   enqueueVisual(when, ()=>{ markTargets(); renderTargetStage(cur, nxt); });
 }
 // whether fret f is inside the drilled shape (always true on the whole-neck 6a mode)
@@ -4946,7 +5046,7 @@ function renderTarget(){
                         {label:'5',aria:t('leg_fifth')},{label:'7',aria:t('leg_seventh')}], tgDeg,
     i=>{ tgDeg=i; const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); renderTarget(); });
   const beats=document.getElementById('tg-beats');
-  if(beats) beats.innerHTML=[0,1,2,3].map(k=>`<span class="co-beat" data-k="${k}"></span>`).join('');
+  if(beats) beats.innerHTML=Array.from({length:barBeats()},(_,k)=>`<span class="co-beat" data-k="${k}"></span>`).join('');
   const cur=tgDrill.bars[tgDrill.bar], nxt=tgDrill.bars[(tgDrill.bar+1)%tgDrill.bars.length];
   renderTargetStage(cur, nxt);
   markTargets();                                     // reflect current chord + shape on the board
@@ -5696,7 +5796,7 @@ function compPlay(){
   if(typeof seqStop==='function') seqStop();
   coDrill.presetIdx=coIdx; coDrill.bars=compBuildBars(SEQ_PRESETS[coIdx]);
   coDrill.bar=0; coDrill.cycles=0; coDrill.playing=true;
-  coDrill.clock={ interval:()=>beat()*4, tick:(time,count)=>compTick(time,count) };
+  coDrill.clock={ interval:()=>barSec(), tick:(time,count)=>compTick(time,count) };
   if(typeof addClock==='function') addClock(coDrill.clock);
   renderComp();
 }
@@ -5715,12 +5815,12 @@ function compTick(when, count){
   const i=count%bars.length;
   if(i===0 && count>0) coDrill.cycles++;
   coDrill.bar=i;
-  const cur=bars[i], nxt=bars[(i+1)%bars.length], b=beat();
+  const cur=bars[i], nxt=bars[(i+1)%bars.length], p=pulseSec();
   const ivs=QUALITIES[cur.qi].iv, base=48+cur.pc;
   compStrum(base, ivs, when, 0.9, 0.028);                    // guide comp on the downbeat
-  compStrum(base, ivs, when+2*b, 0.55, 0.022);               // softer push on beat 3
+  compStrum(base, ivs, when+midPulseSec(), 0.55, 0.022);     // softer push mid-bar (beat 3 in 4/4)
   scheduleBand(cur.pc, cur.qi, when, true);                  // forced bass + groove bed
-  for(let k=0;k<4;k++) enqueueVisual(when+k*b, ()=>compPulseBeat(k));
+  for(let k=0;k<barBeats();k++) enqueueVisual(when+k*p, ()=>compPulseBeat(k));
   enqueueVisual(when, ()=>renderCompStage(cur, nxt));
 }
 
@@ -5732,7 +5832,7 @@ function renderComp(){
   const chips=document.getElementById('co-progs');
   if(chips) chips.innerHTML=SEQ_PRESETS.map((p,i)=>`<button type="button" class="btn co-prog${i===coIdx?' active':''}" data-i="${i}" aria-pressed="${i===coIdx}">${p.name}</button>`).join('');
   const beats=document.getElementById('co-beats');
-  if(beats) beats.innerHTML=[0,1,2,3].map(k=>`<span class="co-beat" data-k="${k}"></span>`).join('');
+  if(beats) beats.innerHTML=Array.from({length:barBeats()},(_,k)=>`<span class="co-beat" data-k="${k}"></span>`).join('');
   const cur=coDrill.bars[coDrill.bar], nxt=coDrill.bars[(coDrill.bar+1)%coDrill.bars.length];
   renderCompStage(cur, nxt);
   const pb=document.getElementById('co-play'); if(pb){ pb.innerHTML=(coDrill.playing?'&#9632; ':'&#9654; ')+t(coDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', coDrill.playing); pb.setAttribute('aria-pressed', coDrill.playing?'true':'false'); }
@@ -5879,6 +5979,201 @@ function refreshGrooveLang(){ if(gfDrill) renderGroove(); }
   wire('gf-mute',   ()=>{ gfMute=!gfMute; renderGroove(); });
   const sw=document.getElementById('gf-swings');
   if(sw) sw.addEventListener('click', e=>{ const btn=e.target.closest('.gf-swing'); if(btn){ gfSwing=+btn.dataset.i; renderGroove(); } });
+})();
+/* ===================== Drill: Subdivision & timing (Phase 7a) =====================
+   The Foundations coach that serves BOTH pillars — subdivision command. Pick a
+   subdivision (quarters → 8ths → triplets → 16ths) + tempo; an accented click grid
+   ticks it out (bar downbeat > beat > subdivision), a visual grid pulses each slot,
+   and the current key's scale (SCALES[scIdx] rooted at gRoot, spine #1) is WALKED
+   note-by-note across the grid in one Phase-2 box so there's something to play. A
+   smart visual metronome — useful, NOT scored (coach tier): mic-scored timing +
+   evenness wait on Phase 8/F1. A practiced run (≥1 full bar) lands a session in the
+   learner's ring buffer (13) so Practice progress reflects it, minting no per-item SRS.
+
+   Reuses the two-clocks scheduler (05: addClock/beat/enqueueVisual), the cue bus for
+   the click, pluckAt (05) for the walked notes, the shared board paint (renderBoard,
+   07) on its OWN display board, boxWindow (10) for the shape, and an in-drill key +
+   position + tempo picker (the roadmap's "tempo reachability" for a timed coach). */
+
+/* subdivisions per beat: 1 = quarter, 2 = eighth, 3 = triplet, 4 = sixteenth.
+   en/uk names inline (like STRUM_PATTERNS/GF_SWINGS) so the i18n symmetry check only
+   guards the I18N table. */
+const SUBDIVS = [
+  { id:'quarter',   div:1, en:'Quarter notes', uk:'Чвертки' },
+  { id:'eighth',    div:2, en:'Eighth notes',  uk:'Вісімки' },
+  { id:'triplet',   div:3, en:'Triplets',      uk:'Тріолі' },
+  { id:'sixteenth', div:4, en:'Sixteenths',    uk:'Шістнадцятки' },
+];
+function sdSubName(s){ return lang==='en'?s.en:s.uk; }
+const SD_BEATS = 4;   // 4/4 for now — meters (3/4, 6/8…) land with Phase 7b (time signatures)
+
+let sdSub = 1;        // index into SUBDIVS (default eighths — the workhorse subdivision)
+let sdPos = 1;        // neck box (1–5, Phase 2 boxWindow) the scale is walked inside
+let sdNotes = true;   // walk a scale note per tick (off = pure metronome grid)
+let sd = null;
+let sdLit = null;     // the currently-lit board dot (so we can clear it next tick)
+// sd = { playing, clock, count, bars, div, path, pathIdx }
+
+/* the scale-note positions of the current key inside the chosen box, walked ascending
+   then descending (turnaround endpoints dropped) so consecutive notes are neighbours —
+   a smooth run up and down the shape, not leaps. Returns [{si,f,midi}…]. */
+function sdPath(){
+  const s=SCALES[scIdx], win=boxWindow(sdPos)||[0,4], lo=win[0], hi=win[1];
+  const scPcs=new Set(s.iv.map(iv=>mod(gRoot+iv,12))), pool=[];
+  for(let si=0; si<6; si++) for(let f=lo; f<=hi; f++){ const midi=OPEN_MIDI[si]+f; if(scPcs.has(midi%12)) pool.push({si, f, midi}); }
+  pool.sort((a,b)=>a.midi-b.midi);
+  if(pool.length<2) return pool;
+  return pool.concat(pool.slice(1,-1).reverse());   // up then down (no repeated turnaround)
+}
+
+/* a 3-level click on the cue bus: bar downbeat (2) > beat (1) > subdivision (0), so the
+   pulse of the bar is audible under the even subdivisions. Mirrors metroClick (06) but
+   with a third, quieter tier for the in-between subdivisions. */
+function sdClick(when, level){
+  const ctx=audio(); if(!ctx) return;
+  const o=ctx.createOscillator(), g=ctx.createGain();
+  const freq = level===2 ? 2093 : level===1 ? 1319 : 880;     // C7 / E6 / A5
+  const peak = level===2 ? 0.34 : level===1 ? 0.22 : 0.11;
+  o.type='square'; o.frequency.setValueAtTime(freq, when);
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.exponentialRampToValueAtTime(peak, when+0.002);
+  g.gain.exponentialRampToValueAtTime(0.0001, when+0.045);
+  o.connect(g).connect(cue); o.start(when); o.stop(when+0.06);
+}
+
+/* ---- lifecycle ---- */
+function startTiming(){
+  sd={ playing:false, clock:null, count:0, bars:0, div:SUBDIVS[sdSub].div, path:[], pathIdx:0 };
+  const home=document.getElementById('practice-home'), area=document.getElementById('sd-area');
+  if(home) home.hidden=true; if(area) area.hidden=false;
+  sdRenderBoard();
+  renderTiming();
+}
+function exitTiming(){
+  sdStop();
+  sd=null; sdLit=null;
+  const home=document.getElementById('practice-home'), area=document.getElementById('sd-area');
+  if(area) area.hidden=true; if(home) home.hidden=false;
+  if(typeof renderPractice==='function') renderPractice();
+}
+function sdToggle(){ if(sd && sd.playing) sdStop(); else sdPlay(); }
+function sdPlay(){
+  if(!sd || sd.playing) return;
+  audio();
+  if(typeof stopLoop==='function') stopLoop();   // don't fight the reference loop / progression
+  if(typeof seqStop==='function') seqStop();
+  sd.playing=true; sd.count=0; sd.bars=0; sd.pathIdx=0;
+  sd.div=SUBDIVS[sdSub].div; sd.path=sdPath();
+  sd.clock={ interval:()=>beat()/sd.div, tick:(time,count)=>sdTick(time,count) };
+  if(typeof addClock==='function') addClock(sd.clock);
+  renderTiming();
+}
+function sdStop(){
+  if(!sd || !sd.playing) return;
+  if(sd.clock){ if(typeof removeClock==='function') removeClock(sd.clock); sd.clock=null; }
+  if(typeof clearVisualQ==='function') clearVisualQ();
+  sd.playing=false;
+  if(sdLit){ sdLit.classList.remove('on'); sdLit=null; }
+  document.querySelectorAll('#sd-grid .sd-cell.on').forEach(c=>c.classList.remove('on'));
+  if(sd.bars>=1){ recordSession('timing:'+SUBDIVS[sdSub].id, sd.bars); saveState(); if(typeof renderPractice==='function') renderPractice(); }
+  renderTiming();
+}
+/* apply a subdivision / box / key change live: rebuild the path + clock without dropping
+   the accumulated bar count, so tweaking mid-run doesn't reset your session. */
+function sdRestart(){
+  if(!sd || !sd.playing) return;
+  if(sd.clock && typeof removeClock==='function') removeClock(sd.clock);
+  if(typeof clearVisualQ==='function') clearVisualQ();
+  sd.div=SUBDIVS[sdSub].div; sd.path=sdPath(); sd.pathIdx=0;
+  sd.clock={ interval:()=>beat()/sd.div, tick:(time,count)=>sdTick(time,count) };
+  if(typeof addClock==='function') addClock(sd.clock);
+}
+function sdTick(when, count){
+  if(!sd) return;
+  const div=sd.div, perBar=div*SD_BEATS, pos=count%perBar, sub=pos%div;
+  if(pos===0 && count>0) sd.bars++;
+  const level = pos===0 ? 2 : sub===0 ? 1 : 0;                 // bar downbeat > beat > subdivision
+  sdClick(when, level);
+  if(sdNotes && sd.path.length){
+    const n=sd.path[sd.pathIdx % sd.path.length]; sd.pathIdx++;
+    pluckAt(n.midi, when, Math.min(0.5, beat()/div*0.9), 0.82);
+    enqueueVisual(when, ()=>sdLightNote(n.si, n.f));
+  }
+  enqueueVisual(when, ()=>sdHighlightCell(pos));
+}
+
+/* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
+function renderTiming(){
+  if(!sd) return;
+  const keyc=document.getElementById('sd-key');
+  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); sdRenderBoard(); sdRestart(); renderTiming(); });
+  segButtons('sd-subs', SUBDIVS.map(s=>({label:sdSubName(s)})), sdSub, i=>{ sdSub=i; renderSdGrid(); sdRestart(); renderTiming(); });
+  segButtons('sd-pos', ['1','2','3','4','5'].map(label=>({label})), sdPos-1, i=>{ sdPos=i+1; sdPaintScale(); sdRestart(); });
+  const tt=document.getElementById('sd-title'); if(tt) tt.textContent=gRootLbl+' · '+sName(SCALES[scIdx]);
+  const bpm=document.getElementById('sd-bpm'); if(bpm) bpm.textContent=tempo+' BPM';
+  const nb=document.getElementById('sd-notes'); if(nb){ nb.textContent=t('sd_notes'); nb.classList.toggle('active', sdNotes); nb.setAttribute('aria-pressed', sdNotes?'true':'false'); }
+  renderSdGrid();
+  const pb=document.getElementById('sd-play'); if(pb){ pb.innerHTML=(sd.playing?'&#9632; ':'&#9654; ')+t(sd.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', sd.playing); pb.setAttribute('aria-pressed', sd.playing?'true':'false'); }
+  const hint=document.getElementById('sd-hint'); if(hint) hint.textContent=t('sd_hint');
+}
+/* one grid row of SD_BEATS·div cells: the bar downbeat + beats read stronger than the
+   in-between subdivisions, with the beat number under each beat cell. */
+function renderSdGrid(){
+  const g=document.getElementById('sd-grid'); if(!g) return;
+  const div=SUBDIVS[sdSub].div, n=SD_BEATS*div, cur=(sd&&sd.playing)?-2:-1, cells=[];
+  for(let pos=0; pos<n; pos++){
+    const sub=pos%div, beatIdx=Math.floor(pos/div);
+    const cls = pos===0 ? 'down' : sub===0 ? 'beat' : 'sub';
+    cells.push(`<div class="sd-cell ${cls}${pos===cur?' on':''}" data-pos="${pos}"><span class="sd-lab">${sub===0?(beatIdx+1):''}</span></div>`);
+  }
+  g.style.gridTemplateColumns='repeat('+n+', 1fr)';
+  g.innerHTML=cells.join('');
+}
+function sdHighlightCell(pos){
+  document.querySelectorAll('#sd-grid .sd-cell').forEach(c=>c.classList.toggle('on', +c.dataset.pos===pos));
+}
+function sdRenderBoard(){
+  const el=document.getElementById('sd-board'); if(!el) return;
+  renderBoard(el, (pc,si,f)=>{ const d=document.createElement('div'); d.className='dot sd-dot'; d.dataset.si=si; d.dataset.f=f; return d; });
+  renderNums(document.getElementById('sd-nums'));
+  sdLit=null;
+  sdPaintScale();
+}
+/* dim-light the box palette so you always see the shape you're walking (even paused) */
+function sdPaintScale(){
+  const s=SCALES[scIdx], win=boxWindow(sdPos)||[0,4], lo=win[0], hi=win[1];
+  const scPcs=new Set(s.iv.map(iv=>mod(gRoot+iv,12)));
+  document.querySelectorAll('#sd-board .sd-dot').forEach(d=>{
+    const si=+d.dataset.si, f=+d.dataset.f, inBox=f>=lo&&f<=hi&&scPcs.has((OPEN_MIDI[si]+f)%12);
+    d.classList.toggle('pal', inBox);
+  });
+}
+function sdLightNote(si, f){
+  if(sdLit) sdLit.classList.remove('on');
+  const d=document.querySelector('#sd-board .sd-dot[data-si="'+si+'"][data-f="'+f+'"]');
+  if(d){ d.classList.add('on'); if(typeof rippleDot==='function') rippleDot(d); }
+  sdLit=d||null;
+}
+/* set the shared tempo from inside the drill (roadmap: tempo reachability for timed
+   coaches) and keep the header transport control in sync. */
+function sdSetTempo(bpm){
+  tempo=Math.max(40, Math.min(200, bpm));
+  const r=document.getElementById('tb-tempo'); if(r) r.value=tempo;
+  const b=document.getElementById('tb-bpm'); if(b) b.textContent=tempo+' BPM';
+  renderTiming();
+}
+// re-localize an in-flight timing drill on a language switch (called from applyLang)
+function refreshTimingLang(){ if(sd) renderTiming(); }
+
+(function initTiming(){
+  const card=document.getElementById('start-timing'); if(!card) return;
+  card.onclick=startTiming;
+  const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
+  wire('sd-quit',   exitTiming);
+  wire('sd-play',   sdToggle);
+  wire('sd-notes',  ()=>{ sdNotes=!sdNotes; if(!sdNotes && sdLit){ sdLit.classList.remove('on'); sdLit=null; } renderTiming(); });
+  wire('sd-slower', ()=>sdSetTempo(tempo-5));
+  wire('sd-faster', ()=>sdSetTempo(tempo+5));
 })();
 /* ===================== WIRING ===================== */
 /* ---- shared root picker, display mode, sub-view toggle, global play ---- */
@@ -6172,6 +6467,7 @@ function setMode(mode){
   if(currentMode!=='practice' && typeof gfDrill!=='undefined' && gfDrill) exitGroove();
   if(currentMode!=='practice' && typeof tgDrill!=='undefined' && tgDrill) exitTarget();
   if(currentMode!=='practice' && typeof cr!=='undefined' && cr) exitCallResp();
+  if(currentMode!=='practice' && typeof sd!=='undefined' && sd) exitTiming();
   if(currentMode!=='ear' && typeof ear!=='undefined' && ear) exitEar();
   if(currentMode==='reference'){
     applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
@@ -6250,6 +6546,7 @@ document.getElementById('tb-tuning').onchange=function(){
   if(ts) ts.addEventListener('click', e=>{ const b=e.target.closest('[data-midi]'); if(b) tunerTone(+b.dataset.midi); }); }
 document.getElementById('tb-frets').onchange=function(){ fretRangeIdx=+this.value; renderAllBoards(); saveState(); };
 { const cp=document.getElementById('tb-capo'); if(cp) cp.onchange=function(){ capo=+this.value; renderAllBoards(); saveState(); }; }
+{ const mt=document.getElementById('tb-meter'); if(mt) mt.onchange=function(){ setMeter(+this.value); if(typeof refreshTimingLang==='function') refreshTimingLang(); saveState(); }; }
 /* accessibility toggles (Phase 9 feel pass): a colour-blind-safe palette + distinct
    per-function dot shapes. Both are pure body-class switches — the CSS does the work
    (see styles.css), so there's nothing to repaint — and both persist. */
@@ -6510,9 +6807,16 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     startCallResp, crAnswer, crReplay, exitCallResp, getCr:()=>cr, CR_ROUNDS, crPool, crMakeMotif,
     crToResponse:()=>{ if(cr){ cr.phase='response'; cr.respIdx=0; cr.wrongNote=0; } }, setCrPos:(i)=>{ crPos=i; },
     crNextRoundNow:()=>{ if(cr) crNewRound(); },   // test hook: skip the inter-round wait
+    // subdivision & timing drill (Phase 7a)
+    startTiming, sdToggle, exitTiming, getSd:()=>sd, SUBDIVS, SD_BEATS, sdPath,
+    setSdSub:(i)=>{ sdSub=i; }, setSdPos:(i)=>{ sdPos=i; }, setSdNotes:(v)=>{ sdNotes=!!v; },
+    sdTickNow:(t,c)=>sdTick(t,c),
     CAGED_BY_POS, isCAGEDScale,
     setFret:(i)=>{ fretRangeIdx=i; },
     setCapo:(i)=>{ capo=i; }, getCapo:()=>capo,
+    // time signature / meter (Phase 7b)
+    METERS, setMeter, curMeter, barBeats, pulseSec, barSec, midPulseSec,
+    meterGroupStarts:()=>[...meterGroupStarts()], getMeterIdx:()=>meterIdx,
     // accessibility + onboarding (Phase 9 feel pass)
     applyA11y, showWelcome, dismissWelcome,
     setCbPalette:(v)=>{ cbPalette=!!v; }, setFnShapes:(v)=>{ fnShapes=!!v; }, setWelcomeSeen:(v)=>{ welcomeSeen=!!v; },

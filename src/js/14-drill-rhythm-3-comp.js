@@ -38,7 +38,7 @@ function compPlay(){
   if(typeof seqStop==='function') seqStop();
   coDrill.presetIdx=coIdx; coDrill.bars=compBuildBars(SEQ_PRESETS[coIdx]);
   coDrill.bar=0; coDrill.cycles=0; coDrill.playing=true;
-  coDrill.clock={ interval:()=>beat()*4, tick:(time,count)=>compTick(time,count) };
+  coDrill.clock={ interval:()=>barSec(), tick:(time,count)=>compTick(time,count) };
   if(typeof addClock==='function') addClock(coDrill.clock);
   renderComp();
 }
@@ -57,12 +57,12 @@ function compTick(when, count){
   const i=count%bars.length;
   if(i===0 && count>0) coDrill.cycles++;
   coDrill.bar=i;
-  const cur=bars[i], nxt=bars[(i+1)%bars.length], b=beat();
+  const cur=bars[i], nxt=bars[(i+1)%bars.length], p=pulseSec();
   const ivs=QUALITIES[cur.qi].iv, base=48+cur.pc;
   compStrum(base, ivs, when, 0.9, 0.028);                    // guide comp on the downbeat
-  compStrum(base, ivs, when+2*b, 0.55, 0.022);               // softer push on beat 3
+  compStrum(base, ivs, when+midPulseSec(), 0.55, 0.022);     // softer push mid-bar (beat 3 in 4/4)
   scheduleBand(cur.pc, cur.qi, when, true);                  // forced bass + groove bed
-  for(let k=0;k<4;k++) enqueueVisual(when+k*b, ()=>compPulseBeat(k));
+  for(let k=0;k<barBeats();k++) enqueueVisual(when+k*p, ()=>compPulseBeat(k));
   enqueueVisual(when, ()=>renderCompStage(cur, nxt));
 }
 
@@ -74,7 +74,7 @@ function renderComp(){
   const chips=document.getElementById('co-progs');
   if(chips) chips.innerHTML=SEQ_PRESETS.map((p,i)=>`<button type="button" class="btn co-prog${i===coIdx?' active':''}" data-i="${i}" aria-pressed="${i===coIdx}">${p.name}</button>`).join('');
   const beats=document.getElementById('co-beats');
-  if(beats) beats.innerHTML=[0,1,2,3].map(k=>`<span class="co-beat" data-k="${k}"></span>`).join('');
+  if(beats) beats.innerHTML=Array.from({length:barBeats()},(_,k)=>`<span class="co-beat" data-k="${k}"></span>`).join('');
   const cur=coDrill.bars[coDrill.bar], nxt=coDrill.bars[(coDrill.bar+1)%coDrill.bars.length];
   renderCompStage(cur, nxt);
   const pb=document.getElementById('co-play'); if(pb){ pb.innerHTML=(coDrill.playing?'&#9632; ':'&#9654; ')+t(coDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', coDrill.playing); pb.setAttribute('aria-pressed', coDrill.playing?'true':'false'); }

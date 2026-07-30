@@ -74,7 +74,7 @@ function targetPlay(){
   if(typeof seqStop==='function') seqStop();
   tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
   tgDrill.bar=0; tgDrill.cycles=0; tgDrill.hits=0; tgDrill.misses=0; tgDrill.found=new Set(); tgDrill.playing=true;
-  tgDrill.clock={ interval:()=>beat()*4, tick:(time,count)=>targetTick(time,count) };
+  tgDrill.clock={ interval:()=>barSec(), tick:(time,count)=>targetTick(time,count) };
   if(typeof addClock==='function') addClock(tgDrill.clock);
   renderTarget();
 }
@@ -95,7 +95,7 @@ function targetTick(when, count){
   const i=count%bars.length;
   if(i===0 && count>0) tgDrill.cycles++;
   tgDrill.bar=i;
-  const cur=bars[i], nxt=bars[(i+1)%bars.length], b=beat();
+  const cur=bars[i], nxt=bars[(i+1)%bars.length], p=pulseSec();
   const ivs=QUALITIES[cur.qi].iv, base=48+cur.pc;
   // the SCORING state (which tones are targets this bar) is set synchronously in the
   // tick so a tap always reads the current chord — only the DOM guides ride the visual
@@ -103,7 +103,7 @@ function targetTick(when, count){
   tgSetTargets(cur); tgDrill.found=new Set();
   compStrum(base, ivs, when, 0.62, 0.03);                    // light guide comp under your targeting
   scheduleBand(cur.pc, cur.qi, when, true);                  // forced bass + groove bed
-  for(let k=0;k<4;k++) enqueueVisual(when+k*b, ()=>tgPulseBeat(k));
+  for(let k=0;k<barBeats();k++) enqueueVisual(when+k*p, ()=>tgPulseBeat(k));
   enqueueVisual(when, ()=>{ markTargets(); renderTargetStage(cur, nxt); });
 }
 // whether fret f is inside the drilled shape (always true on the whole-neck 6a mode)
@@ -170,7 +170,7 @@ function renderTarget(){
                         {label:'5',aria:t('leg_fifth')},{label:'7',aria:t('leg_seventh')}], tgDeg,
     i=>{ tgDeg=i; const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); renderTarget(); });
   const beats=document.getElementById('tg-beats');
-  if(beats) beats.innerHTML=[0,1,2,3].map(k=>`<span class="co-beat" data-k="${k}"></span>`).join('');
+  if(beats) beats.innerHTML=Array.from({length:barBeats()},(_,k)=>`<span class="co-beat" data-k="${k}"></span>`).join('');
   const cur=tgDrill.bars[tgDrill.bar], nxt=tgDrill.bars[(tgDrill.bar+1)%tgDrill.bars.length];
   renderTargetStage(cur, nxt);
   markTargets();                                     // reflect current chord + shape on the board

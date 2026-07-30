@@ -125,6 +125,7 @@ function applyLang(){
   if(typeof refreshGrooveLang==='function') refreshGrooveLang();     // re-localize an in-flight groove drill (5d)
   if(typeof refreshTargetLang==='function') refreshTargetLang();     // re-localize an in-flight targeting drill (6a)
   if(typeof refreshCallRespLang==='function') refreshCallRespLang(); // re-localize an in-flight call-response drill (6c)
+  if(typeof refreshTimingLang==='function') refreshTimingLang();     // re-localize an in-flight subdivision/timing drill (7a)
   setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
   activateRoot(document.getElementById('g-roots'), gRoot);

@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-07-12 · shipping: v2.10.0_
+_Last updated: 2026-07-12 · shipping: v2.11.0_
 
 ---
 
@@ -24,7 +24,8 @@ The reference app and audio engine are mature. Shipped so far (full detail in `C
   (trebles wider, bass centred; hats off-centre), a user master-volume trim, and a final
   brickwall limiter so loud levels / dense chords can't clip. _(v2.2)_
 - **Reference-tone tuner** — a no-mic tuner: hold a sustained pitch per open string of the
-  current tuning (re-labels with Drop D / DADGAD / Open G). _(v2.2)_
+  current tuning (re-labels with Drop D / DADGAD / Open G). _(v2.2)_ _(A mic-driven **chromatic**
+  tuner is Phase 8 / F0 — it complements this one rather than replacing it.)_
 - **Audio engine** — lookahead "two-clocks" scheduler (no more timer drift), named buses,
   synth cue sounds. The gate for anything timed. _(v1.9)_
 - **Backing band** — synth bass, humanized comping, groove click + snare backbeat. _(v1.10, v1.14)_
@@ -103,9 +104,10 @@ audited, and concatenated by `build.js` so nothing is fetched at runtime — and
 genuinely hard, already-solved problem we shouldn't re-derive. Under that bar, the sanctioned
 additions are:
 
-- **Pitch detection — `pitchy` (0BSD), vendored.** The one code dependency, for Phase 8 / F2;
-  re-deriving YIN/McLeod badly is the moonshot's main failure mode. _(Rejected: `pitchfinder` —
-  GPL-3.0, would relicense the app.)_
+- **Pitch detection — `pitchy` (0BSD), vendored.** The one code dependency; re-deriving
+  YIN/McLeod badly is the moonshot's main failure mode. Lands at **Phase 8 / F0** (the mic
+  tuner — a sustained open string is the gentlest possible first test of it) and carries
+  through to **F2**. _(Rejected: `pitchfinder` — GPL-3.0, would relicense the app.)_
 - **Free platform API (no dependency):** `AudioWorklet` (off-main-thread synth + mic analysis).
 - **Small inlined sound assets (CC0 / public-domain only):** a few drum one-shots and a guitar-
   body / room **convolution impulse response**. Assets, not libraries; base64-inlined, license
@@ -592,13 +594,26 @@ and get scored" version needs Phase 8 (F2 pitch).
 Subdivision command — 8th notes → triplets → 16th notes, cleanly and evenly — over the app's
 own scale/triad content. A core improviser *and* rhythm-guitar skill; serves both pillars.
 
-- **Coach tier (no mic):** pick a subdivision + tempo; accented click grid, visual pulse, and
-  a chosen scale/triad walked note-by-note across the grid so there's something to play. A
-  smart visual metronome — useful, *not scored*.
-- **Time signatures.** The metronome, backing band and bar math are hard-wired to 4/4 today
-  (`barSec = beat()*4`; kick on 1 & 3, snare on 2 & 4). Add a meter setting (3/4, 6/8, …) so the
-  click accent pattern, the backing groove and the sequencer's bar length all follow — the natural
-  home is here with subdivision, since both are "what the bar is made of."
+- **Coach tier (no mic)** ✅ **Shipped v2.11.0** (7a). A **Subdivision & timing** card in the
+  Practice home under a new **Timing** (Foundations) group: pick a subdivision (`SUBDIVS` —
+  quarter/eighth/triplet/sixteenth, `div` per beat) + tempo; a 3-level accented click (bar
+  downbeat > beat > subdivision) on the cue bus and a proportional grid (`SD_BEATS·div` cells)
+  tick out the bar on its own scheduler clock, while the context scale (`SCALES[scIdx]` rooted
+  at `gRoot`, spine #1) is **walked** note-by-note across the grid inside one Phase-2 `boxWindow`
+  (ascend-then-descend path) on its own display board, so there's something to play. In-drill
+  key + position + tempo pickers (the roadmap's "tempo reachability" for a timed coach). A
+  practiced run (≥1 bar) records a `timing:<subdiv>` session, minting no per-item SRS. Coach
+  tier — *not scored*; mic-scored timing + evenness wait on Phase 8/F1.
+- **Time signatures** ✅ **Shipped v2.11.0** (7b). A **Meter**
+  picker in the toolbar (2/4 · 3/4 · 4/4 · 6/8 · 12/8; 4/4 default). A `METERS` table drives a
+  `meter` model (`barBeats`/`pulseSec`/`barSec`/`midPulseSec`/`meterGroupStarts`) that replaced the
+  hard-wired `beat()*4` / `count%4`: the metronome accent pattern (group starts), the backing groove
+  (per-meter `kick`/`snare` pulse patterns + eighth-note hats), the bass root/fifth placement, the
+  single-chord loop, the sequencer bar length, and the comp (5c) + targeting (6a) drill loops +
+  beat indicators all follow it. **4/4 is byte-identical** to the old bar math (asserted in the
+  harness), so the shipped backing band is untouched; other meters shrink/regroup the bar. Bounds-
+  checked persistence via `saveState`/`loadState`. _(The single-bar pattern coaches — strum 5b,
+  groove 5d, subdivision 7a — keep their own 4/4 grids; they don't ride the shared band.)_
 - **Scored tier (needs Phase 8 / F1):** score timing accuracy and evenness, flag rushing/
   dragging, and ladder the tempo (auto-bump BPM when consistently in the pocket).
 
@@ -611,19 +626,45 @@ own scale/triad content. A core improviser *and* rhythm-guitar skill; serves bot
 Mic via `AnalyserNode`, split by difficulty. This is what turns every "coach" tier above into
 *scored training* on a real guitar — the app's true differentiator. Gate carefully.
 
+- **F0 — Chromatic tuner (the de-risking slice).** A mic tuner: play any note, see the note name
+  and how many cents sharp/flat. Ships *first*, before any scoring, because it needs none of what
+  makes the rest of this phase risky — **no AudioWorklet** (a needle reading ~20×/s on the main
+  thread is fine), **no latency compensation** (nobody notices an 80 ms lag on a tuner), **no
+  onset detection** (it reads a sustained note), **no polyphony**. What it *does* buy is the
+  entire plumbing layer F1/F2 need anyway — gesture-gated permission, device errors, mic-in-use
+  handling, the enable/disable lifecycle — plus a first honest test of **`pitchy`** against the
+  easiest possible input. Useful on its own, and the safest place to prove the dependency before
+  any score depends on it. **Size:** S–M · **Risk:** low.
+  - Complements, does not replace, the shipped **reference-tone tuner** (v2.2) — that one stays
+    for tuning by ear and for anyone without a working mic.
+  - Reads the current tuning (`OPEN_MIDI`/`SNAMES`), so the nearest-string readout re-labels for
+    Drop D / DADGAD / Open G like the reference tuner already does.
+  - _Design note — why chromatic over string-locked:_ a string tuner could constrain the search to
+    a narrow Hz window around the expected open string, which kills nearly all octave errors and
+    would make a hand-rolled autocorrelation good enough with **zero** dependency. Chromatic has no
+    such constraint, so it wants `pitchy` — but `pitchy` is getting vendored for F2 regardless, and
+    chromatic is the more useful tool (tune anywhere on the neck, check intonation at the 12th).
+  - _Known constraints:_ **`getUserMedia` needs a secure context**, so — like the PWA sidecar — F0
+    is live on the Pages/HTTPS build and dormant on a `file://` `dist/` copy and in jsdom; it must
+    self-disable there rather than throw (same pattern as `16-pwa.js`). The mic prompt must be
+    behind an explicit user gesture, never fired on load. Speaker→mic feedback is real: suspend
+    the reference tone while listening. Low E (82.4 Hz, weak fundamental) is the accuracy case to
+    test against, not A440.
 - **F1 — Onset (when).** Energy / spectral-flux attack detection — **hand-rolled** (the light
-  lift). The enabler for the **Rhythm pillar** and **Timing** scored tiers; can — and should —
-  land first, and onset is *easier* on a strum's big transient than on a single note.
+  lift). The enabler for the **Rhythm pillar** and **Timing** scored tiers; the first *scoring*
+  feature, and onset is *easier* on a strum's big transient than on a single note.
 - **F2 — Pitch (which).** Monophonic YIN/McLeod via **vendored `pitchy` (0BSD)** — the one
-  sanctioned dependency, rather than re-deriving it badly. Unlocks the **Lead pillar** scored
+  sanctioned dependency, rather than re-deriving it badly; already proven by F0 on sustained
+  notes, so what F2 adds is doing it *under time pressure*. Unlocks the **Lead pillar** scored
   tier and real-guitar note-naming. Single notes first; polyphonic chord recognition remains
   the moonshot.
 
 **Substrate (free platform API, no dependency):** **AudioWorklet** — run the mic analysis (and
 ideally the synth) off the main thread, or scoring latency will be unacceptable. Treat as a
-requirement of this phase, not an option.
+requirement of the *scored* tiers (F1/F2), not of F0.
 
-Both audio paths need latency compensation (the Phase 3 calibration) and a permission step.
+The scoring paths need latency compensation (the Phase 3 calibration) and a permission step;
+F0 needs only the permission step, which is why it goes first.
 
 _Deferred / niche:_ Web MIDI could give perfect input for the few players with a MIDI guitar or
 pickup, but that audience is tiny and the mic path already covers everyone — not planned.
@@ -680,7 +721,8 @@ Phase 1  Unify (spine + reference)           ← foundational; everything reuses
          ├─ Phase 6  Lead pillar                ────────────────────────────────── needs F2 to score
          └─ Phase 7  Timing & subdivision       (small; feeds 5 & 6) ───────────── needs F1 to score
                │
-               └─ Phase 8  Mic input            F1 (onset) → scores 5 & 7
+               └─ Phase 8  Mic input            F0 (tuner) → ships first; no scoring, low risk
+                                                F1 (onset) → scores 5 & 7
                                                 F2 (pitch) → scores 6 + real note-naming
 
 Phase 9  Product layer                          (curriculum / distribution / polish — throughout)
@@ -696,6 +738,9 @@ Phase 9  Product layer                          (curriculum / distribution / pol
 - **Timing (7) is small** and feeds both pillars; do it early as a coach metronome.
 - **Phase 8 is the unlock, not the start.** Build the coach tiers (5/6/7) on screen first, then
   F1 retro-scores rhythm + timing (it lands before F2 — strum onsets are easy). F2 is the moonshot.
+- **Open Phase 8 with F0, the tuner.** It's the one mic feature that is genuinely useful with no
+  scoring attached, so it lands the permission/plumbing layer and validates `pitchy` while the
+  cost of being wrong is still a tuner needle rather than a corrupted score.
 - **Know what's backloaded.** By design, Phases 1–7 produce an excellent *coach + reference
   toolbox*; the stated true differentiator — "play your real guitar and get scored" — lives
   entirely in Phase 8. That's the correct risk order (prove the coach tiers cheaply on screen

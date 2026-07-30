@@ -119,6 +119,12 @@
         <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
         <select id="tb-capo"></select>
       </div>
+      <!-- Meter / time signature (Phase 7b): the metronome accent, backing groove and
+           progression bar length all follow it; 4/4 is the default. -->
+      <div class="tb-group">
+        <span class="tb-label" data-i18n="tb_meter">Розмір</span>
+        <select id="tb-meter"></select>
+      </div>
       <!-- Accessibility (Phase 9 feel pass): the function colours carry meaning by
            hue alone, so offer a colour-blind-safe palette + distinct per-function
            dot shapes. Both are body-class toggles (applyA11y) and persisted. -->
@@ -318,6 +324,16 @@
           <li><button type="button" class="drill-card" id="start-notes">
             <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span>
             <span class="dc-meta" data-i18n="drill_notes_meta">Грифознавство · рахунок за точністю</span>
+          </button></li>
+        </ul>
+      </div>
+      <!-- Foundations (Phase 7): subdivision & timing — serves both pillars. -->
+      <div class="practice-section">
+        <div class="ps-label" data-i18n="practice_grp_timing">Тайминг</div>
+        <ul class="practice-list">
+          <li><button type="button" class="drill-card" id="start-timing">
+            <span class="dc-name" data-i18n="drill_timing">Поділ і тайминг</span>
+            <span class="dc-meta" data-i18n="drill_timing_meta">Вісімки · тріолі · шістнадцятки · коуч</span>
           </button></li>
         </ul>
       </div>
@@ -533,6 +549,37 @@
         </div>
       </div>
       <div class="drill-summary" id="cr-summary" hidden></div>
+    </div>
+
+    <!-- Subdivision & timing (Phase 7a): a smart visual metronome — pick a subdivision
+         + tempo, an accented click + grid tick it out, and the context scale is walked
+         note-by-note across the grid in one box so there's something to play. No score
+         (coach tier; mic-scored timing is Phase 8/F1). Its own display board. Hidden
+         until started. -->
+    <div id="sd-area" hidden>
+      <div class="drill-head">
+        <button type="button" class="btn" id="sd-quit" data-i18n="drill_quit">Вийти</button>
+        <span class="drill-count" id="sd-title"></span>
+      </div>
+      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="sd-key"></div></div>
+      <div class="row"><span class="ctrl-label" data-i18n="sd_subdiv">Поділ</span><div class="group" id="sd-subs"></div></div>
+      <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="sd-pos"></div></div>
+      <div class="row">
+        <span class="ctrl-label" data-i18n="sd_tempo">Темп</span>
+        <div class="group sd-tempo">
+          <button type="button" class="btn" id="sd-slower" aria-label="−5 BPM">&#8722;</button>
+          <span class="sd-bpm" id="sd-bpm"></span>
+          <button type="button" class="btn" id="sd-faster" aria-label="+5 BPM">&#43;</button>
+        </div>
+        <div class="divider"></div>
+        <button type="button" class="btn" id="sd-notes" aria-pressed="true"></button>
+      </div>
+      <div class="sd-grid" id="sd-grid"></div>
+      <div class="scroll"><div class="board"><div class="fretboard" id="sd-board"></div></div><div class="fretnums" id="sd-nums"></div></div>
+      <div class="cm-active-foot">
+        <span class="drill-sub" id="sd-hint"></span>
+        <button type="button" class="btn play" id="sd-play"></button>
+      </div>
     </div>
 
     <!-- Active drill (3c): note-naming. Its own board (painted by renderBoard into

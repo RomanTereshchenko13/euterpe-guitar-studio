@@ -102,11 +102,11 @@ function hatHit(when, vel){
 /* humanized chord comp: micro-timing jitter + per-note velocity variation and a
    slight roll-off down the strum, so repeated bars don't sound machine-stamped. */
 function compStrum(base, ivs, when, vel, spread){
-  const barSec=beat()*4;
+  const bs=barSec();
   ivs.forEach((iv,i)=>{
     const tt=when + i*spread + (Math.random()*0.006-0.003);
     const v=vel*(0.9+Math.random()*0.16) - i*0.015;
-    pluckAt(base+iv, tt, Math.min(barSec+0.4,2.4), Math.max(0.4, v));
+    pluckAt(base+iv, tt, Math.min(bs+0.4,2.4), Math.max(0.4, v));
   });
 }
 
@@ -115,20 +115,19 @@ function compStrum(base, ivs, when, vel, spread){
    toggles) and from the Phase 5c comping drill (`force` true → always lays the bed,
    since comping NEEDS something to play over, without flipping the global toggles). */
 function scheduleBand(pc, qi, when, force){
-  const b=beat(), fifth=fifthInterval(qi), bassRoot=36+pc, bOn=force||bassOn, gOn=force||grooveOn;
+  const b=beat(), p=pulseSec(), m=curMeter(), fifth=fifthInterval(qi), bassRoot=36+pc, bOn=force||bassOn, gOn=force||grooveOn;
   if(bOn){
-    bassNote(when,                                   bassRoot,       b*1.9, 0.95);  // root on beat 1
-    bassNote(when+2*b + (Math.random()*0.012-0.006), bassRoot+fifth, b*1.7, 0.8);   // fifth on beat 3
+    bassNote(when,                                     bassRoot,       p*1.9, 0.95);  // root on beat 1
+    bassNote(when+midPulseSec()+(Math.random()*0.012-0.006), bassRoot+fifth, p*1.7, 0.8);  // fifth mid-bar (beat 3 in 4/4)
   }
   if(gOn){
-    for(let k=0;k<8;k++){                                                            // 8th-note hats
-      const tt=when + k*(b/2) + (Math.random()*0.010-0.005);
-      hatHit(tt, k===0 ? 1 : (k%2===0 ? 0.7 : 0.5));                                 // accent the downbeat
+    const half=b/2, nEighths=Math.max(1, Math.round(barSec()/half));                 // 8th-note hats across the bar
+    for(let k=0;k<nEighths;k++){
+      const tt=when + k*half + (Math.random()*0.010-0.005);
+      hatHit(tt, k===0 ? 1 : (k%2===0 ? 0.7 : 0.5));                                  // accent the downbeat
     }
-    kickHit(when,     1);                                                            // kick on 1
-    kickHit(when+2*b, 0.9);                                                          // kick on 3
-    snareHit(when+b,   0.9);                                                         // backbeat on 2
-    snareHit(when+3*b, 0.9);                                                         // backbeat on 4
+    m.kick.forEach(pi=>kickHit(when+pi*p, pi===0 ? 1 : 0.9));                         // kick pattern per meter (1&3 in 4/4)
+    m.snare.forEach(pi=>snareHit(when+pi*p, 0.9));                                    // backbeat per meter (2&4 in 4/4)
   }
 }
 function bandActive(){ return bassOn || grooveOn; }
@@ -148,7 +147,7 @@ function metroToggle(){
   const btn=document.getElementById('tb-metro');
   if(metroClock){ removeClock(metroClock); metroClock=null; btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); setMetroLabel(); setBackingToggle(); syncWakeLock(); return; }
   audio();
-  metroClock={ interval:()=>beat(), tick:(time,count)=>metroClick(time, count%4===0) };
+  metroClock={ interval:()=>pulseSec(), tick:(time,count)=>metroClick(time, meterGroupStarts().has(count%barBeats())) };
   addClock(metroClock);
   btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setMetroLabel(); setBackingToggle(); syncWakeLock();
 }
@@ -181,7 +180,7 @@ function drumsToggle(){ audio(); grooveOn=!grooveOn; if(grooveOn) ensureBacking(
 let loopClock=null, loopMode='chord';
 function loopStrum(when){
   const ctx=audio(); if(!ctx) return;
-  const barSec=beat()*4;
+  const bs=barSec();
   let midis, pcs, boardId='board', pc, qi;     // one shared board (1b)
   if(loopMode==='triad'){
     const v=currentTriadVoicing();
@@ -191,11 +190,11 @@ function loopStrum(when){
     midis=v.midis; pcs=v.pcs; pc=gRoot; qi=chQual;
   }
   strumMidi(midis, when, 0.9, 0.026, +1);                 // humanized downstrum
-  if(bandActive()) strumMidi(midis, when+2*beat(), 0.55, 0.02, +1);   // softer push on beat 3
+  if(bandActive()) strumMidi(midis, when+midPulseSec(), 0.55, 0.02, +1);   // softer push mid-bar (beat 3 in 4/4)
   scheduleBand(pc, qi, when);                             // bass + groove bed (no-op if both off)
   enqueueBeats(when);                                     // 1d: transport beat pulse
   enqueueVisual(when, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, true)); updateGlobalTransport(); });
-  enqueueVisual(when+barSec*0.85, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, false)); });
+  enqueueVisual(when+bs*0.85, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, false)); });
 }
 function stopLoopVisual(){ document.querySelectorAll('#board .dot.playing').forEach(d=>d.classList.remove('playing')); }
 function loopToggle(){
@@ -205,7 +204,7 @@ function loopToggle(){
   if(typeof seqStop==='function') seqStop();
   loopMode = (currentTab==='harmony' && hView==='triads') ? 'triad' : 'chord';
   audio();
-  loopClock={ interval:()=>beat()*4, tick:(time)=>loopStrum(time) };
+  loopClock={ interval:()=>barSec(), tick:(time)=>loopStrum(time) };
   addClock(loopClock);
   btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setLoopLabel();
 }
@@ -226,7 +225,7 @@ function pulseTransport(strong){
   d.classList.remove('bp','bp-strong'); void d.offsetWidth;     // restart the animation
   d.classList.add(strong?'bp-strong':'bp');
 }
-function enqueueBeats(when){ const b=beat(); for(let k=0;k<4;k++) enqueueVisual(when+k*b, ()=>pulseTransport(k===0)); }
+function enqueueBeats(when){ const p=pulseSec(), n=barBeats(), starts=meterGroupStarts(); for(let k=0;k<n;k++) enqueueVisual(when+k*p, ()=>pulseTransport(k===0 || starts.has(k))); }
 function loopChordLabel(){ return loopMode==='triad' ? gRootLbl+TRIADS[trQual].short : gRootLbl+QUALITIES[chQual].short; }
 function updateGlobalTransport(){
   const wrap=document.getElementById('tb-transport'); if(!wrap) return;
@@ -301,9 +300,9 @@ function seqAddCurrent(){ seq.push({pc:gRoot, lbl:gRootLbl, qi:chQual, bars:1});
 function seqBuildMap(){ seqBarMap=[]; seq.forEach((st,i)=>{ for(let b=0;b<Math.max(1,st.bars);b++) seqBarMap.push(i); }); }
 function seqStrumStep(i, when){
   const st=seq[i]; if(!st) return;
-  const ivs=QUALITIES[st.qi].iv, base=48+st.pc, barSec=beat()*4;
+  const ivs=QUALITIES[st.qi].iv, base=48+st.pc, bs=barSec();
   compStrum(base, ivs, when, 0.9, 0.028);                 // humanized downbeat strum
-  if(bandActive()) compStrum(base, ivs, when+2*beat(), 0.55, 0.022);   // softer push on beat 3
+  if(bandActive()) compStrum(base, ivs, when+midPulseSec(), 0.55, 0.022);   // softer push mid-bar (beat 3 in 4/4)
   scheduleBand(st.pc, st.qi, when);                       // bass + groove follow the step's chord
   enqueueBeats(when);                                     // 1d: transport beat pulse
   const pcs=ivs.map(iv=>mod(base+iv,12));
@@ -314,7 +313,7 @@ function seqStrumStep(i, when){
     if(i!==seqStepIdx){ seqStepIdx=i; _boardStagger=false; setChord(st.pc, st.lbl, st.qi); _boardStagger=true; renderSeq(); updateGlobalTransport(); }
     const b=document.getElementById('board'); pcs.forEach(pc=>setDotPlaying(b, pc, true));
   });
-  enqueueVisual(when+barSec*0.85, ()=>{ const b=document.getElementById('board'); pcs.forEach(pc=>setDotPlaying(b, pc, false)); });
+  enqueueVisual(when+bs*0.85, ()=>{ const b=document.getElementById('board'); pcs.forEach(pc=>setDotPlaying(b, pc, false)); });
 }
 function seqTick(when){
   if(!seqBarMap.length){ seqStop(); return; }
@@ -322,7 +321,7 @@ function seqTick(when){
   seqBar++;
   if(seqBar>=seqBarMap.length){
     if(seqLoopOn){ seqBar=0; }
-    else { removeClock(seqClock); seqClock=null; setSeqTransport(); enqueueVisual(when+beat()*4, ()=>seqStop()); }  // stop after the final bar rings
+    else { removeClock(seqClock); seqClock=null; setSeqTransport(); enqueueVisual(when+barSec(), ()=>seqStop()); }  // stop after the final bar rings
   }
 }
 function seqPlay(){
@@ -331,7 +330,7 @@ function seqPlay(){
   stopLoop(); audio();
   seqSaved={pc:gRoot, lbl:gRootLbl, qi:chQual};
   seqBuildMap(); seqBar=0; seqStepIdx=-1;
-  seqClock={ interval:()=>beat()*4, tick:(time)=>seqTick(time) };
+  seqClock={ interval:()=>barSec(), tick:(time)=>seqTick(time) };
   addClock(seqClock);
   setSeqTransport();
 }
