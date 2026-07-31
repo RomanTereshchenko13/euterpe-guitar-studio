@@ -183,6 +183,9 @@ function sdSetTempo(bpm){
 // re-localize an in-flight timing drill on a language switch (called from applyLang)
 function refreshTimingLang(){ if(sd) renderTiming(); }
 
+registerDrill({ id:'timing', mode:'practice', area:'sd-area',
+                isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang });
+
 (function initTiming(){
   const card=document.getElementById('start-timing'); if(!card) return;
   card.onclick=startTiming;

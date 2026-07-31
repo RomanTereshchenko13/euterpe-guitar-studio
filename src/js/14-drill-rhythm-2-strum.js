@@ -100,6 +100,9 @@ function spHighlightSlot(slot){
 // re-localize an in-flight strum trainer on a language switch (called from applyLang)
 function refreshStrumLang(){ if(spDrill) renderStrum(); }
 
+registerDrill({ id:'strum', mode:'practice', area:'sp-area',
+                isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang });
+
 (function initStrum(){
   const card=document.getElementById('start-strum'); if(!card) return;
   card.onclick=startStrum;

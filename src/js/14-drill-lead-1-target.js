@@ -203,6 +203,9 @@ function refreshTargetLang(){ if(tgDrill) renderTarget(); }
 
 /* card starter + in-drill controls — wired once at load (guarded so a missing panel
    never throws, mirroring initComp / initDrill). */
+registerDrill({ id:'target', mode:'practice', area:'tg-area',
+                isActive:()=>!!tgDrill, exit:exitTarget, refreshLang:refreshTargetLang });
+
 (function initTarget(){
   const card=document.getElementById('start-target'); if(!card) return;
   card.onclick=startTarget;

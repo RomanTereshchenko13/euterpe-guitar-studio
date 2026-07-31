@@ -251,6 +251,10 @@ function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPr
 
 /* drill-card starters + the in-drill controls — wired once at load (guarded so a
    missing panel never throws, mirroring initDrill in 14-drill-notes.js). */
+/* one entry for all three ear drills — they share the `ear` state and one area */
+registerDrill({ id:'ear', mode:'ear', area:'ear-area',
+                isActive:()=>!!ear, exit:exitEar, refreshLang:refreshEarLang });
+
 (function initEar(){
   const home=document.getElementById('ear-home'); if(!home) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };

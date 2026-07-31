@@ -184,6 +184,9 @@ function renderCr(){
 function refreshCallRespLang(){ if(cr) renderCr(); }
 
 /* card starter + in-drill controls — wired once at load (guarded, mirroring initTarget). */
+registerDrill({ id:'callresp', mode:'practice', area:'cr-area',
+                isActive:()=>!!cr, exit:exitCallResp, refreshLang:refreshCallRespLang });
+
 (function initCallResp(){
   const card=document.getElementById('start-callresp'); if(!card) return;
   card.onclick=startCallResp;

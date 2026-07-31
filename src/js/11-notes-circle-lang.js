@@ -118,14 +118,7 @@ function applyLang(){
   renderChords(); renderArp(); renderTriads(); renderScales(); renderNotes(); renderCircle();
   if(typeof renderPractice==='function') renderPractice();   // 3b: re-localize the progress chips
   if(typeof renderEar==='function') renderEar();             // Phase 4: ear progress chips
-  if(typeof refreshEarLang==='function') refreshEarLang();   // re-localize an in-flight ear prompt
-  if(typeof refreshChangesLang==='function') refreshChangesLang();   // re-localize an in-flight changes drill (5a)
-  if(typeof refreshStrumLang==='function') refreshStrumLang();       // re-localize an in-flight strum trainer (5b)
-  if(typeof refreshCompLang==='function') refreshCompLang();         // re-localize an in-flight comping drill (5c)
-  if(typeof refreshGrooveLang==='function') refreshGrooveLang();     // re-localize an in-flight groove drill (5d)
-  if(typeof refreshTargetLang==='function') refreshTargetLang();     // re-localize an in-flight targeting drill (6a)
-  if(typeof refreshCallRespLang==='function') refreshCallRespLang(); // re-localize an in-flight call-response drill (6c)
-  if(typeof refreshTimingLang==='function') refreshTimingLang();     // re-localize an in-flight subdivision/timing drill (7a)
+  refreshDrillsLang();   // re-localize whatever drill is in flight (13-drill-registry.js)
   setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
   activateRoot(document.getElementById('g-roots'), gRoot);

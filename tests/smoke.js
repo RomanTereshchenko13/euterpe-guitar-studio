@@ -945,6 +945,79 @@ if (T) {
     T.resetLearner();
   })();
 
+  /* ---- Drill registry: the shell must never carry a hand-written drill list ----
+     Every drill self-registers (13-drill-registry.js) and setMode/applyLang iterate
+     DRILLS. These checks are the drift guard: before the registry, two inline lists
+     in setMode had already gone stale (the 7a timing drill was missing from both),
+     which painted the practice home ON TOP of the running drill. */
+  (function drillRegistry() {
+    const doc = win.document;
+    const R = T.DRILLS;
+
+    ok('registry: every drill is registered with a mode + area + isActive + exit',
+       Array.isArray(R) && R.length >= 9 &&
+       R.every(d => d.id && (d.mode === 'practice' || d.mode === 'ear') &&
+                    d.area && typeof d.isActive === 'function' && typeof d.exit === 'function'));
+
+    ok('registry: drill ids are unique',
+       new Set(R.map(d => d.id)).size === R.length);
+
+    ok('registry: every registered area element exists in the DOM',
+       R.every(d => !!doc.getElementById(d.area)));
+
+    // the real drift guard: an area in the markup that no drill claims means a
+    // drill was added without registering it — exactly the 7a failure mode.
+    const domAreas = [...doc.querySelectorAll('[id$="-area"]')].map(e => e.id).sort();
+    const regAreas = R.map(d => d.area).sort();
+    ok('registry: every *-area in the markup is claimed by a registered drill',
+       domAreas.join(',') === regAreas.join(','),
+       'markup: ' + domAreas.join(',') + '  |  registry: ' + regAreas.join(','));
+
+    const vis = id => { const e = doc.getElementById(id); return !!e && !e.hidden; };
+
+    // Re-entering the mode you are already in must not disturb a running drill.
+    // Reproduces the fixed bug: modenav has no same-mode guard, so clicking the
+    // active "Practice" button re-runs setMode('practice') with a drill open.
+    T.setMode('practice');
+    T.startTiming();
+    ok('registry: starting a drill hides the practice home',
+       vis('sd-area') && !vis('practice-home'));
+    T.setMode('practice');
+    ok('registry: re-entering Practice leaves the running drill alone (no home on top)',
+       vis('sd-area') && !vis('practice-home'));
+    ok('registry: re-entering Practice does not tear the drill down', T.getSd() !== null);
+
+    // and the generic teardown still works for a drill the old list DID cover
+    T.setMode('reference');
+    ok('registry: leaving Practice exits the drill and restores the home',
+       T.getSd() === null && !vis('sd-area') && vis('practice-home'));
+
+    // the ear mode is registered separately and must not be hidden by a practice switch
+    T.setMode('ear');
+    T.startEar('interval');
+    ok('registry: an ear drill hides the ear home', vis('ear-area') && !vis('ear-home'));
+    T.setMode('practice');
+    ok('registry: switching to Practice exits the ear drill', T.getEar() === null && vis('ear-home'));
+    ok('registry: switching to Practice shows the practice home', vis('practice-home'));
+
+    // activeDrill() reports the running drill, scoped by mode
+    T.startStrum();
+    const a = T.activeDrill();
+    ok('registry: activeDrill() finds the running drill', !!a && a.id === 'strum');
+    ok('registry: activeDrill(mode) is mode-scoped',
+       !!T.activeDrill('practice') && T.activeDrill('ear') === null);
+
+    // refreshDrillsLang is what applyLang now calls — it must repaint, not throw
+    let threw = false;
+    try { T.refreshDrillsLang(); } catch (e) { threw = true; }
+    ok('registry: refreshDrillsLang repaints an in-flight drill without throwing', !threw);
+
+    T.setMode('reference');
+    ok('registry: no drill is left running after the mode returns to reference',
+       T.activeDrill() === null);
+    T.resetLearner();
+  })();
+
   /* ---- Phase 7b: time signatures / meter ---- */
   (function meter() {
     const doc = win.document;

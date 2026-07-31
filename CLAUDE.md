@@ -47,6 +47,14 @@ Edit the sources, then run the build.
     drills follow the same meter · `07-render-shared.js` · `08-chords.js` · `09-triads.js`
   - `10-scales.js` · `11-notes-circle-lang.js` · `12-toolbar-state.js` (state save/load +
     the custom-tuning editor + the share-link codec `encodeShareState`/`applyShareHash`)
+  - `13-drill-registry.js` — the **drill registry**: `DRILLS` + `registerDrill()`, plus the
+    generic shell helpers `activeDrill`/`exitDrillsExcept`/`showDrillHome`/`refreshDrillsLang`.
+    Every drill file self-registers at load (`{id, mode, area, isActive, exit, refreshLang}`),
+    and `setMode` (15) / `applyLang` (11) iterate `DRILLS` instead of naming drills — so
+    **adding a drill is one new `14-*.js` file + its markup, with nothing to register by hand**.
+    Loads at slot 13 (before the slot-14 drills) because `const DRILLS` isn't hoisted. The
+    smoke suite guards the seam: every `*-area` in the markup must be claimed by a registered
+    drill, so an unregistered drill fails the build rather than silently half-working.
   - `13-learner.js` — learner model (spine #3): per-item SRS history + sessions ring
     buffer; persists via `12-toolbar-state.js`'s `saveState`/`loadState`. Exposes the
     progress-card readouts `learnerReview` (due-for-review queue) + `learnerActivity` (active days)

@@ -93,6 +93,9 @@ function compPulseBeat(k){
 // re-localize an in-flight comping drill on a language switch (called from applyLang)
 function refreshCompLang(){ if(coDrill) renderComp(); }
 
+registerDrill({ id:'comp', mode:'practice', area:'co-area',
+                isActive:()=>!!coDrill, exit:exitComp, refreshLang:refreshCompLang });
+
 (function initComp(){
   const card=document.getElementById('start-comp'); if(!card) return;
   card.onclick=startComp;

@@ -282,34 +282,17 @@ function setMode(mode){
   document.querySelectorAll('.modebtn').forEach(b=>{
     const on=b.dataset.mode===currentMode; b.classList.toggle('active',on); b.setAttribute('aria-pressed',on?'true':'false');
   });
-  // end the other modes' running drills when we leave them
-  if(currentMode!=='practice' && typeof drill!=='undefined' && drill) exitDrill();
-  if(currentMode!=='practice' && typeof cmDrill!=='undefined' && cmDrill) exitChanges();
-  if(currentMode!=='practice' && typeof spDrill!=='undefined' && spDrill) exitStrum();
-  if(currentMode!=='practice' && typeof coDrill!=='undefined' && coDrill) exitComp();
-  if(currentMode!=='practice' && typeof gfDrill!=='undefined' && gfDrill) exitGroove();
-  if(currentMode!=='practice' && typeof tgDrill!=='undefined' && tgDrill) exitTarget();
-  if(currentMode!=='practice' && typeof cr!=='undefined' && cr) exitCallResp();
-  if(currentMode!=='practice' && typeof sd!=='undefined' && sd) exitTiming();
-  if(currentMode!=='ear' && typeof ear!=='undefined' && ear) exitEar();
+  // end the running drills that don't belong to the mode we're entering. Registry-
+  // driven (13-drill-registry.js): every drill self-registers, so this can't go
+  // stale the way the old hand-written list did.
+  exitDrillsExcept(currentMode);
   if(currentMode==='reference'){
     applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
-  } else if(currentMode==='practice'){
-    // entering Practice with no drill running: show the home view (drill starters
-    // swap it for the active drill area right after)
-    const anyDrill=(typeof drill!=='undefined' && drill) || (typeof cmDrill!=='undefined' && cmDrill) || (typeof spDrill!=='undefined' && spDrill) || (typeof coDrill!=='undefined' && coDrill) || (typeof gfDrill!=='undefined' && gfDrill) || (typeof tgDrill!=='undefined' && tgDrill) || (typeof cr!=='undefined' && cr);
-    if(!anyDrill){
-      const home=document.getElementById('practice-home');
-      if(home) home.hidden=false;
-      ['drill-area','cm-area','sp-area','co-area','gf-area','tg-area','cr-area'].forEach(id=>{ const a=document.getElementById(id); if(a) a.hidden=true; });
-    }
-    renderPractice();
-  } else {   // ear
-    if(!(typeof ear!=='undefined' && ear)){
-      const home=document.getElementById('ear-home'), area=document.getElementById('ear-area');
-      if(home) home.hidden=false; if(area) area.hidden=true;
-    }
-    renderEar();
+  } else {
+    // entering an activity mode with no drill running: show that mode's home view
+    // (a drill starter swaps it for the drill's own area right after)
+    if(!activeDrill(currentMode)) showDrillHome(currentMode);
+    if(currentMode==='practice') renderPractice(); else renderEar();
   }
   updateGlobalPlay();
   saveState();
@@ -369,7 +352,10 @@ document.getElementById('tb-tuning').onchange=function(){
   if(ts) ts.addEventListener('click', e=>{ const b=e.target.closest('[data-midi]'); if(b) tunerTone(+b.dataset.midi); }); }
 document.getElementById('tb-frets').onchange=function(){ fretRangeIdx=+this.value; renderAllBoards(); saveState(); };
 { const cp=document.getElementById('tb-capo'); if(cp) cp.onchange=function(){ capo=+this.value; renderAllBoards(); saveState(); }; }
-{ const mt=document.getElementById('tb-meter'); if(mt) mt.onchange=function(){ setMeter(+this.value); if(typeof refreshTimingLang==='function') refreshTimingLang(); saveState(); }; }
+/* a meter change alters what an in-flight drill should be showing (bar length,
+   beat grid), so re-paint the running drill via the registry rather than naming
+   one drill here — the old call reached for the timing drill only. */
+{ const mt=document.getElementById('tb-meter'); if(mt) mt.onchange=function(){ setMeter(+this.value); refreshDrillsLang(); saveState(); }; }
 /* accessibility toggles (Phase 9 feel pass): a colour-blind-safe palette + distinct
    per-function dot shapes. Both are pure body-class switches — the CSS does the work
    (see styles.css), so there's nothing to repaint — and both persist. */
@@ -598,6 +584,8 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     learnerReview, learnerActivity, startReview,
     // shareable deep links (Phase 9)
     encodeShareState, applyShareHash, shareURL,
+    // drill registry (13): the one list the shell iterates instead of naming drills
+    DRILLS, activeDrill, showDrillHome, exitDrillsExcept, refreshDrillsLang,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
     renderAllBoards,
     // learner model (spine #3, 3b)

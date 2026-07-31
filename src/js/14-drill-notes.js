@@ -144,6 +144,9 @@ function renderDrillSummary(elapsed, acc){
 
 /* board tap/keys + quit — wired once at load (the markup is parsed before this
    script runs; guarded so a missing panel never throws). */
+registerDrill({ id:'notes', mode:'practice', area:'drill-area',
+                isActive:()=>!!drill, exit:exitDrill });
+
 (function initDrill(){
   const b=document.getElementById('drill-board'); if(!b) return;
   const fire=d=>{ if(d) drillAnswer(parseInt(d.dataset.si,10), parseInt(d.dataset.f,10)); };

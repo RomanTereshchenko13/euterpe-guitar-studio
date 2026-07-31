@@ -107,6 +107,9 @@ function gfPulseBeat(k){
 // re-localize an in-flight groove drill on a language switch (called from applyLang)
 function refreshGrooveLang(){ if(gfDrill) renderGroove(); }
 
+registerDrill({ id:'groove', mode:'practice', area:'gf-area',
+                isActive:()=>!!gfDrill, exit:exitGroove, refreshLang:refreshGrooveLang });
+
 (function initGroove(){
   const card=document.getElementById('start-groove'); if(!card) return;
   card.onclick=startGroove;

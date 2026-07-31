@@ -1642,9 +1642,11 @@ const APP_VERSION = '2.11.0';
 const CHANGELOG = [
   { v:'2.11.0', date:'2026-07-12',
     en:['New Foundations drill — Subdivision & timing: a smart visual metronome for locking in your time. Pick a subdivision (quarter notes → eighths → triplets → sixteenths) and a tempo; an accented click and a grid tick out the bar (a strong beat 1, softer subdivisions), and the current key\'s scale is walked note-by-note across the grid in one neck box so you always have something to play. Change key, box or tempo without leaving Practice. A coach that serves both the Rhythm and Lead pillars — mic-scored timing arrives with microphone input later.',
-        'Time signatures: a new Meter picker in Settings (2/4, 3/4, 4/4, 6/8, 12/8). The metronome accent, the backing groove (kick/snare pattern), the bass, the single-chord loop and the whole progression / comping / targeting bar length all follow the meter — so you can jam a waltz in 3/4 or a 6/8 feel, not just 4/4.'],
+        'Time signatures: a new Meter picker in Settings (2/4, 3/4, 4/4, 6/8, 12/8). The metronome accent, the backing groove (kick/snare pattern), the bass, the single-chord loop and the whole progression / comping / targeting bar length all follow the meter — so you can jam a waltz in 3/4 or a 6/8 feel, not just 4/4.',
+        'Fixed: with the Subdivision & timing drill open, tapping "Practice" again drew the drill list on top of the still-running drill. Switching modes now handles every drill the same way.'],
     uk:['Нова вправа-основа — «Поділ і тайминг»: розумний візуальний метроном, щоб тримати час. Обери поділ (чвертки → вісімки → тріолі → шістнадцятки) і темп; акцентоване клацання й сітка відбивають такт (сильний «раз», тихіші поділи), а гама поточної тональності «прокрокує» по сітці нота за нотою в одній позиції на грифі — тож завжди є що грати. Змінюй тональність, позицію чи темп, не виходячи з «Практики». Коуч, що працює і на ритм-, і на соло-пілон — оцінку тайминга з мікрофоном додамо згодом.',
-        'Розміри такту: у «Налаштуваннях» зʼявився вибір розміру (2/4, 3/4, 4/4, 6/8, 12/8). Акцент метронома, грув супроводу (малюнок бочки/малого), бас, луп одного акорду й довжина такту всієї прогресії / акомпанементу / прицілювання — усе слідує за розміром, тож можна зіграти вальс у 3/4 чи відчуття 6/8, а не лише 4/4.'] },
+        'Розміри такту: у «Налаштуваннях» зʼявився вибір розміру (2/4, 3/4, 4/4, 6/8, 12/8). Акцент метронома, грув супроводу (малюнок бочки/малого), бас, луп одного акорду й довжина такту всієї прогресії / акомпанементу / прицілювання — усе слідує за розміром, тож можна зіграти вальс у 3/4 чи відчуття 6/8, а не лише 4/4.',
+        'Виправлено: якщо була відкрита вправа «Поділ і тайминг», повторне натискання «Практики» малювало список вправ поверх тієї, що ще працювала. Тепер перемикання режимів однаково опрацьовує всі вправи.'] },
   { v:'2.10.0', date:'2026-07-12',
     en:['New Lead drill — Call & response: the app plays a short phrase from the key\'s scale in one neck box, then you echo it back on the fretboard in the same order. Listen while it plays, answer in the space it leaves — the turn structure itself trains soloing phrasing (when to play, when to leave space). Scored on how cleanly you echo each phrase; the phrases grow as you go. This completes the Lead pillar\'s coach tiers.'],
     uk:['Нова соло-вправа — «Запитання-відповідь»: застосунок грає коротку фразу з гами тональності в одній позиції на грифі, а ти повторюєш її на грифі в тому ж порядку. Слухай, поки грає, і відповідай у паузі — сама структура «запит-відповідь» тренує фразування (коли грати, а коли лишити тишу). Рахунок — наскільки чисто ти повторюєш кожну фразу; фрази довшають по ходу. Це завершує коуч-рівні соло-пілона.'] },
@@ -4145,14 +4147,7 @@ function applyLang(){
   renderChords(); renderArp(); renderTriads(); renderScales(); renderNotes(); renderCircle();
   if(typeof renderPractice==='function') renderPractice();   // 3b: re-localize the progress chips
   if(typeof renderEar==='function') renderEar();             // Phase 4: ear progress chips
-  if(typeof refreshEarLang==='function') refreshEarLang();   // re-localize an in-flight ear prompt
-  if(typeof refreshChangesLang==='function') refreshChangesLang();   // re-localize an in-flight changes drill (5a)
-  if(typeof refreshStrumLang==='function') refreshStrumLang();       // re-localize an in-flight strum trainer (5b)
-  if(typeof refreshCompLang==='function') refreshCompLang();         // re-localize an in-flight comping drill (5c)
-  if(typeof refreshGrooveLang==='function') refreshGrooveLang();     // re-localize an in-flight groove drill (5d)
-  if(typeof refreshTargetLang==='function') refreshTargetLang();     // re-localize an in-flight targeting drill (6a)
-  if(typeof refreshCallRespLang==='function') refreshCallRespLang(); // re-localize an in-flight call-response drill (6c)
-  if(typeof refreshTimingLang==='function') refreshTimingLang();     // re-localize an in-flight subdivision/timing drill (7a)
+  refreshDrillsLang();   // re-localize whatever drill is in flight (13-drill-registry.js)
   setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
   activateRoot(document.getElementById('g-roots'), gRoot);
@@ -4464,6 +4459,68 @@ function applyShareHash(){
   return true;
 }
 
+/* ===================== Drill registry =====================
+   ONE place every drill announces itself, so the shell never carries a
+   hand-maintained list of drills.
+
+   Why this exists: the shell needs to do four things generically — end a
+   running drill when you leave its mode, decide whether a mode's home view
+   should be showing, hide that mode's drill areas, and re-render an in-flight
+   drill on a language / meter change. Before this, each of those was an inline
+   list in 15-wiring-init.js / 11-notes-circle-lang.js that had to be edited by
+   hand for every new drill. Two of those four lists had already drifted (the
+   Phase 7a timing drill was missing from both, so re-entering Practice while it
+   ran painted the home view on top of the running drill).
+
+   Now each drill file calls registerDrill() at load and the shell iterates
+   DRILLS. Adding a drill is: one file + its markup. Nothing to remember.
+
+   An entry:
+     { id, mode:'practice'|'ear', area:'<area element id>',
+       isActive:()=>boolean,       // is this drill running right now?
+       exit:fn,                    // tear it down + restore the home view
+       refreshLang:fn|undefined }  // optional: re-paint an in-flight drill
+
+   Load order note: this file sits at slot 13 so DRILLS exists before the slot-14
+   drill files register into it (a `const` is not hoisted the way a function
+   declaration is, so the ordering here is load-bearing). */
+
+const DRILLS = [];
+
+function registerDrill(d){ DRILLS.push(d); return d; }
+
+// a drill's isActive() reads its own module-level state; guard so one broken
+// drill can never take down a mode switch.
+function drillIsActive(d){ try{ return !!d.isActive(); }catch(_){ return false; } }
+
+// the running drill (optionally restricted to one mode), or null
+function activeDrill(mode){
+  return DRILLS.find(d => (!mode || d.mode===mode) && drillIsActive(d)) || null;
+}
+
+// end every running drill that does NOT belong to `mode` (pass 'reference' to end them all)
+function exitDrillsExcept(mode){
+  DRILLS.forEach(d=>{ if(d.mode!==mode && drillIsActive(d) && typeof d.exit==='function') d.exit(); });
+}
+
+function drillHomeId(mode){ return mode==='ear' ? 'ear-home' : 'practice-home'; }
+
+// show a mode's home view and hide every drill area belonging to that mode
+function showDrillHome(mode){
+  const home=document.getElementById(drillHomeId(mode));
+  if(home) home.hidden=false;
+  DRILLS.forEach(d=>{
+    if(d.mode!==mode || !d.area) return;
+    const a=document.getElementById(d.area); if(a) a.hidden=true;
+  });
+}
+
+/* re-paint whatever drill is in flight. Called on a language switch (applyLang)
+   and on a meter change — both change what a running drill should be showing.
+   At most one drill is ever active, so this is cheap. */
+function refreshDrillsLang(){
+  DRILLS.forEach(d=>{ if(typeof d.refreshLang==='function' && drillIsActive(d)) d.refreshLang(); });
+}
 /* ===================== Learner model (spine #3) =====================
    Phase 3b. The app's memory of what you know: per-item history + an SM-2-lite
    spaced-repetition queue, plus a bounded ring buffer of recent sessions. Every
@@ -4862,6 +4919,10 @@ function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPr
 
 /* drill-card starters + the in-drill controls — wired once at load (guarded so a
    missing panel never throws, mirroring initDrill in 14-drill-notes.js). */
+/* one entry for all three ear drills — they share the `ear` state and one area */
+registerDrill({ id:'ear', mode:'ear', area:'ear-area',
+                isActive:()=>!!ear, exit:exitEar, refreshLang:refreshEarLang });
+
 (function initEar(){
   const home=document.getElementById('ear-home'); if(!home) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
@@ -5079,6 +5140,9 @@ function refreshTargetLang(){ if(tgDrill) renderTarget(); }
 
 /* card starter + in-drill controls — wired once at load (guarded so a missing panel
    never throws, mirroring initComp / initDrill). */
+registerDrill({ id:'target', mode:'practice', area:'tg-area',
+                isActive:()=>!!tgDrill, exit:exitTarget, refreshLang:refreshTargetLang });
+
 (function initTarget(){
   const card=document.getElementById('start-target'); if(!card) return;
   card.onclick=startTarget;
@@ -5280,6 +5344,9 @@ function renderCr(){
 function refreshCallRespLang(){ if(cr) renderCr(); }
 
 /* card starter + in-drill controls — wired once at load (guarded, mirroring initTarget). */
+registerDrill({ id:'callresp', mode:'practice', area:'cr-area',
+                isActive:()=>!!cr, exit:exitCallResp, refreshLang:refreshCallRespLang });
+
 (function initCallResp(){
   const card=document.getElementById('start-callresp'); if(!card) return;
   card.onclick=startCallResp;
@@ -5439,6 +5506,9 @@ function renderDrillSummary(elapsed, acc){
 
 /* board tap/keys + quit — wired once at load (the markup is parsed before this
    script runs; guarded so a missing panel never throws). */
+registerDrill({ id:'notes', mode:'practice', area:'drill-area',
+                isActive:()=>!!drill, exit:exitDrill });
+
 (function initDrill(){
   const b=document.getElementById('drill-board'); if(!b) return;
   const fire=d=>{ if(d) drillAnswer(parseInt(d.dataset.si,10), parseInt(d.dataset.f,10)); };
@@ -5629,6 +5699,9 @@ function refreshChangesLang(){ if(cmDrill) renderCm(); }
 
 /* card starter + in-drill controls — wired once at load (guarded so a missing panel
    never throws, mirroring initDrill / initEar). */
+registerDrill({ id:'changes', mode:'practice', area:'cm-area',
+                isActive:()=>!!cmDrill, exit:exitChanges, refreshLang:refreshChangesLang });
+
 (function initChanges(){
   const card=document.getElementById('start-changes'); if(!card) return;
   card.onclick=startChanges;
@@ -5746,6 +5819,9 @@ function spHighlightSlot(slot){
 // re-localize an in-flight strum trainer on a language switch (called from applyLang)
 function refreshStrumLang(){ if(spDrill) renderStrum(); }
 
+registerDrill({ id:'strum', mode:'practice', area:'sp-area',
+                isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang });
+
 (function initStrum(){
   const card=document.getElementById('start-strum'); if(!card) return;
   card.onclick=startStrum;
@@ -5850,6 +5926,9 @@ function compPulseBeat(k){
 }
 // re-localize an in-flight comping drill on a language switch (called from applyLang)
 function refreshCompLang(){ if(coDrill) renderComp(); }
+
+registerDrill({ id:'comp', mode:'practice', area:'co-area',
+                isActive:()=>!!coDrill, exit:exitComp, refreshLang:refreshCompLang });
 
 (function initComp(){
   const card=document.getElementById('start-comp'); if(!card) return;
@@ -5968,6 +6047,9 @@ function gfPulseBeat(k){
 }
 // re-localize an in-flight groove drill on a language switch (called from applyLang)
 function refreshGrooveLang(){ if(gfDrill) renderGroove(); }
+
+registerDrill({ id:'groove', mode:'practice', area:'gf-area',
+                isActive:()=>!!gfDrill, exit:exitGroove, refreshLang:refreshGrooveLang });
 
 (function initGroove(){
   const card=document.getElementById('start-groove'); if(!card) return;
@@ -6164,6 +6246,9 @@ function sdSetTempo(bpm){
 }
 // re-localize an in-flight timing drill on a language switch (called from applyLang)
 function refreshTimingLang(){ if(sd) renderTiming(); }
+
+registerDrill({ id:'timing', mode:'practice', area:'sd-area',
+                isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang });
 
 (function initTiming(){
   const card=document.getElementById('start-timing'); if(!card) return;
@@ -6459,34 +6544,17 @@ function setMode(mode){
   document.querySelectorAll('.modebtn').forEach(b=>{
     const on=b.dataset.mode===currentMode; b.classList.toggle('active',on); b.setAttribute('aria-pressed',on?'true':'false');
   });
-  // end the other modes' running drills when we leave them
-  if(currentMode!=='practice' && typeof drill!=='undefined' && drill) exitDrill();
-  if(currentMode!=='practice' && typeof cmDrill!=='undefined' && cmDrill) exitChanges();
-  if(currentMode!=='practice' && typeof spDrill!=='undefined' && spDrill) exitStrum();
-  if(currentMode!=='practice' && typeof coDrill!=='undefined' && coDrill) exitComp();
-  if(currentMode!=='practice' && typeof gfDrill!=='undefined' && gfDrill) exitGroove();
-  if(currentMode!=='practice' && typeof tgDrill!=='undefined' && tgDrill) exitTarget();
-  if(currentMode!=='practice' && typeof cr!=='undefined' && cr) exitCallResp();
-  if(currentMode!=='practice' && typeof sd!=='undefined' && sd) exitTiming();
-  if(currentMode!=='ear' && typeof ear!=='undefined' && ear) exitEar();
+  // end the running drills that don't belong to the mode we're entering. Registry-
+  // driven (13-drill-registry.js): every drill self-registers, so this can't go
+  // stale the way the old hand-written list did.
+  exitDrillsExcept(currentMode);
   if(currentMode==='reference'){
     applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
-  } else if(currentMode==='practice'){
-    // entering Practice with no drill running: show the home view (drill starters
-    // swap it for the active drill area right after)
-    const anyDrill=(typeof drill!=='undefined' && drill) || (typeof cmDrill!=='undefined' && cmDrill) || (typeof spDrill!=='undefined' && spDrill) || (typeof coDrill!=='undefined' && coDrill) || (typeof gfDrill!=='undefined' && gfDrill) || (typeof tgDrill!=='undefined' && tgDrill) || (typeof cr!=='undefined' && cr);
-    if(!anyDrill){
-      const home=document.getElementById('practice-home');
-      if(home) home.hidden=false;
-      ['drill-area','cm-area','sp-area','co-area','gf-area','tg-area','cr-area'].forEach(id=>{ const a=document.getElementById(id); if(a) a.hidden=true; });
-    }
-    renderPractice();
-  } else {   // ear
-    if(!(typeof ear!=='undefined' && ear)){
-      const home=document.getElementById('ear-home'), area=document.getElementById('ear-area');
-      if(home) home.hidden=false; if(area) area.hidden=true;
-    }
-    renderEar();
+  } else {
+    // entering an activity mode with no drill running: show that mode's home view
+    // (a drill starter swaps it for the drill's own area right after)
+    if(!activeDrill(currentMode)) showDrillHome(currentMode);
+    if(currentMode==='practice') renderPractice(); else renderEar();
   }
   updateGlobalPlay();
   saveState();
@@ -6546,7 +6614,10 @@ document.getElementById('tb-tuning').onchange=function(){
   if(ts) ts.addEventListener('click', e=>{ const b=e.target.closest('[data-midi]'); if(b) tunerTone(+b.dataset.midi); }); }
 document.getElementById('tb-frets').onchange=function(){ fretRangeIdx=+this.value; renderAllBoards(); saveState(); };
 { const cp=document.getElementById('tb-capo'); if(cp) cp.onchange=function(){ capo=+this.value; renderAllBoards(); saveState(); }; }
-{ const mt=document.getElementById('tb-meter'); if(mt) mt.onchange=function(){ setMeter(+this.value); if(typeof refreshTimingLang==='function') refreshTimingLang(); saveState(); }; }
+/* a meter change alters what an in-flight drill should be showing (bar length,
+   beat grid), so re-paint the running drill via the registry rather than naming
+   one drill here — the old call reached for the timing drill only. */
+{ const mt=document.getElementById('tb-meter'); if(mt) mt.onchange=function(){ setMeter(+this.value); refreshDrillsLang(); saveState(); }; }
 /* accessibility toggles (Phase 9 feel pass): a colour-blind-safe palette + distinct
    per-function dot shapes. Both are pure body-class switches — the CSS does the work
    (see styles.css), so there's nothing to repaint — and both persist. */
@@ -6775,6 +6846,8 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     learnerReview, learnerActivity, startReview,
     // shareable deep links (Phase 9)
     encodeShareState, applyShareHash, shareURL,
+    // drill registry (13): the one list the shell iterates instead of naming drills
+    DRILLS, activeDrill, showDrillHome, exitDrillsExcept, refreshDrillsLang,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
     renderAllBoards,
     // learner model (spine #3, 3b)
