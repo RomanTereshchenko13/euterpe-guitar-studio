@@ -27,8 +27,7 @@
    Phase 5 Rhythm: pass `changes` for the one-minute-changes setup, or `changes-run`
    to also press Start and land on the running tally; `strum` for the strumming-pattern
    trainer, or `strum-run` to also press Play and land on the looping grid; `comp` for the
-   comp-the-progression drill, or `comp-run` to also press Play and land on the cycling now/next;
-   `groove` for the groove/feel lab, or `groove-run` to also press Play and land on the looping groove.
+   comp-the-progression drill, or `comp-run` to also press Play and land on the cycling now/next.
    Phase 6 Lead: `target` for the chord-tone-targeting drill, or `target-run` to also press Play and
    land on the lit-tones neck with the band cycling; `callresp` for the call-and-response drill.
    Phase 7 Timing: `timing` for the subdivision & timing coach, or `timing-run` to also press Play
@@ -73,7 +72,7 @@ for (const a of process.argv.slice(2)) {
   else if (/^\d+\/\d+$/.test(a)) meterArg = a;              // time signature, e.g. 3/4 (Phase 7b)
   else if (a === 'practice' || a === 'reference' || a === 'drill' || a === 'changes' || a === 'changes-run'
            || a === 'strum' || a === 'strum-run' || a === 'comp' || a === 'comp-run'
-           || a === 'groove' || a === 'groove-run' || a === 'target' || a === 'target-run' || a === 'callresp'
+           || a === 'target' || a === 'target-run' || a === 'callresp'
            || a === 'timing' || a === 'timing-run'
            || a === 'ear' || a === 'ear-interval' || a === 'ear-chordq' || a === 'ear-rhythm')
     mode = (a === 'reference') ? null : a;
@@ -96,16 +95,14 @@ function appFor(panel) {
   // bottom-nav Practice button, so the shot lands on the Practice surface.
   const clicks = [];
   if (panel) clicks.push(`var b=document.querySelector('.tab[data-panel="${panel}"]');if(b)b.click();`);
-  if (mode === 'practice' || mode === 'drill' || mode === 'changes' || mode === 'changes-run' || mode === 'strum' || mode === 'strum-run' || mode === 'comp' || mode === 'comp-run' || mode === 'groove' || mode === 'groove-run' || mode === 'target' || mode === 'target-run' || mode === 'callresp' || mode === 'timing' || mode === 'timing-run') clicks.push(`var m=document.querySelector('.modebtn[data-mode="practice"]');if(m)m.click();`);
+  if (mode === 'practice' || mode === 'drill' || mode === 'changes' || mode === 'changes-run' || mode === 'strum' || mode === 'strum-run' || mode === 'comp' || mode === 'comp-run' || mode === 'target' || mode === 'target-run' || mode === 'callresp' || mode === 'timing' || mode === 'timing-run') clicks.push(`var m=document.querySelector('.modebtn[data-mode="practice"]');if(m)m.click();`);
   if (mode === 'drill') clicks.push(`var s=document.getElementById('start-notes');if(s)s.click();`);
   if (mode === 'changes' || mode === 'changes-run') clicks.push(`var s=document.getElementById('start-changes');if(s)s.click();`);
   if (mode === 'changes-run') clicks.push(`var g=document.getElementById('cm-start-btn');if(g)g.click();`);
   if (mode === 'strum' || mode === 'strum-run') clicks.push(`var s=document.getElementById('start-strum');if(s)s.click();`);
   if (mode === 'strum-run') clicks.push(`var g=document.getElementById('sp-play');if(g)g.click();`);
   if (mode === 'comp' || mode === 'comp-run') clicks.push(`var s=document.getElementById('start-comp');if(s)s.click();`);
-  if (mode === 'comp-run') clicks.push(`var g=document.getElementById('co-play');if(g)g.click();`);
-  if (mode === 'groove' || mode === 'groove-run') clicks.push(`var s=document.getElementById('start-groove');if(s)s.click();`);
-  if (mode === 'groove-run') clicks.push(`var g=document.getElementById('gf-play');if(g)g.click();`);
+  if (mode === 'comp-run') clicks.push(`var g=document.getElementById('tg-play');if(g)g.click();`);
   if (mode === 'target' || mode === 'target-run') clicks.push(`var s=document.getElementById('start-target');if(s)s.click();`);
   if (mode === 'target-run') clicks.push(`var g=document.getElementById('tg-play');if(g)g.click();`);
   if (mode === 'callresp') clicks.push(`var s=document.getElementById('start-callresp');if(s)s.click();`);

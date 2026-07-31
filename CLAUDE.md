@@ -21,6 +21,8 @@ These files are **build output / generated — never hand-edit them**, your chan
 will be overwritten:
 
 - `index.html`   → generated from `src/index.template.html` + `src/styles.css` + `src/js/*.js`
+  (the changelog is **sliced**: `build.js` inlines only the newest `CHANGELOG_KEEP` releases
+  into the bundle — the full history was 15% of the file — and the modal links to `CHANGELOG.md`)
 - `sw.js`        → generated from `src/sw.template.js` (`APP_VERSION` stamped into the cache name)
 - `CHANGELOG.md` → generated from `src/js/02-changelog.js`
 - `icons/icon.svg` → copied from `src/icons/icon.svg`
@@ -40,41 +42,58 @@ Edit the sources, then run the build.
   - `03-i18n.js` — translation strings · `04-constants.js` (incl. custom-tuning state:
     `customTuning` + `tuningMidi()`; and the meter model `METERS`/`meterIdx` +
     `barBeats`/`pulseSec`/`barSec`/`midPulseSec`/`meterGroupStarts`/`setMeter`, Phase 7b — 4/4 is
-    byte-identical to the old `beat()*4`) · `05-audio.js` (incl. timing calibration:
-    `calMs`/`calOffsetSec`/`calcLatencyOffset` + the tap-test `calStart`/`calTap`/`calFinish`)
+    byte-identical to the old `beat()*4`) · `05-audio.js` (the timing-calibration tap-test lived
+    here; it was built ahead of the mic/scored tier meant to consume it, nothing ever called
+    `calOffsetSec()`, so it was removed — bring it back with Phase 8/F1)
   - `06-backing.js` — the backing band + metronome + sequencer, all **meter-aware** (they read
-    `barSec()`/`pulseSec()`/`barBeats()` instead of hard-wired 4/4); the comp (5c) + targeting (6a)
-    drills follow the same meter · `07-render-shared.js` · `08-chords.js` · `09-triads.js`
+    `barSec()`/`pulseSec()`/`barBeats()` instead of hard-wired 4/4); the merged over-the-changes
+    drill (5c/6a) follows the same meter · `07-render-shared.js` · `08-chords.js` · `09-triads.js`
   - `10-scales.js` · `11-notes-circle-lang.js` · `12-toolbar-state.js` (state save/load +
     the custom-tuning editor + the share-link codec `encodeShareState`/`applyShareHash`)
   - `13-drill-registry.js` — the **drill registry**: `DRILLS` + `registerDrill()`, plus the
-    generic shell helpers `activeDrill`/`exitDrillsExcept`/`showDrillHome`/`refreshDrillsLang`.
-    Every drill file self-registers at load (`{id, mode, area, isActive, exit, refreshLang}`),
-    and `setMode` (15) / `applyLang` (11) iterate `DRILLS` instead of naming drills — so
-    **adding a drill is one new `14-*.js` file + its markup, with nothing to register by hand**.
+    generic shell helpers `activeDrill`/`exitDrillsExcept`/`showDrillHome`/`refreshDrillsLang`/
+    `drillKeyChanged`. Every drill file self-registers at load
+    (`{id, mode, area, isActive, exit, refreshLang, onKey?}`), and `setMode` (15) / `applyLang`
+    (11) iterate `DRILLS` instead of naming drills — so **adding a drill is one new `14-*.js`
+    file + its markup, with nothing to register by hand**.
     Loads at slot 13 (before the slot-14 drills) because `const DRILLS` isn't hoisted. The
     smoke suite guards the seam: every `*-area` in the markup must be claimed by a registered
     drill, so an unregistered drill fails the build rather than silently half-working.
+    **Shared drill chrome** (`#drill-ctx` in the template, built in 15): one Key picker + one
+    Exit button for *all* practice drills, instead of the identical copy each drill used to
+    carry. Exit calls `activeDrill('practice').exit()`; the key picker calls `setKey` then
+    `drillKeyChanged()`, which invokes the running drill's optional `onKey()` — "re-derive
+    yourself from the new key" (rebuild bars, deal a new round, repaint the board). A drill
+    with nothing key-dependent just omits `onKey`. CSS derives the strip's visibility from
+    `#practice-home:not([hidden]) ~ #drill-ctx`, so no drill manages it.
   - `13-learner.js` — learner model (spine #3): per-item SRS history + sessions ring
     buffer; persists via `12-toolbar-state.js`'s `saveState`/`loadState`. Exposes the
     progress-card readouts `learnerReview` (due-for-review queue) + `learnerActivity` (active days)
-  - `14-drill-ear.js` + `14-drill-notes.js` + `14-drill-lead-{1-target,2-callresponse}.js` +
-    `14-drill-rhythm-{1-changes,2-strum,3-comp,4-groove}.js` + `14-drill-timing.js`
+  - `14-drill-ear.js` + `14-drill-notes.js` + `14-drill-overchanges.js` +
+    `14-drill-lead-callresponse.js` + `14-drill-rhythm-{1-changes,2-strum}.js` +
+    `14-drill-timing.js`
     — the drills (all at load slot 14, before wiring). `14-drill-notes.js` is the Practice
     note-naming drill (3c); `14-drill-ear.js` is Ear training (Phase 4) — interval /
-    chord-quality / rhythm recognition, multiple-choice on the audio buses; the four
-    `14-drill-rhythm-*.js` files are the Rhythm pillar (Phase 5), one coach per file in
-    load order — the "one-minute changes" chord-change coach (5a, `cm*`) + the
-    strumming-pattern trainer (5b, `sp*`) + comp-the-progression (5c, `co*`) + the
-    groove/feel lab (5d, `gf*`), each a setup→timed run→summary flow living as a card in
-    the Practice home (the `-1/-2/-3/-4` suffix preserves the cm→sp→co→gf concat order);
-    the two `14-drill-lead-*.js` files are the Lead pillar (Phase 6). `14-drill-lead-1-target.js`
-    (`tg*`) covers 6a/6b/6c-targeting: a progression loops with a forced backing band (reusing
-    `SEQ_PRESETS`/`scheduleBand`/`compStrum` like 5c) while the current chord's tones light on a
-    tappable neck (its own board) that you aim for — accuracy-scored, honest coach tier; a
-    **Position** picker windows the targets to one arpeggio box (6b, reusing Phase 2's `boxWindow`)
-    and a **Target** picker narrows them to a single degree (6c target-note soloing: other chord
-    tones stay neutral, only off-chord notes miss). `14-drill-lead-2-callresponse.js` (`cr*`) is
+    chord-quality / rhythm recognition, multiple-choice on the audio buses.
+    `14-drill-rhythm-1-changes.js` (`cm*`) is the "one-minute changes" chord-change coach (5a),
+    a setup→timed run→summary flow. `14-drill-rhythm-2-strum.js` (`sp*`) is **Strumming & feel**
+    — the 5b pattern trainer and the 5d groove lab **merged**: one 8th-note clock over the
+    context chord with a pattern picker (`STRUM_PATTERNS`) *and* the feel controls
+    (`SP_SWINGS` swing, backbeat accent, palm-mute, optional drums+bass band), so the
+    cross-combinations neither drill could reach now work.
+    `14-drill-overchanges.js` (`tg*`) is **Over the changes** — comp-the-progression (5c) and
+    chord-tone targeting (6a/6b/6c) **merged**, because they were one machine: the same
+    `SEQ_PRESETS` bar expansion on the same `barSec()` clock with the same
+    `scheduleBand(force)`/`compStrum` bed, NOW/NEXT stage and beat dots (6a's markup already
+    reused 5c's `co-*` CSS). A `tgMode` switch picks what you play: `chords` (loud guide comp
+    + mid-bar push, chord **diagrams**, no neck, records `comp:<prog>` by bars) or `tones`
+    (lighter comp, chord **names**, tappable neck of lit chord tones, records `target:<prog>`
+    by accuracy; **Position** windows them to one arpeggio box via Phase 2's `boxWindow`,
+    **Target** narrows to a single degree — other chord tones stay neutral, only off-chord
+    notes miss). Both practice cards (`start-comp` in Rhythm, `start-target` in Lead) open
+    this one drill in their own mode, so each pillar's picker stays honest; both session
+    namespaces are kept so pre-merge progress still reads. The DOM ids stay `tg-*`.
+    `14-drill-lead-callresponse.js` (`cr*`) is
     6c call-and-response — the app plays a scale-box motif (LISTEN) and you echo it back on its own
     board (YOUR TURN); self-paced, scored on echo accuracy, its listen/answer turns being the
     play-vs-rest phrasing lesson.
@@ -82,7 +101,8 @@ Edit the sources, then run the build.
     a smart visual metronome — a subdivision picker (`SUBDIVS`, `div` per beat) + tempo drive a
     3-level accented click + a `SD_BEATS·div` grid on its own scheduler clock, while the context
     scale is walked note-by-note across the grid inside one Phase-2 `boxWindow` on its own display
-    board; in-drill key/position/tempo, records a `timing:<subdiv>` session (no SRS). Coach tier
+    board; in-drill position/tempo (the key comes from the shared `#drill-ctx` strip), records a
+    `timing:<subdiv>` session (no SRS). Coach tier
     (serves both pillars) — mic scoring is Phase 8/F1.
     They reuse the cue bus and the
     learner model; the shared progress readout (`renderProgressInto`) lives in the ear module.

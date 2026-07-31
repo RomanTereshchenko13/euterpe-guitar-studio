@@ -26,6 +26,8 @@ function setKey(pc, lbl, mode){
   chVoicing=0; scOverlay=null;
   ntRoot=lbl;                                   // Notes reflects the shared root (#4)
   activateRoot(document.getElementById('g-roots'), gRoot);
+  // the drills' shared key strip (13-drill-registry.js) tracks the same context root
+  { const dk=document.getElementById('drill-ctx-key'); if(dk) activateRoot(dk, gRoot); }
   buildChQuals(); buildArpQuals(); buildArpPos(); buildScSelect(); buildScPos();
   renderContextViews(); renderCircle(); renderNotes();
   saveState();
@@ -369,31 +371,6 @@ function applyA11y(){
 { const p=document.getElementById('tb-cbpalette'); if(p) p.onclick=function(){ cbPalette=!cbPalette; applyA11y(); saveState(); };
   const s=document.getElementById('tb-shapes');    if(s) s.onclick=function(){ fnShapes=!fnShapes;  applyA11y(); saveState(); }; }
 
-/* ---- timing calibration (Phase 3 debt) ----
-   The Tap-test button is a tiny state machine: first click starts the click track,
-   each later click is a tap matched to the nearest beat; at CAL_TAPS it computes +
-   stores the offset (calMs). The slider sets it by hand. calOffsetSec() is the
-   value future scored/mic windows will read; nothing consumes it on screen yet. */
-function calBtnLabel(){
-  const b=document.getElementById('tb-cal-tap'); if(!b) return;
-  if(cal){ b.classList.add('active'); b.textContent=t('cal_tapnow')+' '+cal.deltas.length+'/'+CAL_TAPS; }
-  else { b.classList.remove('active'); b.textContent=t('cal_test'); }
-}
-function applyCal(){
-  const s=document.getElementById('tb-cal'); if(s) s.value=calMs;
-  const v=document.getElementById('tb-cal-val'); if(v) v.textContent=calMs+' '+t('cal_unit');
-  calBtnLabel();
-}
-{ const cb=document.getElementById('tb-cal-tap');
-  if(cb) cb.onclick=function(){
-    if(!cal){ calStart(); calBtnLabel(); return; }
-    const n=calTap();
-    if(n>=CAL_TAPS){ calFinish(); applyCal(); saveState(); }
-    else calBtnLabel();
-  };
-  const cs=document.getElementById('tb-cal');
-  if(cs){ cs.oninput=function(){ setCalMs(+this.value); applyCal(); }; cs.onchange=saveState; } }
-
 /* ---- share a deep link (Phase 9 distribution) ----
    Copy a URL whose hash encodes the current key / scale / chord view; opening it
    lands a new visitor on that exact context (applyShareHash on load). */
@@ -447,7 +424,10 @@ function renderChangelog(){
       `<span class="cl-ver">v${r.v}</span>`+
       (cur?`<span class="cl-badge">${t('cl_current')}</span>`:'')+
       `<span class="cl-date">${r.date}</span></div><ul>${bullets}</ul></div>`;
-  }).join('');
+  }).join('') +
+    // build.js ships only the newest few releases (the full history was 15% of the
+    // bundle); point at CHANGELOG.md for the rest.
+    `<p class="cl-older"><a href="https://github.com/RomanTereshchenko13/euterpe-guitar-studio/blob/main/CHANGELOG.md" target="_blank" rel="noopener">${t('cl_older')}</a></p>`;
 }
 function openChangelog(){ const o=document.getElementById('cl-overlay'); renderChangelog(); o.hidden=false; o.classList.add('open'); }
 function closeChangelog(){ const o=document.getElementById('cl-overlay'); o.classList.remove('open'); o.hidden=true; }
@@ -548,7 +528,15 @@ window.addEventListener('resize', markScrollables);
 try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(markScrollables); }catch(_){}
 applyAudioAvailability();
 applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
-applyCal();    // reflect the restored timing-calibration offset in the toolbar
+/* the drills' one shared key picker (13-drill-registry.js). Built once here rather than by
+   each drill: they all set the same context root, and the running drill only has to say what
+   to re-derive (onKey). CSS shows the row only while a drill is up. */
+{ const dk=document.getElementById('drill-ctx-key');
+  if(dk) buildRootBtns(dk, gRoot, (pc,r)=>{ setKey(pc,r); drillKeyChanged(); });
+  // Quit was a seventh identical button, one per drill area. The registry already knows
+  // which drill is running and how to end it, so the shell owns the button.
+  const dq=document.getElementById('drill-ctx-quit');
+  if(dq) dq.onclick=function(){ const d=activeDrill('practice'); if(d && typeof d.exit==='function') d.exit(); }; }
 // Deep link (Phase 9): if the URL hash carries a shared context, apply it over the
 // restored state now that the shell + setters are up, then strip the hash.
 const fromShare = (typeof applyShareHash==='function') && applyShareHash();
@@ -577,15 +565,12 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     TUNINGS, applyTuning, tuningMidi, TUNE_LO, TUNE_HI,
     getOpenMidi:()=>OPEN_MIDI.slice(), getCustomTuning:()=>customTuning.slice(),
     setCustomTuning:(arr)=>{ customTuning=arr.slice(); }, setTuningIdx:(i)=>{ tuningIdx=i; applyTuning(); },
-    // timing calibration (Phase 3 debt)
-    calcLatencyOffset, calOffsetSec, setCalMs, getCalMs:()=>calMs, CAL_MIN, CAL_MAX, CAL_TAPS,
-    calStart, calTap, calFinish, calCancel, getCal:()=>cal,
     // learner review + activity (spine #3)
     learnerReview, learnerActivity, startReview,
     // shareable deep links (Phase 9)
     encodeShareState, applyShareHash, shareURL,
     // drill registry (13): the one list the shell iterates instead of naming drills
-    DRILLS, activeDrill, showDrillHome, exitDrillsExcept, refreshDrillsLang,
+    DRILLS, activeDrill, showDrillHome, exitDrillsExcept, refreshDrillsLang, drillKeyChanged,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
     renderAllBoards,
     // learner model (spine #3, 3b)
@@ -600,17 +585,15 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     startChanges, cmBegin, cmTap, cmUntap, finishChanges, exitChanges, getCm:()=>cmDrill,
     CM_PAIRS, CM_DURS, cmPairId, cmPairBest,
     setCmPair:(i)=>{ cmPairIdx=i; if(cmDrill) cmDrill.pairIdx=i; }, setCmDur:(i)=>{ cmDurIdx=i; if(cmDrill) cmDrill.dur=CM_DURS[i]; },
-    // strumming-pattern trainer (Phase 5b)
+    // strumming & feel lab (Phase 5b + 5d, merged)
     startStrum, spPlay, spStop, spToggle, exitStrum, getSp:()=>spDrill,
     STRUM_PATTERNS, setSpPattern:(i)=>{ spIdx=i; if(spDrill) spDrill.patIdx=i; },
-    // comp-the-progression drill (Phase 5c)
-    startComp, compPlay, compStop, compToggle, exitComp, getCo:()=>coDrill,
-    compBuildBars, setCompProg:(i)=>{ coIdx=i; if(coDrill){ coDrill.presetIdx=i; coDrill.bars=compBuildBars(SEQ_PRESETS[i]); } },
-    // groove & feel drill (Phase 5d)
-    startGroove, groovePlay, grooveStop, grooveToggle, exitGroove, getGf:()=>gfDrill,
-    GF_SWINGS, setGfSwing:(i)=>{ gfSwing=i; }, setGfAccent:(v)=>{ gfAccent=!!v; }, setGfMute:(v)=>{ gfMute=!!v; },
-    // chord-tone targeting drill (Phase 6a)
-    startTarget, targetPlay, targetStop, targetToggle, targetAnswer, exitTarget, getTg:()=>tgDrill,
+    SP_SWINGS, setSpSwing:(i)=>{ spSwing=i; }, setSpAccent:(v)=>{ spAccent=!!v; },
+    setSpMute:(v)=>{ spMute=!!v; }, setSpBand:(v)=>{ spBand=!!v; },
+    // over-the-changes drill (Phase 5c + 6a/6b/6c, merged) — one machine, two modes
+    startOverChanges, startComp, startTarget, getOcMode:()=>tgMode,
+    setOcMode:(m)=>{ tgMode = (m==='chords') ? 'chords' : 'tones'; },
+    targetPlay, targetStop, targetToggle, targetAnswer, exitTarget, getTg:()=>tgDrill,
     tgBuildBars, tgAccuracy, setTargetProg:(i)=>{ tgIdx=i; if(tgDrill){ tgDrill.presetIdx=i; tgDrill.bars=tgBuildBars(SEQ_PRESETS[i]); } },
     setTargetPos:(i)=>{ tgPos=i; if(tgDrill) tgDrill.win = i ? boxWindow(i) : null; },
     setTargetDeg:(i)=>{ tgDeg=i; if(tgDrill){ const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); } },

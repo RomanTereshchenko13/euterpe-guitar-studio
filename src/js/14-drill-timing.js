@@ -14,7 +14,7 @@
    position + tempo picker (the roadmap's "tempo reachability" for a timed coach). */
 
 /* subdivisions per beat: 1 = quarter, 2 = eighth, 3 = triplet, 4 = sixteenth.
-   en/uk names inline (like STRUM_PATTERNS/GF_SWINGS) so the i18n symmetry check only
+   en/uk names inline (like STRUM_PATTERNS/SP_SWINGS) so the i18n symmetry check only
    guards the I18N table. */
 const SUBDIVS = [
   { id:'quarter',   div:1, en:'Quarter notes', uk:'Чвертки' },
@@ -123,8 +123,6 @@ function sdTick(when, count){
 /* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
 function renderTiming(){
   if(!sd) return;
-  const keyc=document.getElementById('sd-key');
-  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); sdRenderBoard(); sdRestart(); renderTiming(); });
   segButtons('sd-subs', SUBDIVS.map(s=>({label:sdSubName(s)})), sdSub, i=>{ sdSub=i; renderSdGrid(); sdRestart(); renderTiming(); });
   segButtons('sd-pos', ['1','2','3','4','5'].map(label=>({label})), sdPos-1, i=>{ sdPos=i+1; sdPaintScale(); sdRestart(); });
   const tt=document.getElementById('sd-title'); if(tt) tt.textContent=gRootLbl+' · '+sName(SCALES[scIdx]);
@@ -184,13 +182,14 @@ function sdSetTempo(bpm){
 function refreshTimingLang(){ if(sd) renderTiming(); }
 
 registerDrill({ id:'timing', mode:'practice', area:'sd-area',
-                isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang });
+                isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang,
+                // the grid walks the key's scale, so a key change repaints the board and restarts
+                onKey:()=>{ if(!sd) return; sdRenderBoard(); sdRestart(); renderTiming(); } });
 
 (function initTiming(){
   const card=document.getElementById('start-timing'); if(!card) return;
   card.onclick=startTiming;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('sd-quit',   exitTiming);
   wire('sd-play',   sdToggle);
   wire('sd-notes',  ()=>{ sdNotes=!sdNotes; if(!sdNotes && sdLit){ sdLit.classList.remove('on'); sdLit=null; } renderTiming(); });
   wire('sd-slower', ()=>sdSetTempo(tempo-5));

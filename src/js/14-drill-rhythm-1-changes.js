@@ -188,7 +188,6 @@ registerDrill({ id:'changes', mode:'practice', area:'cm-area',
   const card=document.getElementById('start-changes'); if(!card) return;
   card.onclick=startChanges;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('cm-quit',      exitChanges);
   wire('cm-start-btn', cmBegin);
   wire('cm-stop',      finishChanges);   // finish early
   wire('cm-tally',     cmTap);

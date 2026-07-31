@@ -158,6 +158,11 @@
      so the two navigation axes never fight. */
   .practice-panel, .ear-panel { display: none; animation: fade 0.25s ease; }
   body.mode-practice .practice-panel { display: block; }
+  /* The drills' one shared key row sits between the practice home and the drill areas.
+     It belongs to whichever drill is running, so it's visible exactly when the home is
+     NOT — derived from the home's own [hidden] rather than managed by every drill's
+     start/exit, which is what the six duplicated per-drill key rows used to cost. */
+  #practice-home:not([hidden]) ~ #drill-ctx { display: none; }
   body.mode-ear .ear-panel { display: block; }
   /* In any activity mode (Practice / Ear) collapse the reference shell: hide the
      active reference panel, the context bar, the shared board (+ meta), harmony
@@ -284,6 +289,8 @@
   .sp-cell { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 0; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); transition: border-color 0.1s, box-shadow 0.1s, background 0.1s; }
   .sp-cell.beat { background: var(--bg-panel-2); border-color: var(--border-strong); }
   .sp-cell.on { border-color: var(--root); box-shadow: 0 0 0 2px rgba(107,165,58,0.4); }
+  /* backbeat (2 & 4) when the accent toggle is on — see the emphasis, not just hear it */
+  .sp-cell.accent { border-color: var(--third); }
   .sp-dir { font-size: 23px; font-weight: 700; line-height: 1; min-height: 25px; color: var(--text); }
   .sp-dir.none { color: var(--text-faint); }
   .sp-cell.on .sp-dir.has { color: var(--root); }
@@ -492,6 +499,13 @@
   .tb-toggle.open .chev { transform: rotate(180deg); }
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
   .toolbar.collapsed { display: none; }
+  /* Settings reads as three labelled clusters (instrument / neck+meter / app) instead of
+     one eleven-control wrap-flow. Each cluster wraps internally, so a narrow viewport
+     stacks the clusters rather than interleaving unrelated controls on one line. */
+  .tb-cluster { display: flex; align-items: baseline; gap: 10px; flex: 1 1 auto; min-width: 0; }
+  .tbc-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); white-space: nowrap; flex-shrink: 0; }
+  .tbc-items { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+  @media (max-width: 700px) { .tb-cluster { flex: 1 1 100%; } }
   .toolbar .tb-group, .tb-bar .tb-group { display: flex; align-items: center; gap: 7px; }
   /* the display:flex above outranks the UA [hidden]{display:none}, so a hidden group
      (e.g. the custom-tuning editor on a non-custom tuning) would still show — re-assert it */
@@ -801,6 +815,11 @@
   .cl-rel ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
   .cl-rel li { position: relative; padding-left: 16px; font-size: 13px; color: var(--text-dim); line-height: 1.45; }
   .cl-rel li::before { content: '—'; position: absolute; left: 0; color: var(--text-faint); }
+  /* only the newest releases ship in the bundle (build.js slices them); this links
+     out to the full history rather than shipping 15% dead weight to every visitor. */
+  .cl-older { padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; }
+  .cl-older a { color: var(--text-faint); text-decoration: none; }
+  .cl-older a:hover, .cl-older a:focus-visible { color: var(--accent); text-decoration: underline; }
 
   /* ---- keyboard-shortcuts cheat-sheet (desktop) ---- */
   .kbd-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.62); display: none; align-items: center; justify-content: center; padding: 24px; z-index: 100; }

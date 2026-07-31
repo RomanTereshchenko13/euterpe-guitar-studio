@@ -57,9 +57,18 @@ const html = fs.readFileSync(htmlPath, 'utf8');
      'meta tag does not match ' + ver);
   ok('top comment lists current version', ver && html.includes('Version: ' + ver),
      'header comment missing Version: ' + ver);
+  // build.js re-serializes the sliced changelog as JSON ("v":"2.11.0"), while the
+  // src/ form is hand-written JS (v:'2.11.0'); accept either so the invariant is
+  // about the entry existing, not about how build.js happens to emit it.
   ok('CHANGELOG has current-version entry',
-     ver && new RegExp("v:\\s*'" + ver.replace(/\./g, '\\.') + "'").test(html),
+     ver && new RegExp('"?v"?:\\s*[\'"]' + ver.replace(/\./g, '\\.') + '[\'"]').test(html),
      'no CHANGELOG entry for ' + ver);
+  // the slice must never drop the release the app is currently reporting, and the
+  // modal must offer a way to reach the rest.
+  ok('changelog slice keeps the newest release first',
+     ver && new RegExp('CHANGELOG\\s*=\\s*\\[\\s*\\{"v":"' + ver.replace(/\./g, '\\.') + '"').test(html),
+     'sliced CHANGELOG does not lead with ' + ver);
+  ok('changelog modal links to the full history', html.includes('cl-older'));
 
   // The Loop button moved to the timing bar: the old per-row id must be gone,
   // the new contextual id must exist and be wired.
@@ -190,12 +199,13 @@ if (T) {
    'cm_changes','cm_cpm','cm_best','cm_tap_hint','cm_undo','cm_newbest',
    'drill_strum','drill_strum_meta','sp_pattern','sp_chord','sp_play','sp_stop','sp_hint',
    'drill_comp','drill_comp_meta','co_prog','co_now','co_next','co_hint',
-   'drill_groove','drill_groove_meta','gf_swing','gf_accent','gf_mute','gf_hint',
+   'oc_mode','oc_chords','oc_tones',
+   'sp_swing','sp_accent','sp_mute','sp_band',
    'practice_grp_lead','drill_target','drill_target_meta','tg_prog','tg_pos','tg_deg','tg_hits','tg_acc','tg_hint',
    'drill_callresp','drill_callresp_meta','cr_listen','cr_your_turn','cr_replay','cr_echoed','cr_rounds','cr_hint',
    'a11y_label','a11y_palette','a11y_shapes',
    'wc_title','wc_lead','wc_ref','wc_practice','wc_ear','wc_got',
-   'tun_custom','cal_label','cal_test','cal_tapnow','cal_unit',
+   'tun_custom','cl_older',
    'prog_active','prog_due','prog_review','share_btn','share_copied'].forEach(k => {
     ok('i18n new key present (uk+en): ' + k,
        T.I18N.uk[k] !== undefined && T.I18N.en[k] !== undefined);
@@ -578,18 +588,23 @@ if (T) {
     T.resetLearner();
   })();
 
-  /* ---- Phase 5c: comp-the-progression coach drill ---- */
-  (function compDrill() {
+  /* ---- Phase 5c: comping, now the `chords` mode of the merged over-the-changes drill ----
+     Comp-the-progression and chord-tone targeting were one machine behind two cards; they
+     are now one drill with a mode. These checks pin the comping half: its card still opens
+     the drill, it opens in the right mode, the lead-only controls stay out of the way, and
+     it still records under the `comp:` session namespace so pre-merge history reads. */
+  (function compMode() {
     const doc = win.document;
     ok('5c: comp drill card present (start-comp)', !!doc.getElementById('start-comp'));
-    ok('5c: comp area + stage present', !!doc.getElementById('co-area') && !!doc.getElementById('co-now') && !!doc.getElementById('co-next'));
-    // the rhythm group now lists three drills
+    ok('5c: the separate comp area is gone', !doc.getElementById('co-area'));
+    ok('5c: comp shares the over-the-changes area + stage',
+       !!doc.getElementById('tg-area') && !!doc.getElementById('tg-now') && !!doc.getElementById('tg-next'));
     ok('5c: three rhythm-group drill cards',
        ['start-changes', 'start-strum', 'start-comp'].every(id => !!doc.getElementById(id)));
 
-    // compBuildBars expands a preset (offsets, qi, bars) into one chord per bar, in the key
+    // tgBuildBars expands a preset (offsets, qi, bars) into one chord per bar, in the key
     T.setKey(0, 'C');                       // context root C → I–V–vi–IV = C G Am F
-    const bars = T.compBuildBars(T.SEQ_PRESETS[1]);
+    const bars = T.tgBuildBars(T.SEQ_PRESETS[1]);
     ok('5c: I–V–vi–IV expands to 4 bars', bars.length === 4);
     ok('5c: bars are resolved to the context key (C G Am F)',
        bars[0].pc === 0 && bars[1].pc === 7 && bars[2].pc === 9 && bars[3].pc === 5,
@@ -600,86 +615,102 @@ if (T) {
     T.setCtxNow(0);
     T.setMode('practice');
     T.startComp();
-    ok('5c: startComp opens the drill, not yet playing', !!T.getCo() && T.getCo().playing === false);
-    T.setCompProg(2);                        // I–IV–V (3 bars)
-    T.compPlay();
-    let co = T.getCo();
+    ok('5c: the Rhythm card opens the drill in chords mode', T.getOcMode() === 'chords');
+    ok('5c: startComp opens the drill, not yet playing', !!T.getTg() && T.getTg().playing === false);
+    ok('5c: comping hides the neck and the lead-only rows',
+       doc.getElementById('tg-board-wrap').hidden === true &&
+       doc.getElementById('tg-tone-rows').hidden === true);
+    T.setTargetProg(2);                      // I–IV–V (3 bars)
+    T.targetPlay();
+    let co = T.getTg();
     ok('5c: play starts the progression loop', co.playing === true && co.presetIdx === 2 && co.bars.length === 3);
 
     // drive ~10s of the scheduler → the bar index advances and at least one cycle wraps
     for (let s = 0; s <= 10; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
-    co = T.getCo();
+    co = T.getTg();
     ok('5c: the bar pointer stays in range', co.bar >= 0 && co.bar < co.bars.length);
     ok('5c: at least one full progression cycle elapses', co.cycles >= 1);
+    // a tap can't score in comping mode — there is no board to tap
+    const beforeHits = co.hits;
+    T.targetAnswer(0, 0);
+    ok('5c: taps do not score while comping', T.getTg().hits === beforeHits);
 
-    T.compStop();
-    ok('5c: stop ends the loop', T.getCo().playing === false);
+    T.targetStop();
+    ok('5c: stop ends the loop', T.getTg().playing === false);
     const ss = T.getLearner().sessions;
     ok('5c: a practiced comp session is recorded (bars comped)',
        ss.length >= 1 && /^comp:/.test(ss[ss.length - 1].drill) && ss[ss.length - 1].score >= 1);
     ok('5c: comp coach mints no per-item SRS', T.learnerStats().items === 0);
 
     // leaving Practice stops + clears a running drill
-    T.compPlay();
+    T.targetPlay();
     T.setMode('reference');
-    ok('5c: leaving Practice exits a running comp drill', T.getCo() === null);
+    ok('5c: leaving Practice exits a running comp drill', T.getTg() === null);
     T.setCtxNow(0);
     T.resetLearner();
   })();
 
-  /* ---- Phase 5d: groove & feel coach ---- */
-  (function grooveDrill() {
+  /* ---- Phase 5b+5d merged: the feel half of the Strumming & feel lab ----
+     Groove & feel used to be its own card driving its own 8th-note clock; it is now
+     the swing/accent/mute/band layer over the pattern grid. These checks guard that
+     the merge kept the feel controls working AND that the old card is really gone
+     (a stray start-groove would mean the practice home and the drill disagreed). */
+  (function strumFeel() {
     const doc = win.document;
-    ok('5d: groove drill card present (start-groove)', !!doc.getElementById('start-groove'));
-    ok('5d: groove area + beats present', !!doc.getElementById('gf-area') && !!doc.getElementById('gf-beats'));
-    ok('5d: four rhythm-group drill cards',
-       ['start-changes', 'start-strum', 'start-comp', 'start-groove'].every(id => !!doc.getElementById(id)));
+    ok('5d: the separate groove card is gone', !doc.getElementById('start-groove'));
+    ok('5d: the separate groove area is gone', !doc.getElementById('gf-area'));
+    ok('5d: feel controls live in the strum area',
+       !!doc.getElementById('sp-swings') && !!doc.getElementById('sp-accent') &&
+       !!doc.getElementById('sp-mute') && !!doc.getElementById('sp-band'));
     // swing settings: straight → shuffle, each named in both languages, amount ascending
-    ok('5d: three swing feels (straight/swing/shuffle)', T.GF_SWINGS.length === 3);
+    ok('5d: three swing feels (straight/swing/shuffle)', T.SP_SWINGS.length === 3);
     ok('5d: swing feels carry en + uk names + an amount',
-       T.GF_SWINGS.every(s => s.en && s.uk && typeof s.amt === 'number'));
-    ok('5d: straight feel has zero swing', T.GF_SWINGS[0].amt === 0 && T.GF_SWINGS[T.GF_SWINGS.length - 1].amt > 0);
+       T.SP_SWINGS.every(s => s.en && s.uk && typeof s.amt === 'number'));
+    ok('5d: straight feel has zero swing', T.SP_SWINGS[0].amt === 0 && T.SP_SWINGS[T.SP_SWINGS.length - 1].amt > 0);
 
     T.resetLearner();
     T.initAudio();
     T.setCtxNow(0);
     T.setMode('practice');
-    T.startGroove();
-    ok('5d: startGroove opens the lab, not yet playing', !!T.getGf() && T.getGf().playing === false);
-    T.setGfSwing(2); T.setGfAccent(true); T.setGfMute(true);
-    T.groovePlay();
-    let gf = T.getGf();
-    ok('5d: play starts the groove loop', gf.playing === true);
+    T.startStrum();
+    // the combination neither drill could reach before: a swung, palm-muted,
+    // band-backed pattern — all four feel controls on at once over a chosen pattern.
+    T.setSpPattern(2); T.setSpSwing(2); T.setSpAccent(true); T.setSpMute(true); T.setSpBand(true);
+    T.spPlay();
+    ok('5d: play starts the loop with the feel layer engaged', T.getSp().playing === true);
 
     // drive ~10s of the scheduler → the 8th-note playhead moves and a bar wraps
     for (let s = 0; s <= 10; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
-    gf = T.getGf();
-    ok('5d: the 8th-note playhead stays in range', gf.slot >= 0 && gf.slot < 8);
-    ok('5d: at least one bar of groove elapses', gf.cycles >= 1);
+    const sp = T.getSp();
+    ok('5d: the 8th-note playhead stays in range', sp.slot >= 0 && sp.slot < 8);
+    ok('5d: at least one bar elapses with swing + band on', sp.bars >= 1);
 
-    T.grooveStop();
-    ok('5d: stop ends the loop', T.getGf().playing === false);
+    T.spStop();
+    ok('5d: stop ends the loop', T.getSp().playing === false);
     const ss = T.getLearner().sessions;
-    ok('5d: a practiced groove session is recorded',
-       ss.length >= 1 && /^groove:/.test(ss[ss.length - 1].drill) && ss[ss.length - 1].score >= 1);
-    ok('5d: groove coach mints no per-item SRS', T.learnerStats().items === 0);
+    ok('5d: a practiced session is recorded under the strum namespace',
+       ss.length >= 1 && /^strum:/.test(ss[ss.length - 1].drill) && ss[ss.length - 1].score >= 1);
+    ok('5d: the merged coach still mints no per-item SRS', T.learnerStats().items === 0);
 
-    T.groovePlay();
+    T.spPlay();
     T.setMode('reference');
-    ok('5d: leaving Practice exits a running groove drill', T.getGf() === null);
+    ok('5d: leaving Practice exits the running lab', T.getSp() === null);
     T.setCtxNow(0);
     T.resetLearner();
+    T.setSpSwing(0); T.setSpAccent(false); T.setSpMute(false); T.setSpBand(false);
   })();
 
-  /* ---- Phase 6a: chord-tone targeting (Lead pillar) ---- */
+  /* ---- Phase 6a: chord-tone targeting — the `tones` mode of the merged drill ---- */
   (function targetDrill() {
     const doc = win.document;
     ok('6a: target drill card present (start-target)', !!doc.getElementById('start-target'));
     ok('6a: target area + board + stage present',
        !!doc.getElementById('tg-area') && !!doc.getElementById('tg-board') &&
        !!doc.getElementById('tg-now') && !!doc.getElementById('tg-next') && !!doc.getElementById('tg-beats'));
-    ok('6a: Lead group adds a fifth practice card',
-       ['start-changes', 'start-strum', 'start-comp', 'start-groove', 'start-target'].every(id => !!doc.getElementById(id)));
+    ok('6a: Lead group adds a card beyond the three Rhythm ones',
+       ['start-changes', 'start-strum', 'start-comp', 'start-target'].every(id => !!doc.getElementById(id)));
+    ok('6a: both cards point at one registered drill',
+       T.DRILLS.filter(d => d.area === 'tg-area').length === 1);
 
     // bars resolve the preset to the CURRENT key (spine #1): in C, I–V–vi–IV starts on C(0)
     T.resetLearner();
@@ -690,6 +721,10 @@ if (T) {
     T.setTargetProg(2);            // I–IV–V (3 bars, so a cycle wraps within the 10s drive)
     T.startTarget();
     let tg = T.getTg();
+    ok('6a: the Lead card opens the drill in tones mode', T.getOcMode() === 'tones');
+    ok('6a: targeting shows the neck and the lead-only rows',
+       doc.getElementById('tg-board-wrap').hidden === false &&
+       doc.getElementById('tg-tone-rows').hidden === false);
     ok('6a: startTarget opens the drill, not yet playing', !!tg && tg.playing === false);
     ok('6a: bars expand to one chord per bar in the key', tg.bars.length === 3 && tg.bars[0].pc === 0);
 
@@ -954,8 +989,11 @@ if (T) {
     const doc = win.document;
     const R = T.DRILLS;
 
+    // no drill-count literal here on purpose: merging or adding a drill changes the
+    // count legitimately, and the markup-vs-registry check below already pins it
+    // exactly. This one guards the SHAPE of each registration.
     ok('registry: every drill is registered with a mode + area + isActive + exit',
-       Array.isArray(R) && R.length >= 9 &&
+       Array.isArray(R) && R.length > 0 &&
        R.every(d => d.id && (d.mode === 'practice' || d.mode === 'ear') &&
                     d.area && typeof d.isActive === 'function' && typeof d.exit === 'function'));
 
@@ -1015,6 +1053,57 @@ if (T) {
     T.setMode('reference');
     ok('registry: no drill is left running after the mode returns to reference',
        T.activeDrill() === null);
+    T.resetLearner();
+  })();
+
+  /* ---- one shared drill key strip (replaces six duplicated per-drill key rows) ---- */
+  (function sharedDrillKey() {
+    const doc = win.document;
+    ok('drill ctx: the shared key strip exists', !!doc.getElementById('drill-ctx-key'));
+    // the whole point: no drill carries its own copy of the key row any more
+    ok('drill ctx: no per-drill key pickers remain',
+       ['sp-key', 'co-key', 'gf-key', 'tg-key', 'cr-key', 'sd-key']
+         .every(id => !doc.getElementById(id)));
+    ok('drill ctx: the strip is populated with root buttons',
+       doc.getElementById('drill-ctx-key').children.length >= 12);
+    // Quit was a seventh identical per-drill button; the shell owns it now
+    ok('drill ctx: one shared Quit button', !!doc.getElementById('drill-ctx-quit'));
+    ok('drill ctx: no per-drill quit buttons remain in practice',
+       ['cm-quit', 'sp-quit', 'tg-quit', 'cr-quit', 'sd-quit', 'drill-quit']
+         .every(id => !doc.getElementById(id)));
+    ok('drill ctx: the ear drill keeps its own quit (its own panel)',
+       !!doc.getElementById('ear-quit'));
+    // the shared Quit must end whichever drill is up
+    T.setMode('practice');
+    T.startTiming();
+    doc.getElementById('drill-ctx-quit').click();
+    ok('drill ctx: the shared Quit exits the running drill', T.activeDrill('practice') === null);
+    ok('drill ctx: quitting restores the practice home',
+       doc.getElementById('practice-home').hidden === false);
+
+    // drillKeyChanged() must reach the RUNNING drill's onKey — for the over-the-changes
+    // drill that means its bars are re-resolved into the new key, which is the behaviour
+    // the drill's own picker used to own.
+    T.initAudio();
+    T.setMode('practice');
+    T.setKey(0, 'C');
+    T.setTargetProg(1);                     // I–V–vi–IV
+    T.startTarget();
+    ok('drill ctx: bars start in the context key (C)', T.getTg().bars[0].pc === 0);
+    T.setKey(7, 'G');
+    T.drillKeyChanged();
+    ok('drill ctx: a key change re-resolves the running drill into the new key (G)',
+       T.getTg().bars[0].pc === 7, String(T.getTg().bars[0].pc));
+
+    // a drill with nothing key-dependent simply omits onKey — that must not throw
+    T.exitTarget();
+    T.startChanges();
+    let threw = false;
+    try { T.drillKeyChanged(); } catch (e) { threw = true; }
+    ok('drill ctx: a drill without onKey is skipped, not crashed', !threw);
+
+    T.setMode('reference');
+    T.setKey(0, 'C');
     T.resetLearner();
   })();
 
@@ -1512,36 +1601,6 @@ if (T) {
     ok('custom tuning: editor range is a sane guitar span', T.TUNE_LO < T.TUNE_HI && T.TUNE_LO >= 24 && T.TUNE_HI <= 76);
     // persistence: only a 6-length all-in-range array is restored
     T.setTuningIdx(0); T.applyTuning();   // back to standard so later tests are unaffected
-  })();
-
-  /* ---- 2.5: timing calibration (Phase 3 debt) ---- */
-  (function calibration() {
-    // pure averaging: trims the single fastest + slowest, means the rest
-    ok('cal: empty deltas → 0', T.calcLatencyOffset([]) === 0);
-    ok('cal: trimmed mean ignores the extremes',
-       T.calcLatencyOffset([1000, 40, 50, 60, -1000]) === 50, String(T.calcLatencyOffset([1000, 40, 50, 60, -1000])));
-    ok('cal: result clamps to CAL_MAX', T.calcLatencyOffset([9999, 9999, 9999, 9999]) === T.CAL_MAX);
-    ok('cal: result clamps to CAL_MIN', T.calcLatencyOffset([-9999, -9999, -9999, -9999]) === T.CAL_MIN);
-    // setter clamps + calOffsetSec mirrors it in seconds
-    T.setCalMs(120);
-    ok('cal: setCalMs stores within bounds', T.getCalMs() === 120);
-    ok('cal: calOffsetSec is ms/1000', Math.abs(T.calOffsetSec() - 0.12) < 1e-9);
-    T.setCalMs(9999); ok('cal: setCalMs clamps high', T.getCalMs() === T.CAL_MAX);
-    T.setCalMs(0);
-    // live tap loop: nearest-beat matching produces a sensible offset, then resets
-    const c = T.calStart();
-    ok('cal: calStart returns a session', !!c && Array.isArray(c.deltas));
-    if (c) {
-      const AC = win.__AC;
-      c.beats = [10.0, 10.5, 11.0];                 // pretend three beats were scheduled
-      AC.__ctx.currentTime = 10.52; T.calTap();      // ~20ms late vs 10.5
-      AC.__ctx.currentTime = 11.03; T.calTap();      // ~30ms late vs 11.0
-      ok('cal: taps recorded against nearest beat', T.getCal().deltas.length === 2);
-      const off = T.calFinish();
-      ok('cal: calFinish stores a positive offset for late taps', off > 0 && off === T.getCalMs());
-      ok('cal: calFinish ends the session', T.getCal() === null);
-    }
-    T.calCancel(); T.setCalMs(0);
   })();
 
   /* ---- 2.5: learner review + activity (spine #3) ---- */

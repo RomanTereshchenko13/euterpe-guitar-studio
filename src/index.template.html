@@ -91,61 +91,68 @@
         </div>
       </div>
     </div>
+    <!-- Settings. These were eleven controls in one flat wrap-flow — the "console" the
+         transport bar's disclosure toggles exist to avoid, just moved one tap down. They
+         are three different KINDS of setting, so they read as three labelled clusters:
+         the instrument you're holding, the neck you're reading, and app-level prefs
+         (set-once accessibility + share). -->
     <div class="toolbar collapsed" id="toolbar">
-      <div class="tb-group">
-        <span class="tb-label" data-i18n="tb_tuning">Стрій</span>
-        <select id="tb-tuning"></select>
+      <div class="tb-cluster">
+        <span class="tbc-label" data-i18n="tbc_instrument">Інструмент</span>
+        <div class="tbc-items">
+          <div class="tb-group">
+            <span class="tb-label" data-i18n="tb_tuning">Стрій</span>
+            <select id="tb-tuning"></select>
+          </div>
+          <!-- Custom tuning (Phase 2): six per-string note selects, shown only when the
+               Custom tuning preset is picked (applyCustomTuningVis). Built by
+               buildCustomTuning() from the live customTuning. -->
+          <div class="tb-group tb-custom" id="tb-custom" hidden>
+            <span class="tb-label" data-i18n="tun_custom">Власний стрій</span>
+            <span class="custom-strings" id="tb-custom-strings"></span>
+          </div>
+          <!-- Reference-tone tuner (no mic): one button per open string of the current
+               tuning; tap to hold a sustained pitch and tune a real guitar against it.
+               Buttons are built from the live tuning by buildTuner(). -->
+          <div class="tb-group tb-tuner">
+            <span class="tb-label" data-i18n="tb_tuner">Тюнер</span>
+            <span class="tuner-strings" id="tb-tuner-strings"></span>
+          </div>
+          <div class="tb-group">
+            <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
+            <select id="tb-capo"></select>
+          </div>
+        </div>
       </div>
-      <!-- Custom tuning (Phase 2): six per-string note selects, shown only when the
-           Custom tuning preset is picked (applyCustomTuningVis). Built by
-           buildCustomTuning() from the live customTuning. -->
-      <div class="tb-group tb-custom" id="tb-custom" hidden>
-        <span class="tb-label" data-i18n="tun_custom">Власний стрій</span>
-        <span class="custom-strings" id="tb-custom-strings"></span>
+      <div class="tb-cluster">
+        <span class="tbc-label" data-i18n="tbc_neck">Гриф і розмір</span>
+        <div class="tbc-items">
+          <div class="tb-group">
+            <span class="tb-label" data-i18n="tb_frets">Лади</span>
+            <select id="tb-frets"></select>
+          </div>
+          <!-- Meter / time signature (Phase 7b): the metronome accent, backing groove and
+               progression bar length all follow it; 4/4 is the default. -->
+          <div class="tb-group">
+            <span class="tb-label" data-i18n="tb_meter">Розмір</span>
+            <select id="tb-meter"></select>
+          </div>
+          <button class="btn" id="tb-lefty" aria-pressed="false" data-i18n="tb_lefty">Ліворукий</button>
+        </div>
       </div>
-      <!-- Reference-tone tuner (no mic): one button per open string of the current
-           tuning; tap to hold a sustained pitch and tune a real guitar against it.
-           Buttons are built from the live tuning by buildTuner(). -->
-      <div class="tb-group tb-tuner">
-        <span class="tb-label" data-i18n="tb_tuner">Тюнер</span>
-        <span class="tuner-strings" id="tb-tuner-strings"></span>
-      </div>
-      <button class="btn" id="tb-lefty" aria-pressed="false" data-i18n="tb_lefty">Ліворукий</button>
-      <div class="tb-group">
-        <span class="tb-label" data-i18n="tb_frets">Лади</span>
-        <select id="tb-frets"></select>
-      </div>
-      <div class="tb-group">
-        <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
-        <select id="tb-capo"></select>
-      </div>
-      <!-- Meter / time signature (Phase 7b): the metronome accent, backing groove and
-           progression bar length all follow it; 4/4 is the default. -->
-      <div class="tb-group">
-        <span class="tb-label" data-i18n="tb_meter">Розмір</span>
-        <select id="tb-meter"></select>
-      </div>
-      <!-- Accessibility (Phase 9 feel pass): the function colours carry meaning by
-           hue alone, so offer a colour-blind-safe palette + distinct per-function
-           dot shapes. Both are body-class toggles (applyA11y) and persisted. -->
-      <div class="tb-group">
-        <span class="tb-label" data-i18n="a11y_label">Доступність</span>
-        <button class="btn" id="tb-cbpalette" aria-pressed="false" data-i18n="a11y_palette">Палітра для дальтоніків</button>
-        <button class="btn" id="tb-shapes" aria-pressed="false" data-i18n="a11y_shapes">Форми на нотах</button>
-      </div>
-      <!-- Timing calibration (Phase 3 debt): a Tap-test that measures your round-trip
-           latency + a manual slider; the stored offset (calMs) feeds future scored /
-           mic timing windows via calOffsetSec(). -->
-      <div class="tb-group tb-cal">
-        <span class="tb-label" data-i18n="cal_label">Зсув часу</span>
-        <button class="btn" id="tb-cal-tap"></button>
-        <input type="range" id="tb-cal" min="-100" max="300" step="5" value="0" aria-label="Timing offset (ms)">
-        <span class="bpm-val" id="tb-cal-val">0 ms</span>
-      </div>
-      <!-- Share (Phase 9 distribution): copy a deep link encoding the current
-           key / scale / chord view (encodeShareState → URL hash). -->
-      <div class="tb-group">
-        <button class="btn" id="tb-share" data-i18n="share_btn">Поділитися</button>
+      <div class="tb-cluster">
+        <span class="tbc-label" data-i18n="tbc_app">Застосунок</span>
+        <div class="tbc-items">
+          <!-- Accessibility (Phase 9 feel pass): the function colours carry meaning by
+               hue alone, so offer a colour-blind-safe palette + distinct per-function
+               dot shapes. Both are body-class toggles (applyA11y) and persisted — set
+               once and forgotten, which is why they sit here and not in the hot path. -->
+          <button class="btn" id="tb-cbpalette" aria-pressed="false" data-i18n="a11y_palette">Палітра для дальтоніків</button>
+          <button class="btn" id="tb-shapes" aria-pressed="false" data-i18n="a11y_shapes">Форми на нотах</button>
+          <!-- Share (Phase 9 distribution): copy a deep link encoding the current
+               key / scale / chord view (encodeShareState → URL hash). -->
+          <button class="btn" id="tb-share" data-i18n="share_btn">Поділитися</button>
+        </div>
       </div>
     </div>
     <!-- Backing band (metronome + synth bass/drums): secondary jam-along tools, one
@@ -345,16 +352,14 @@
             <span class="dc-meta" data-i18n="drill_changes_meta">Чисті зміни за хвилину · коуч (без оцінки)</span>
           </button></li>
           <li><button type="button" class="drill-card" id="start-strum">
-            <span class="dc-name" data-i18n="drill_strum">Малюнки боя</span>
-            <span class="dc-meta" data-i18n="drill_strum_meta">Удари вниз/вгору по сітці · коуч</span>
+            <span class="dc-name" data-i18n="drill_strum">Бій і відчуття</span>
+            <span class="dc-meta" data-i18n="drill_strum_meta">Малюнки · свінг · акценти · глушіння · коуч</span>
           </button></li>
+          <!-- opens the shared "over the changes" drill in comping mode; the Lead card
+               below opens the same drill on chord tones. -->
           <li><button type="button" class="drill-card" id="start-comp">
             <span class="dc-name" data-i18n="drill_comp">Акомпанемент прогресії</span>
             <span class="dc-meta" data-i18n="drill_comp_meta">Потрібний акорд вчасно · коуч</span>
-          </button></li>
-          <li><button type="button" class="drill-card" id="start-groove">
-            <span class="dc-name" data-i18n="drill_groove">Грув і відчуття</span>
-            <span class="dc-meta" data-i18n="drill_groove_meta">Свінг, акценти, глушіння · коуч</span>
           </button></li>
         </ul>
       </div>
@@ -380,12 +385,22 @@
       </div>
     </div>
 
+    <!-- Shared drill context (spine #1): ONE key picker for every practice drill. Each
+         drill used to carry its own identical copy of this row, all setting the same
+         global key. CSS shows it only while a drill is running (see #practice-home ~
+         #drill-ctx), and drillKeyChanged() tells the running drill to re-derive. -->
+    <div class="row" id="drill-ctx">
+      <button type="button" class="btn" id="drill-ctx-quit" data-i18n="drill_quit">Вийти</button>
+      <div class="divider"></div>
+      <span class="ctrl-label" data-i18n="dr_key">Тональність</span>
+      <div class="group root-row" id="drill-ctx-key"></div>
+    </div>
+
     <!-- Chord-change fluency / "one-minute changes" (Phase 5a): a coach drill with a
          setup → timed run → summary flow. Reuses the chord diagrams; counts taps, not
          audio (honest coach framing). Hidden until started. -->
     <div id="cm-area" hidden>
       <div class="drill-head">
-        <button type="button" class="btn" id="cm-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" data-i18n="drill_changes">Зміна акордів за хвилину</span>
       </div>
       <!-- setup: pick a chord pair + length, optional click; then Start -->
@@ -423,16 +438,22 @@
       <div class="drill-summary" id="cm-summary" hidden></div>
     </div>
 
-    <!-- Strumming-pattern trainer (Phase 5b): a coach visualizer — pick a pattern,
-         press Play, and the down/up strums loop over the current chord, highlighting
-         each 8th-note slot in time. No score (coach tier). Hidden until started. -->
+    <!-- Strumming & feel (Phase 5b + 5d, merged): a coach lab — pick a pattern, press
+         Play, and the down/up strums loop over the current chord, highlighting each
+         8th-note slot in time; swing / backbeat / palm-mute / band shape how it feels.
+         Was two cards (patterns + groove) driving one 8th-note clock. Coach tier. -->
     <div id="sp-area" hidden>
       <div class="drill-head">
-        <button type="button" class="btn" id="sp-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="sp-chord"></span>
       </div>
-      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="sp-key"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="sp_pattern">Малюнок</span><div class="group" id="sp-patterns"></div></div>
+      <div class="row">
+        <span class="ctrl-label" data-i18n="sp_swing">Свінг</span><div class="group" id="sp-swings"></div>
+        <div class="divider"></div>
+        <button type="button" class="btn" id="sp-accent" aria-pressed="false"></button>
+        <button type="button" class="btn" id="sp-mute" aria-pressed="false"></button>
+        <button type="button" class="btn" id="sp-band" aria-pressed="false"></button>
+      </div>
       <div class="sp-name" id="sp-name"></div>
       <div class="sp-grid" id="sp-grid"></div>
       <div class="cm-active-foot">
@@ -444,68 +465,24 @@
       </div>
     </div>
 
-    <!-- Comp the progression (Phase 5c): a chosen progression cycles with a backing
-         band; play the right chord at the right time. NOW + NEXT diagrams + a 4-beat
-         indicator guide the change. Hidden until started. -->
-    <div id="co-area" hidden>
-      <div class="drill-head">
-        <button type="button" class="btn" id="co-quit" data-i18n="drill_quit">Вийти</button>
-        <span class="drill-count" id="co-cycles"></span>
-      </div>
-      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="co-key"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="co_prog">Прогресія</span><div class="group" id="co-progs"></div></div>
-      <div class="co-stage">
-        <div class="co-slot">
-          <div class="co-lab" id="co-now-lab" data-i18n="co_now">Зараз</div>
-          <div class="co-chord co-now" id="co-now"></div>
-        </div>
-        <div class="co-arrow" aria-hidden="true">→</div>
-        <div class="co-slot co-next-slot">
-          <div class="co-lab" id="co-next-lab" data-i18n="co_next">Далі</div>
-          <div class="co-chord co-next" id="co-next"></div>
-        </div>
-      </div>
-      <div class="co-beats" id="co-beats"></div>
-      <div class="cm-active-foot">
-        <span class="drill-sub" id="co-hint"></span>
-        <button type="button" class="btn play" id="co-play"></button>
-      </div>
-    </div>
-
-    <!-- Groove & feel (Phase 5d): loop a groove over the context chord and toggle
-         swing / backbeat accent / palm-mute to hear and play the feel. Hidden until
-         started. (The CC0 sample + convolution-IR "sound win" is a separate task.) -->
-    <div id="gf-area" hidden>
-      <div class="drill-head">
-        <button type="button" class="btn" id="gf-quit" data-i18n="drill_quit">Вийти</button>
-        <span class="drill-count" id="gf-chord"></span>
-      </div>
-      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="gf-key"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="gf_swing">Свінг</span><div class="group" id="gf-swings"></div></div>
-      <div class="row">
-        <button type="button" class="btn" id="gf-accent" aria-pressed="true"></button>
-        <button type="button" class="btn" id="gf-mute" aria-pressed="false"></button>
-      </div>
-      <div class="co-beats" id="gf-beats"></div>
-      <div class="cm-active-foot">
-        <span class="drill-sub" id="gf-hint"></span>
-        <button type="button" class="btn play" id="gf-play"></button>
-      </div>
-    </div>
-
-    <!-- Chord-tone targeting (Phase 6a): a progression loops with a backing band; the
-         current chord's tones light up as targets on a tappable neck and you aim for
-         them. Location/recognition coach — accuracy, not timing (mic scoring is Phase
-         8/F2). Its own board so the reference board stays put. Hidden until started. -->
+    <!-- Over the changes (Phase 5c + 6a/6b/6c, merged): a progression loops with a
+         backing band, and you either COMP it (chord diagrams in NOW/NEXT, no neck) or
+         play its CHORD TONES (chord names + a tappable neck whose lit dots are the
+         current chord's tones, windowed by Position and narrowed by Target). The mode
+         switch is what used to be two separate cards; both cards still open it, each in
+         its own mode. Its own board so the reference board stays put. Hidden until started. -->
     <div id="tg-area" hidden>
       <div class="drill-head">
-        <button type="button" class="btn" id="tg-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="tg-hits"></span>
       </div>
-      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="tg-key"></div></div>
+      <div class="row"><span class="ctrl-label" data-i18n="oc_mode">Що граєш</span><div class="group" id="tg-mode"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="tg_prog">Прогресія</span><div class="group" id="tg-progs"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="tg-pos"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="tg_deg">Ціль</span><div class="group" id="tg-deg"></div></div>
+      <!-- lead-only: windowing the targets to one box / one degree means nothing when
+           you're comping the chord, so the whole block hides in `chords` mode. -->
+      <div id="tg-tone-rows" hidden>
+        <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="tg-pos"></div></div>
+        <div class="row"><span class="ctrl-label" data-i18n="tg_deg">Ціль</span><div class="group" id="tg-deg"></div></div>
+      </div>
       <div class="co-stage">
         <div class="co-slot">
           <div class="co-lab" id="tg-now-lab" data-i18n="co_now">Зараз</div>
@@ -519,7 +496,9 @@
         <div class="tg-acc" id="tg-acc"></div>
       </div>
       <div class="co-beats" id="tg-beats"></div>
-      <div class="scroll"><div class="board"><div class="fretboard" id="tg-board"></div></div><div class="fretnums" id="tg-nums"></div></div>
+      <div id="tg-board-wrap" hidden>
+        <div class="scroll"><div class="board"><div class="fretboard" id="tg-board"></div></div><div class="fretnums" id="tg-nums"></div></div>
+      </div>
       <div class="cm-active-foot">
         <span class="drill-sub" id="tg-hint"></span>
         <button type="button" class="btn play" id="tg-play"></button>
@@ -532,11 +511,9 @@
          phrasing lesson. Its own board so the reference board stays put. Hidden until started. -->
     <div id="cr-area" hidden>
       <div class="drill-head">
-        <button type="button" class="btn" id="cr-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="cr-round"></span>
       </div>
       <div id="cr-active">
-        <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="cr-key"></div></div>
         <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="cr-pos"></div></div>
         <div class="cr-stage">
           <div class="cr-status" id="cr-status"></div>
@@ -558,10 +535,8 @@
          until started. -->
     <div id="sd-area" hidden>
       <div class="drill-head">
-        <button type="button" class="btn" id="sd-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="sd-title"></span>
       </div>
-      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="sd-key"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="sd_subdiv">Поділ</span><div class="group" id="sd-subs"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="sd-pos"></div></div>
       <div class="row">
@@ -586,7 +561,6 @@
          #drill-board) so the shared reference board stays put. Hidden until started. -->
     <div id="drill-area" hidden>
       <div class="drill-head">
-        <button type="button" class="btn" id="drill-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="drill-count"></span>
       </div>
       <div id="drill-active">

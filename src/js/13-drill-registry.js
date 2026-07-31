@@ -42,6 +42,16 @@ function exitDrillsExcept(mode){
   DRILLS.forEach(d=>{ if(d.mode!==mode && drillIsActive(d) && typeof d.exit==='function') d.exit(); });
 }
 
+/* The shared drill key picker (#drill-ctx) changed the context key. Every practice drill
+   used to carry its own copy of that row — six identical markup blocks all calling the same
+   setKey — so the row moved to the shell and the drill now only says what it has to re-derive
+   when the key moves (rebuild its bars, restart its round, repaint its board). Optional: a
+   drill with nothing key-dependent just omits onKey. */
+function drillKeyChanged(){
+  const d=activeDrill('practice');
+  if(d && typeof d.onKey==='function'){ try{ d.onKey(); }catch(_){} }
+}
+
 function drillHomeId(mode){ return mode==='ear' ? 'ear-home' : 'practice-home'; }
 
 // show a mode's home view and hide every drill area belonging to that mode

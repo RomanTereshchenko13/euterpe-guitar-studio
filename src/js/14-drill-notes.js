@@ -152,5 +152,4 @@ registerDrill({ id:'notes', mode:'practice', area:'drill-area',
   const fire=d=>{ if(d) drillAnswer(parseInt(d.dataset.si,10), parseInt(d.dataset.f,10)); };
   b.addEventListener('click', e=>fire(e.target.closest('.dot.quiz')));
   b.addEventListener('keydown', e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const d=e.target.closest('.dot.quiz'); if(!d) return; e.preventDefault(); fire(d); });
-  const q=document.getElementById('drill-quit'); if(q) q.onclick=exitDrill;
 })();

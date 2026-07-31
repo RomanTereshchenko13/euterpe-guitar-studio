@@ -189,6 +189,11 @@
      so the two navigation axes never fight. */
   .practice-panel, .ear-panel { display: none; animation: fade 0.25s ease; }
   body.mode-practice .practice-panel { display: block; }
+  /* The drills' one shared key row sits between the practice home and the drill areas.
+     It belongs to whichever drill is running, so it's visible exactly when the home is
+     NOT — derived from the home's own [hidden] rather than managed by every drill's
+     start/exit, which is what the six duplicated per-drill key rows used to cost. */
+  #practice-home:not([hidden]) ~ #drill-ctx { display: none; }
   body.mode-ear .ear-panel { display: block; }
   /* In any activity mode (Practice / Ear) collapse the reference shell: hide the
      active reference panel, the context bar, the shared board (+ meta), harmony
@@ -315,6 +320,8 @@
   .sp-cell { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 0; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); transition: border-color 0.1s, box-shadow 0.1s, background 0.1s; }
   .sp-cell.beat { background: var(--bg-panel-2); border-color: var(--border-strong); }
   .sp-cell.on { border-color: var(--root); box-shadow: 0 0 0 2px rgba(107,165,58,0.4); }
+  /* backbeat (2 & 4) when the accent toggle is on — see the emphasis, not just hear it */
+  .sp-cell.accent { border-color: var(--third); }
   .sp-dir { font-size: 23px; font-weight: 700; line-height: 1; min-height: 25px; color: var(--text); }
   .sp-dir.none { color: var(--text-faint); }
   .sp-cell.on .sp-dir.has { color: var(--root); }
@@ -523,6 +530,13 @@
   .tb-toggle.open .chev { transform: rotate(180deg); }
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
   .toolbar.collapsed { display: none; }
+  /* Settings reads as three labelled clusters (instrument / neck+meter / app) instead of
+     one eleven-control wrap-flow. Each cluster wraps internally, so a narrow viewport
+     stacks the clusters rather than interleaving unrelated controls on one line. */
+  .tb-cluster { display: flex; align-items: baseline; gap: 10px; flex: 1 1 auto; min-width: 0; }
+  .tbc-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); white-space: nowrap; flex-shrink: 0; }
+  .tbc-items { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+  @media (max-width: 700px) { .tb-cluster { flex: 1 1 100%; } }
   .toolbar .tb-group, .tb-bar .tb-group { display: flex; align-items: center; gap: 7px; }
   /* the display:flex above outranks the UA [hidden]{display:none}, so a hidden group
      (e.g. the custom-tuning editor on a non-custom tuning) would still show — re-assert it */
@@ -832,6 +846,11 @@
   .cl-rel ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
   .cl-rel li { position: relative; padding-left: 16px; font-size: 13px; color: var(--text-dim); line-height: 1.45; }
   .cl-rel li::before { content: '—'; position: absolute; left: 0; color: var(--text-faint); }
+  /* only the newest releases ship in the bundle (build.js slices them); this links
+     out to the full history rather than shipping 15% dead weight to every visitor. */
+  .cl-older { padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; }
+  .cl-older a { color: var(--text-faint); text-decoration: none; }
+  .cl-older a:hover, .cl-older a:focus-visible { color: var(--accent); text-decoration: underline; }
 
   /* ---- keyboard-shortcuts cheat-sheet (desktop) ---- */
   .kbd-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.62); display: none; align-items: center; justify-content: center; padding: 24px; z-index: 100; }
@@ -945,61 +964,68 @@
         </div>
       </div>
     </div>
+    <!-- Settings. These were eleven controls in one flat wrap-flow — the "console" the
+         transport bar's disclosure toggles exist to avoid, just moved one tap down. They
+         are three different KINDS of setting, so they read as three labelled clusters:
+         the instrument you're holding, the neck you're reading, and app-level prefs
+         (set-once accessibility + share). -->
     <div class="toolbar collapsed" id="toolbar">
-      <div class="tb-group">
-        <span class="tb-label" data-i18n="tb_tuning">Стрій</span>
-        <select id="tb-tuning"></select>
+      <div class="tb-cluster">
+        <span class="tbc-label" data-i18n="tbc_instrument">Інструмент</span>
+        <div class="tbc-items">
+          <div class="tb-group">
+            <span class="tb-label" data-i18n="tb_tuning">Стрій</span>
+            <select id="tb-tuning"></select>
+          </div>
+          <!-- Custom tuning (Phase 2): six per-string note selects, shown only when the
+               Custom tuning preset is picked (applyCustomTuningVis). Built by
+               buildCustomTuning() from the live customTuning. -->
+          <div class="tb-group tb-custom" id="tb-custom" hidden>
+            <span class="tb-label" data-i18n="tun_custom">Власний стрій</span>
+            <span class="custom-strings" id="tb-custom-strings"></span>
+          </div>
+          <!-- Reference-tone tuner (no mic): one button per open string of the current
+               tuning; tap to hold a sustained pitch and tune a real guitar against it.
+               Buttons are built from the live tuning by buildTuner(). -->
+          <div class="tb-group tb-tuner">
+            <span class="tb-label" data-i18n="tb_tuner">Тюнер</span>
+            <span class="tuner-strings" id="tb-tuner-strings"></span>
+          </div>
+          <div class="tb-group">
+            <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
+            <select id="tb-capo"></select>
+          </div>
+        </div>
       </div>
-      <!-- Custom tuning (Phase 2): six per-string note selects, shown only when the
-           Custom tuning preset is picked (applyCustomTuningVis). Built by
-           buildCustomTuning() from the live customTuning. -->
-      <div class="tb-group tb-custom" id="tb-custom" hidden>
-        <span class="tb-label" data-i18n="tun_custom">Власний стрій</span>
-        <span class="custom-strings" id="tb-custom-strings"></span>
+      <div class="tb-cluster">
+        <span class="tbc-label" data-i18n="tbc_neck">Гриф і розмір</span>
+        <div class="tbc-items">
+          <div class="tb-group">
+            <span class="tb-label" data-i18n="tb_frets">Лади</span>
+            <select id="tb-frets"></select>
+          </div>
+          <!-- Meter / time signature (Phase 7b): the metronome accent, backing groove and
+               progression bar length all follow it; 4/4 is the default. -->
+          <div class="tb-group">
+            <span class="tb-label" data-i18n="tb_meter">Розмір</span>
+            <select id="tb-meter"></select>
+          </div>
+          <button class="btn" id="tb-lefty" aria-pressed="false" data-i18n="tb_lefty">Ліворукий</button>
+        </div>
       </div>
-      <!-- Reference-tone tuner (no mic): one button per open string of the current
-           tuning; tap to hold a sustained pitch and tune a real guitar against it.
-           Buttons are built from the live tuning by buildTuner(). -->
-      <div class="tb-group tb-tuner">
-        <span class="tb-label" data-i18n="tb_tuner">Тюнер</span>
-        <span class="tuner-strings" id="tb-tuner-strings"></span>
-      </div>
-      <button class="btn" id="tb-lefty" aria-pressed="false" data-i18n="tb_lefty">Ліворукий</button>
-      <div class="tb-group">
-        <span class="tb-label" data-i18n="tb_frets">Лади</span>
-        <select id="tb-frets"></select>
-      </div>
-      <div class="tb-group">
-        <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
-        <select id="tb-capo"></select>
-      </div>
-      <!-- Meter / time signature (Phase 7b): the metronome accent, backing groove and
-           progression bar length all follow it; 4/4 is the default. -->
-      <div class="tb-group">
-        <span class="tb-label" data-i18n="tb_meter">Розмір</span>
-        <select id="tb-meter"></select>
-      </div>
-      <!-- Accessibility (Phase 9 feel pass): the function colours carry meaning by
-           hue alone, so offer a colour-blind-safe palette + distinct per-function
-           dot shapes. Both are body-class toggles (applyA11y) and persisted. -->
-      <div class="tb-group">
-        <span class="tb-label" data-i18n="a11y_label">Доступність</span>
-        <button class="btn" id="tb-cbpalette" aria-pressed="false" data-i18n="a11y_palette">Палітра для дальтоніків</button>
-        <button class="btn" id="tb-shapes" aria-pressed="false" data-i18n="a11y_shapes">Форми на нотах</button>
-      </div>
-      <!-- Timing calibration (Phase 3 debt): a Tap-test that measures your round-trip
-           latency + a manual slider; the stored offset (calMs) feeds future scored /
-           mic timing windows via calOffsetSec(). -->
-      <div class="tb-group tb-cal">
-        <span class="tb-label" data-i18n="cal_label">Зсув часу</span>
-        <button class="btn" id="tb-cal-tap"></button>
-        <input type="range" id="tb-cal" min="-100" max="300" step="5" value="0" aria-label="Timing offset (ms)">
-        <span class="bpm-val" id="tb-cal-val">0 ms</span>
-      </div>
-      <!-- Share (Phase 9 distribution): copy a deep link encoding the current
-           key / scale / chord view (encodeShareState → URL hash). -->
-      <div class="tb-group">
-        <button class="btn" id="tb-share" data-i18n="share_btn">Поділитися</button>
+      <div class="tb-cluster">
+        <span class="tbc-label" data-i18n="tbc_app">Застосунок</span>
+        <div class="tbc-items">
+          <!-- Accessibility (Phase 9 feel pass): the function colours carry meaning by
+               hue alone, so offer a colour-blind-safe palette + distinct per-function
+               dot shapes. Both are body-class toggles (applyA11y) and persisted — set
+               once and forgotten, which is why they sit here and not in the hot path. -->
+          <button class="btn" id="tb-cbpalette" aria-pressed="false" data-i18n="a11y_palette">Палітра для дальтоніків</button>
+          <button class="btn" id="tb-shapes" aria-pressed="false" data-i18n="a11y_shapes">Форми на нотах</button>
+          <!-- Share (Phase 9 distribution): copy a deep link encoding the current
+               key / scale / chord view (encodeShareState → URL hash). -->
+          <button class="btn" id="tb-share" data-i18n="share_btn">Поділитися</button>
+        </div>
       </div>
     </div>
     <!-- Backing band (metronome + synth bass/drums): secondary jam-along tools, one
@@ -1199,16 +1225,14 @@
             <span class="dc-meta" data-i18n="drill_changes_meta">Чисті зміни за хвилину · коуч (без оцінки)</span>
           </button></li>
           <li><button type="button" class="drill-card" id="start-strum">
-            <span class="dc-name" data-i18n="drill_strum">Малюнки боя</span>
-            <span class="dc-meta" data-i18n="drill_strum_meta">Удари вниз/вгору по сітці · коуч</span>
+            <span class="dc-name" data-i18n="drill_strum">Бій і відчуття</span>
+            <span class="dc-meta" data-i18n="drill_strum_meta">Малюнки · свінг · акценти · глушіння · коуч</span>
           </button></li>
+          <!-- opens the shared "over the changes" drill in comping mode; the Lead card
+               below opens the same drill on chord tones. -->
           <li><button type="button" class="drill-card" id="start-comp">
             <span class="dc-name" data-i18n="drill_comp">Акомпанемент прогресії</span>
             <span class="dc-meta" data-i18n="drill_comp_meta">Потрібний акорд вчасно · коуч</span>
-          </button></li>
-          <li><button type="button" class="drill-card" id="start-groove">
-            <span class="dc-name" data-i18n="drill_groove">Грув і відчуття</span>
-            <span class="dc-meta" data-i18n="drill_groove_meta">Свінг, акценти, глушіння · коуч</span>
           </button></li>
         </ul>
       </div>
@@ -1234,12 +1258,22 @@
       </div>
     </div>
 
+    <!-- Shared drill context (spine #1): ONE key picker for every practice drill. Each
+         drill used to carry its own identical copy of this row, all setting the same
+         global key. CSS shows it only while a drill is running (see #practice-home ~
+         #drill-ctx), and drillKeyChanged() tells the running drill to re-derive. -->
+    <div class="row" id="drill-ctx">
+      <button type="button" class="btn" id="drill-ctx-quit" data-i18n="drill_quit">Вийти</button>
+      <div class="divider"></div>
+      <span class="ctrl-label" data-i18n="dr_key">Тональність</span>
+      <div class="group root-row" id="drill-ctx-key"></div>
+    </div>
+
     <!-- Chord-change fluency / "one-minute changes" (Phase 5a): a coach drill with a
          setup → timed run → summary flow. Reuses the chord diagrams; counts taps, not
          audio (honest coach framing). Hidden until started. -->
     <div id="cm-area" hidden>
       <div class="drill-head">
-        <button type="button" class="btn" id="cm-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" data-i18n="drill_changes">Зміна акордів за хвилину</span>
       </div>
       <!-- setup: pick a chord pair + length, optional click; then Start -->
@@ -1277,16 +1311,22 @@
       <div class="drill-summary" id="cm-summary" hidden></div>
     </div>
 
-    <!-- Strumming-pattern trainer (Phase 5b): a coach visualizer — pick a pattern,
-         press Play, and the down/up strums loop over the current chord, highlighting
-         each 8th-note slot in time. No score (coach tier). Hidden until started. -->
+    <!-- Strumming & feel (Phase 5b + 5d, merged): a coach lab — pick a pattern, press
+         Play, and the down/up strums loop over the current chord, highlighting each
+         8th-note slot in time; swing / backbeat / palm-mute / band shape how it feels.
+         Was two cards (patterns + groove) driving one 8th-note clock. Coach tier. -->
     <div id="sp-area" hidden>
       <div class="drill-head">
-        <button type="button" class="btn" id="sp-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="sp-chord"></span>
       </div>
-      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="sp-key"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="sp_pattern">Малюнок</span><div class="group" id="sp-patterns"></div></div>
+      <div class="row">
+        <span class="ctrl-label" data-i18n="sp_swing">Свінг</span><div class="group" id="sp-swings"></div>
+        <div class="divider"></div>
+        <button type="button" class="btn" id="sp-accent" aria-pressed="false"></button>
+        <button type="button" class="btn" id="sp-mute" aria-pressed="false"></button>
+        <button type="button" class="btn" id="sp-band" aria-pressed="false"></button>
+      </div>
       <div class="sp-name" id="sp-name"></div>
       <div class="sp-grid" id="sp-grid"></div>
       <div class="cm-active-foot">
@@ -1298,68 +1338,24 @@
       </div>
     </div>
 
-    <!-- Comp the progression (Phase 5c): a chosen progression cycles with a backing
-         band; play the right chord at the right time. NOW + NEXT diagrams + a 4-beat
-         indicator guide the change. Hidden until started. -->
-    <div id="co-area" hidden>
-      <div class="drill-head">
-        <button type="button" class="btn" id="co-quit" data-i18n="drill_quit">Вийти</button>
-        <span class="drill-count" id="co-cycles"></span>
-      </div>
-      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="co-key"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="co_prog">Прогресія</span><div class="group" id="co-progs"></div></div>
-      <div class="co-stage">
-        <div class="co-slot">
-          <div class="co-lab" id="co-now-lab" data-i18n="co_now">Зараз</div>
-          <div class="co-chord co-now" id="co-now"></div>
-        </div>
-        <div class="co-arrow" aria-hidden="true">→</div>
-        <div class="co-slot co-next-slot">
-          <div class="co-lab" id="co-next-lab" data-i18n="co_next">Далі</div>
-          <div class="co-chord co-next" id="co-next"></div>
-        </div>
-      </div>
-      <div class="co-beats" id="co-beats"></div>
-      <div class="cm-active-foot">
-        <span class="drill-sub" id="co-hint"></span>
-        <button type="button" class="btn play" id="co-play"></button>
-      </div>
-    </div>
-
-    <!-- Groove & feel (Phase 5d): loop a groove over the context chord and toggle
-         swing / backbeat accent / palm-mute to hear and play the feel. Hidden until
-         started. (The CC0 sample + convolution-IR "sound win" is a separate task.) -->
-    <div id="gf-area" hidden>
-      <div class="drill-head">
-        <button type="button" class="btn" id="gf-quit" data-i18n="drill_quit">Вийти</button>
-        <span class="drill-count" id="gf-chord"></span>
-      </div>
-      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="gf-key"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="gf_swing">Свінг</span><div class="group" id="gf-swings"></div></div>
-      <div class="row">
-        <button type="button" class="btn" id="gf-accent" aria-pressed="true"></button>
-        <button type="button" class="btn" id="gf-mute" aria-pressed="false"></button>
-      </div>
-      <div class="co-beats" id="gf-beats"></div>
-      <div class="cm-active-foot">
-        <span class="drill-sub" id="gf-hint"></span>
-        <button type="button" class="btn play" id="gf-play"></button>
-      </div>
-    </div>
-
-    <!-- Chord-tone targeting (Phase 6a): a progression loops with a backing band; the
-         current chord's tones light up as targets on a tappable neck and you aim for
-         them. Location/recognition coach — accuracy, not timing (mic scoring is Phase
-         8/F2). Its own board so the reference board stays put. Hidden until started. -->
+    <!-- Over the changes (Phase 5c + 6a/6b/6c, merged): a progression loops with a
+         backing band, and you either COMP it (chord diagrams in NOW/NEXT, no neck) or
+         play its CHORD TONES (chord names + a tappable neck whose lit dots are the
+         current chord's tones, windowed by Position and narrowed by Target). The mode
+         switch is what used to be two separate cards; both cards still open it, each in
+         its own mode. Its own board so the reference board stays put. Hidden until started. -->
     <div id="tg-area" hidden>
       <div class="drill-head">
-        <button type="button" class="btn" id="tg-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="tg-hits"></span>
       </div>
-      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="tg-key"></div></div>
+      <div class="row"><span class="ctrl-label" data-i18n="oc_mode">Що граєш</span><div class="group" id="tg-mode"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="tg_prog">Прогресія</span><div class="group" id="tg-progs"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="tg-pos"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="tg_deg">Ціль</span><div class="group" id="tg-deg"></div></div>
+      <!-- lead-only: windowing the targets to one box / one degree means nothing when
+           you're comping the chord, so the whole block hides in `chords` mode. -->
+      <div id="tg-tone-rows" hidden>
+        <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="tg-pos"></div></div>
+        <div class="row"><span class="ctrl-label" data-i18n="tg_deg">Ціль</span><div class="group" id="tg-deg"></div></div>
+      </div>
       <div class="co-stage">
         <div class="co-slot">
           <div class="co-lab" id="tg-now-lab" data-i18n="co_now">Зараз</div>
@@ -1373,7 +1369,9 @@
         <div class="tg-acc" id="tg-acc"></div>
       </div>
       <div class="co-beats" id="tg-beats"></div>
-      <div class="scroll"><div class="board"><div class="fretboard" id="tg-board"></div></div><div class="fretnums" id="tg-nums"></div></div>
+      <div id="tg-board-wrap" hidden>
+        <div class="scroll"><div class="board"><div class="fretboard" id="tg-board"></div></div><div class="fretnums" id="tg-nums"></div></div>
+      </div>
       <div class="cm-active-foot">
         <span class="drill-sub" id="tg-hint"></span>
         <button type="button" class="btn play" id="tg-play"></button>
@@ -1386,11 +1384,9 @@
          phrasing lesson. Its own board so the reference board stays put. Hidden until started. -->
     <div id="cr-area" hidden>
       <div class="drill-head">
-        <button type="button" class="btn" id="cr-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="cr-round"></span>
       </div>
       <div id="cr-active">
-        <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="cr-key"></div></div>
         <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="cr-pos"></div></div>
         <div class="cr-stage">
           <div class="cr-status" id="cr-status"></div>
@@ -1412,10 +1408,8 @@
          until started. -->
     <div id="sd-area" hidden>
       <div class="drill-head">
-        <button type="button" class="btn" id="sd-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="sd-title"></span>
       </div>
-      <div class="row"><span class="ctrl-label" data-i18n="dr_key">Тональність</span><div class="group root-row" id="sd-key"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="sd_subdiv">Поділ</span><div class="group" id="sd-subs"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="sd-pos"></div></div>
       <div class="row">
@@ -1440,7 +1434,6 @@
          #drill-board) so the shared reference board stays put. Hidden until started. -->
     <div id="drill-area" hidden>
       <div class="drill-head">
-        <button type="button" class="btn" id="drill-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="drill-count"></span>
       </div>
       <div id="drill-active">
@@ -1637,352 +1630,7 @@
 /* Single source of truth for the app version. Bump on each release and update
    the changelog comment at the top of the file + the <meta name="version">. */
 const APP_VERSION = '2.11.0';
-/* Changelog — single source of truth for the in-app "What's new" modal.
-   Newest first; add a new entry on top each release. Bullets are localized. */
-const CHANGELOG = [
-  { v:'2.11.0', date:'2026-07-12',
-    en:['New Foundations drill — Subdivision & timing: a smart visual metronome for locking in your time. Pick a subdivision (quarter notes → eighths → triplets → sixteenths) and a tempo; an accented click and a grid tick out the bar (a strong beat 1, softer subdivisions), and the current key\'s scale is walked note-by-note across the grid in one neck box so you always have something to play. Change key, box or tempo without leaving Practice. A coach that serves both the Rhythm and Lead pillars — mic-scored timing arrives with microphone input later.',
-        'Time signatures: a new Meter picker in Settings (2/4, 3/4, 4/4, 6/8, 12/8). The metronome accent, the backing groove (kick/snare pattern), the bass, the single-chord loop and the whole progression / comping / targeting bar length all follow the meter — so you can jam a waltz in 3/4 or a 6/8 feel, not just 4/4.',
-        'Fixed: with the Subdivision & timing drill open, tapping "Practice" again drew the drill list on top of the still-running drill. Switching modes now handles every drill the same way.'],
-    uk:['Нова вправа-основа — «Поділ і тайминг»: розумний візуальний метроном, щоб тримати час. Обери поділ (чвертки → вісімки → тріолі → шістнадцятки) і темп; акцентоване клацання й сітка відбивають такт (сильний «раз», тихіші поділи), а гама поточної тональності «прокрокує» по сітці нота за нотою в одній позиції на грифі — тож завжди є що грати. Змінюй тональність, позицію чи темп, не виходячи з «Практики». Коуч, що працює і на ритм-, і на соло-пілон — оцінку тайминга з мікрофоном додамо згодом.',
-        'Розміри такту: у «Налаштуваннях» зʼявився вибір розміру (2/4, 3/4, 4/4, 6/8, 12/8). Акцент метронома, грув супроводу (малюнок бочки/малого), бас, луп одного акорду й довжина такту всієї прогресії / акомпанементу / прицілювання — усе слідує за розміром, тож можна зіграти вальс у 3/4 чи відчуття 6/8, а не лише 4/4.',
-        'Виправлено: якщо була відкрита вправа «Поділ і тайминг», повторне натискання «Практики» малювало список вправ поверх тієї, що ще працювала. Тепер перемикання режимів однаково опрацьовує всі вправи.'] },
-  { v:'2.10.0', date:'2026-07-12',
-    en:['New Lead drill — Call & response: the app plays a short phrase from the key\'s scale in one neck box, then you echo it back on the fretboard in the same order. Listen while it plays, answer in the space it leaves — the turn structure itself trains soloing phrasing (when to play, when to leave space). Scored on how cleanly you echo each phrase; the phrases grow as you go. This completes the Lead pillar\'s coach tiers.'],
-    uk:['Нова соло-вправа — «Запитання-відповідь»: застосунок грає коротку фразу з гами тональності в одній позиції на грифі, а ти повторюєш її на грифі в тому ж порядку. Слухай, поки грає, і відповідай у паузі — сама структура «запит-відповідь» тренує фразування (коли грати, а коли лишити тишу). Рахунок — наскільки чисто ти повторюєш кожну фразу; фрази довшають по ходу. Це завершує коуч-рівні соло-пілона.'] },
-  { v:'2.9.0', date:'2026-07-12',
-    en:['Target-note soloing: the Chord-tones drill gains a Target picker — instead of all the chord tones, light up just the root, 3rd, 5th or 7th and aim to land on that one tone as the chords change (the heart of melodic phrasing). Other chord tones just sound (they are fair game in a solo); only off-chord notes miss.'],
-    uk:['Соло по цільових тонах: у вправі «Тони акорду» зʼявився вибір цілі — замість усіх тонів акорду підсвічується лише тоніка, терція, квінта чи септима, і ти щоразу «приземляєшся» саме на неї, поки акорди змінюються (основа мелодичної фрази). Інші тони акорду просто звучать (у соло вони доречні); промах — лише на позаакордових нотах.'] },
-  { v:'2.8.0', date:'2026-07-12',
-    en:['Arpeggios over changes: the Chord-tones drill gains a Position picker — choose one of the five neck boxes and only that arpeggio shape lights up, so you play a single moveable shape through the whole progression instead of chasing tones all over the neck. "All" keeps the full-neck targeting.'],
-    uk:['Арпеджіо крізь зміни: у вправі «Тони акорду» зʼявився вибір позиції — обери одну з пʼяти форм на грифі, і підсвічуватиметься лише вона, тож ти граєш одну рухому форму арпеджіо крізь усю прогресію, а не ловиш тони по всьому грифу. «Усі» лишає прицілювання по всьому грифу.'] },
-  { v:'2.7.0', date:'2026-07-12',
-    en:['Practice gains its first Lead drill — Chord tones over changes: a progression loops with a full backing band, and the tones of the chord playing now light up on a tappable neck for you to target. Hit the lit tones, dodge the rest; it tracks your accuracy as you follow the changes through any key or progression.',
-        'An honest coach, like the Rhythm drills: it trains where the chord tones live under a real progression — playing your actual guitar and getting scored arrives with microphone input later.'],
-    uk:['У «Практиці» зʼявилася перша соло-вправа — «Тони акорду в прогресії»: прогресія крутиться з повним гуртом супроводу, а тони акорду, що звучить зараз, підсвічуються на грифі, у який можна тицяти. Влучай у підсвічені тони, оминай решту — вправа веде облік твоєї точності, поки ти йдеш за змінами в будь-якій тональності чи прогресії.',
-        'Чесний коуч, як і ритм-вправи: він тренує, де лежать тони акорду під справжньою прогресією — а гру на власній гітарі з оцінкою додамо згодом разом зі входом із мікрофона.'] },
-  { v:'2.6.0', date:'2026-07-12',
-    en:['Choose the key right inside the Rhythm coaches: the strumming, comping and groove drills now have their own key picker, so you can move a progression or a chord to any key without leaving Practice.'],
-    uk:['Обирай тональність просто у ритм-коучах: вправи на бій, акомпанемент і грув тепер мають власний вибір тональності, тож можна перенести прогресію чи акорд у будь-яку тональність, не виходячи з «Практики».'] },
-  { v:'2.5.1', date:'2026-07-12',
-    en:['Warmer reverb: the built-in room now sounds like a small wooden room — early reflections and a tail that darkens as it fades — instead of a flat hiss, so plucks and chords ring more naturally.'],
-    uk:['Тепліша реверберація: вбудована «кімната» тепер звучить як невелика деревʼяна кімната — з раннім відлунням і хвостом, що темнішає, згасаючи, — замість плаского шипіння, тож ноти й акорди звучать природніше.'] },
-  { v:'2.5.0', date:'2026-06-22',
-    en:['Practice now closes the loop: the progress card shows how many items are due for review and an Active-days count, with a one-tap Review that drops you into the right drill — the notes, intervals and chords you miss come back to you.',
-        'Custom tunings: pick "Custom" in Settings and set any note per string — the fretboard, tuner and labels follow, and it is remembered.',
-        'Timing calibration in Settings: a quick tap-test (or a manual slider) measures your device\'s audio latency, so timed practice can score fairly later on.',
-        'Share a view: a Share button copies a link that opens Euterpe on the exact key, scale or chord you are looking at.',
-        'Punchier backing drums — a clearer kick attack, more snare snap and a crisper hi-hat.'],
-    uk:['«Практика» тепер замикає коло: картка прогресу показує, скільки вправ час повторити, і кількість активних днів, а кнопка «Повторити» одразу веде до потрібної вправи — ноти, інтервали й акорди, що даються важче, повертаються.',
-        'Власні строї: обери «Власний» у «Налаштуваннях» і задай будь-яку ноту для кожної струни — гриф, тюнер і підписи підлаштуються, і це запамʼятається.',
-        'Калібрування часу в «Налаштуваннях»: швидкий тест на дотик (або повзунок) міряє затримку звуку твого пристрою, щоб згодом практика з рахунком оцінювалася чесно.',
-        'Поділись виглядом: кнопка «Поділитися» копіює посилання, що відкриває Euterpe саме на тій тональності, гамі чи акорді, які ти дивишся.',
-        'Соковитіші ударні супроводу — чіткіша атака бочки, більше «снепу» в малому барабані й дзвінкіший хай-хет.'] },
-  { v:'2.4.0', date:'2026-06-22',
-    en:['Practice\'s Rhythm section is now complete with three new coach drills you play along with over the backing band.',
-        'Strumming patterns: common down/up patterns loop over your chord on an eighth-note grid, lit slot-by-slot in time — see it, hear it, strum along.',
-        'Comp the progression: a progression cycles with bass and drums while a big NOW chord and a NEXT preview land each change in time. Groove & feel: loop a one-bar groove and toggle swing, the backbeat accent and palm-muting to feel what makes it sit right.',
-        'New accessibility options in Settings: a colour-blind-safe palette and a distinct shape for each note role (root, third, fifth, seventh), so the fretboard reads without relying on colour alone.',
-        'A short welcome now greets first-time visitors with the three ways in — Reference, Practice and Ear.'],
-    uk:['Розділ «Ритм» у «Практиці» тепер повний — три нові коуч-вправи, які граєш разом із гуртом супроводу.',
-        'Малюнки боя: поширені удари вниз/вгору крутяться над твоїм акордом по сітці восьмих, підсвічуючись клітинка за клітинкою в темп — бачиш, чуєш і граєш разом.',
-        'Акомпанемент прогресії: прогресія крутиться з басом і ударними, а великий акорд «Зараз» і прев’ю «Далі» допомагають вчасно змінювати акорди. Грув і відчуття: зацикли однотактовий грув і вмикай свінг, бекбіт-акцент та глушіння, щоб відчути, що робить грув живим.',
-        'Нові опції доступності в «Налаштуваннях»: палітра для дальтоніків і окрема форма для кожної ролі ноти (тоніка, терція, квінта, септима), щоб гриф читався без опори лише на колір.',
-        'Новачків тепер вітає коротке віконце з трьома способами почати — «Довідник», «Практика» та «Слух».'] },
-  { v:'2.3.0', date:'2026-06-21',
-    en:['Practice now has a Rhythm section, starting with the classic "one-minute changes" — the most useful drill there is for getting your chord changes clean and fast.',
-        'Pick a chord pair (A–D, C–G, G–Em and more), choose 30/60/90 seconds, and switch between the two shapes as cleanly as you can. The two chord diagrams stay on screen the whole time so you always know where your fingers go.',
-        'Tap the big button on every clean change; at the end you get your changes-per-minute and your personal best for that pair, so there is always a record to beat. An optional metronome gives you a pulse to switch against.',
-        'Honest by design: this is a coach drill — it counts your taps, not your guitar. Real "play it and get scored" lands later with microphone input.'],
-    uk:['У «Практиці» зʼявився розділ «Ритм», і перша вправа — класична «зміна акордів за хвилину», найкорисніше, що є для чистих і швидких переходів між акордами.',
-        'Обери пару акордів (A–D, C–G, G–Em та інші), задай 30/60/90 секунд і перемикайся між двома формами якомога чистіше. Обидві аплікатури весь час на екрані, тож завжди видно, куди ставити пальці.',
-        'Натискай велику кнопку на кожній чистій зміні; наприкінці отримуєш кількість змін за хвилину й свій рекорд для цієї пари — завжди є що побити. За бажання вмикається метроном для пульсу.',
-        'Чесно за задумом: це коуч-вправа — вона рахує твої натискання, а не звук гітари. Справжня оцінка гри зʼявиться згодом, із мікрофоном.'] },
-  { v:'2.2.0', date:'2026-06-21',
-    en:['Sound is now in stereo. The guitar spreads across the stereo field by register — low strings centred, higher strings wider — so chords and scales open up instead of collapsing to one spot, and the hi-hats sit slightly off-centre like a real kit.',
-        'A master Volume slider in the Backing panel sets the overall output level (and is remembered between visits).',
-        'A built-in tuner: tap a string in Settings to hold its reference pitch and tune a real guitar by ear — it follows your current tuning, so Drop D and the others re-label automatically. No microphone needed.',
-        'A final limiter now guards the output, so loud volumes or dense extended chords no longer clip.'],
-    uk:['Звук тепер стерео. Гітара розкладається в стереополі за регістром — низькі струни в центрі, вищі ширше — тож акорди й гами розкриваються, а не збираються в одну точку; хай-хети ж сидять трохи збоку, як у справжній установці.',
-        'Повзунок гучності у панелі «Супровід» задає загальний рівень виходу (і памʼятається між візитами).',
-        'Вбудований тюнер: натисни струну в «Налаштуваннях», щоб утримати її еталонну висоту й налаштувати справжню гітару на слух — він іде за поточним строєм, тож Drop D та інші перепозначаються автоматично. Мікрофон не потрібен.',
-        'Фінальний лімітер тепер береже вихід, тож гучні рівні чи насичені розширені акорди більше не перевантажуються.'] },
-  { v:'2.1.0', date:'2026-06-21',
-    en:['Euterpe now has Ear training — a new mode beside Reference and Practice (in the bottom bar on a phone) with three by-ear drills.',
-        'Intervals by ear: hear two notes and name the interval, from a minor 2nd up to the octave.',
-        'Chord quality by ear: hear a chord and tell major from minor, diminished, augmented and the four common sevenths.',
-        'Rhythm by ear: hear a one-bar figure played over a soft beat and pick the matching rhythm.',
-        'Every ear drill is scored on accuracy and feeds the same progress tracking as the fretboard drill — the notes and intervals you miss come back around.'],
-    uk:['У Euterpe зʼявилося тренування слуху — новий режим поряд із «Довідником» і «Практикою» (на телефоні — у нижній смужці) із трьома вправами на слух.',
-        'Інтервали на слух: почуй дві ноти й назви інтервал — від малої секунди до октави.',
-        'Якість акорду на слух: почуй акорд і відрізни мажор від мінору, зменшеного, збільшеного та чотирьох поширених септакордів.',
-        'Ритм на слух: почуй одно­тактовий малюнок над тихим пульсом і обери відповідний ритм.',
-        'Кожна вправа зі слуху рахується за точністю й живить той самий облік прогресу, що й вправа на грифі — те, що ти даєш важче, повертається на повтор.'] },
-  { v:'2.0.0', date:'2026-06-20',
-    en:['Euterpe now has a Practice mode. A new navigation layer switches between Reference — the chords, scales and circle you already know — and Practice, so the reference tabs stay uncluttered as practice grows (on a phone it lives in a thumb-friendly bar along the bottom).',
-        'The first drill: fretboard note-naming. Euterpe names a note and you tap every place it lives on the neck — correct taps light up and sound, wrong ones buzz. It is scored on accuracy and timed only for pace.',
-        'Euterpe now remembers how you are doing. A learner model tracks each note you practise, resurfaces the ones you miss, and shows your progress — accuracy, best streak and sessions — on the Practice screen.',
-        'Jump straight from the Notes view into the drill with "Drill on the neck".'],
-    uk:['У Euterpe зʼявився режим «Практика». Новий рівень навігації перемикає між «Довідником» — акорди, гами й коло квінт, які ти вже знаєш — і «Практикою», тож вкладки довідника лишаються охайними, поки практика росте (на телефоні він живе у зручній для великого пальця смужці внизу).',
-        'Перша вправа: називання нот на грифі. Euterpe називає ноту, а ти позначаєш усі місця, де вона живе на грифі — правильні дотики світяться і звучать, хибні гудуть. Рахунок ведеться за точністю, а час — лише для темпу.',
-        'Euterpe тепер памʼятає твої успіхи. Модель учня відстежує кожну ноту, яку ти тренуєш, повертає ті, що даються важче, і показує прогрес — точність, найкращу серію та кількість сесій — на екрані «Практики».',
-        'Переходь просто з виду «Ноти» до вправи кнопкою «Тренувати на грифі».'] },
-  { v:'1.27.2', date:'2026-06-19',
-    en:['Landscape now matches portrait: the same compact colour key applies, and the chord-shapes card keeps its proper place beside the neck instead of dropping to the bottom of the page.'],
-    uk:['Альбомна орієнтація тепер відповідає книжковій: застосовується та сама компактна легенда, а картка форм акорду лишається на своєму місці поруч із грифом, а не падає в самий низ сторінки.'] },
-  { v:'1.27.1', date:'2026-06-19',
-    en:['The chord-shapes card now opens with just the first few shapes — the open shape and the nearest forms — and a "More shapes" button reveals the rest of the library when you want them, so the card no longer floods a phone with diagrams.',
-        'The note-colour key under the neck is tidier on phones: it now fits a single clean row (the degree numbers tuck away on small screens) instead of wrapping into a second line that looked like part of the neck\'s scroll.'],
-    uk:['Картка форм акорду тепер відкривається лише з кількома першими формами — відкритою та найближчими — а кнопка «Більше форм» показує решту бібліотеки, коли вони потрібні, тож картка більше не засипає телефон діаграмами.',
-        'Кольорова легенда нот під грифом охайніша на телефоні: тепер вона вміщується в один рядок (номери ступенів ховаються на малих екранах) замість того, щоб переноситися на другий рядок, який виглядав частиною прокрутки грифа.'] },
-  { v:'1.27.0', date:'2026-06-19',
-    en:['The links between the tabs now go both ways. In Scales, once you overlay one of the key\'s chords on the neck, an "Open in chords" button jumps you straight to that chord in the Chords view — so the diatonic-chord row is no longer a dead end.',
-        'The Circle of fifths gains an "Open in chords" button beside "Open in scales", so you can jump from a key straight to its tonic chord on the neck.'],
-    uk:['Звʼязки між вкладками тепер працюють в обидва боки. У «Гамах», коли ти накладаєш один з акордів тональності на гриф, кнопка «Відкрити в акордах» одразу переносить до цього акорду у вкладці «Акорди» — тож ряд акордів тональності більше не глухий кут.',
-        'У «Колі квінт» зʼявилася кнопка «Відкрити в акордах» поруч із «Відкрити в гамах» — тож від тональності можна одразу перейти до її тонічного акорду на грифі.'] },
-  { v:'1.26.0', date:'2026-06-19',
-    en:['The chord-shapes card now shows a fuller set of ways to play each chord — the open shape, the barre forms, and several movable shapes higher up the neck — so it reads as a shape library instead of one or two lonely diagrams.',
-        'You can fold the chord shapes away: a − on the card collapses it when you don\'t need it, and it remembers whether you left it open or closed.',
-        'On a phone the chord shapes now sit right under the neck — before the "what to play over this" panel — so "how to play it" comes first.'],
-    uk:['Картка форм акорду тепер показує більший набір способів зіграти акорд — відкриту форму, барре та кілька рухомих форм вище по грифу — тож це радше бібліотека форм, ніж одна-дві самотні діаграми.',
-        'Форми акорду можна згорнути: позначка − на картці ховає її, коли вона не потрібна, і застосунок запам\'ятовує, лишив ти її відкритою чи закритою.',
-        'На телефоні форми акорду тепер одразу під грифом — перед панеллю «що грати над цим» — тож «як це зіграти» йде першим.'] },
-  { v:'1.25.1', date:'2026-06-18',
-    en:['Chord types start simple: only the basic chords show at first, with a "more" toggle that reveals the sevenths and extended chords when you want them — so the picker is no longer a wall of twenty buttons.',
-        'A bigger fretboard on desktop: the neck now spans the full width of the page, with the "what to play over this" panel tucked up beside the controls.',
-        'The Notes view is simpler: the highlighted note now follows the key you pick above, and a single "Naturals only" switch replaces the old grid of note buttons.',
-        'A tidier toolbar on phones: the metronome and backing band now tuck behind a "Backing" button next to Settings, and the view / key / display controls are no longer boxed in — so the header is lighter and the neck sits higher.',
-        'Fixed a glitch where the slimming header could strand a control mid-row as you scrolled on a phone.'],
-    uk:['Типи акордів починаються з простого: спершу показано лише базові акорди, а перемикач «більше» відкриває септакорди та розширені, коли вони потрібні — тож вибір більше не стіна з двадцяти кнопок.',
-        'Більший гриф на комп\'ютері: гриф тепер займає всю ширину сторінки, а панель «що грати над цим» перемістилася вгору поруч із керуванням.',
-        'Вид «Ноти» простіший: підсвічена нота тепер іде за тонікою, яку ти вибираєш вище, а один перемикач «Тільки натуральні» замінює стару сітку кнопок із нотами.',
-        'Охайніша панель на телефонах: метроном і супровід тепер ховаються за кнопкою «Супровід» поруч із «Налаштуваннями», а керування видом / тонікою / показом більше не в рамці — тож шапка легша, а гриф сидить вище.',
-        'Виправлено збій, коли шапка, що стискається, могла лишити елемент керування посеред ряду під час гортання на телефоні.'] },
-  { v:'1.25.0', date:'2026-06-18',
-    en:['A wider, more readable fretboard on desktop: on a large screen the neck now grows with the window — taller string spacing and bigger note dots — instead of stretching into a thin strip.',
-        'Keyboard shortcuts on desktop: Space to listen or stop, L to loop, M for the metronome, 1–3 to switch tabs, A–G to set the key, and [ / ] to transpose it by a semitone. Press ? (or the link below the page) for the full list.',
-        'Landscape is finally useful: turn your phone sideways and the screen splits in two — the controls, chord cards and progression scroll on the left while the neck stays pinned on the right, always in view.',
-        'A cleaner first look: each view\'s description and the board\'s playing tip now tuck behind a ? next to the heading — on every screen, not just phones — so the controls and the neck sit higher; tap ? whenever you want the explanation back.',
-        'A clearer hint that the chord rows scroll: when a row of chord types runs off the edge of a phone screen, it now fades at the right so you can tell there is more to swipe to.'],
-    uk:['Ширший і чіткіший гриф на комп\'ютері: на великому екрані гриф тепер росте разом із вікном — більша відстань між струнами й більші крапки нот — замість того щоб розтягуватися у вузьку смужку.',
-        'Гарячі клавіші на комп\'ютері: Space — прослухати чи зупинити, L — луп, M — метроном, 1–3 — перемикати вкладки, A–G — задати тоніку, [ / ] — транспонувати її на півтон. Натисни ? (або посилання під сторінкою), щоб побачити весь список.',
-        'Альбомна орієнтація нарешті корисна: поверни телефон боком — і екран ділиться навпіл: керування, картки акордів і прогресія гортаються ліворуч, а гриф лишається закріпленим праворуч, завжди в полі зору.',
-        'Чистіший перший погляд: опис кожного виду й підказка для гри на грифі тепер ховаються за позначкою ? біля заголовка — на кожному екрані, не лише на телефонах — тож керування й гриф сидять вище; натисни ?, коли захочеш повернути пояснення.',
-        'Чіткіший натяк, що ряди акордів гортаються: коли ряд типів акордів виходить за край екрана телефона, він тепер згасає праворуч, тож видно, що є куди гортнути.'] },
-  { v:'1.24.0', date:'2026-06-17',
-    en:['Mobile shell pass — less scrolling, the neck always in reach. On phones the fretboard now stays pinned in view while you scroll the chords, cards and progression below it, and gently snaps back into place — so you can pick a chord or chip and see it on the neck without scrolling back up.',
-        'Shorter control stack: each view\'s description now tucks behind an ⓘ on the heading, and the chord/quality rows swipe sideways instead of stacking into tall blocks — so the board sits higher on a phone.',
-        'The header now slims as you scroll, keeping the tabs and playback controls within reach at the top instead of scrolling away.',
-        'Your phone no longer sleeps while a loop, metronome or progression is playing, and an accidental over-scroll can no longer reload the app mid-jam.'],
-    uk:['Шліфування для телефонів — менше гортання, гриф завжди під рукою. На телефонах гриф тепер лишається закріпленим у полі зору, поки ти гортаєш акорди, картки та прогресію під ним, і мʼяко повертається на місце — тож можна обрати акорд чи фішку й одразу побачити їх на грифі, не гортаючи назад угору.',
-        'Коротший стос керування: опис кожного виду тепер ховається за позначкою ⓘ біля заголовка, а ряди акордів/типів гортаються вбік замість того, щоб складатися у високі блоки — тож гриф на телефоні сидить вище.',
-        'Шапка тепер стискається під час гортання, тримаючи вкладки та керування відтворенням під рукою вгорі, а не зникаючи з екрана.',
-        'Телефон більше не засинає, поки грає луп, метроном чи прогресія, а випадкове перегортання вже не може перезавантажити застосунок посеред гри.'] },
-  { v:'1.23.0', date:'2026-06-17',
-    en:['Install Euterpe straight from the app: where your browser supports it, an "Install" button now appears in the header, so you can add Euterpe to your device without digging through browser menus. (On iPhone, keep using Share → Add to Home Screen.)',
-        'Update notifications: when a new version is ready, a small prompt now offers to reload into it — so an already-open tab no longer keeps running the old version until you happen to refresh.',
-        'Smoother progression playback: the fretboard no longer re-fades all its dots on every chord change while a progression is playing.'],
-    uk:['Встановлення прямо із застосунку: якщо твій браузер це підтримує, у шапці зʼявляється кнопка «Встановити», тож Euterpe можна додати на пристрій, не порпаючись у меню браузера. (На iPhone — як і раніше, через «Поділитися» → «На початковий екран».)',
-        'Сповіщення про оновлення: коли готова нова версія, невелика підказка пропонує перезавантажитись у неї — тож відкрита вкладка більше не працює на старій версії, доки ти випадково не оновиш сторінку.',
-        'Плавніше відтворення прогресії: точки на грифі більше не згасають наново на кожній зміні акорду, поки грає прогресія.'] },
-  { v:'1.22.1', date:'2026-06-17',
-    en:['Installed-app polish for iPhone: adding Euterpe to your home screen now opens it in its own dark, full-screen window with the proper app name and a matching status bar, instead of a generic browser-style shell.',
-        'On phones with a camera notch or a home-indicator bar, the layout now keeps clear of them, so nothing hides behind the cut-out edges when the app runs full-screen.'],
-    uk:['Шліфування встановленого застосунку для iPhone: додавання Euterpe на головний екран тепер відкриває його у власному темному повноекранному вікні з правильною назвою застосунку та відповідним рядком стану, а не в загальному вигляді браузера.',
-        'На телефонах із вирізом під камеру чи смугою-індикатором унизу макет тепер тримається від них на відстані, тож у повноекранному режимі нічого не ховається за краями екрана.'] },
-  { v:'1.22.0', date:'2026-06-17',
-    en:['Euterpe is now installable. Add it to your phone\'s home screen or your desktop and it opens in its own window — no browser bar — and keeps working with no connection.',
-        'New app icon: the guitar inside a Greek-key (meander) border, a nod to Euterpe, the Greek muse of music.'],
-    uk:['Euterpe тепер можна встановити. Додай застосунок на головний екран телефона чи на робочий стіл — він відкриється у власному вікні, без панелі браузера, і працюватиме без інтернету.',
-        'Нова іконка застосунку: гітара в обрамленні грецького меандра — відсилання до Евтерпи, грецької музи музики.'] },
-  { v:'1.21.1', date:'2026-06-17',
-    en:['Fixed: on the Arpeggio and Identify views, the fretboard now updates straight away when you change the tuning, capo, fret window or handedness — previously it kept its old layout on those two views until you switched away and back.'],
-    uk:['Виправлено: у видах «Арпеджіо» та «Розпізнати» гриф тепер одразу оновлюється, коли ти змінюєш стрій, каподастр, діапазон ладів чи ліворукість — раніше на цих двох видах він лишався зі старим виглядом, доки ти не перемкнешся на інший вид і назад.'] },
-  { v:'1.21.0', date:'2026-06-17',
-    en:['The app is now called Euterpe — after the Greek muse of music. "Guitar studio" stays on as a descriptor; nothing about how the app works has changed.',
-        'Scales view now colours the fifth and the seventh, not just the root and third.',
-        'Each scale shows its tonic-seventh skeleton — root, third, fifth, seventh — in the same colours used across the chord and triad views, with the remaining passing tones (2 · 4 · 6) in a neutral tone. The fifth is finally named in the legend instead of blending into a generic "other" that had borrowed the fifth’s blue.',
-        'The legend now lists only the degrees the selected scale actually contains, so a pentatonic with no seventh no longer shows a seventh swatch.'],
-    uk:['Застосунок тепер називається Euterpe — на честь грецької музи музики. «Гітарна студія» лишається описом; у роботі застосунку нічого не змінилося.',
-        'Вид «Гами» тепер фарбує квінту й септиму, а не лише тоніку й терцію.',
-        'Кожна гама показує свій каркас — тоніка, терція, квінта, септима — тими самими кольорами, що й види акордів і тріад, а решта прохідних нот (2 · 4 · 6) — нейтральним тоном. Квінту нарешті названо в легенді, замість того щоб зливатися із загальним «іншим», який позичав її синій колір.',
-        'Легенда тепер перелічує лише ті ступені, які справді є в обраній гамі, тож пентатоніка без септими більше не показує позначку септими.'] },
-  { v:'1.20.0', date:'2026-06-16',
-    en:['Phase 2 — completing the reference: arpeggios, a capo, and the CAGED framework, added without crowding the three-tab layout.',
-        'New "Arpeggio" view under Chords / triads: the same chord, shown as a melodic shape you run up the neck. Listen plays it ascending, and you can isolate one position as a practice box — the bridge between a chord and the scale you solo with over it.',
-        'Capo: a new control in Settings (next to Tuning and Frets). Set a capo and the fretboard dims the frets behind it and marks the capo as a movable nut, so you can see where your shapes sit — the notes themselves don\'t move.',
-        'CAGED: in the major scale, the five fretboard positions are now labelled with their C·A·G·E·D chord shapes (E·D·C·A·G up the neck) instead of plain numbers, and the panel names the chord form each scale box is built around — making the link between chord shapes and scale positions explicit.'],
-    uk:['Фаза 2 — доповнюємо довідник: арпеджіо, каподастр і система CAGED, додані без захаращення тривкладкового макета.',
-        'Новий вид «Арпеджіо» поряд з «Акордами / тріадами»: той самий акорд, показаний як мелодична форма, яку ти ведеш угору по грифу. «Прослухати» грає його висхідно, а одну позицію можна ізолювати як бокс для практики — місток між акордом і гамою, якою ти граєш над ним.',
-        'Каподастр: нове керування в «Налаштуваннях» (поряд зі «Строєм» і «Ладами»). Постав каподастр — і гриф приглушить лади за ним і позначить каподастр як рухомий поріжок, тож видно, де лягають форми; самі ноти не зсуваються.',
-        'CAGED: у мажорній гамі п’ять позицій на грифі тепер підписані формами акордів C·A·G·E·D (E·D·C·A·G угору по грифу) замість простих номерів, а панель називає форму акорду, навколо якої побудований кожен бокс гами, — роблячи зв’язок між формами акордів і позиціями гами явним.'] },
-  { v:'1.19.0', date:'2026-06-16',
-    en:['Clarity pass: the same tools, less clutter — and the fretboard front and centre.',
-        'The neck now sits directly under the controls. The chord-shape cards and the progression sequencer moved below the board, so on a phone you reach the fretboard right after picking a chord instead of scrolling past everything first.',
-        'The chord picker is grouped into Basic / Sevenths / Extended tiers, so the 21 chord types read as organised sections instead of one long wall of buttons.',
-        'The timing bar is tidier: the metronome, bass and drums are collected into one labelled "Backing" group, so the bar reads as a few clusters rather than a row of loose buttons.',
-        'Backing that starts itself: turning on Bass or Drums now starts the chord loop when nothing is playing, so they behave like the metronome instead of staying silent until you start a loop or progression first.',
-        'Fewer control layers: the view switch (chord tones / triad shapes / identify, or scale / notes) moved up next to the root, so each tab shows one "View · Root · Display" header instead of a separate row above the board; the dot-label toggle is now "Names / Intervals" so it no longer reads as a second "Notes".',
-        '"Play over this" where you need it: on a phone the suggestion panel now sits directly under the fretboard instead of at the very bottom of the page, below the chord shapes and the progression builder.',
-        'Smaller polish: on a narrow screen the tab strip now fades at its right edge to show more tabs scroll off-screen, and the root / note-name separator no longer strands itself on its own line when the controls wrap.'],
-    uk:['Прохід на ясність: ті самі інструменти, менше безладу — і гриф у центрі уваги.',
-        'Гриф тепер одразу під керуванням. Картки форм акорду та секвенсор прогресії переїхали під гриф, тож на телефоні ти потрапляєш на гриф одразу після вибору акорду, а не прогортуєш усе перед тим.',
-        'Вибір акорду згруповано в рівні «Базові / Септакорди / Розширені», тож 21 тип акорду читається як впорядковані секції, а не суцільна стіна кнопок.',
-        'Панель темпу охайніша: метроном, бас і ударні зібрано в одну підписану групу «Супровід», тож панель читається як кілька кластерів, а не ряд розрізнених кнопок.',
-        'Супровід, що сам запускається: увімкнення «Бас» чи «Ударні» тепер запускає луп акорду, коли нічого не грає, тож вони поводяться як метроном, а не мовчать, доки спершу не запустиш луп чи прогресію.',
-        'Менше шарів керування: перемикач виду (тони акорду / форми тріад / розпізнати чи гама / ноти) переїхав угору, поряд із тонікою, тож кожна вкладка показує один заголовок «Вид · Тоніка · Показ» замість окремого рядка над грифом; перемикач підпису крапок тепер «Назви / Інтервали», тож він більше не читається як друге «Ноти».',
-        '«Що грати над цим» там, де треба: на телефоні панель підказок тепер одразу під грифом, а не в самому низу сторінки під формами акорду та секвенсором.',
-        'Дрібні штрихи: на вузькому екрані смужка вкладок тепер згасає праворуч, показуючи, що частина вкладок ховається за краєм, а роздільник між тонікою й назвами нот більше не лишається сам на окремому рядку, коли керування переноситься.'] },
-  { v:'1.18.0', date:'2026-06-16',
-    en:['Feel pass (Phase 1d): subtle, motion-respecting animation that makes sound and rhythm visible.',
-        'Beat pulse — while a loop or the backing band plays, the transport indicator now pumps on every beat (a stronger pulse on the downbeat), locked to the same precise clock as the sound, so you can see the tempo.',
-        'Pluck ripple — tapping a note on the fretboard sends a one-shot halo out from the dot, so a pluck reads as sound emanating.',
-        'Smoother board changes — when you change key, chord or scale the fretboard dots now fade in with a quick left-to-right sweep instead of snapping, so a re-draw reads as a transition.',
-        'Circle of fifths — picking a key now draws a connecting arc through the subdominant, tonic and dominant, turning the recolour into a visible harmonic relationship.',
-        'All of the above is disabled automatically if your system prefers reduced motion, and the timing-bar controls were aligned to a common height so they stay tidy at any browser zoom.'],
-    uk:['Прохід «відчуття» (Фаза 1d): делікатна анімація, що поважає налаштування руху й робить звук і ритм видимими.',
-        'Пульс долі — поки грає луп чи супровідний гурт, індикатор транспорту тепер пульсує на кожній долі (сильніше на сильній долі), синхронно з тим самим точним годинником, що й звук, — тож темп можна побачити.',
-        'Брижі від щипка — дотик до ноти на грифі пускає від крапки одноразове кільце, тож щипок читається як звук, що розходиться.',
-        'Плавніші зміни на грифі — коли ти змінюєш тональність, акорд чи гаму, крапки тепер плавно з’являються хвилею зліва направо замість різкого стрибка.',
-        'Квінтове коло — вибір тональності тепер малює дугу через субдомінанту, тоніку й домінанту, перетворюючи перефарбування на видимий гармонічний зв’язок.',
-        'Усе це автоматично вимикається, якщо у системі ввімкнено зменшений рух, а елементи панелі темпу вирівняно за спільною висотою, щоб вони лишалися охайними за будь-якого масштабу браузера.'] },
-  { v:'1.17.0', date:'2026-06-16',
-    en:['New "Identify" view under Chords / Triads: tap the notes you are playing on the neck and the app names the chord — including the real alternatives (e.g. C6 and Am7 are the same notes) and slash chords when the bass note is not the root.',
-        'When the notes don\'t fit any chord exactly, Identify now shows the closest matches instead of just "unknown" — naming the chord you are one or two notes away from and telling you which tone is missing or extra.',
-        'The sidebar is now a live "Play over this" panel instead of a static table: for the chord you are looking at it shows the arpeggio and the scales that fit, and tapping a scale jumps you straight to it.'],
-    uk:['Новий вид «Розпізнати» поряд з «Акордами / тріадами»: натисни на грифі ноти, які береш, — і програма назве акорд, разом зі справжніми варіантами (напр., C6 і Am7 — це ті самі ноти) та слеш-акордами, коли в басі не тоніка.',
-        'Коли ноти не складають жодного акорду точно, «Розпізнати» тепер показує найближчі варіанти замість простого «невідомо» — називає акорд, до якого бракує однієї-двох нот, і вказує, якої ноти бракує чи яка зайва.',
-        'Бічна панель тепер жива — «Що грати над цим» замість статичної таблиці: для акорду, який ти розглядаєш, вона показує арпеджіо та гами, що підходять, а дотик до гами одразу веде до неї.'] },
-  { v:'1.16.0', date:'2026-06-16',
-    en:['One fretboard instead of four: the chord-tones, triads, scale and notes views now share a single neck that just changes what it highlights, so switching views keeps the board steady in front of you.',
-        'Fewer tabs: "Notes on the neck" moved from its own tab into a Notes view inside Scales (next to Scale), the same way Chords and Triads sit together under one tab.',
-        'Tidier controls: the selectors above the neck were grouped into a more compact area.'],
-    uk:['Один гриф замість чотирьох: види «тони акорду», «тріади», «гама» та «ноти» тепер мають спільний гриф, який лише змінює підсвічування, тож перемикання видів не зрушує гриф перед тобою.',
-        'Менше вкладок: «Ноти на грифі» переїхали зі своєї вкладки у вид «Ноти» всередині «Гам» (поряд із «Гамою») — так само, як «Акорди» і «Тріади» живуть під однією вкладкою.',
-        'Охайніше керування: селектори над грифом згруповано в компактнішу зону.'] },
-  { v:'1.15.0', date:'2026-06-16',
-    en:['Pick your key once and the whole app follows: choosing a root — or a key on the circle of fifths — now switches the chords, scales, circle and notes views together, instead of each tab keeping its own separate key.',
-        'The circle of fifths is now tied to your current key: it always highlights the key you are in and its closest neighbours, and tapping any key on it sets that key everywhere.'],
-    uk:['Обери тональність один раз — і вся програма слідує за нею: вибір тоніки чи тональності на квінтовому колі тепер одночасно перемикає акорди, гами, коло та ноти, замість того щоб кожна вкладка тримала свою окрему тональність.',
-        'Квінтове коло тепер прив’язане до твоєї поточної тональності: воно завжди підсвічує тональність, у якій ти перебуваєш, та її найближчих сусідів, а дотик до будь-якої тональності на колі встановлює її всюди.'] },
-  { v:'1.14.0', date:'2026-06-15',
-    en:['The drums now have a backbeat: a snare lands on beats 2 and 4, so turning on Drums sounds like a real groove instead of a ticking pulse.',
-        'Listen now plays at a fixed, comfortable speed no matter your tempo — so slowing the metronome down for practice no longer makes the preview crawl. Loop and progression Play still follow the tempo, since they are backings you play over.'],
-    uk:['Удар­ні тепер мають бекбіт: малий барабан звучить на 2-й і 4-й долях, тож увімкнені «Ударні» звучать як справжній грув, а не як цокання.',
-        '«Прослухати» тепер грає зі сталою зручною швидкістю незалежно від темпу — тож сповільнення метронома для занять більше не робить попереднє відтворення млявим. «Луп» і «Програти» прогресію, як і раніше, слідують за темпом, бо це супровід, під який ти граєш.'] },
-  { v:'1.13.0', date:'2026-06-15',
-    en:['Easier to use on phones: fretboard notes and buttons now have bigger touch targets, and tapping a note no longer triggers zoom or selects text.',
-        'The interface accent is now a distinct teal, so a selected control is no longer the same blue as the "fifth" note on the fretboard.',
-        'The fretboard now shows position-marker inlays on its face — single dots at frets 3·5·7·9 and a double at 12 — so you can orient at a glance.',
-        'Chord and triad diagrams now print a suggested fingering (1–4) inside each dot.',
-        'The neck fades at its right edge when more frets are scrollable off-screen, and the fret wires gained a subtle metallic sheen.'],
-    uk:['Зручніше на телефонах: ноти на грифі та кнопки тепер мають більші зони дотику, а дотик до ноти більше не викликає масштабування чи виділення тексту.',
-        'Акцентний колір інтерфейсу тепер окремий бірюзовий, тож вибраний елемент більше не збігається із синім кольором «квінти» на грифі.',
-        'На грифі з’явилися маркери позицій — поодинокі крапки на ладах 3·5·7·9 і подвійна на 12 — щоб орієнтуватися з першого погляду.',
-        'Діаграми акордів і тріад тепер показують підказку аплікатури (1–4) всередині кожної крапки.',
-        'Гриф плавно згасає біля правого краю, коли є ще лади для прокрутки, а лади отримали легкий металевий відблиск.'] },
-  { v:'1.12.0', date:'2026-06-15',
-    en:['Chord diagrams now show every common way to play the chord — the open shape plus the E-shape and A-shape barre forms — instead of just one.',
-        'Tap a voicing card to select it: Listen and Loop then play that exact shape in its real register, so an open chord and its barre version actually sound different.',
-        'Chord-card dots are now live — click one to hear that string — and are coloured by their role in the chord (root, third, fifth…).',
-        'Triads now have shape cards too, one per inversion, matching the chord view.',
-        'You can finally loop a triad as a backing track, and Listen plays the inversion and string set you are actually looking at — with the bass following the triad\u2019s correct fifth.',
-        'Strums now sweep across the strings instead of sounding all at once.'],
-    uk:['Діаграми акордів тепер показують усі звичні способи зіграти акорд — відкриту форму та барре у формі E і A — а не лише одну.',
-        'Натисни картку аплікатури, щоб обрати її: «Прослухати» і «Луп» зіграють саме цю форму у її реальному регістрі, тож відкритий акорд і барре справді звучать по-різному.',
-        'Крапки на картці акорду тепер активні — натисни, щоб почути цю струну — і пофарбовані за роллю в акорді (тоніка, терція, квінта…).',
-        'Тріади тепер теж мають картки форм — по одній на кожне обернення, як у виді акордів.',
-        'Нарешті можна зациклити тріаду як супровід, а «Прослухати» грає те обернення й набір струн, які ти бачиш — із басом за правильною квінтою тризвуку.',
-        'Бій тепер «прокочується» по струнах, а не звучить усіма нотами одночасно.'] },
-  { v:'1.11.0', date:'2026-06-15',
-    en:['Playback controls are clearer: Listen and Loop now sit together in the timing bar, so hearing the current chord once (Listen) and looping it as a backing (Loop) are one obvious pair.',
-        'Loop now appears only on the chord-tones view where it applies; the transport chip is still there to stop playback from any tab.',
-        'The fretboard fits phones: a windowed fret range now scales to the screen with no sideways scrolling — only the full "All frets" view still scrolls. It re-fits when you rotate.',
-        'Sturdier on unusual browsers: if a browser has no audio support, the playback buttons are disabled with a note instead of doing nothing.'],
-    uk:['Керування відтворенням зрозуміліше: «Прослухати» і «Луп» тепер поруч у панелі темпу — почути поточний акорд один раз (Прослухати) та зациклити його як супровід (Луп) стали однією очевидною парою.',
-        '«Луп» з’являється лише у вкладі тонів акорду, де він діє; чип транспорту, як і раніше, зупиняє відтворення з будь-якої вкладки.',
-        'Гриф вміщується на телефонах: віконний діапазон ладів тепер масштабується під екран без бічної прокрутки — гортається лише повний вид «Усі лади». Підлаштовується при повороті.',
-        'Надійніше на незвичних браузерах: якщо браузер не підтримує звук, кнопки відтворення вимикаються з підказкою, а не лишаються «мертвими».'] },
-  { v:'1.10.0', date:'2026-06-14',
-    en:['Backing now plays as a band: turn on Bass and Drums in the timing bar and the loop or progression becomes a jam-along bed for improvising over.',
-        'A synthesized bass follows each chord — root on beat 1, the chord\u2019s fifth on beat 3 — and sits cleanly under the guitar.',
-        'An optional groove adds a kick on beats 1 and 3 with steady 8th-note hi-hats, accented on the downbeat.',
-        'The guitar comping is more human now: small note-to-note changes in loudness and timing, plus a softer push on beat 3 when the band is on.',
-        'Your Bass and Drums choices are remembered across reloads.'],
-    uk:['\u0421\u0443\u043f\u0440\u043e\u0432\u0456\u0434 \u0442\u0435\u043f\u0435\u0440 \u0437\u0432\u0443\u0447\u0438\u0442\u044c \u044f\u043a \u0433\u0443\u0440\u0442: \u0443\u0432\u0456\u043c\u043a\u043d\u0438 \u00ab\u0411\u0430\u0441\u00bb \u0456 \u00ab\u0423\u0434\u0430\u0440\u043d\u0456\u00bb \u0443 \u043f\u0430\u043d\u0435\u043b\u0456 \u0442\u0435\u043c\u043f\u0443 \u2014 \u0456 \u043b\u0443\u043f \u0447\u0438 \u043f\u0440\u043e\u0433\u0440\u0435\u0441\u0456\u044f \u0441\u0442\u0430\u044e\u0442\u044c \u043c\u0456\u043d\u0443\u0441\u0456\u0432\u043a\u043e\u044e \u0434\u043b\u044f \u0456\u043c\u043f\u0440\u043e\u0432\u0456\u0437\u0430\u0446\u0456\u0457.',
-        '\u0421\u0438\u043d\u0442\u0435\u0437\u043e\u0432\u0430\u043d\u0438\u0439 \u0431\u0430\u0441 \u0441\u043b\u0456\u0434\u0443\u0454 \u0437\u0430 \u043a\u043e\u0436\u043d\u0438\u043c \u0430\u043a\u043e\u0440\u0434\u043e\u043c \u2014 \u0442\u043e\u043d\u0456\u043a\u0430 \u043d\u0430 \u043f\u0435\u0440\u0448\u0456\u0439 \u0434\u043e\u043b\u0456, \u043a\u0432\u0456\u043d\u0442\u0430 \u043d\u0430 \u0442\u0440\u0435\u0442\u0456\u0439 \u2014 \u0456 \u0447\u0438\u0441\u0442\u043e \u043b\u044f\u0433\u0430\u0454 \u043f\u0456\u0434 \u0433\u0456\u0442\u0430\u0440\u0443.',
-        '\u0414\u043e\u0434\u0430\u0442\u043a\u043e\u0432\u0438\u0439 \u0433\u0440\u0443\u0432: \u0431\u043e\u0447\u043a\u0430 \u043d\u0430 1-\u0448\u0456\u0439 \u0456 3-\u0439 \u0434\u043e\u043b\u044f\u0445 \u0442\u0430 \u0440\u0456\u0432\u043d\u0456 \u0432\u043e\u0441\u044c\u043c\u0456 \u0445\u0430\u0439-\u0445\u0435\u0442\u0430 \u0437 \u0430\u043a\u0446\u0435\u043d\u0442\u043e\u043c \u043d\u0430 \u0441\u0438\u043b\u044c\u043d\u0456\u0439 \u0434\u043e\u043b\u0456.',
-        '\u0413\u0456\u0442\u0430\u0440\u043d\u0438\u0439 \u0430\u043a\u043e\u043c\u043f\u0430\u043d\u0435\u043c\u0435\u043d\u0442 \u0436\u0438\u0432\u0456\u0448\u0438\u0439: \u043d\u0435\u0432\u0435\u043b\u0438\u043a\u0456 \u0437\u043c\u0456\u043d\u0438 \u0433\u0443\u0447\u043d\u043e\u0441\u0442\u0456 \u0439 \u0447\u0430\u0441\u0443 \u043c\u0456\u0436 \u043d\u043e\u0442\u0430\u043c\u0438 \u0442\u0430 \u043c\u2019\u044f\u043a\u0456\u0448\u0438\u0439 \u0443\u0434\u0430\u0440 \u043d\u0430 3-\u0439 \u0434\u043e\u043b\u0456, \u043a\u043e\u043b\u0438 \u0433\u0443\u0440\u0442 \u0443\u0432\u0456\u043c\u043a\u043d\u0435\u043d\u043e.',
-        '\u0412\u0438\u0431\u0456\u0440 \u00ab\u0411\u0430\u0441\u00bb \u0456 \u00ab\u0423\u0434\u0430\u0440\u043d\u0456\u00bb \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044c\u0441\u044f \u043f\u0456\u0441\u043b\u044f \u043f\u0435\u0440\u0435\u0437\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043d\u044f.'] },
-  { v:'1.9.0', date:'2026-06-14',
-    en:['Playback timing was rebuilt on a precise audio clock, so the metronome, loop and progression no longer drift out of time — especially on phones and in background tabs.',
-        'The tempo slider now glides smoothly while something is playing, instead of restarting the beat.',
-        'The lit notes during the loop and progression now stay locked to the sound.',
-        'Groundwork for the upcoming practice modes: separate internal audio channels and short correct / wrong / count-in cue sounds.'],
-    uk:['Тайминг відтворення перебудовано на точному аудіогодиннику — метроном, луп і прогресія більше не «пливуть» у часі, особливо на телефонах і у фонових вкладках.',
-        'Повзунок темпу тепер плавно змінює швидкість під час гри, а не перезапускає долю.',
-        'Підсвічені ноти під час лупа та прогресії тепер точно збігаються зі звуком.',
-        'Основа для майбутніх режимів тренування: окремі внутрішні аудіоканали та короткі звуки-підказки правильно / помилка / відлік.'] },
-  { v:'1.8.0', date:'2026-06-14',
-    en:['The guitar tone was reworked to sound more like a real instrument.',
-        'Notes now ring through a body resonance, so they sound like they come from a guitar body rather than a bare synthesized string.',
-        'Tuning is accurate across the whole neck \u2014 high notes no longer drift slightly flat.',
-        'Plucking responds to dynamics: harder is louder and brighter, with subtle note-to-note variation so long loops feel less robotic.',
-        'Low and high strings now have their own character \u2014 darker, longer-ringing bass and rounder treble.'],
-    uk:['\u0422\u0435\u043c\u0431\u0440 \u0433\u0456\u0442\u0430\u0440\u0438 \u043f\u0435\u0440\u0435\u0440\u043e\u0431\u043b\u0435\u043d\u043e, \u0449\u043e\u0431 \u0432\u0456\u043d \u0437\u0432\u0443\u0447\u0430\u0432 \u0431\u043b\u0438\u0436\u0447\u0435 \u0434\u043e \u0441\u043f\u0440\u0430\u0432\u0436\u043d\u044c\u043e\u0433\u043e \u0456\u043d\u0441\u0442\u0440\u0443\u043c\u0435\u043d\u0442\u0430.',
-        '\u041d\u043e\u0442\u0438 \u0442\u0435\u043f\u0435\u0440 \u0437\u0432\u0443\u0447\u0430\u0442\u044c \u043a\u0440\u0456\u0437\u044c \u0440\u0435\u0437\u043e\u043d\u0430\u043d\u0441 \u043a\u043e\u0440\u043f\u0443\u0441\u0443 \u2014 \u043d\u0435\u043c\u043e\u0432 \u0456\u0437 \u0434\u0435\u043a\u0438 \u0433\u0456\u0442\u0430\u0440\u0438, \u0430 \u043d\u0435 \u0432\u0456\u0434 \u0433\u043e\u043b\u043e\u0457 \u0441\u0438\u043d\u0442\u0435\u0437\u043e\u0432\u0430\u043d\u043e\u0457 \u0441\u0442\u0440\u0443\u043d\u0438.',
-        '\u0411\u0443\u0434\u043e\u0432\u0430 \u0442\u043e\u0447\u043d\u0430 \u043f\u043e \u0432\u0441\u044c\u043e\u043c\u0443 \u0433\u0440\u0438\u0444\u0443 \u2014 \u0432\u0438\u0441\u043e\u043a\u0456 \u043d\u043e\u0442\u0438 \u0431\u0456\u043b\u044c\u0448\u0435 \u043d\u0435 \u0437\u0430\u043d\u0438\u0436\u0443\u044e\u0442\u044c\u0441\u044f.',
-        '\u0417\u0432\u0443\u043a \u0440\u0435\u0430\u0433\u0443\u0454 \u043d\u0430 \u0434\u0438\u043d\u0430\u043c\u0456\u043a\u0443: \u0441\u0438\u043b\u044c\u043d\u0456\u0448\u0438\u0439 \u0449\u0438\u043f\u043e\u043a \u2014 \u0433\u0443\u0447\u043d\u0456\u0448\u0435 \u0439 \u044f\u0441\u043a\u0440\u0430\u0432\u0456\u0448\u0435, \u0456\u0437 \u043b\u0435\u0433\u043a\u043e\u044e \u0432\u0430\u0440\u0456\u0430\u0446\u0456\u0454\u044e \u043c\u0456\u0436 \u043d\u043e\u0442\u0430\u043c\u0438, \u0449\u043e\u0431 \u0434\u043e\u0432\u0433\u0456 \u043f\u043e\u0432\u0442\u043e\u0440\u0438 \u043d\u0435 \u0437\u0432\u0443\u0447\u0430\u043b\u0438 \u043c\u0435\u0445\u0430\u043d\u0456\u0447\u043d\u043e.',
-        '\u041d\u0438\u0437\u044c\u043a\u0456 \u0439 \u0432\u0438\u0441\u043e\u043a\u0456 \u0441\u0442\u0440\u0443\u043d\u0438 \u0442\u0435\u043f\u0435\u0440 \u043c\u0430\u044e\u0442\u044c \u0432\u043b\u0430\u0441\u043d\u0438\u0439 \u0445\u0430\u0440\u0430\u043a\u0442\u0435\u0440 \u2014 \u0442\u0435\u043c\u043d\u0456\u0448\u0438\u0439 \u0456 \u0434\u043e\u0432\u0448\u0438\u0439 \u0431\u0430\u0441 \u0442\u0430 \u043c\u2019\u044f\u043a\u0448\u0456 \u0432\u0438\u0441\u043e\u043a\u0456.'] },
-  { v:'1.7.0', date:'2026-06-14',
-    en:['Chord vocabulary expanded from 7 to 21 types — sus2/sus4, 6 and m6, m7\u266d5, dim7, add9, 9/maj9/m9, 11, 13, 7\u266d9 and the 7\u266f9 "Hendrix" chord.',
-        'Extensions (6, 9, 11, 13) now have their own violet colour, and every tone is labelled by its true degree so a \u266f9 reads as \u266f9, not \u266d3.',
-        'Chord diagrams now generate a playable shape for every chord automatically, instead of showing "no simple shape" for the rarer ones.',
-        'You can now tab to any note on the fretboard and play it with Enter or Space.',
-        'On phones the frets are narrower and open in a 5-fret window, so the neck fits the screen better.',
-        'The app now remembers your full working state across reloads — chord quality, scale and position, triad set and inversion, circle selection, the highlighted note, and your built progression.'],
-    uk:['\u0421\u043b\u043e\u0432\u043d\u0438\u043a \u0430\u043a\u043e\u0440\u0434\u0456\u0432 \u0440\u043e\u0437\u0448\u0438\u0440\u0435\u043d\u043e \u0437 7 \u0434\u043e 21 \u0442\u0438\u043f\u0443 \u2014 sus2/sus4, 6 \u0456 m6, m7\u266d5, dim7, add9, 9/maj9/m9, 11, 13, 7\u266d9 \u0442\u0430 \u0430\u043a\u043e\u0440\u0434 7\u266f9 (\u00ab\u0413\u0435\u043d\u0434\u0440\u0456\u043a\u0441\u00bb).',
-        '\u0420\u043e\u0437\u0448\u0438\u0440\u0435\u043d\u043d\u044f (6, 9, 11, 13) \u0442\u0435\u043f\u0435\u0440 \u043c\u0430\u044e\u0442\u044c \u0444\u0456\u043e\u043b\u0435\u0442\u043e\u0432\u0438\u0439 \u043a\u043e\u043b\u0456\u0440, \u0430 \u043a\u043e\u0436\u0435\u043d \u0442\u043e\u043d \u043f\u043e\u0437\u043d\u0430\u0447\u0435\u043d\u043e \u0441\u0432\u043e\u0457\u043c \u0441\u0442\u0443\u043f\u0435\u043d\u0435\u043c, \u0442\u043e\u0436 \u266f9 \u0447\u0438\u0442\u0430\u0454\u0442\u044c\u0441\u044f \u044f\u043a \u266f9, \u0430 \u043d\u0435 \u266d3.',
-        '\u0414\u0456\u0430\u0433\u0440\u0430\u043c\u0438 \u0430\u043a\u043e\u0440\u0434\u0456\u0432 \u0442\u0435\u043f\u0435\u0440 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u043d\u043e \u0431\u0443\u0434\u0443\u044e\u0442\u044c \u0430\u043f\u043b\u0456\u043a\u0430\u0442\u0443\u0440\u0443 \u0434\u043b\u044f \u0431\u0443\u0434\u044c-\u044f\u043a\u043e\u0433\u043e \u0430\u043a\u043e\u0440\u0434\u0443.',
-        '\u0422\u0435\u043f\u0435\u0440 \u043c\u043e\u0436\u043d\u0430 \u043f\u0435\u0440\u0435\u0439\u0442\u0438 Tab\u2019\u043e\u043c \u0434\u043e \u0431\u0443\u0434\u044c-\u044f\u043a\u043e\u0457 \u043d\u043e\u0442\u0438 \u043d\u0430 \u0433\u0440\u0438\u0444\u0456 \u0442\u0430 \u0437\u0456\u0433\u0440\u0430\u0442\u0438 \u0457\u0457 \u043a\u043b\u0430\u0432\u0456\u0448\u0435\u044e Enter \u0430\u0431\u043e \u041f\u0440\u043e\u0431\u0456\u043b.',
-        '\u041d\u0430 \u0442\u0435\u043b\u0435\u0444\u043e\u043d\u0430\u0445 \u043b\u0430\u0434\u0438 \u0432\u0443\u0436\u0447\u0456 \u0439 \u0432\u0456\u0434\u043a\u0440\u0438\u0432\u0430\u044e\u0442\u044c\u0441\u044f \u0443 \u0432\u0456\u043a\u043d\u0456 \u043d\u0430 5 \u043b\u0430\u0434\u0456\u0432 \u2014 \u0433\u0440\u0438\u0444 \u043a\u0440\u0430\u0449\u0435 \u0432\u043c\u0456\u0449\u0430\u0454\u0442\u044c\u0441\u044f \u043d\u0430 \u0435\u043a\u0440\u0430\u043d\u0456.',
-        '\u0417\u0430\u0441\u0442\u043e\u0441\u0443\u043d\u043e\u043a \u0437\u0430\u043f\u0430\u043c\u2019\u044f\u0442\u043e\u0432\u0443\u0454 \u0432\u0435\u0441\u044c \u0440\u043e\u0431\u043e\u0447\u0438\u0439 \u0441\u0442\u0430\u043d \u043f\u0456\u0441\u043b\u044f \u043f\u0435\u0440\u0435\u0437\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043d\u044f \u2014 \u0442\u0438\u043f \u0430\u043a\u043e\u0440\u0434\u0443, \u0433\u0430\u043c\u0443 \u0439 \u043f\u043e\u0437\u0438\u0446\u0456\u044e, \u043d\u0430\u0431\u0456\u0440 \u0456 \u043e\u0431\u0435\u0440\u043d\u0435\u043d\u043d\u044f \u0442\u0440\u0456\u0430\u0434\u0438, \u0432\u0438\u0431\u0456\u0440 \u043d\u0430 \u043a\u043e\u043b\u0456, \u0432\u0438\u0434\u0456\u043b\u0435\u043d\u0443 \u043d\u043e\u0442\u0443 \u0442\u0430 \u0437\u0456\u0431\u0440\u0430\u043d\u0443 \u043f\u0440\u043e\u0433\u0440\u0435\u0441\u0456\u044e.'] },
-  { v:'1.6.0', date:'2026-06-14',
-    en:['Removed the subtitle tagline — the header is cleaner and the tabs sit higher.',
-        'Added keyboard focus rings on every control and support for reduced-motion.',
-        'Tabs now scroll sideways on phones instead of wrapping, plus a subtle hover on each tab.'],
-    uk:['Прибрано підзаголовок — шапка чистіша, вкладки вище.',
-        'Додано фокус-рамки для клавіатури на всіх кнопках і підтримку зменшеної анімації.',
-        'На телефоні вкладки тепер прокручуються вбік замість переносу, плюс делікатне підсвічування при наведенні.'] },
-  { v:'1.5.0', date:'2026-06-13',
-    en:['Chord tones and Triads merged into one "Chords / triads" tab with a view toggle.',
-        'Root and Notes/Intervals are now one shared bar across Harmony and Scales — pick a root once, it follows you.',
-        'A single context-aware Play in the timing bar replaces the four separate Listen/Cadence buttons.'],
-    uk:['Тони акорду і Тріади об\'єднані в одну вкладку «Акорди / тріади» з перемикачем виду.',
-        'Тоніка і Ноти/Інтервали тепер спільні для Акордів і Гам — вибери тоніку раз, вона зберігається.',
-        'Одна кнопка «Грати» в панелі темпу замість чотирьох окремих кнопок прослуховування.'] },
-  { v:'1.4.0', date:'2026-06-13',
-    en:['Loop and progression now keep playing when you switch tabs — backing-track mode.',
-        'New transport in the timing bar shows what is playing and stops it from any tab.',
-        'Added this changelog (tap the version badge any time).'],
-    uk:['Луп і прогресія більше не зупиняються при перемиканні вкладок — режим мінусовки.',
-        'Новий індикатор у панелі темпу показує, що грає, і зупиняє з будь-якої вкладки.',
-        'Додано цей список змін (тисни на бейдж версії будь-коли).'] },
-  { v:'1.3.0', date:'2026-06-13',
-    en:['Tempo and metronome moved to an always-visible timing bar.',
-        'Settings now holds instrument options only — tuning, handedness, fret range.'],
-    uk:['Темп і метроном переїхали в завжди видиму панель темпу.',
-        'Налаштування тепер містять лише інструмент — стрій, рукість, діапазон ладів.'] },
-  { v:'1.2.0', date:'2026-06-13',
-    en:['Chord progression sequencer: presets, per-chord bar counts, board follows the active chord, cycle or once.'],
-    uk:['Секвенсер прогресій: пресети, кількість тактів на акорд, гриф слідує за активним акордом, цикл або один раз.'] },
-  { v:'1.1.0', date:'2026-06-13',
-    en:['Single-chord background loop.'],
-    uk:['Фоновий луп одного акорду.'] },
-  { v:'1.0.0', date:'2026-06-13',
-    en:['Initial release: chord tones, triads, scales and modes, circle of fifths, notes on the neck.'],
-    uk:['Перший випуск: тони акорду, тріади, гами й моди, коло квінт, ноти на грифі.'] },
-];
+const CHANGELOG = [{"v":"2.11.0","date":"2026-07-12","en":["New Foundations drill — Subdivision & timing: a smart visual metronome for locking in your time. Pick a subdivision (quarter notes → eighths → triplets → sixteenths) and a tempo; an accented click and a grid tick out the bar (a strong beat 1, softer subdivisions), and the current key's scale is walked note-by-note across the grid in one neck box so you always have something to play. Change key, box or tempo without leaving Practice. A coach that serves both the Rhythm and Lead pillars — mic-scored timing arrives with microphone input later.","Time signatures: a new Meter picker in Settings (2/4, 3/4, 4/4, 6/8, 12/8). The metronome accent, the backing groove (kick/snare pattern), the bass, the single-chord loop and the whole progression / comping / targeting bar length all follow the meter — so you can jam a waltz in 3/4 or a 6/8 feel, not just 4/4.","Fixed: with the Subdivision & timing drill open, tapping \"Practice\" again drew the drill list on top of the still-running drill. Switching modes now handles every drill the same way.","Leaner app: the release-notes archive no longer ships with the page — only the newest releases are in-app, and the full history lives in CHANGELOG.md — and the timing-calibration control (which nothing used yet) is gone. The download is about 15% smaller.","Settings now starts closed and reads as three groups — Instrument, Neck & meter, App — instead of eleven controls in one flat row. The colour-blind palette and note-shape toggles moved in with the app settings, where set-once preferences belong.","Strumming patterns and Groove & feel are now one drill, Strumming & feel: pick a pattern AND how it feels — swing, backbeat accent, palm-muting, and an optional drums+bass band. Combinations neither drill could reach before (a swung folk pattern, a palm-muted strum over the band) now just work.","Comp the progression and Chord tones over changes are now one drill with a You-play switch: Chords (comp it, with shapes in Now/Next) or Chord tones (aim at the tones on the neck, with Position and Target). Both practice cards still open it, each in the mode it teaches, and your recorded progress for either is unchanged.","Every drill now shares one Key picker and one Exit button at the top of Practice instead of carrying its own copy."],"uk":["Нова вправа-основа — «Поділ і тайминг»: розумний візуальний метроном, щоб тримати час. Обери поділ (чвертки → вісімки → тріолі → шістнадцятки) і темп; акцентоване клацання й сітка відбивають такт (сильний «раз», тихіші поділи), а гама поточної тональності «прокрокує» по сітці нота за нотою в одній позиції на грифі — тож завжди є що грати. Змінюй тональність, позицію чи темп, не виходячи з «Практики». Коуч, що працює і на ритм-, і на соло-пілон — оцінку тайминга з мікрофоном додамо згодом.","Розміри такту: у «Налаштуваннях» зʼявився вибір розміру (2/4, 3/4, 4/4, 6/8, 12/8). Акцент метронома, грув супроводу (малюнок бочки/малого), бас, луп одного акорду й довжина такту всієї прогресії / акомпанементу / прицілювання — усе слідує за розміром, тож можна зіграти вальс у 3/4 чи відчуття 6/8, а не лише 4/4.","Виправлено: якщо була відкрита вправа «Поділ і тайминг», повторне натискання «Практики» малювало список вправ поверх тієї, що ще працювала. Тепер перемикання режимів однаково опрацьовує всі вправи.","Легший застосунок: архів нотаток до випусків більше не вантажиться зі сторінкою — у застосунку лишились найновіші випуски, а повна історія в CHANGELOG.md — і зник регулятор зсуву часу, який ще нічим не використовувався. Завантаження приблизно на 15% менше.","«Налаштування» тепер стартують згорнутими й читаються як три групи — Інструмент, Гриф і розмір, Застосунок — замість одинадцяти контролів в один ряд. Палітра для дальтоніків і форми на нотах переїхали до налаштувань застосунку, де й місце разовим уподобанням.","«Малюнки боя» і «Грув і відчуття» тепер одна вправа — «Бій і відчуття»: обирай і малюнок, і відчуття — свінг, бекбіт-акцент, глушіння та гурт (барабани з басом). Поєднання, недосяжні раніше в жодній із них (фолк-малюнок зі свінгом, приглушений бій під гурт), тепер просто працюють.","«Акомпанемент прогресії» і «Тони акорду в прогресії» тепер одна вправа з перемикачем «Що граєш»: «Акорди» (акомпануй, з формами у «Зараз/Далі») або «Тони акорду» (влучай у тони на грифі, з позицією та ціллю). Обидві картки в «Практиці» відкривають її — кожна у своєму режимі, а збережений прогрес для обох лишився без змін.","Усі вправи тепер мають один спільний вибір тональності й одну кнопку «Вийти» вгорі «Практики» замість власної копії в кожній."]},{"v":"2.10.0","date":"2026-07-12","en":["New Lead drill — Call & response: the app plays a short phrase from the key's scale in one neck box, then you echo it back on the fretboard in the same order. Listen while it plays, answer in the space it leaves — the turn structure itself trains soloing phrasing (when to play, when to leave space). Scored on how cleanly you echo each phrase; the phrases grow as you go. This completes the Lead pillar's coach tiers."],"uk":["Нова соло-вправа — «Запитання-відповідь»: застосунок грає коротку фразу з гами тональності в одній позиції на грифі, а ти повторюєш її на грифі в тому ж порядку. Слухай, поки грає, і відповідай у паузі — сама структура «запит-відповідь» тренує фразування (коли грати, а коли лишити тишу). Рахунок — наскільки чисто ти повторюєш кожну фразу; фрази довшають по ходу. Це завершує коуч-рівні соло-пілона."]},{"v":"2.9.0","date":"2026-07-12","en":["Target-note soloing: the Chord-tones drill gains a Target picker — instead of all the chord tones, light up just the root, 3rd, 5th or 7th and aim to land on that one tone as the chords change (the heart of melodic phrasing). Other chord tones just sound (they are fair game in a solo); only off-chord notes miss."],"uk":["Соло по цільових тонах: у вправі «Тони акорду» зʼявився вибір цілі — замість усіх тонів акорду підсвічується лише тоніка, терція, квінта чи септима, і ти щоразу «приземляєшся» саме на неї, поки акорди змінюються (основа мелодичної фрази). Інші тони акорду просто звучать (у соло вони доречні); промах — лише на позаакордових нотах."]},{"v":"2.8.0","date":"2026-07-12","en":["Arpeggios over changes: the Chord-tones drill gains a Position picker — choose one of the five neck boxes and only that arpeggio shape lights up, so you play a single moveable shape through the whole progression instead of chasing tones all over the neck. \"All\" keeps the full-neck targeting."],"uk":["Арпеджіо крізь зміни: у вправі «Тони акорду» зʼявився вибір позиції — обери одну з пʼяти форм на грифі, і підсвічуватиметься лише вона, тож ти граєш одну рухому форму арпеджіо крізь усю прогресію, а не ловиш тони по всьому грифу. «Усі» лишає прицілювання по всьому грифу."]},{"v":"2.7.0","date":"2026-07-12","en":["Practice gains its first Lead drill — Chord tones over changes: a progression loops with a full backing band, and the tones of the chord playing now light up on a tappable neck for you to target. Hit the lit tones, dodge the rest; it tracks your accuracy as you follow the changes through any key or progression.","An honest coach, like the Rhythm drills: it trains where the chord tones live under a real progression — playing your actual guitar and getting scored arrives with microphone input later."],"uk":["У «Практиці» зʼявилася перша соло-вправа — «Тони акорду в прогресії»: прогресія крутиться з повним гуртом супроводу, а тони акорду, що звучить зараз, підсвічуються на грифі, у який можна тицяти. Влучай у підсвічені тони, оминай решту — вправа веде облік твоєї точності, поки ти йдеш за змінами в будь-якій тональності чи прогресії.","Чесний коуч, як і ритм-вправи: він тренує, де лежать тони акорду під справжньою прогресією — а гру на власній гітарі з оцінкою додамо згодом разом зі входом із мікрофона."]}];
 /* ===================== i18n ===================== */
 const I18N = {
   uk: {
@@ -2005,19 +1653,18 @@ const I18N = {
     cm_pair:'Пара акордів', cm_dur:'Тривалість', cm_sec:'с', cm_click:'Метроном', cm_start:'Почати', cm_stop:'Завершити',
     cm_setup_note:'Перемикайся між акордами якомога чистіше й натискай велику кнопку на кожній чистій зміні. Лічильник рахує твої натискання, а не звук гітари — оцінку з мікрофоном додамо згодом.',
     cm_changes:'Зміни', cm_cpm:'За хвилину', cm_best:'Рекорд', cm_tap_hint:'Натискай на кожній чистій зміні', cm_undo:'Скасувати', cm_newbest:'Новий рекорд!',
-    drill_strum:'Малюнки боя', drill_strum_meta:'Удари вниз/вгору по сітці · коуч',
+    drill_strum:'Бій і відчуття', drill_strum_meta:'Малюнки · свінг · акценти · глушіння · коуч',
     dr_key:'Тональність',
     practice_grp_timing:'Тайминг', drill_timing:'Поділ і тайминг', drill_timing_meta:'Вісімки · тріолі · шістнадцятки · коуч',
     sd_subdiv:'Поділ', sd_tempo:'Темп', sd_notes:'Ноти',
     sd_hint:'Тримайся клацання — акцентований удар це «раз», тихі — поділи долі. Грай підсвічені ноти гами рівно по сітці. Це коуч: оцінку тайминга з мікрофоном додамо згодом.',
     sp_pattern:'Малюнок', sp_chord:'Акорд', sp_play:'Грати', sp_stop:'Стоп',
-    sp_hint:'Грай разом — ↓ вниз, ↑ вгору; над порожніми клітинами рука рухається, але струн не торкається.',
+    sp_swing:'Свінг', sp_accent:'Бекбіт', sp_mute:'Глушіння', sp_band:'Гурт',
+    sp_hint:'Грай разом — ↓ вниз, ↑ вгору; над порожніми клітинами рука рухається, але струн не торкається. Спробуй свінг, бекбіт-акцент, глушіння та гурт.',
     drill_comp:'Акомпанемент прогресії', drill_comp_meta:'Потрібний акорд вчасно · коуч',
     co_prog:'Прогресія', co_now:'Зараз', co_next:'Далі',
+    oc_mode:'Що граєш', oc_chords:'Акорди', oc_tones:'Тони акорду',
     co_hint:'Акомпануй показаний акорд — змінюй вчасно, поки гурт веде прогресію.',
-    drill_groove:'Грув і відчуття', drill_groove_meta:'Свінг, акценти, глушіння · коуч',
-    gf_swing:'Свінг', gf_accent:'Бекбіт', gf_mute:'Глушіння',
-    gf_hint:'Грай разом і відчуй біт — спробуй свінг, бекбіт-акцент і приглушені удари.',
     practice_grp_lead:'Соло', drill_target:'Тони акорду в прогресії', drill_target_meta:'Влучай у тони акорду під гурт · коуч',
     tg_prog:'Прогресія', tg_pos:'Позиція', tg_deg:'Ціль', tg_hits:'Влучань', tg_acc:'Точність',
     tg_hint:'Гурт веде прогресію — влучай у підсвічені тони поточного акорду. Обери позицію, щоб грати одну форму арпеджіо крізь зміни, або ціль (1·3·5·7), щоб щоразу «приземлятися» на один тон. Це тренує, де лежать тони акорду (не звук гітари — оцінку з мікрофоном додамо згодом).',
@@ -2080,8 +1727,7 @@ const I18N = {
     tb_tuning:'Стрій', tb_lefty:'Ліворукий', tb_frets:'Лади', tb_tempo:'Темп', tb_capo:'Каподастр', capo_off:'без', tb_meter:'Розмір',
     a11y_label:'Доступність', a11y_palette:'Палітра для дальтоніків', a11y_shapes:'Форми на нотах',
     tun_custom:'Власний стрій',
-    cal_label:'Зсув часу', cal_test:'Тест ритму', cal_tapnow:'Тап!', cal_unit:'мс',
-    prog_active:'Активних днів', prog_due:'До повтору', prog_review:'Повторити',
+      prog_active:'Активних днів', prog_due:'До повтору', prog_review:'Повторити',
     share_btn:'Поділитися', share_copied:'Скопійовано!',
     wc_title:'Вітаємо в Euterpe',
     wc_lead:'Гітарна студія для теорії та практики. Три способи почати:',
@@ -2096,7 +1742,8 @@ const I18N = {
     seq_play_tip:'Програти всю прогресію', seq_loop_tip:'Циклити прогресію як супровід для імпровізації',
     nt_pick_hint:'Підсвічена нота йде за тонікою вгорі · «Тільки натуральні» ховає дієзи й бемолі',
     tb_now_loop:'Луп', tb_now_seq:'Прогресія', tb_stop:'Стоп',
-    cl_title:'Що нового', cl_current:'зараз',
+    cl_title:'Що нового', cl_current:'зараз', cl_older:'Повна історія випусків — CHANGELOG.md у репозиторії',
+  tbc_instrument:'Інструмент', tbc_neck:'Гриф і розмір', tbc_app:'Застосунок',
     frets_all:'Усі', cd_open:'відкритий акорд',
     cd_barre:'барре, лад', cd_std:'аплікатура для стандартного строю',
     cd_na:'немає простої форми', cd_calc:'обчислена аплікатура', cd_pos:'вище по грифу',
@@ -2130,19 +1777,18 @@ const I18N = {
     cm_pair:'Chord pair', cm_dur:'Length', cm_sec:'s', cm_click:'Click', cm_start:'Start', cm_stop:'Finish',
     cm_setup_note:'Switch between the chords as cleanly as you can and tap the big button on each clean change. The counter counts your taps, not your guitar — mic scoring comes later.',
     cm_changes:'Changes', cm_cpm:'Per minute', cm_best:'Best', cm_tap_hint:'Tap on each clean change', cm_undo:'Undo', cm_newbest:'New best!',
-    drill_strum:'Strumming patterns', drill_strum_meta:'Down/up patterns on the beat grid · coach',
+    drill_strum:'Strumming & feel', drill_strum_meta:'Patterns · swing · accents · muting · coach',
     dr_key:'Key',
     practice_grp_timing:'Timing', drill_timing:'Subdivision & timing', drill_timing_meta:'Eighths · triplets · sixteenths · coach',
     sd_subdiv:'Subdivision', sd_tempo:'Tempo', sd_notes:'Notes',
     sd_hint:'Lock to the click — the accented tick is beat 1, the soft ticks are the subdivisions. Play the lit scale notes evenly across the grid. A coach: mic-scored timing arrives later.',
     sp_pattern:'Pattern', sp_chord:'Chord', sp_play:'Play', sp_stop:'Stop',
-    sp_hint:'Strum along — ↓ down, ↑ up; over the empty slots your hand keeps moving but misses the strings.',
+    sp_swing:'Swing', sp_accent:'Backbeat', sp_mute:'Palm mute', sp_band:'Band',
+    sp_hint:'Strum along — ↓ down, ↑ up; over the empty slots your hand keeps moving but misses the strings. Try swing, the backbeat accent, palm-muting and the band.',
     drill_comp:'Comp the progression', drill_comp_meta:'Right chord, right time · coach',
     co_prog:'Progression', co_now:'Now', co_next:'Next',
+    oc_mode:'You play', oc_chords:'Chords', oc_tones:'Chord tones',
     co_hint:'Comp the chord shown — switch on time as the band cycles the progression.',
-    drill_groove:'Groove & feel', drill_groove_meta:'Swing, accents, palm-mute · coach',
-    gf_swing:'Swing', gf_accent:'Backbeat', gf_mute:'Palm mute',
-    gf_hint:'Play along and feel the beat — try swing, the backbeat accent, and muted strums.',
     practice_grp_lead:'Lead', drill_target:'Chord tones over changes', drill_target_meta:'Target the chord tones over a band · coach',
     tg_prog:'Progression', tg_pos:'Position', tg_deg:'Target', tg_hits:'Hits', tg_acc:'Accuracy',
     tg_hint:'The band cycles the progression — hit the lit tones of the current chord. Pick a position to play one arpeggio shape through the changes, or a target (1·3·5·7) to land on a single tone each time. This trains where the chord tones are (not your guitar — mic scoring comes later).',
@@ -2205,8 +1851,7 @@ const I18N = {
     tb_tuning:'Tuning', tb_lefty:'Left-handed', tb_frets:'Frets', tb_tempo:'Tempo', tb_capo:'Capo', capo_off:'off', tb_meter:'Meter',
     a11y_label:'Accessibility', a11y_palette:'Colour-blind palette', a11y_shapes:'Shapes on dots',
     tun_custom:'Custom tuning',
-    cal_label:'Timing offset', cal_test:'Tap test', cal_tapnow:'Tap!', cal_unit:'ms',
-    prog_active:'Active days', prog_due:'Due to review', prog_review:'Review',
+      prog_active:'Active days', prog_due:'Due to review', prog_review:'Review',
     share_btn:'Share', share_copied:'Copied!',
     wc_title:'Welcome to Euterpe',
     wc_lead:'A guitar studio for theory and practice. Three ways in:',
@@ -2221,7 +1866,8 @@ const I18N = {
     seq_play_tip:'Play the whole progression', seq_loop_tip:'Loop the progression as a backing to play over',
     nt_pick_hint:'The highlighted note follows the Root above · "Naturals only" hides sharps and flats',
     tb_now_loop:'Loop', tb_now_seq:'Progression', tb_stop:'Stop',
-    cl_title:'What\'s new', cl_current:'current',
+    cl_title:'What\'s new', cl_current:'current', cl_older:'Full release history — CHANGELOG.md in the repository',
+  tbc_instrument:'Instrument', tbc_neck:'Neck & meter', tbc_app:'App',
     frets_all:'All', cd_open:'open chord',
     cd_barre:'barre, fret', cd_std:'fingering for standard tuning',
     cd_na:'no simple shape', cd_calc:'computed voicing', cd_pos:'up the neck',
@@ -2323,9 +1969,13 @@ function midPulseSec(){ return Math.floor(barBeats()/2)*pulseSec(); }   // the m
 function meterGroupStarts(){ const g=curMeter().groups, s=new Set(); let a=0; for(const n of g){ s.add(a); a+=n; } return s; }
 function setMeter(i){ if(Number.isInteger(i) && i>=0 && i<METERS.length) meterIdx=i; }
 
-/* collapsible toolbar; default open on wide screens, collapsed on phones — and also
-   collapsed on a short (landscape-phone) viewport, where every row above the neck counts */
-let toolbarOpen = (typeof window!=='undefined' && window.innerWidth>700 && window.innerHeight>500);
+/* collapsible toolbar, default closed everywhere. It used to open itself on any
+   viewport over 700x500, which put eleven setup controls (tuning, frets, capo,
+   meter, a11y, share…) between a first-time desktop visitor and the neck — exactly
+   the console the transport bar's disclosure toggles exist to avoid. They're setup,
+   not actions: one tap away is the right distance. The choice is persisted, so
+   anyone who wants it open keeps it open. */
+let toolbarOpen = false;
 /* the backing band (metronome + bass/drums) lives in its own collapsible panel,
    default closed — secondary jam-along tools, kept out of the lean transport bar */
 let backingOpen = false;
@@ -2613,61 +2263,11 @@ function visualDrain(){
   if(visualQ.length || clocks.size) visRAF=requestAnimationFrame(visualDrain);
 }
 
-/* ===================== TIMING CALIBRATION (Phase 3 debt) =====================
-   A one-time round-trip latency offset (ms) the scoring window will subtract so a
-   tap that *felt* on the beat scores on the beat. Built now (cheap) ahead of the
-   first scored/mic tier that consumes it — no scored tap drill exists yet, so this
-   only measures + stores the offset and exposes calOffsetSec() for later (the
-   roadmap calls it out as needed for tap windows now and reused by mic windows).
-
-   Measure: a steady click runs on the cue bus; the player taps along; each tap is
-   matched to its nearest scheduled beat and a trimmed mean of the deltas is the
-   offset. The averaging (calcLatencyOffset) is pure + unit-tested; the live tap
-   loop rides the same two-clocks scheduler as everything else. */
-let calMs = 0;                                       // stored offset, ms (positive = taps land late)
-const CAL_MIN = -100, CAL_MAX = 300, CAL_TAPS = 8;   // slider bounds + taps per test
-function calOffsetSec(){ return calMs/1000; }        // future scoring windows read this
-function clampCal(v){ return Math.max(CAL_MIN, Math.min(CAL_MAX, Math.round(v))); }
-// robust centre of the tap deltas: with enough taps, drop the single fastest +
-// slowest then mean the rest (kills one fumbled tap); otherwise mean them all.
-// Pure, so the harness can assert it directly.
-function calcLatencyOffset(deltas){
-  const a=(deltas||[]).filter(d=>typeof d==='number' && isFinite(d)).sort((x,y)=>x-y);
-  if(!a.length) return 0;
-  const trimmed = a.length>=4 ? a.slice(1, a.length-1) : a;
-  return clampCal(trimmed.reduce((s,d)=>s+d,0)/trimmed.length);
-}
-let cal=null;   // { beats:[audioTime…], deltas:[ms…], clock } while a tap test runs
-function calStart(){
-  const ctx=audio(); if(!ctx) return null;
-  calCancel();
-  cal={ beats:[], deltas:[], clock:null };
-  cal.clock={ interval:()=>beat(), tick:(time,count)=>{ cal.beats.push(time); if(typeof metroClick==='function') metroClick(time, count%4===0); if(cal.beats.length>32) cal.beats.shift(); } };
-  if(typeof addClock==='function') addClock(cal.clock);
-  return cal;
-}
-function calCancel(){ if(cal && cal.clock && typeof removeClock==='function') removeClock(cal.clock); cal=null; }
-// one tap: match it to the nearest scheduled beat, record the signed delta (ms).
-// Returns the running tap count so the UI can advance / finish at CAL_TAPS.
-function calTap(now){
-  if(!cal) return 0;
-  now = (typeof now==='number') ? now : (actx?actx.currentTime:0);
-  if(cal.beats.length){
-    let nearest=cal.beats[0];
-    for(let i=1;i<cal.beats.length;i++){ if(Math.abs(cal.beats[i]-now)<Math.abs(nearest-now)) nearest=cal.beats[i]; }
-    cal.deltas.push((now-nearest)*1000);
-  }
-  return cal.deltas.length;
-}
-// finish: compute + store the offset from the collected taps, stop the click.
-function calFinish(){
-  if(!cal) return calMs;
-  const off=calcLatencyOffset(cal.deltas);
-  calCancel();
-  calMs=off;
-  return calMs;
-}
-function setCalMs(v){ calMs=clampCal(typeof v==='number'?v:0); return calMs; }
+/* Timing calibration (the tap-test + stored latency offset) lived here. It was
+   built ahead of the scored/mic tier that would consume it, and that tier never
+   arrived — calOffsetSec() had no callers, so the toolbar carried a control that
+   adjusted nothing. Removed; bring it back with Phase 8/F1 mic scoring, which is
+   the first thing that can actually use an offset. */
 
 /* ---- cue sounds (cue bus): short synthesized UI feedback. The metronome uses
    the cue bus; correct / wrong / count-in are foundation primitives consumed by
@@ -4348,7 +3948,7 @@ let currentTab='harmony';
 let currentMode='reference';
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
   lang, mode:currentMode, tab:currentTab, tuningIdx, customTuning, fretRangeIdx, tempo, meterIdx, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
-  calMs, cbPalette, fnShapes, welcomeSeen,
+  cbPalette, fnShapes, welcomeSeen,
   gRoot, gRootLbl, gMode, hView, scView,
   chQual, arpPos, scIdx, scPos, scOverlay,
   chVoicing,
@@ -4364,7 +3964,6 @@ function loadState(){ try{
   if(s.mode==='reference'||s.mode==='practice'||s.mode==='ear') currentMode=s.mode;   // mode axis (3a; Ear added in Phase 4) — default reference
   if(Number.isInteger(s.tuningIdx)&&TUNINGS[s.tuningIdx]) tuningIdx=s.tuningIdx;
   if(Array.isArray(s.customTuning)&&s.customTuning.length===6&&s.customTuning.every(m=>Number.isInteger(m)&&m>=TUNE_LO&&m<=TUNE_HI)) customTuning=s.customTuning.slice();
-  if(typeof s.calMs==='number'&&isFinite(s.calMs)) calMs=clampCal(s.calMs);   // 05-audio bounds (CAL_MIN..CAL_MAX)
   if(Number.isInteger(s.fretRangeIdx)&&FRET_RANGES[s.fretRangeIdx]) fretRangeIdx=s.fretRangeIdx;
   if(Number.isInteger(s.capo)&&s.capo>=0&&s.capo<=11) capo=s.capo;
   if(typeof s.tempo==='number'&&s.tempo>=40&&s.tempo<=200) tempo=s.tempo;
@@ -4501,6 +4100,16 @@ function activeDrill(mode){
 // end every running drill that does NOT belong to `mode` (pass 'reference' to end them all)
 function exitDrillsExcept(mode){
   DRILLS.forEach(d=>{ if(d.mode!==mode && drillIsActive(d) && typeof d.exit==='function') d.exit(); });
+}
+
+/* The shared drill key picker (#drill-ctx) changed the context key. Every practice drill
+   used to carry its own copy of that row — six identical markup blocks all calling the same
+   setKey — so the row moved to the shell and the drill now only says what it has to re-derive
+   when the key moves (rebuild its bars, restart its round, repaint its board). Optional: a
+   drill with nothing key-dependent just omits onKey. */
+function drillKeyChanged(){
+  const d=activeDrill('practice');
+  if(d && typeof d.onKey==='function'){ try{ d.onKey(); }catch(_){} }
 }
 
 function drillHomeId(mode){ return mode==='ear' ? 'ear-home' : 'practice-home'; }
@@ -4935,229 +4544,6 @@ registerDrill({ id:'ear', mode:'ear', area:'ear-area',
   const ch=document.getElementById('ear-choices');
   if(ch) ch.addEventListener('click', e=>{ const b=e.target.closest('.ear-choice'); if(b && !b.disabled) earAnswer(b.dataset.key); });
 })();
-/* ===================== Drill: Chord-tone targeting (Phase 6a) =====================
-   The LEAD pillar's table-stakes tier — playing OVER the changes. A chosen progression
-   loops with a full backing band (bass + groove + a guide comp), and for the chord that
-   is sounding NOW its chord tones light up as targets on a tappable neck. You aim for the
-   lit tones; a tap on a chord tone lands (lights + sounds its degree), a tap off the chord
-   buzzes. Each bar the targets move to the new chord, so you track the tones through the
-   progression.
-
-   Honest framing (roadmap): with no mic this trains WHERE the chord tones are — a
-   location/recognition game, not soloing; don't market it as the latter. Tap input is
-   scored on ACCURACY (right tones vs wrong notes), never on timing (touch latency corrupts
-   timing — the coach-tier rule); real "play your guitar and get scored" waits on Phase 8/F2.
-   A practiced run (≥1 bar) records a session (accuracy %), minting no per-item SRS — the
-   looping shape derives from the sessions ring buffer, like the Rhythm coaches, so the
-   pinned learner item shape (spine #3) stays untouched.
-
-   Reuses SEQ_PRESETS + compBuildBars-style expansion (resolved to the context key, spine
-   #1), scheduleBand(force)/compStrum for the band (06), the scheduler clock + enqueueVisual,
-   the shared board paint (renderBoard, 07) on its OWN board, and playCue/pluck (05). */
-
-let tgIdx = 1;          // selected progression (default I–V–vi–IV)
-let tgDrill = null;
-// tgDrill = { presetIdx, bars:[{pc,qi}…], bar, cycles, clock, playing, hits, misses,
-//             targetPcs:Set(pc), chordPcs:Set(pc), degMap:{pc:lab}, found:Set("si:f"), win:[lo,hi]|null }
-
-let tgPos = 0;         // 0 = whole neck (6a targeting); 1–5 = one arpeggio box (6b, reuses Phase 2 boxWindow)
-let tgDeg = 0;         // 0 = all chord tones; else a target degree (6c: land on ONE tone through the changes)
-// target-degree families → the labClass they match (index = tgDeg): root / third / fifth / seventh
-const TG_DEG_CLASS = [null, 'd-root', 'd-third', 'd-fifth', 'd-sev'];
-
-// expand a preset's steps (offset, qi, bars) into one chord per bar, in the context key
-function tgBuildBars(preset){
-  const r=gRoot, out=[];
-  preset.steps.forEach(([off,qi,b])=>{ const pc=mod(r+off,12); for(let k=0;k<Math.max(1,b);k++) out.push({pc, qi}); });
-  return out;
-}
-// the current chord's tones → the bar's SCORED targets + the full chord set. Kept in one
-// place so the idle board (before Play) and each tick agree. In target-note mode (6c,
-// tgDeg>0) only the chosen degree lights/scores as a hit; the other chord tones stay
-// `chordPcs` so tapping them is neutral (a valid solo note), not a miss. Doesn't touch `found`.
-function tgSetTargets(chord){
-  const q=QUALITIES[chord.qi], chordPcs=new Set(), targetPcs=new Set(), deg={};
-  const want=TG_DEG_CLASS[tgDeg];
-  q.lab.forEach((lab,idx)=>{
-    const pc=mod(chord.pc+q.iv[idx],12);
-    chordPcs.add(pc);
-    if(!want || labClass(lab)===want){ targetPcs.add(pc); deg[pc]=lab; }
-  });
-  // if the chord lacks the chosen degree (e.g. a 7th on a triad), nothing lights that bar
-  // — an honest "lay out" rest, itself a phrasing lesson.
-  tgDrill.targetPcs=targetPcs; tgDrill.chordPcs=chordPcs; tgDrill.degMap=deg;
-}
-function startTarget(){
-  tgDrill={ presetIdx:tgIdx, bars:tgBuildBars(SEQ_PRESETS[tgIdx]), bar:0, cycles:0, clock:null, playing:false,
-            hits:0, misses:0, targetPcs:new Set(), chordPcs:new Set(), degMap:{}, found:new Set(), win:null };
-  tgSetTargets(tgDrill.bars[0]);          // light the first chord on the idle board
-  const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
-  if(home) home.hidden=true; if(area) area.hidden=false;
-  renderTargetBoard();
-  renderTarget();
-}
-function exitTarget(){
-  targetStop();
-  tgDrill=null;
-  const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  if(typeof renderPractice==='function') renderPractice();
-}
-function targetToggle(){ if(tgDrill && tgDrill.playing) targetStop(); else targetPlay(); }
-function targetPlay(){
-  if(!tgDrill || tgDrill.playing) return;
-  audio();
-  if(typeof stopLoop==='function') stopLoop();       // don't fight the reference loop / progression
-  if(typeof seqStop==='function') seqStop();
-  tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
-  tgDrill.bar=0; tgDrill.cycles=0; tgDrill.hits=0; tgDrill.misses=0; tgDrill.found=new Set(); tgDrill.playing=true;
-  tgDrill.clock={ interval:()=>barSec(), tick:(time,count)=>targetTick(time,count) };
-  if(typeof addClock==='function') addClock(tgDrill.clock);
-  renderTarget();
-}
-function targetStop(){
-  if(!tgDrill || !tgDrill.playing) return;
-  if(tgDrill.clock){ if(typeof removeClock==='function') removeClock(tgDrill.clock); tgDrill.clock=null; }
-  if(typeof clearVisualQ==='function') clearVisualQ();
-  tgDrill.playing=false;
-  const barsPlayed = tgDrill.cycles*tgDrill.bars.length + tgDrill.bar;
-  if(barsPlayed>=1){ recordSession('target:'+SEQ_PRESETS[tgDrill.presetIdx].name, tgAccuracy()); saveState(); if(typeof renderPractice==='function') renderPractice(); }
-  renderTarget();
-}
-// accuracy over the run: right tones / all taps, as a 0..100 int (0 when untapped)
-function tgAccuracy(){ const tot=tgDrill.hits+tgDrill.misses; return tot ? Math.round(100*tgDrill.hits/tot) : 0; }
-function targetTick(when, count){
-  if(!tgDrill) return;
-  const bars=tgDrill.bars; if(!bars.length) return;
-  const i=count%bars.length;
-  if(i===0 && count>0) tgDrill.cycles++;
-  tgDrill.bar=i;
-  const cur=bars[i], nxt=bars[(i+1)%bars.length], p=pulseSec();
-  const ivs=QUALITIES[cur.qi].iv, base=48+cur.pc;
-  // the SCORING state (which tones are targets this bar) is set synchronously in the
-  // tick so a tap always reads the current chord — only the DOM guides ride the visual
-  // queue (which may lag/skip a frame). Reset the found set for the new bar.
-  tgSetTargets(cur); tgDrill.found=new Set();
-  compStrum(base, ivs, when, 0.62, 0.03);                    // light guide comp under your targeting
-  scheduleBand(cur.pc, cur.qi, when, true);                  // forced bass + groove bed
-  for(let k=0;k<barBeats();k++) enqueueVisual(when+k*p, ()=>tgPulseBeat(k));
-  enqueueVisual(when, ()=>{ markTargets(); renderTargetStage(cur, nxt); });
-}
-// whether fret f is inside the drilled shape (always true on the whole-neck 6a mode)
-function tgInWin(f){ const w=tgDrill&&tgDrill.win; return !w || (f>=w[0] && f<=w[1]); }
-// paint/refresh which dots are lit targets, clearing the previous bar's hit/miss marks.
-// In a box (6b) only the tones INSIDE the window light, so you drill one moveable shape.
-function markTargets(){
-  if(!tgDrill) return;
-  document.querySelectorAll('#tg-board .dot.quiz').forEach(d=>{
-    const pc=+d.dataset.pc;
-    d.classList.remove('hit','miss'); d.textContent='';
-    d.classList.toggle('target', tgDrill.targetPcs.has(pc) && tgInWin(+d.dataset.f));
-  });
-}
-
-// one tap at (string,fret) while the loop runs. A target tone not yet found this bar →
-// hit (light its degree + sound it); an off-chord note → miss (buzz); a re-tap → ignored.
-// In box mode (6b) taps OUTSIDE the shape are ignored. In target-note mode (6c) a chord
-// tone that isn't the chosen target is NEUTRAL — a valid solo note that just sounds, no
-// score either way — so only landing on the prompted tone is rewarded and only off-chord
-// notes buzz.
-function targetAnswer(si, f){
-  if(!tgDrill || !tgDrill.playing) return;
-  if(!tgInWin(f)) return;                                    // 6b: outside the shape → ignore
-  const pc=(OPEN_MIDI[si]+f)%12, key=si+':'+f;
-  if(tgDrill.targetPcs.has(pc)){
-    if(tgDrill.found.has(key)) return;                       // already landed
-    tgDrill.found.add(key); tgDrill.hits++;
-    markTargetDot(si,f,'hit');
-    pluck(OPEN_MIDI[si]+f);
-  } else if(tgDrill.chordPcs.has(pc)){
-    pluck(OPEN_MIDI[si]+f);                                  // 6c: another chord tone — neutral, just sounds
-  } else {
-    tgDrill.misses++;
-    markTargetDot(si,f,'miss');
-    playCue('wrong');
-  }
-  renderTargetStats();
-}
-
-/* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
-function renderTargetBoard(){
-  const el=document.getElementById('tg-board'); if(!el) return;
-  renderBoard(el, (pc,si,f)=>{
-    const d=document.createElement('div'); d.className='dot quiz';
-    d.dataset.si=si; d.dataset.f=f; d.dataset.pc=pc; d.tabIndex=0; d.setAttribute('role','button');
-    d.setAttribute('aria-label', SNAMES[si]+' '+f);        // the position, never the answer
-    return d;
-  });
-  renderNums(document.getElementById('tg-nums'));
-}
-function renderTarget(){
-  if(!tgDrill) return;
-  const keyc=document.getElementById('tg-key');
-  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); if(tgDrill){ tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]); if(tgDrill.bar>=tgDrill.bars.length) tgDrill.bar=0; } renderTarget(); });
-  const chips=document.getElementById('tg-progs');
-  if(chips) chips.innerHTML=SEQ_PRESETS.map((p,i)=>`<button type="button" class="btn tg-prog${i===tgIdx?' active':''}" data-i="${i}" aria-pressed="${i===tgIdx}">${p.name}</button>`).join('');
-  // arpeggio-position picker (6b): All (whole neck) + boxes 1–5, reusing Phase 2's boxWindow
-  segButtons('tg-pos', [t('pos_all'),'1','2','3','4','5'].map(label=>({label})), tgPos,
-    i=>{ tgPos=i; renderTarget(); });
-  tgDrill.win = tgPos ? boxWindow(tgPos) : null;
-  // target-note picker (6c): All chord tones, or land on ONE degree through the changes
-  segButtons('tg-deg', [{label:t('pos_all')},{label:'1',aria:t('leg_root')},{label:'3',aria:t('leg_third')},
-                        {label:'5',aria:t('leg_fifth')},{label:'7',aria:t('leg_seventh')}], tgDeg,
-    i=>{ tgDeg=i; const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); renderTarget(); });
-  const beats=document.getElementById('tg-beats');
-  if(beats) beats.innerHTML=Array.from({length:barBeats()},(_,k)=>`<span class="co-beat" data-k="${k}"></span>`).join('');
-  const cur=tgDrill.bars[tgDrill.bar], nxt=tgDrill.bars[(tgDrill.bar+1)%tgDrill.bars.length];
-  renderTargetStage(cur, nxt);
-  markTargets();                                     // reflect current chord + shape on the board
-  renderTargetStats();
-  const pb=document.getElementById('tg-play'); if(pb){ pb.innerHTML=(tgDrill.playing?'&#9632; ':'&#9654; ')+t(tgDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', tgDrill.playing); pb.setAttribute('aria-pressed', tgDrill.playing?'true':'false'); }
-  const hint=document.getElementById('tg-hint'); if(hint) hint.textContent=t('tg_hint');
-}
-function tgChordName(st){ return st ? ROOTS[st.pc]+QUALITIES[st.qi].short : ''; }
-function renderTargetStage(cur, nxt){
-  const nowEl=document.getElementById('tg-now'); if(nowEl) nowEl.textContent=tgChordName(cur);
-  const nxtEl=document.getElementById('tg-next'); if(nxtEl) nxtEl.textContent=tgChordName(nxt);
-  const nl=document.getElementById('tg-now-lab'); if(nl) nl.textContent=t('co_now');
-  const xl=document.getElementById('tg-next-lab'); if(xl) xl.textContent=t('co_next');
-}
-function renderTargetStats(){
-  if(!tgDrill) return;
-  const h=document.getElementById('tg-hits'); if(h) h.textContent=t('tg_hits')+' '+tgDrill.hits;
-  const a=document.getElementById('tg-acc'); if(a) a.textContent = (tgDrill.hits+tgDrill.misses) ? (t('tg_acc')+' '+tgAccuracy()+'%') : '';
-}
-function tgPulseBeat(k){
-  document.querySelectorAll('#tg-beats .co-beat').forEach(d=>d.classList.toggle('on', +d.dataset.k===k));
-}
-function markTargetDot(si,f,kind){
-  const d=document.querySelector('#tg-board .dot.quiz[data-si="'+si+'"][data-f="'+f+'"]'); if(!d) return;
-  if(kind==='hit'){ d.classList.add('hit'); d.textContent=(tgDrill.degMap[+d.dataset.pc]||''); rippleDot(d); }
-  else { d.classList.add('miss'); setTimeout(()=>{ if(d) d.classList.remove('miss'); }, 420); }
-}
-// re-localize an in-flight targeting drill on a language switch (called from applyLang)
-function refreshTargetLang(){ if(tgDrill) renderTarget(); }
-
-/* card starter + in-drill controls — wired once at load (guarded so a missing panel
-   never throws, mirroring initComp / initDrill). */
-registerDrill({ id:'target', mode:'practice', area:'tg-area',
-                isActive:()=>!!tgDrill, exit:exitTarget, refreshLang:refreshTargetLang });
-
-(function initTarget(){
-  const card=document.getElementById('start-target'); if(!card) return;
-  card.onclick=startTarget;
-  const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('tg-quit', exitTarget);
-  wire('tg-play', targetToggle);
-  const pg=document.getElementById('tg-progs');
-  if(pg) pg.addEventListener('click', e=>{ const btn=e.target.closest('.tg-prog'); if(btn){ tgIdx=+btn.dataset.i; if(tgDrill){ tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]); if(tgDrill.bar>=tgDrill.bars.length) tgDrill.bar=0; } renderTarget(); } });
-  const b=document.getElementById('tg-board');
-  if(b){
-    const fire=d=>{ if(d) targetAnswer(parseInt(d.dataset.si,10), parseInt(d.dataset.f,10)); };
-    b.addEventListener('click', e=>fire(e.target.closest('.dot.quiz')));
-    b.addEventListener('keydown', e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const d=e.target.closest('.dot.quiz'); if(!d) return; e.preventDefault(); fire(d); });
-  }
-})();
 /* ===================== Drill: Call & response (Phase 6c) =====================
    The Lead pillar's phrasing tier — motif call-and-response. The app plays a short
    lick (the CALL) from the current key's scale inside one neck box; you echo it back
@@ -5318,8 +4704,6 @@ function crRenderSummary(acc){
   const dn=document.getElementById('cr-done2'); if(dn){ dn.textContent=t('drill_done'); dn.onclick=exitCallResp; }
 }
 function crRenderControls(){
-  const keyc=document.getElementById('cr-key');
-  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); if(cr) crNewRound(); });
   segButtons('cr-pos', ['1','2','3','4','5'].map(label=>({label})), crPos-1, i=>{ crPos=i+1; if(cr) crNewRound(); });
 }
 function crRenderStatus(){
@@ -5345,13 +4729,14 @@ function refreshCallRespLang(){ if(cr) renderCr(); }
 
 /* card starter + in-drill controls — wired once at load (guarded, mirroring initTarget). */
 registerDrill({ id:'callresp', mode:'practice', area:'cr-area',
-                isActive:()=>!!cr, exit:exitCallResp, refreshLang:refreshCallRespLang });
+                isActive:()=>!!cr, exit:exitCallResp, refreshLang:refreshCallRespLang,
+                // the motif is drawn from the key's scale, so a key change deals a new round
+                onKey:()=>{ if(cr) crNewRound(); } });
 
 (function initCallResp(){
   const card=document.getElementById('start-callresp'); if(!card) return;
   card.onclick=startCallResp;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('cr-quit', exitCallResp);
   wire('cr-replay', crReplay);
   const b=document.getElementById('cr-board');
   if(b){
@@ -5514,7 +4899,287 @@ registerDrill({ id:'notes', mode:'practice', area:'drill-area',
   const fire=d=>{ if(d) drillAnswer(parseInt(d.dataset.si,10), parseInt(d.dataset.f,10)); };
   b.addEventListener('click', e=>fire(e.target.closest('.dot.quiz')));
   b.addEventListener('keydown', e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const d=e.target.closest('.dot.quiz'); if(!d) return; e.preventDefault(); fire(d); });
-  const q=document.getElementById('drill-quit'); if(q) q.onclick=exitDrill;
+})();
+/* ===================== Drill: Over the changes (Phase 5c + 6a/6b/6c, merged) =====================
+   One machine, two things to practise over a looping progression: COMP it (play the right
+   chord at the right time — the Rhythm pillar) or play its CHORD TONES (aim at the tones of
+   the chord that is sounding — the Lead pillar). A chosen progression cycles with a forced
+   backing band; a big NOW + a NEXT preview + a beat indicator land each change in time.
+
+   This was two drills. "Comp the progression" (5c) and "Chord-tone targeting" (6a/6b/6c) ran
+   the same SEQ_PRESETS through the same bar expansion, on the same barSec() clock, with the
+   same scheduleBand(force)+compStrum bed, the same NOW/NEXT stage and the same beat dots —
+   6a's markup even reused 5c's co-stage/co-slot/co-beats CSS. The only real differences are
+   what you're asked to play and how it's scored, which is now a mode:
+
+     chords  — a loud guide comp + a mid-bar push, chord DIAGRAMS in NOW/NEXT, no board.
+               Records comp:<progression> scored by bars comped. Coach tier.
+     tones   — a lighter comp so your line sits on top, chord NAMES in NOW/NEXT, and a
+               tappable neck whose lit dots are the current chord's tones. Position windows
+               them to one arpeggio box (6b, Phase 2's boxWindow); Target narrows them to a
+               single degree (6c). Records target:<progression> scored by accuracy.
+
+   Both session namespaces are kept, so progress recorded before the merge still reads.
+
+   Honest framing (roadmap): with no mic, `tones` trains WHERE the chord tones are — a
+   location/recognition game, not soloing. Tap input is scored on ACCURACY (right tones vs
+   wrong notes), never on timing (touch latency corrupts timing — the coach-tier rule); real
+   "play your guitar and get scored" waits on Phase 8/F2. Neither mode mints per-item SRS —
+   the looping shape derives from the sessions ring buffer, so the pinned learner item shape
+   (spine #3) stays untouched.
+
+   The DOM ids stay `tg-*` from the targeting drill: they're the shared vocabulary of the CSS
+   and the smoke suite, and renaming them would be churn with no user-visible effect. */
+
+let tgIdx = 1;          // selected progression (default I–V–vi–IV)
+let tgMode = 'tones';   // 'chords' (comp it) | 'tones' (play its chord tones)
+let tgDrill = null;
+// tgDrill = { presetIdx, bars:[{pc,qi}…], bar, cycles, clock, playing, hits, misses,
+//             targetPcs:Set(pc), chordPcs:Set(pc), degMap:{pc:lab}, found:Set("si:f"), win:[lo,hi]|null }
+
+let tgPos = 0;         // 0 = whole neck; 1–5 = one arpeggio box (6b, reuses Phase 2 boxWindow)
+let tgDeg = 0;         // 0 = all chord tones; else a target degree (6c: land on ONE tone through the changes)
+// target-degree families → the labClass they match (index = tgDeg): root / third / fifth / seventh
+const TG_DEG_CLASS = [null, 'd-root', 'd-third', 'd-fifth', 'd-sev'];
+function tgTones(){ return tgMode==='tones'; }
+
+// expand a preset's steps (offset, qi, bars) into one chord per bar, in the context key
+function tgBuildBars(preset){
+  const r=gRoot, out=[];
+  preset.steps.forEach(([off,qi,b])=>{ const pc=mod(r+off,12); for(let k=0;k<Math.max(1,b);k++) out.push({pc, qi}); });
+  return out;
+}
+// the current chord's tones → the bar's SCORED targets + the full chord set. Kept in one
+// place so the idle board (before Play) and each tick agree. In target-note mode (6c,
+// tgDeg>0) only the chosen degree lights/scores as a hit; the other chord tones stay
+// `chordPcs` so tapping them is neutral (a valid solo note), not a miss. Doesn't touch `found`.
+function tgSetTargets(chord){
+  const q=QUALITIES[chord.qi], chordPcs=new Set(), targetPcs=new Set(), deg={};
+  const want=TG_DEG_CLASS[tgDeg];
+  q.lab.forEach((lab,idx)=>{
+    const pc=mod(chord.pc+q.iv[idx],12);
+    chordPcs.add(pc);
+    if(!want || labClass(lab)===want){ targetPcs.add(pc); deg[pc]=lab; }
+  });
+  // if the chord lacks the chosen degree (e.g. a 7th on a triad), nothing lights that bar
+  // — an honest "lay out" rest, itself a phrasing lesson.
+  tgDrill.targetPcs=targetPcs; tgDrill.chordPcs=chordPcs; tgDrill.degMap=deg;
+}
+// both practice-home cards land here; each one just picks the mode it teaches
+function startOverChanges(mode){
+  tgMode = (mode==='chords') ? 'chords' : 'tones';
+  tgDrill={ presetIdx:tgIdx, bars:tgBuildBars(SEQ_PRESETS[tgIdx]), bar:0, cycles:0, clock:null, playing:false,
+            hits:0, misses:0, targetPcs:new Set(), chordPcs:new Set(), degMap:{}, found:new Set(), win:null };
+  tgSetTargets(tgDrill.bars[0]);          // light the first chord on the idle board
+  const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
+  if(home) home.hidden=true; if(area) area.hidden=false;
+  renderTargetBoard();
+  renderTarget();
+}
+function startComp(){ startOverChanges('chords'); }
+function startTarget(){ startOverChanges('tones'); }
+function exitTarget(){
+  targetStop();
+  tgDrill=null;
+  const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
+  if(area) area.hidden=true; if(home) home.hidden=false;
+  if(typeof renderPractice==='function') renderPractice();
+}
+function targetToggle(){ if(tgDrill && tgDrill.playing) targetStop(); else targetPlay(); }
+function targetPlay(){
+  if(!tgDrill || tgDrill.playing) return;
+  audio();
+  if(typeof stopLoop==='function') stopLoop();       // don't fight the reference loop / progression
+  if(typeof seqStop==='function') seqStop();
+  tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
+  tgDrill.bar=0; tgDrill.cycles=0; tgDrill.hits=0; tgDrill.misses=0; tgDrill.found=new Set(); tgDrill.playing=true;
+  tgDrill.clock={ interval:()=>barSec(), tick:(time,count)=>targetTick(time,count) };
+  if(typeof addClock==='function') addClock(tgDrill.clock);
+  renderTarget();
+}
+function targetStop(){
+  if(!tgDrill || !tgDrill.playing) return;
+  if(tgDrill.clock){ if(typeof removeClock==='function') removeClock(tgDrill.clock); tgDrill.clock=null; }
+  if(typeof clearVisualQ==='function') clearVisualQ();
+  tgDrill.playing=false;
+  const barsPlayed = tgDrill.cycles*tgDrill.bars.length + tgDrill.bar;
+  // each mode keeps its own session namespace + score, so pre-merge history still reads:
+  // comping is scored by bars played, targeting by tap accuracy.
+  if(barsPlayed>=1){
+    const name=SEQ_PRESETS[tgDrill.presetIdx].name;
+    if(tgTones()) recordSession('target:'+name, tgAccuracy());
+    else recordSession('comp:'+name, barsPlayed);
+    saveState();
+    if(typeof renderPractice==='function') renderPractice();
+  }
+  renderTarget();
+}
+// accuracy over the run: right tones / all taps, as a 0..100 int (0 when untapped)
+function tgAccuracy(){ const tot=tgDrill.hits+tgDrill.misses; return tot ? Math.round(100*tgDrill.hits/tot) : 0; }
+function targetTick(when, count){
+  if(!tgDrill) return;
+  const bars=tgDrill.bars; if(!bars.length) return;
+  const i=count%bars.length;
+  if(i===0 && count>0) tgDrill.cycles++;
+  tgDrill.bar=i;
+  const cur=bars[i], nxt=bars[(i+1)%bars.length], p=pulseSec();
+  const ivs=QUALITIES[cur.qi].iv, base=48+cur.pc;
+  // the SCORING state (which tones are targets this bar) is set synchronously in the
+  // tick so a tap always reads the current chord — only the DOM guides ride the visual
+  // queue (which may lag/skip a frame). Reset the found set for the new bar.
+  tgSetTargets(cur); tgDrill.found=new Set();
+  if(tgTones()){
+    compStrum(base, ivs, when, 0.62, 0.03);                  // light guide comp under your targeting
+  } else {
+    compStrum(base, ivs, when, 0.9, 0.028);                  // guide comp on the downbeat
+    compStrum(base, ivs, when+midPulseSec(), 0.55, 0.022);   // softer push mid-bar (beat 3 in 4/4)
+  }
+  scheduleBand(cur.pc, cur.qi, when, true);                  // forced bass + groove bed
+  for(let k=0;k<barBeats();k++) enqueueVisual(when+k*p, ()=>tgPulseBeat(k));
+  enqueueVisual(when, ()=>{ if(tgTones()) markTargets(); renderTargetStage(cur, nxt); });
+}
+// whether fret f is inside the drilled shape (always true on the whole-neck mode)
+function tgInWin(f){ const w=tgDrill&&tgDrill.win; return !w || (f>=w[0] && f<=w[1]); }
+// paint/refresh which dots are lit targets, clearing the previous bar's hit/miss marks.
+// In a box (6b) only the tones INSIDE the window light, so you drill one moveable shape.
+function markTargets(){
+  if(!tgDrill) return;
+  document.querySelectorAll('#tg-board .dot.quiz').forEach(d=>{
+    const pc=+d.dataset.pc;
+    d.classList.remove('hit','miss'); d.textContent='';
+    d.classList.toggle('target', tgDrill.targetPcs.has(pc) && tgInWin(+d.dataset.f));
+  });
+}
+
+// one tap at (string,fret) while the loop runs. A target tone not yet found this bar →
+// hit (light its degree + sound it); an off-chord note → miss (buzz); a re-tap → ignored.
+// In box mode (6b) taps OUTSIDE the shape are ignored. In target-note mode (6c) a chord
+// tone that isn't the chosen target is NEUTRAL — a valid solo note that just sounds, no
+// score either way — so only landing on the prompted tone is rewarded and only off-chord
+// notes buzz. Comping mode has no board, so taps can't reach here.
+function targetAnswer(si, f){
+  if(!tgDrill || !tgDrill.playing || !tgTones()) return;
+  if(!tgInWin(f)) return;                                    // 6b: outside the shape → ignore
+  const pc=(OPEN_MIDI[si]+f)%12, key=si+':'+f;
+  if(tgDrill.targetPcs.has(pc)){
+    if(tgDrill.found.has(key)) return;                       // already landed
+    tgDrill.found.add(key); tgDrill.hits++;
+    markTargetDot(si,f,'hit');
+    pluck(OPEN_MIDI[si]+f);
+  } else if(tgDrill.chordPcs.has(pc)){
+    pluck(OPEN_MIDI[si]+f);                                  // 6c: another chord tone — neutral, just sounds
+  } else {
+    tgDrill.misses++;
+    markTargetDot(si,f,'miss');
+    playCue('wrong');
+  }
+  renderTargetStats();
+}
+
+/* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
+function renderTargetBoard(){
+  const el=document.getElementById('tg-board'); if(!el) return;
+  renderBoard(el, (pc,si,f)=>{
+    const d=document.createElement('div'); d.className='dot quiz';
+    d.dataset.si=si; d.dataset.f=f; d.dataset.pc=pc; d.tabIndex=0; d.setAttribute('role','button');
+    d.setAttribute('aria-label', SNAMES[si]+' '+f);        // the position, never the answer
+    return d;
+  });
+  renderNums(document.getElementById('tg-nums'));
+}
+function renderTarget(){
+  if(!tgDrill) return;
+  const tones=tgTones();
+  // the mode switch is the first control: it's what the two old cards used to be
+  segButtons('tg-mode', [{label:t('oc_chords')},{label:t('oc_tones')}], tones?1:0,
+    i=>{ tgMode = i ? 'tones' : 'chords'; const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); renderTarget(); });
+  const chips=document.getElementById('tg-progs');
+  if(chips) chips.innerHTML=SEQ_PRESETS.map((p,i)=>`<button type="button" class="btn tg-prog${i===tgIdx?' active':''}" data-i="${i}" aria-pressed="${i===tgIdx}">${p.name}</button>`).join('');
+  // the lead-only controls + the neck only exist in `tones` mode; comping needs neither
+  const toneRows=document.getElementById('tg-tone-rows'); if(toneRows) toneRows.hidden=!tones;
+  const boardWrap=document.getElementById('tg-board-wrap'); if(boardWrap) boardWrap.hidden=!tones;
+  if(tones){
+    // arpeggio-position picker (6b): All (whole neck) + boxes 1–5, reusing Phase 2's boxWindow
+    segButtons('tg-pos', [t('pos_all'),'1','2','3','4','5'].map(label=>({label})), tgPos,
+      i=>{ tgPos=i; renderTarget(); });
+    tgDrill.win = tgPos ? boxWindow(tgPos) : null;
+    // target-note picker (6c): All chord tones, or land on ONE degree through the changes
+    segButtons('tg-deg', [{label:t('pos_all')},{label:'1',aria:t('leg_root')},{label:'3',aria:t('leg_third')},
+                          {label:'5',aria:t('leg_fifth')},{label:'7',aria:t('leg_seventh')}], tgDeg,
+      i=>{ tgDeg=i; const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); renderTarget(); });
+  } else {
+    tgDrill.win = null;
+  }
+  const beats=document.getElementById('tg-beats');
+  if(beats) beats.innerHTML=Array.from({length:barBeats()},(_,k)=>`<span class="co-beat" data-k="${k}"></span>`).join('');
+  const cur=tgDrill.bars[tgDrill.bar], nxt=tgDrill.bars[(tgDrill.bar+1)%tgDrill.bars.length];
+  renderTargetStage(cur, nxt);
+  if(tones) markTargets();                           // reflect current chord + shape on the board
+  renderTargetStats();
+  const pb=document.getElementById('tg-play'); if(pb){ pb.innerHTML=(tgDrill.playing?'&#9632; ':'&#9654; ')+t(tgDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', tgDrill.playing); pb.setAttribute('aria-pressed', tgDrill.playing?'true':'false'); }
+  const hint=document.getElementById('tg-hint'); if(hint) hint.textContent=t(tones?'tg_hint':'co_hint');
+}
+function tgChordName(st){ return st ? ROOTS[st.pc]+QUALITIES[st.qi].short : ''; }
+/* comping shows the SHAPE (you have to fret it); targeting shows the NAME (you're finding
+   its tones yourself, and a diagram would just answer the question). */
+function renderTargetStage(cur, nxt){
+  const tones=tgTones();
+  const paint=(el, st)=>{ if(!el) return;
+    if(!st){ el.innerHTML=''; return; }
+    if(tones) el.textContent=tgChordName(st);
+    else el.innerHTML=cmChordBox(cmChord([st.pc, st.qi]));
+  };
+  paint(document.getElementById('tg-now'), cur);
+  paint(document.getElementById('tg-next'), nxt);
+  const nl=document.getElementById('tg-now-lab'); if(nl) nl.textContent=t('co_now');
+  const xl=document.getElementById('tg-next-lab'); if(xl) xl.textContent=t('co_next');
+}
+function renderTargetStats(){
+  if(!tgDrill) return;
+  const tones=tgTones();
+  const h=document.getElementById('tg-hits');
+  if(h) h.textContent = tones ? (t('tg_hits')+' '+tgDrill.hits) : (tgDrill.playing ? ('↻ '+tgDrill.cycles) : '');
+  const a=document.getElementById('tg-acc');
+  if(a) a.textContent = (tones && (tgDrill.hits+tgDrill.misses)) ? (t('tg_acc')+' '+tgAccuracy()+'%') : '';
+}
+function tgPulseBeat(k){
+  document.querySelectorAll('#tg-beats .co-beat').forEach(d=>d.classList.toggle('on', +d.dataset.k===k));
+}
+function markTargetDot(si,f,kind){
+  const d=document.querySelector('#tg-board .dot.quiz[data-si="'+si+'"][data-f="'+f+'"]'); if(!d) return;
+  if(kind==='hit'){ d.classList.add('hit'); d.textContent=(tgDrill.degMap[+d.dataset.pc]||''); rippleDot(d); }
+  else { d.classList.add('miss'); setTimeout(()=>{ if(d) d.classList.remove('miss'); }, 420); }
+}
+// re-localize an in-flight drill on a language switch (called from applyLang)
+function refreshTargetLang(){ if(tgDrill) renderTarget(); }
+
+/* card starters + in-drill controls — wired once at load (guarded so a missing panel
+   never throws, mirroring initDrill). */
+registerDrill({ id:'overchanges', mode:'practice', area:'tg-area',
+                isActive:()=>!!tgDrill, exit:exitTarget, refreshLang:refreshTargetLang,
+                // the progression is stored resolved to the key, so a key change rebuilds the bars
+                onKey:()=>{ if(!tgDrill) return;
+                            tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
+                            if(tgDrill.bar>=tgDrill.bars.length) tgDrill.bar=0;
+                            const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c);
+                            renderTarget(); } });
+
+(function initOverChanges(){
+  const area=document.getElementById('tg-area'); if(!area) return;
+  // two entry points, one drill: the Rhythm card opens it comping, the Lead card opens it
+  // targeting. Keeping both cards keeps each pillar's picker honest about what it teaches.
+  const comp=document.getElementById('start-comp');   if(comp) comp.onclick=startComp;
+  const tgt=document.getElementById('start-target');  if(tgt)  tgt.onclick=startTarget;
+  const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
+  wire('tg-play', targetToggle);
+  const pg=document.getElementById('tg-progs');
+  if(pg) pg.addEventListener('click', e=>{ const btn=e.target.closest('.tg-prog'); if(btn){ tgIdx=+btn.dataset.i; if(tgDrill){ tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]); if(tgDrill.bar>=tgDrill.bars.length) tgDrill.bar=0; } renderTarget(); } });
+  const b=document.getElementById('tg-board');
+  if(b){
+    const fire=d=>{ if(d) targetAnswer(parseInt(d.dataset.si,10), parseInt(d.dataset.f,10)); };
+    b.addEventListener('click', e=>fire(e.target.closest('.dot.quiz')));
+    b.addEventListener('keydown', e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const d=e.target.closest('.dot.quiz'); if(!d) return; e.preventDefault(); fire(d); });
+  }
 })();
 /* ===================== Drill: Chord-change fluency (Phase 5a) =====================
    The RHYTHM pillar's table-stakes coach tier — the famous "one-minute changes":
@@ -5706,7 +5371,6 @@ registerDrill({ id:'changes', mode:'practice', area:'cm-area',
   const card=document.getElementById('start-changes'); if(!card) return;
   card.onclick=startChanges;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('cm-quit',      exitChanges);
   wire('cm-start-btn', cmBegin);
   wire('cm-stop',      finishChanges);   // finish early
   wire('cm-tally',     cmTap);
@@ -5717,16 +5381,26 @@ registerDrill({ id:'changes', mode:'practice', area:'cm-area',
   const dd=document.getElementById('cm-durs');
   if(dd) dd.addEventListener('click', e=>{ const btn=e.target.closest('.cm-dur'); if(btn){ cmDurIdx=+btn.dataset.i; if(cmDrill) cmDrill.dur=CM_DURS[cmDurIdx]; renderCmSetup(); } });
 })();
-/* ===================== Drill: Strumming-pattern trainer (Phase 5b) =====================
-   A coach VISUALIZER, not a quiz: a one-bar 4/4 pattern of down/up strums on an 8th-note
-   grid, looped over the current context chord (spine #1) and highlighted slot-by-slot in
-   time on the scheduler — so you SEE and HEAR the pattern and strum along. No score (coach
-   tier): mic-scored timing waits on Phase 8/F1. A practiced run (≥1 full bar) lands a
-   session in the learner's ring buffer (13) so the Practice progress reflects it, but it
-   mints no per-item SRS (the pinned item shape stays untouched). Reuses strumMidi (05) for
-   the directional sweep, an optional metroClick beat reference (06), and the scheduler. */
+/* ===================== Drill: Strumming & feel (Phase 5b + 5d, merged) =====================
+   A coach LAB, not a quiz: a one-bar pattern of down/up strums on an 8th-note grid, looped
+   over the current context chord (spine #1) and highlighted slot-by-slot in time — so you SEE
+   and HEAR it and strum along. On top of the pattern sit the things that make a groove FEEL
+   right: swing (straight → shuffle), a backbeat accent, palm-mute dynamics, and an optional
+   drums+bass band.
 
-/* 8th-note slots over one 4/4 bar (index 0..7 = 1 & 2 & 3 & 4 &): 'D' down, 'U' up, '' miss.
+   This was two drills. "Strumming patterns" (5b) owned the pattern grid and an optional click;
+   "Groove & feel" (5d) owned swing/accent/mute over a fixed down-on-beats comp with a band.
+   They were one machine — same 8th-note clock, same context chord, same coach tier, same
+   session record — split across two cards, and neither could reach the other's half. Merged,
+   the combinations that were previously unreachable (a swung folk pattern, a palm-muted
+   "common one", any pattern over the band) just work.
+
+   Coach tier — no timing score (Phase 8/F1); a practiced run (>=1 full bar) records a session
+   in the learner's ring buffer (13) so Practice progress reflects it, minting no per-item SRS.
+   Reuses the drum/bass primitives (hatHit/kickHit/snareHit/bassNote, 06), pluckAt (05) for a
+   mute-able strum, metroClick (06) for the beat reference, and the shared scheduler. */
+
+/* 8th-note slots over one bar (index 0..7 = 1 & 2 & 3 & 4 &): 'D' down, 'U' up, '' miss.
    en/uk names inline (like INTERVALS/RHYTHMS) so the i18n symmetry check only guards I18N. */
 const STRUM_PATTERNS = [
   { id:'downs',   en:'Quarter downstrokes', uk:'Чвертки вниз',         seg:['D','','D','','D','','D',''] },
@@ -5735,10 +5409,21 @@ const STRUM_PATTERNS = [
   { id:'ddu_ddu', en:'Down, down-up ×2',    uk:'Вниз, вниз-вгору ×2',  seg:['D','','D','U','D','','D','U'] },
   { id:'folk',    en:'Folk / pop',          uk:'Фолк / поп',           seg:['D','','D','U','','U','','U'] },
 ];
+/* how far the off-beats are pushed late, as a fraction of an 8th — the difference between
+   a stiff pattern and one that grooves. */
+const SP_SWINGS = [
+  { id:'straight', amt:0,    en:'Straight', uk:'Рівно' },
+  { id:'swing',    amt:0.20, en:'Swing',    uk:'Свінг' },
+  { id:'shuffle',  amt:0.33, en:'Shuffle',  uk:'Шафл' },
+];
 function spName(p){ return lang==='en'?p.en:p.uk; }
 function strumArrow(d){ return d==='D'?'↓':d==='U'?'↑':''; }   // ↓ / ↑
 
 let spIdx = 0;          // selected pattern (in-session preference)
+let spSwing = 0;        // index into SP_SWINGS — straight by default, so a pattern reads as written
+let spAccent = false;   // backbeat (2 & 4) accent
+let spMute = false;     // palm-mute the strum
+let spBand = false;     // drums + bass underneath
 let spClick = false;    // optional beat-reference click
 let spDrill = null;
 // spDrill = { patIdx, slot, bars, clock, playing }
@@ -5775,30 +5460,57 @@ function spStop(){
   if(spDrill.bars>=1){ recordSession('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars); saveState(); if(typeof renderPractice==='function') renderPractice(); }
   renderStrum();
 }
+/* a strum that can be palm-muted (short, chunky) or open (ringing) — pluckAt lets us set
+   per-note duration, which strumMidi (05) doesn't expose. */
+function spStrum(midis, when, vel, dir, muted){
+  if(!midis.length) return;
+  const order = dir<0 ? midis.slice().reverse() : midis.slice();
+  const spread = muted?0.012:0.02, dur = muted?0.14:1.6;
+  order.forEach((m,i)=>{ const tt=when + i*spread + (Math.random()*0.004-0.002); pluckAt(m, tt, dur, Math.max(0.25, vel - i*0.012)); });
+}
 function spTick(time, count){
   if(!spDrill) return;
   const seg=STRUM_PATTERNS[spDrill.patIdx].seg, slot=count%8;
   if(slot===0 && count>0) spDrill.bars++;        // a full bar wrapped
   spDrill.slot=slot;
+  const b=beat(), beatPos=slot%2===0;
+  const swDelay = beatPos ? 0 : SP_SWINGS[spSwing].amt*(b/2);   // push the off-beats late
+  const backbeat = (slot===2 || slot===6);
+  // guitar: only the pattern's slots sound — the empty ones are where the hand misses
   const dir=seg[slot];
-  if(dir){ const v=currentChordVoicing();
-    if(dir==='D') strumMidi(v.midis, time, 0.9, 0.022, +1);     // downstroke, low→high
-    else strumMidi(v.midis, time, 0.72, 0.018, -1);             // upstroke, high→low (lighter)
+  if(dir){
+    let vel = dir==='D' ? 0.9 : 0.72;            // upstrokes lighter
+    if(spAccent && backbeat) vel += 0.12;
+    spStrum(currentChordVoicing().midis, time+swDelay, vel, dir==='D'?+1:-1, spMute);
   }
-  if(spClick && slot%2===0) metroClick(time, slot===0);          // beat-reference click
+  // band: hats on every 8th (swung with the guitar), kick 1 & 3, snare on the backbeat
+  if(spBand){
+    hatHit(time+swDelay, slot===0 ? 1 : (beatPos ? 0.7 : 0.45));
+    if(slot===0) kickHit(time, 1);
+    if(slot===4) kickHit(time, 0.9);
+    if(backbeat) snareHit(time, spAccent ? 1.0 : 0.8);
+    if(slot===0) bassNote(time, 36+gRoot, b*1.9, 0.95);
+    if(slot===4) bassNote(time, 36+gRoot+fifthInterval(chQual), b*1.7, 0.8);
+  }
+  if(spClick && beatPos) metroClick(time, slot===0);              // beat-reference click
   if(typeof enqueueVisual==='function') enqueueVisual(time, ()=>spHighlightSlot(slot));
 }
 
 /* ---- DOM paint ---- */
 function renderStrum(){
   if(!spDrill) return;
-  const keyc=document.getElementById('sp-key');
-  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); renderStrum(); });
   const chips=document.getElementById('sp-patterns');
   if(chips) chips.innerHTML=STRUM_PATTERNS.map((p,i)=>`<button type="button" class="btn sp-pat${i===spIdx?' active':''}" data-i="${i}" aria-pressed="${i===spIdx}" title="${spName(p)}" aria-label="${spName(p)}">${p.seg.map(d=>d?strumArrow(d):'·').join('')}</button>`).join('');
+  const sw=document.getElementById('sp-swings');
+  if(sw) sw.innerHTML=SP_SWINGS.map((s,i)=>`<button type="button" class="btn sp-swing${i===spSwing?' active':''}" data-i="${i}" aria-pressed="${i===spSwing}">${spName(s)}</button>`).join('');
   const nm=document.getElementById('sp-name'); if(nm) nm.textContent=spName(STRUM_PATTERNS[spIdx]);
   const ch=document.getElementById('sp-chord'); if(ch) ch.textContent=t('sp_chord')+' · '+gRootLbl+QUALITIES[chQual].short;
   renderStrumGrid();
+  const toggle=(id,on,label)=>{ const el=document.getElementById(id); if(!el) return;
+    el.textContent=t(label); el.classList.toggle('active', on); el.setAttribute('aria-pressed', on?'true':'false'); };
+  toggle('sp-accent', spAccent, 'sp_accent');
+  toggle('sp-mute',   spMute,   'sp_mute');
+  toggle('sp-band',   spBand,   'sp_band');
   const pb=document.getElementById('sp-play'); if(pb){ pb.innerHTML=(spDrill.playing?'&#9632; ':'&#9654; ')+t(spDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', spDrill.playing); pb.setAttribute('aria-pressed', spDrill.playing?'true':'false'); }
   const ck=document.getElementById('sp-click'); if(ck){ ck.classList.toggle('active', spClick); ck.setAttribute('aria-pressed', spClick?'true':'false'); ck.innerHTML='&#9833; '+t('cm_click'); }
   const hint=document.getElementById('sp-hint'); if(hint) hint.textContent=t('sp_hint');
@@ -5807,8 +5519,8 @@ function renderStrumGrid(){
   const g=document.getElementById('sp-grid'); if(!g) return;
   const seg=STRUM_PATTERNS[spIdx].seg;
   g.innerHTML=seg.map((d,i)=>{
-    const isBeat=i%2===0;
-    return `<div class="sp-cell${isBeat?' beat':''}${i===spDrill.slot?' on':''}" data-i="${i}">`+
+    const isBeat=i%2===0, accent=spAccent&&(i===2||i===6);
+    return `<div class="sp-cell${isBeat?' beat':''}${accent?' accent':''}${i===spDrill.slot?' on':''}" data-i="${i}">`+
       `<span class="sp-dir ${d?'has':'none'}">${d?strumArrow(d):''}</span>`+
       `<span class="sp-beat">${isBeat?(i/2+1):'&'}</span></div>`;
   }).join('');
@@ -5820,247 +5532,23 @@ function spHighlightSlot(slot){
 function refreshStrumLang(){ if(spDrill) renderStrum(); }
 
 registerDrill({ id:'strum', mode:'practice', area:'sp-area',
-                isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang });
+                isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang,
+                // the loop reads currentChordVoicing() live, so a key change only needs a repaint
+                onKey:()=>{ if(spDrill) renderStrum(); } });
 
 (function initStrum(){
   const card=document.getElementById('start-strum'); if(!card) return;
   card.onclick=startStrum;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('sp-quit',  exitStrum);
-  wire('sp-play',  spToggle);
-  wire('sp-click', ()=>{ spClick=!spClick; renderStrum(); });
-  const pp=document.getElementById('sp-patterns');
-  if(pp) pp.addEventListener('click', e=>{ const btn=e.target.closest('.sp-pat'); if(btn){ spIdx=+btn.dataset.i; if(spDrill) spDrill.patIdx=spIdx; renderStrum(); } });
-})();
-/* ===================== Drill: Comp the progression (Phase 5c) =====================
-   The rhythm-side mirror of chord-tone targeting: a chosen progression cycles with a
-   full backing band (bass + groove + a guide comp) and you play the RIGHT CHORD at the
-   RIGHT TIME. A big NOW chord + a NEXT preview + a 4-beat indicator make the change
-   land in time. Reuses the sequencer presets (SEQ_PRESETS, 06) resolved to the context
-   key (spine #1), compStrum + scheduleBand(force) for the band, the scheduler clock,
-   and cmChord/cmChordBox for the diagrams. Coach tier — no timing score (Phase 8/F1);
-   a practiced run (≥1 bar) records a session (bars comped), minting no per-item SRS. */
-
-let coIdx = 1;          // selected progression (default I–V–vi–IV)
-let coDrill = null;
-// coDrill = { presetIdx, bars:[{pc,qi}…], bar, cycles, clock, playing }
-
-// expand a preset's steps (offset, qi, bars) into one chord per bar, in the context key
-function compBuildBars(preset){
-  const r=gRoot, out=[];
-  preset.steps.forEach(([off,qi,b])=>{ const pc=mod(r+off,12); for(let k=0;k<Math.max(1,b);k++) out.push({pc, qi}); });
-  return out;
-}
-function startComp(){
-  coDrill={ presetIdx:coIdx, bars:compBuildBars(SEQ_PRESETS[coIdx]), bar:0, cycles:0, clock:null, playing:false };
-  const home=document.getElementById('practice-home'), area=document.getElementById('co-area');
-  if(home) home.hidden=true; if(area) area.hidden=false;
-  renderComp();
-}
-function exitComp(){
-  compStop();
-  coDrill=null;
-  const home=document.getElementById('practice-home'), area=document.getElementById('co-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  if(typeof renderPractice==='function') renderPractice();
-}
-function compToggle(){ if(coDrill && coDrill.playing) compStop(); else compPlay(); }
-function compPlay(){
-  if(!coDrill || coDrill.playing) return;
-  audio();
-  if(typeof stopLoop==='function') stopLoop();
-  if(typeof seqStop==='function') seqStop();
-  coDrill.presetIdx=coIdx; coDrill.bars=compBuildBars(SEQ_PRESETS[coIdx]);
-  coDrill.bar=0; coDrill.cycles=0; coDrill.playing=true;
-  coDrill.clock={ interval:()=>barSec(), tick:(time,count)=>compTick(time,count) };
-  if(typeof addClock==='function') addClock(coDrill.clock);
-  renderComp();
-}
-function compStop(){
-  if(!coDrill || !coDrill.playing) return;
-  if(coDrill.clock){ if(typeof removeClock==='function') removeClock(coDrill.clock); coDrill.clock=null; }
-  if(typeof clearVisualQ==='function') clearVisualQ();
-  coDrill.playing=false;
-  const barsPlayed = coDrill.cycles*coDrill.bars.length + coDrill.bar;
-  if(barsPlayed>=1){ recordSession('comp:'+SEQ_PRESETS[coDrill.presetIdx].name, barsPlayed); saveState(); if(typeof renderPractice==='function') renderPractice(); }
-  renderComp();
-}
-function compTick(when, count){
-  if(!coDrill) return;
-  const bars=coDrill.bars; if(!bars.length) return;
-  const i=count%bars.length;
-  if(i===0 && count>0) coDrill.cycles++;
-  coDrill.bar=i;
-  const cur=bars[i], nxt=bars[(i+1)%bars.length], p=pulseSec();
-  const ivs=QUALITIES[cur.qi].iv, base=48+cur.pc;
-  compStrum(base, ivs, when, 0.9, 0.028);                    // guide comp on the downbeat
-  compStrum(base, ivs, when+midPulseSec(), 0.55, 0.022);     // softer push mid-bar (beat 3 in 4/4)
-  scheduleBand(cur.pc, cur.qi, when, true);                  // forced bass + groove bed
-  for(let k=0;k<barBeats();k++) enqueueVisual(when+k*p, ()=>compPulseBeat(k));
-  enqueueVisual(when, ()=>renderCompStage(cur, nxt));
-}
-
-/* ---- DOM paint ---- */
-function renderComp(){
-  if(!coDrill) return;
-  const keyc=document.getElementById('co-key');
-  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); if(coDrill){ coDrill.bars=compBuildBars(SEQ_PRESETS[coIdx]); if(coDrill.bar>=coDrill.bars.length) coDrill.bar=0; } renderComp(); });
-  const chips=document.getElementById('co-progs');
-  if(chips) chips.innerHTML=SEQ_PRESETS.map((p,i)=>`<button type="button" class="btn co-prog${i===coIdx?' active':''}" data-i="${i}" aria-pressed="${i===coIdx}">${p.name}</button>`).join('');
-  const beats=document.getElementById('co-beats');
-  if(beats) beats.innerHTML=Array.from({length:barBeats()},(_,k)=>`<span class="co-beat" data-k="${k}"></span>`).join('');
-  const cur=coDrill.bars[coDrill.bar], nxt=coDrill.bars[(coDrill.bar+1)%coDrill.bars.length];
-  renderCompStage(cur, nxt);
-  const pb=document.getElementById('co-play'); if(pb){ pb.innerHTML=(coDrill.playing?'&#9632; ':'&#9654; ')+t(coDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', coDrill.playing); pb.setAttribute('aria-pressed', coDrill.playing?'true':'false'); }
-  const cy=document.getElementById('co-cycles'); if(cy) cy.textContent = coDrill.playing ? ('↻ '+coDrill.cycles) : '';
-  const hint=document.getElementById('co-hint'); if(hint) hint.textContent=t('co_hint');
-}
-function renderCompStage(cur, nxt){
-  const nowEl=document.getElementById('co-now'); if(nowEl) nowEl.innerHTML = cur ? cmChordBox(cmChord([cur.pc,cur.qi])) : '';
-  const nxtEl=document.getElementById('co-next'); if(nxtEl) nxtEl.innerHTML = nxt ? cmChordBox(cmChord([nxt.pc,nxt.qi])) : '';
-  const nl=document.getElementById('co-now-lab'); if(nl) nl.textContent=t('co_now');
-  const xl=document.getElementById('co-next-lab'); if(xl) xl.textContent=t('co_next');
-}
-function compPulseBeat(k){
-  document.querySelectorAll('#co-beats .co-beat').forEach(d=>d.classList.toggle('on', +d.dataset.k===k));
-}
-// re-localize an in-flight comping drill on a language switch (called from applyLang)
-function refreshCompLang(){ if(coDrill) renderComp(); }
-
-registerDrill({ id:'comp', mode:'practice', area:'co-area',
-                isActive:()=>!!coDrill, exit:exitComp, refreshLang:refreshCompLang });
-
-(function initComp(){
-  const card=document.getElementById('start-comp'); if(!card) return;
-  card.onclick=startComp;
-  const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('co-quit', exitComp);
-  wire('co-play', compToggle);
-  const pg=document.getElementById('co-progs');
-  if(pg) pg.addEventListener('click', e=>{ const btn=e.target.closest('.co-prog'); if(btn){ coIdx=+btn.dataset.i; if(coDrill){ coDrill.presetIdx=coIdx; coDrill.bars=compBuildBars(SEQ_PRESETS[coIdx]); if(coDrill.bar>=coDrill.bars.length) coDrill.bar=0; } renderComp(); } });
-})();
-/* ===================== Drill: Groove & feel (Phase 5d) =====================
-   A feel LAB: loop a one-bar groove (swung hats + kick/snare backbeat + bass + a
-   down-up guitar comp) over the context chord (spine #1) and toggle the things that
-   make a groove FEEL right — swing (straight → shuffle), a backbeat accent, and
-   palm-mute dynamics — hearing each change live and playing along. Reuses the drum/
-   bass primitives (hatHit/kickHit/snareHit/bassNote, 06) and pluckAt (05) for a
-   mute-able strum, all on one 8th-note scheduler clock with swing baked into the
-   off-beats. Coach tier — no timing score (Phase 8/F1); a practiced run records a
-   session (bars grooved), minting no per-item SRS.
-
-   NOTE (5d, deferred): the roadmap's "sound win" — CC0 drum one-shots + a room
-   convolution IR, base64-inlined — is a separate asset task (needs license-verified
-   public-domain audio) and is not part of this synthesized coach. */
-const GF_SWINGS = [
-  { id:'straight', amt:0,    en:'Straight', uk:'Рівно' },
-  { id:'swing',    amt:0.20, en:'Swing',    uk:'Свінг' },
-  { id:'shuffle',  amt:0.33, en:'Shuffle',  uk:'Шафл' },
-];
-function gfSwingName(s){ return lang==='en'?s.en:s.uk; }
-
-let gfSwing=1;          // index into GF_SWINGS (default light swing)
-let gfAccent=true;      // backbeat (2 & 4) accent
-let gfMute=false;       // palm-mute the guitar comp
-let gfDrill=null;
-// gfDrill = { playing, clock, cycles, slot }
-
-/* a strum that can be palm-muted (short, chunky) or open (ringing) — pluckAt lets us
-   set per-note duration, which strumMidi (05) doesn't expose. */
-function gfStrum(midis, when, vel, dir, muted){
-  if(!midis.length) return;
-  const order = dir<0 ? midis.slice().reverse() : midis.slice();
-  const spread = muted?0.012:0.02, dur = muted?0.14:1.6;
-  order.forEach((m,i)=>{ const tt=when + i*spread + (Math.random()*0.004-0.002); pluckAt(m, tt, dur, Math.max(0.25, vel - i*0.012)); });
-}
-function startGroove(){
-  gfDrill={ playing:false, clock:null, cycles:0, slot:-1 };
-  const home=document.getElementById('practice-home'), area=document.getElementById('gf-area');
-  if(home) home.hidden=true; if(area) area.hidden=false;
-  renderGroove();
-}
-function exitGroove(){
-  grooveStop();
-  gfDrill=null;
-  const home=document.getElementById('practice-home'), area=document.getElementById('gf-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  if(typeof renderPractice==='function') renderPractice();
-}
-function grooveToggle(){ if(gfDrill && gfDrill.playing) grooveStop(); else groovePlay(); }
-function groovePlay(){
-  if(!gfDrill || gfDrill.playing) return;
-  audio();
-  if(typeof stopLoop==='function') stopLoop();
-  if(typeof seqStop==='function') seqStop();
-  gfDrill.playing=true; gfDrill.cycles=0; gfDrill.slot=-1;
-  gfDrill.clock={ interval:()=>beat()/2, tick:(time,count)=>grooveTick(time,count) };
-  if(typeof addClock==='function') addClock(gfDrill.clock);
-  renderGroove();
-}
-function grooveStop(){
-  if(!gfDrill || !gfDrill.playing) return;
-  if(gfDrill.clock){ if(typeof removeClock==='function') removeClock(gfDrill.clock); gfDrill.clock=null; }
-  if(typeof clearVisualQ==='function') clearVisualQ();
-  gfDrill.playing=false; gfDrill.slot=-1;
-  if(gfDrill.cycles>=1){ recordSession('groove:'+GF_SWINGS[gfSwing].id, gfDrill.cycles); saveState(); if(typeof renderPractice==='function') renderPractice(); }
-  renderGroove();
-}
-function grooveTick(when, count){
-  if(!gfDrill) return;
-  const b=beat(), half=b/2, slot=count%8;
-  if(slot===0 && count>0) gfDrill.cycles++;
-  gfDrill.slot=slot;
-  const swDelay = (slot%2===1) ? GF_SWINGS[gfSwing].amt*half : 0;   // delay off-beats for swing
-  const midis = currentChordVoicing().midis, beatPos = slot%2===0;
-  // drums: hats every 8th (swung off-beats, downbeat accent), kick 1&3, snare 2&4
-  hatHit(when+swDelay, slot===0 ? 1 : (beatPos ? 0.7 : 0.45));
-  if(slot===0) kickHit(when, 1);
-  if(slot===4) kickHit(when, 0.9);
-  if(slot===2 || slot===6) snareHit(when, gfAccent ? 1.0 : 0.8);    // backbeat
-  // bass: root on beat 1, fifth on beat 3
-  if(slot===0) bassNote(when, 36+gRoot, b*1.9, 0.95);
-  if(slot===4) bassNote(when, 36+gRoot+fifthInterval(chQual), b*1.7, 0.8);
-  // guitar comp: down on beats, up on off-beats; backbeat accent louder on 2 & 4
-  let vel = beatPos ? 0.85 : 0.6;
-  if(gfAccent && (slot===2 || slot===6)) vel += 0.12;
-  gfStrum(midis, when+swDelay, vel, beatPos ? +1 : -1, gfMute);
-  if(beatPos) enqueueVisual(when, ()=>gfPulseBeat(slot/2));
-}
-
-/* ---- DOM paint ---- */
-function renderGroove(){
-  if(!gfDrill) return;
-  const keyc=document.getElementById('gf-key');
-  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); renderGroove(); });
-  const sw=document.getElementById('gf-swings');
-  if(sw) sw.innerHTML=GF_SWINGS.map((s,i)=>`<button type="button" class="btn gf-swing${i===gfSwing?' active':''}" data-i="${i}" aria-pressed="${i===gfSwing}">${gfSwingName(s)}</button>`).join('');
-  const ac=document.getElementById('gf-accent'); if(ac){ ac.textContent=t('gf_accent'); ac.classList.toggle('active', gfAccent); ac.setAttribute('aria-pressed', gfAccent?'true':'false'); }
-  const mu=document.getElementById('gf-mute'); if(mu){ mu.textContent=t('gf_mute'); mu.classList.toggle('active', gfMute); mu.setAttribute('aria-pressed', gfMute?'true':'false'); }
-  const beats=document.getElementById('gf-beats');
-  if(beats) beats.innerHTML=[0,1,2,3].map(k=>`<span class="co-beat${(gfAccent&&(k===1||k===3))?' accent':''}" data-k="${k}"></span>`).join('');
-  const ch=document.getElementById('gf-chord'); if(ch) ch.textContent=t('sp_chord')+' · '+gRootLbl+QUALITIES[chQual].short;
-  const pb=document.getElementById('gf-play'); if(pb){ pb.innerHTML=(gfDrill.playing?'&#9632; ':'&#9654; ')+t(gfDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', gfDrill.playing); pb.setAttribute('aria-pressed', gfDrill.playing?'true':'false'); }
-  const hint=document.getElementById('gf-hint'); if(hint) hint.textContent=t('gf_hint');
-}
-function gfPulseBeat(k){
-  document.querySelectorAll('#gf-beats .co-beat').forEach(d=>d.classList.toggle('on', +d.dataset.k===k));
-}
-// re-localize an in-flight groove drill on a language switch (called from applyLang)
-function refreshGrooveLang(){ if(gfDrill) renderGroove(); }
-
-registerDrill({ id:'groove', mode:'practice', area:'gf-area',
-                isActive:()=>!!gfDrill, exit:exitGroove, refreshLang:refreshGrooveLang });
-
-(function initGroove(){
-  const card=document.getElementById('start-groove'); if(!card) return;
-  card.onclick=startGroove;
-  const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('gf-quit',   exitGroove);
-  wire('gf-play',   grooveToggle);
-  wire('gf-accent', ()=>{ gfAccent=!gfAccent; renderGroove(); });
-  wire('gf-mute',   ()=>{ gfMute=!gfMute; renderGroove(); });
-  const sw=document.getElementById('gf-swings');
-  if(sw) sw.addEventListener('click', e=>{ const btn=e.target.closest('.gf-swing'); if(btn){ gfSwing=+btn.dataset.i; renderGroove(); } });
+  wire('sp-play',   spToggle);
+  wire('sp-click',  ()=>{ spClick=!spClick;   renderStrum(); });
+  wire('sp-accent', ()=>{ spAccent=!spAccent; renderStrum(); });
+  wire('sp-mute',   ()=>{ spMute=!spMute;     renderStrum(); });
+  wire('sp-band',   ()=>{ spBand=!spBand;     renderStrum(); });
+  const pick=(hostId, cls, set)=>{ const h=document.getElementById(hostId); if(!h) return;
+    h.addEventListener('click', e=>{ const btn=e.target.closest('.'+cls); if(btn){ set(+btn.dataset.i); renderStrum(); } }); };
+  pick('sp-patterns', 'sp-pat',   i=>{ spIdx=i; if(spDrill) spDrill.patIdx=i; });
+  pick('sp-swings',   'sp-swing', i=>{ spSwing=i; });
 })();
 /* ===================== Drill: Subdivision & timing (Phase 7a) =====================
    The Foundations coach that serves BOTH pillars — subdivision command. Pick a
@@ -6078,7 +5566,7 @@ registerDrill({ id:'groove', mode:'practice', area:'gf-area',
    position + tempo picker (the roadmap's "tempo reachability" for a timed coach). */
 
 /* subdivisions per beat: 1 = quarter, 2 = eighth, 3 = triplet, 4 = sixteenth.
-   en/uk names inline (like STRUM_PATTERNS/GF_SWINGS) so the i18n symmetry check only
+   en/uk names inline (like STRUM_PATTERNS/SP_SWINGS) so the i18n symmetry check only
    guards the I18N table. */
 const SUBDIVS = [
   { id:'quarter',   div:1, en:'Quarter notes', uk:'Чвертки' },
@@ -6187,8 +5675,6 @@ function sdTick(when, count){
 /* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
 function renderTiming(){
   if(!sd) return;
-  const keyc=document.getElementById('sd-key');
-  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); sdRenderBoard(); sdRestart(); renderTiming(); });
   segButtons('sd-subs', SUBDIVS.map(s=>({label:sdSubName(s)})), sdSub, i=>{ sdSub=i; renderSdGrid(); sdRestart(); renderTiming(); });
   segButtons('sd-pos', ['1','2','3','4','5'].map(label=>({label})), sdPos-1, i=>{ sdPos=i+1; sdPaintScale(); sdRestart(); });
   const tt=document.getElementById('sd-title'); if(tt) tt.textContent=gRootLbl+' · '+sName(SCALES[scIdx]);
@@ -6248,13 +5734,14 @@ function sdSetTempo(bpm){
 function refreshTimingLang(){ if(sd) renderTiming(); }
 
 registerDrill({ id:'timing', mode:'practice', area:'sd-area',
-                isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang });
+                isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang,
+                // the grid walks the key's scale, so a key change repaints the board and restarts
+                onKey:()=>{ if(!sd) return; sdRenderBoard(); sdRestart(); renderTiming(); } });
 
 (function initTiming(){
   const card=document.getElementById('start-timing'); if(!card) return;
   card.onclick=startTiming;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('sd-quit',   exitTiming);
   wire('sd-play',   sdToggle);
   wire('sd-notes',  ()=>{ sdNotes=!sdNotes; if(!sdNotes && sdLit){ sdLit.classList.remove('on'); sdLit=null; } renderTiming(); });
   wire('sd-slower', ()=>sdSetTempo(tempo-5));
@@ -6288,6 +5775,8 @@ function setKey(pc, lbl, mode){
   chVoicing=0; scOverlay=null;
   ntRoot=lbl;                                   // Notes reflects the shared root (#4)
   activateRoot(document.getElementById('g-roots'), gRoot);
+  // the drills' shared key strip (13-drill-registry.js) tracks the same context root
+  { const dk=document.getElementById('drill-ctx-key'); if(dk) activateRoot(dk, gRoot); }
   buildChQuals(); buildArpQuals(); buildArpPos(); buildScSelect(); buildScPos();
   renderContextViews(); renderCircle(); renderNotes();
   saveState();
@@ -6631,31 +6120,6 @@ function applyA11y(){
 { const p=document.getElementById('tb-cbpalette'); if(p) p.onclick=function(){ cbPalette=!cbPalette; applyA11y(); saveState(); };
   const s=document.getElementById('tb-shapes');    if(s) s.onclick=function(){ fnShapes=!fnShapes;  applyA11y(); saveState(); }; }
 
-/* ---- timing calibration (Phase 3 debt) ----
-   The Tap-test button is a tiny state machine: first click starts the click track,
-   each later click is a tap matched to the nearest beat; at CAL_TAPS it computes +
-   stores the offset (calMs). The slider sets it by hand. calOffsetSec() is the
-   value future scored/mic windows will read; nothing consumes it on screen yet. */
-function calBtnLabel(){
-  const b=document.getElementById('tb-cal-tap'); if(!b) return;
-  if(cal){ b.classList.add('active'); b.textContent=t('cal_tapnow')+' '+cal.deltas.length+'/'+CAL_TAPS; }
-  else { b.classList.remove('active'); b.textContent=t('cal_test'); }
-}
-function applyCal(){
-  const s=document.getElementById('tb-cal'); if(s) s.value=calMs;
-  const v=document.getElementById('tb-cal-val'); if(v) v.textContent=calMs+' '+t('cal_unit');
-  calBtnLabel();
-}
-{ const cb=document.getElementById('tb-cal-tap');
-  if(cb) cb.onclick=function(){
-    if(!cal){ calStart(); calBtnLabel(); return; }
-    const n=calTap();
-    if(n>=CAL_TAPS){ calFinish(); applyCal(); saveState(); }
-    else calBtnLabel();
-  };
-  const cs=document.getElementById('tb-cal');
-  if(cs){ cs.oninput=function(){ setCalMs(+this.value); applyCal(); }; cs.onchange=saveState; } }
-
 /* ---- share a deep link (Phase 9 distribution) ----
    Copy a URL whose hash encodes the current key / scale / chord view; opening it
    lands a new visitor on that exact context (applyShareHash on load). */
@@ -6709,7 +6173,10 @@ function renderChangelog(){
       `<span class="cl-ver">v${r.v}</span>`+
       (cur?`<span class="cl-badge">${t('cl_current')}</span>`:'')+
       `<span class="cl-date">${r.date}</span></div><ul>${bullets}</ul></div>`;
-  }).join('');
+  }).join('') +
+    // build.js ships only the newest few releases (the full history was 15% of the
+    // bundle); point at CHANGELOG.md for the rest.
+    `<p class="cl-older"><a href="https://github.com/RomanTereshchenko13/euterpe-guitar-studio/blob/main/CHANGELOG.md" target="_blank" rel="noopener">${t('cl_older')}</a></p>`;
 }
 function openChangelog(){ const o=document.getElementById('cl-overlay'); renderChangelog(); o.hidden=false; o.classList.add('open'); }
 function closeChangelog(){ const o=document.getElementById('cl-overlay'); o.classList.remove('open'); o.hidden=true; }
@@ -6810,7 +6277,15 @@ window.addEventListener('resize', markScrollables);
 try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(markScrollables); }catch(_){}
 applyAudioAvailability();
 applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
-applyCal();    // reflect the restored timing-calibration offset in the toolbar
+/* the drills' one shared key picker (13-drill-registry.js). Built once here rather than by
+   each drill: they all set the same context root, and the running drill only has to say what
+   to re-derive (onKey). CSS shows the row only while a drill is up. */
+{ const dk=document.getElementById('drill-ctx-key');
+  if(dk) buildRootBtns(dk, gRoot, (pc,r)=>{ setKey(pc,r); drillKeyChanged(); });
+  // Quit was a seventh identical button, one per drill area. The registry already knows
+  // which drill is running and how to end it, so the shell owns the button.
+  const dq=document.getElementById('drill-ctx-quit');
+  if(dq) dq.onclick=function(){ const d=activeDrill('practice'); if(d && typeof d.exit==='function') d.exit(); }; }
 // Deep link (Phase 9): if the URL hash carries a shared context, apply it over the
 // restored state now that the shell + setters are up, then strip the hash.
 const fromShare = (typeof applyShareHash==='function') && applyShareHash();
@@ -6839,15 +6314,12 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     TUNINGS, applyTuning, tuningMidi, TUNE_LO, TUNE_HI,
     getOpenMidi:()=>OPEN_MIDI.slice(), getCustomTuning:()=>customTuning.slice(),
     setCustomTuning:(arr)=>{ customTuning=arr.slice(); }, setTuningIdx:(i)=>{ tuningIdx=i; applyTuning(); },
-    // timing calibration (Phase 3 debt)
-    calcLatencyOffset, calOffsetSec, setCalMs, getCalMs:()=>calMs, CAL_MIN, CAL_MAX, CAL_TAPS,
-    calStart, calTap, calFinish, calCancel, getCal:()=>cal,
     // learner review + activity (spine #3)
     learnerReview, learnerActivity, startReview,
     // shareable deep links (Phase 9)
     encodeShareState, applyShareHash, shareURL,
     // drill registry (13): the one list the shell iterates instead of naming drills
-    DRILLS, activeDrill, showDrillHome, exitDrillsExcept, refreshDrillsLang,
+    DRILLS, activeDrill, showDrillHome, exitDrillsExcept, refreshDrillsLang, drillKeyChanged,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
     renderAllBoards,
     // learner model (spine #3, 3b)
@@ -6862,17 +6334,15 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     startChanges, cmBegin, cmTap, cmUntap, finishChanges, exitChanges, getCm:()=>cmDrill,
     CM_PAIRS, CM_DURS, cmPairId, cmPairBest,
     setCmPair:(i)=>{ cmPairIdx=i; if(cmDrill) cmDrill.pairIdx=i; }, setCmDur:(i)=>{ cmDurIdx=i; if(cmDrill) cmDrill.dur=CM_DURS[i]; },
-    // strumming-pattern trainer (Phase 5b)
+    // strumming & feel lab (Phase 5b + 5d, merged)
     startStrum, spPlay, spStop, spToggle, exitStrum, getSp:()=>spDrill,
     STRUM_PATTERNS, setSpPattern:(i)=>{ spIdx=i; if(spDrill) spDrill.patIdx=i; },
-    // comp-the-progression drill (Phase 5c)
-    startComp, compPlay, compStop, compToggle, exitComp, getCo:()=>coDrill,
-    compBuildBars, setCompProg:(i)=>{ coIdx=i; if(coDrill){ coDrill.presetIdx=i; coDrill.bars=compBuildBars(SEQ_PRESETS[i]); } },
-    // groove & feel drill (Phase 5d)
-    startGroove, groovePlay, grooveStop, grooveToggle, exitGroove, getGf:()=>gfDrill,
-    GF_SWINGS, setGfSwing:(i)=>{ gfSwing=i; }, setGfAccent:(v)=>{ gfAccent=!!v; }, setGfMute:(v)=>{ gfMute=!!v; },
-    // chord-tone targeting drill (Phase 6a)
-    startTarget, targetPlay, targetStop, targetToggle, targetAnswer, exitTarget, getTg:()=>tgDrill,
+    SP_SWINGS, setSpSwing:(i)=>{ spSwing=i; }, setSpAccent:(v)=>{ spAccent=!!v; },
+    setSpMute:(v)=>{ spMute=!!v; }, setSpBand:(v)=>{ spBand=!!v; },
+    // over-the-changes drill (Phase 5c + 6a/6b/6c, merged) — one machine, two modes
+    startOverChanges, startComp, startTarget, getOcMode:()=>tgMode,
+    setOcMode:(m)=>{ tgMode = (m==='chords') ? 'chords' : 'tones'; },
+    targetPlay, targetStop, targetToggle, targetAnswer, exitTarget, getTg:()=>tgDrill,
     tgBuildBars, tgAccuracy, setTargetProg:(i)=>{ tgIdx=i; if(tgDrill){ tgDrill.presetIdx=i; tgDrill.bars=tgBuildBars(SEQ_PRESETS[i]); } },
     setTargetPos:(i)=>{ tgPos=i; if(tgDrill) tgDrill.win = i ? boxWindow(i) : null; },
     setTargetDeg:(i)=>{ tgDeg=i; if(tgDrill){ const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); } },

@@ -82,9 +82,13 @@ function midPulseSec(){ return Math.floor(barBeats()/2)*pulseSec(); }   // the m
 function meterGroupStarts(){ const g=curMeter().groups, s=new Set(); let a=0; for(const n of g){ s.add(a); a+=n; } return s; }
 function setMeter(i){ if(Number.isInteger(i) && i>=0 && i<METERS.length) meterIdx=i; }
 
-/* collapsible toolbar; default open on wide screens, collapsed on phones — and also
-   collapsed on a short (landscape-phone) viewport, where every row above the neck counts */
-let toolbarOpen = (typeof window!=='undefined' && window.innerWidth>700 && window.innerHeight>500);
+/* collapsible toolbar, default closed everywhere. It used to open itself on any
+   viewport over 700x500, which put eleven setup controls (tuning, frets, capo,
+   meter, a11y, share…) between a first-time desktop visitor and the neck — exactly
+   the console the transport bar's disclosure toggles exist to avoid. They're setup,
+   not actions: one tap away is the right distance. The choice is persisted, so
+   anyone who wants it open keeps it open. */
+let toolbarOpen = false;
 /* the backing band (metronome + bass/drums) lives in its own collapsible panel,
    default closed — secondary jam-along tools, kept out of the lean transport bar */
 let backingOpen = false;

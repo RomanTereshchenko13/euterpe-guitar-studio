@@ -15,7 +15,24 @@ const css = fs.readFileSync(path.join(root, 'src', 'styles.css'), 'utf8');
 
 const jsDir = path.join(root, 'src', 'js');
 const jsFiles = fs.readdirSync(jsDir).filter(f => f.endsWith('.js')).sort();
-const js = jsFiles.map(f => fs.readFileSync(path.join(jsDir, f), 'utf8')).join('');
+
+// The changelog is the single source of truth for BOTH the in-app modal and
+// CHANGELOG.md, so it's parsed once here and consumed twice below.
+const changelogSrc = fs.readFileSync(path.join(jsDir, '02-changelog.js'), 'utf8');
+const arrMatch = changelogSrc.match(/=\s*(\[[\s\S]*\]);/);
+if (!arrMatch) throw new Error('could not locate CHANGELOG array in 02-changelog.js');
+const CHANGELOG = new Function('return ' + arrMatch[1])();
+
+// …but only the newest few releases ship in the bundle. The full history was
+// 15% of index.html — release notes nobody scrolls back through, downloaded by
+// every visitor. CHANGELOG.md (written below) still gets all of it, and the
+// modal links there. Keep this >= 1 so the current version always has an entry.
+const CHANGELOG_KEEP = 5;
+const changelogJs = 'const CHANGELOG = ' + JSON.stringify(CHANGELOG.slice(0, CHANGELOG_KEEP)) + ';\n';
+
+const js = jsFiles
+  .map(f => (f === '02-changelog.js' ? changelogJs : fs.readFileSync(path.join(jsDir, f), 'utf8')))
+  .join('');
 
 // APP_VERSION is the single source of truth: read it once and inject it into the
 // header comment (@@VERSION@@) and the dist filename, so neither drifts from it.
@@ -66,11 +83,8 @@ fs.writeFileSync(path.join(distDir, versioned), standalone);
 
 // CHANGELOG.md: a human-facing changelog generated from the same CHANGELOG array
 // that powers the in-app "What's new" modal, so the two never drift. English
-// bullets only (the modal localizes; the repo doc is English).
-const changelogSrc = fs.readFileSync(path.join(jsDir, '02-changelog.js'), 'utf8');
-const arrMatch = changelogSrc.match(/=\s*(\[[\s\S]*\]);/);
-if (!arrMatch) throw new Error('could not locate CHANGELOG array in 02-changelog.js');
-const CHANGELOG = new Function('return ' + arrMatch[1])();
+// bullets only (the modal localizes; the repo doc is English). Unlike the
+// bundle, this gets the FULL history — it costs the visitor nothing.
 let md = '# Changelog\n\n' +
   '_Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._\n\n';
 CHANGELOG.forEach(rel => {

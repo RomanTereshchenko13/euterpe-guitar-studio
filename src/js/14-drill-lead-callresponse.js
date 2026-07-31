@@ -158,8 +158,6 @@ function crRenderSummary(acc){
   const dn=document.getElementById('cr-done2'); if(dn){ dn.textContent=t('drill_done'); dn.onclick=exitCallResp; }
 }
 function crRenderControls(){
-  const keyc=document.getElementById('cr-key');
-  if(keyc) buildRootBtns(keyc, gRoot, (pc,r)=>{ setKey(pc,r); if(cr) crNewRound(); });
   segButtons('cr-pos', ['1','2','3','4','5'].map(label=>({label})), crPos-1, i=>{ crPos=i+1; if(cr) crNewRound(); });
 }
 function crRenderStatus(){
@@ -185,13 +183,14 @@ function refreshCallRespLang(){ if(cr) renderCr(); }
 
 /* card starter + in-drill controls — wired once at load (guarded, mirroring initTarget). */
 registerDrill({ id:'callresp', mode:'practice', area:'cr-area',
-                isActive:()=>!!cr, exit:exitCallResp, refreshLang:refreshCallRespLang });
+                isActive:()=>!!cr, exit:exitCallResp, refreshLang:refreshCallRespLang,
+                // the motif is drawn from the key's scale, so a key change deals a new round
+                onKey:()=>{ if(cr) crNewRound(); } });
 
 (function initCallResp(){
   const card=document.getElementById('start-callresp'); if(!card) return;
   card.onclick=startCallResp;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('cr-quit', exitCallResp);
   wire('cr-replay', crReplay);
   const b=document.getElementById('cr-board');
   if(b){
