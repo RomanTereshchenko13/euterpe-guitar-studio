@@ -575,6 +575,11 @@
 
     .cl-overlay { padding: 16px; }
     .cl-modal { max-height: calc(100vh - 32px); }
+
+    .mt-body { padding: 12px 20px 14px; gap: 8px; }
+    .mt-note-wrap { min-height: 40px; }
+    .mt-note { font-size: 38px; }
+    .mt-hint { display: none; }
   }
 
   #harmony-extras { margin-top: 26px; }
@@ -765,7 +770,8 @@
 
 
   .mt-modal { max-width: 420px; }
-  .mt-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+
+  .mt-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
   .mt-readout { text-align: center; }
   .mt-note-wrap { display: flex; align-items: baseline; justify-content: center; gap: 2px; min-height: 62px; }
   .mt-note { font-family: 'Fraunces', serif; font-size: 58px; line-height: 1; font-weight: 500; color: var(--text); }

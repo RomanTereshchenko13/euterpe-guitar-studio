@@ -650,6 +650,14 @@
     /* the changelog modal's 60px vertical padding leaves no room on a short screen */
     .cl-overlay { padding: 16px; }
     .cl-modal { max-height: calc(100vh - 32px); }
+    /* Landscape phone is the tuner's worst case — you're most likely to prop the
+       phone sideways while tuning, and it's the shortest viewport we support. Shrink
+       the oversized note and tighten the stack so the whole readout fits without
+       scrolling; the needle is what has to stay visible, not the typography. */
+    .mt-body { padding: 12px 20px 14px; gap: 8px; }
+    .mt-note-wrap { min-height: 40px; }
+    .mt-note { font-size: 38px; }
+    .mt-hint { display: none; }
   }
   /* chord-tones reference (voicing cards + sequencer) sits below the board */
   #harmony-extras { margin-top: 26px; }
@@ -880,7 +888,9 @@
      Everything here is sized to be read at arm's length with a guitar in your hands,
      so the note is deliberately huge and the needle track spans the full panel. */
   .mt-modal { max-width: 420px; }
-  .mt-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+  /* overflow-y matches .cl-body: the modal is max-height capped, so without this the
+     content clips instead of scrolling on a short screen (landscape phone). */
+  .mt-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
   .mt-readout { text-align: center; }
   .mt-note-wrap { display: flex; align-items: baseline; justify-content: center; gap: 2px; min-height: 62px; }
   .mt-note { font-family: 'Fraunces', serif; font-size: 58px; line-height: 1; font-weight: 500; color: var(--text); }
