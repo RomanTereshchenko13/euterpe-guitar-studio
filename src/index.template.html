@@ -112,10 +112,15 @@
           </div>
           <!-- Reference-tone tuner (no mic): one button per open string of the current
                tuning; tap to hold a sustained pitch and tune a real guitar against it.
-               Buttons are built from the live tuning by buildTuner(). -->
+               Buttons are built from the live tuning by buildTuner().
+               Beside it, the Phase 8/F0 chromatic MIC tuner — a different tool, not a
+               replacement: this one plays a pitch at you, that one listens. 17-mic-tuner.js
+               REMOVES the mic button when there's no secure context (file:// / jsdom),
+               so it never sits there as a control that can only report an error. -->
           <div class="tb-group tb-tuner">
             <span class="tb-label" data-i18n="tb_tuner">Тюнер</span>
             <span class="tuner-strings" id="tb-tuner-strings"></span>
+            <button class="btn tuner-mic" id="tb-mic" data-i18n="mic_open">🎤 Мікрофон</button>
           </div>
           <div class="tb-group">
             <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
@@ -734,6 +739,48 @@
       <div class="kbd-row"><span class="kbd-keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><span data-i18n="kbd_tabs">Перемкнути вкладки</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>A</kbd>–<kbd>G</kbd></span><span data-i18n="kbd_root">Задати тоніку</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>[</kbd><kbd>]</kbd></span><span data-i18n="kbd_transpose">Транспонувати на півтон</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Chromatic mic tuner (Phase 8 / F0). Reuses the changelog overlay chrome. The
+     needle is a single absolutely-positioned marker inside a ±50-cent track, moved
+     by 17-mic-tuner.js; the gauge carries .in-tune / data-dir for the colour state,
+     so hue is never the only signal (the number and the arrow say it too). -->
+<div class="cl-overlay" id="mic-overlay" role="dialog" aria-modal="true" aria-labelledby="mt-title" hidden>
+  <div class="cl-modal mt-modal">
+    <div class="cl-head">
+      <h2 id="mt-title" data-i18n="mic_title">Хроматичний тюнер</h2>
+      <button class="cl-close" id="mt-close" aria-label="close">✕</button>
+    </div>
+    <div class="mt-body">
+      <div class="mt-readout">
+        <div class="mt-note-wrap">
+          <span class="mt-note" id="mt-note">—</span><span class="mt-oct" id="mt-oct"></span>
+        </div>
+        <div class="mt-cents" id="mt-cents"></div>
+      </div>
+      <!-- ±50 cents. The centre band is the in-tune target; flat is left, sharp right. -->
+      <div class="mt-gauge" id="mt-gauge" role="img" aria-live="polite">
+        <div class="mt-track">
+          <span class="mt-tick" style="left:0%"></span>
+          <span class="mt-tick" style="left:25%"></span>
+          <span class="mt-tick mt-tick-mid" style="left:50%"></span>
+          <span class="mt-tick" style="left:75%"></span>
+          <span class="mt-tick" style="left:100%"></span>
+          <span class="mt-zone"></span>
+          <span class="mt-needle" id="mt-needle"></span>
+        </div>
+        <div class="mt-scale">
+          <span>♭ −50</span><span data-i18n="mic_intune">У строї</span><span>+50 ♯</span>
+        </div>
+      </div>
+      <div class="mt-string" id="mt-string"></div>
+      <p class="mt-status" id="mt-status" role="status" hidden></p>
+      <div class="mt-actions">
+        <button class="btn play" id="mt-toggle" data-i18n="mic_start">Увімкнути мікрофон</button>
+      </div>
+      <p class="mt-hint" data-i18n="mic_hint">Звук з мікрофона обробляється лише у твоєму браузері — нікуди не надсилається й не записується.</p>
     </div>
   </div>
 </div>

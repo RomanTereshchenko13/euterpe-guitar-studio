@@ -42,7 +42,18 @@ Edit the sources, then run the build.
 ## Where things live (all editable sources under `src/`)
 
 - `src/js/NN-*.js` — ordered modules, concatenated alphabetically (zero-padded
-  `01`..`16`). Order matters; the number is the load order.
+  `00`..`16`). Order matters; the number is the load order.
+  - `00-vendor-fft.js` + `00-vendor-pitchy.js` — **the only third-party code in the
+    repo** (Phase 8/F0). `fft.js` 4.0.4 (MIT) and `pitchy` 4.1.0 (MIT/ISC — the
+    roadmap's "0BSD" label was wrong, and pitchy is not alone: it *needs* fft.js).
+    Vendored per the dependency policy: copied in, audited, concatenated — nothing
+    fetched at runtime. **Do not edit them**; the only sanctioned change is swapping
+    in a newer upstream release and re-applying the documented deltas (drop
+    `module.exports` / `import` / `export`, wrap in an IIFE). The wrapper is
+    load-bearing: `00-vendor-fft.js` sorts first, so an unwrapped upstream
+    `'use strict'` would become the *script-level* directive and silently switch the
+    whole hand-written app to strict mode. Each returns one symbol (`FFT`,
+    `PitchDetector`) into the shared scope and keeps its helpers private.
   - `01-version.js` — `APP_VERSION`, the **single source of truth** for the version
   - `02-changelog.js` — release notes (EN/UK); drives the in-app modal AND `CHANGELOG.md`
   - `03-i18n.js` — translation strings · `04-constants.js` (incl. custom-tuning state:
@@ -130,6 +141,24 @@ Edit the sources, then run the build.
     learner model; the shared progress readout (`renderProgressInto`) lives in the ear module.
     The note/ear drills write per-item SRS; the rhythm + lead coaches write only a sessions entry
     (best-per-pair / bars-played / accuracy is derived from the ring buffer, so the pinned item shape stays untouched).
+  - `14-mic-tuner.js` — the **chromatic mic tuner** (Phase 8/F0, `mic*`/`mt*`, `#mt-*`). Real
+    `getUserMedia` → `AnalyserNode` → the vendored `PitchDetector` → a ±50-cent needle, note
+    name + octave, and a nearest-open-string readout derived from the live `OPEN_MIDI`/`SNAMES`
+    (so it re-labels for Drop D / DADGAD / Open G). **Complements** the reference-tone tuner in
+    `05-audio.js` — that one plays a pitch at you, this one listens. It asks for the raw signal
+    (`echoCancellation`/`noiseSuppression`/`autoGainControl` all **off** — voice-call DSP mangles
+    sustained tones), never connects the mic to `destination` (that's a feedback loop), calls
+    `tunerStop()` before listening, and stops the tracks on close / tab-hide / pagehide. Readings
+    are median-filtered (MPM's failure mode on a plucked string is a one-frame octave jump) then
+    eased; the easing lives in a module-level `mtCents` *outside* the session object, so the whole
+    readout is drivable with no mic attached — which is what the jsdom checks use.
+    **Why slot 14** and not 17 beside the PWA sidecar it otherwise resembles: `applyLang` (11)
+    calls `micRefreshLang`, and `applyLang` first runs from wiring-init (15), so loading after 15
+    makes `let mt` throw on the temporal dead zone — the same trap that pins the drill registry to
+    slot 13. **Self-disables like the PWA sidecar**: with no secure context / no `getUserMedia`
+    (a `file://` dist copy, jsdom) the entry button is *removed*, not disabled — a control that
+    can only ever report an error shouldn't be on screen. It is **not** a drill: no registry
+    entry, no `-area`, no learner-model writes.
   - `15-wiring-init.js` · `16-pwa.js`
 - `src/styles.css` — all CSS
 - `src/index.template.html` — markup shell with `@@STYLES@@` / `@@SCRIPT@@` / `@@FAVICON@@` markers
@@ -180,6 +209,16 @@ devDependencies in the **root** `package.json` (same status as jsdom in
   (exits 1 on failure). Dispatches real keydown events and asserts the DOM
   responds: tab switch (`1/2/3`), root set (`g/a/c`), transpose (`[`/`]`), help
   overlay (`?`/`Escape`), and the typing/focus guards.
+- `node tools/mic-check.js` — **end-to-end check for the F0 mic tuner** (exits 1 on
+  failure). The jsdom suite covers the pitch→readout maths and the DOM contract but
+  has no `getUserMedia`, so the half that matters — real capture → `AnalyserNode` →
+  the vendored detector → the needle — is only testable in a real browser. It
+  synthesizes a guitar-ish WAV at a known pitch, hands it to Chromium as a fake mic
+  (`--use-file-for-fake-audio-capture` + `--use-fake-ui-for-media-stream`), and asserts
+  the tuner names the right note and cents. Serves the build over a throwaway
+  `127.0.0.1` port because **`getUserMedia` needs a secure context and `file://` isn't
+  one**. Real time, not `--virtual-time-budget` (which starves the audio pipeline —
+  same reason `scroll-check.js` avoids it). ~1 browser launch per pitch, ~30 s total.
 - `node tools/make-icons.js` — **rasterize** `src/icons/icon.svg` into the PWA
   PNGs (`icon-192`, `icon-512`, `icon-maskable`, `apple-touch-icon`) in `icons/`.
   Run after editing the SVG; the PNGs are committed (Pages serves them). The
@@ -247,9 +286,12 @@ leads with the "edit `src/`, never the generated files" rule.
   **never copyleft** — GPL would relicense the whole single-file output),
   (b) **vendored**: source copied into `src/`, audited, and concatenated by
   `build.js` so nothing is fetched at runtime, and (c) solving a genuinely hard,
-  already-solved problem. The one sanctioned addition so far: **`pitchy` (0BSD),
-  vendored**, for pitch detection (Phase 8 / F2). Everything else stays
-  hand-rolled. See the Dependency policy in `ROADMAP.md` before adding any lib.
+  already-solved problem. **Vendored so far (Phase 8/F0): `pitchy` 4.1.0 + its one
+  dependency `fft.js` 4.0.4**, both MIT-class, both in `src/js/00-vendor-*.js`, for
+  pitch detection. Note the roadmap originally promised "the one code dependency,
+  0BSD" and both halves were off — pitchy is MIT/ISC, and it does not stand alone.
+  Everything else stays hand-rolled. See the Dependency policy in `ROADMAP.md`
+  before adding any lib.
 
 See `README.md` for the full architecture write-up and `ROADMAP.md` for the
 phased plan.

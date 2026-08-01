@@ -120,6 +120,7 @@ function applyLang(){
   refreshDrillsLang();   // re-localize whatever drill is in flight (13-drill-registry.js)
   setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
+  if(typeof micRefreshLang==='function') micRefreshLang();   // F0: re-localize a live tuner readout
   activateRoot(document.getElementById('g-roots'), gRoot);
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));

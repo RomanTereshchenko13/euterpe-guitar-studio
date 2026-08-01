@@ -2,6 +2,12 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.12.0 — 2026-08-01
+
+- New: a microphone tuner. Play any note on the guitar and see which note it is and how far off you are, on a needle that reads up to 50 cents sharp or flat — plus the nearest open string of whatever tuning you are in, so Drop D and the rest re-label themselves. It is chromatic, so you can also check your intonation at the 12th fret, not just tune the open strings. Open it with the Mic button next to the Tuner in Settings.
+- The existing reference-tone tuner stays exactly as it was — that one plays a pitch for you to tune against by ear, the new one listens to you. Use whichever suits the room you are in; the mic tuner needs a microphone and a secure (https) connection, and quietly hides itself when it cannot work, so nothing on screen ever pretends to do something it can't.
+- Your audio never leaves the browser: the microphone is only on while the tuner panel is open, is released the moment you close it or switch tabs, and nothing is sent anywhere or recorded.
+
 ## v2.11.0 — 2026-08-01
 
 - New Foundations drill — Subdivision & timing: a smart visual metronome for locking in your time. Pick a subdivision (quarter notes → eighths → triplets → sixteenths) and a tempo; an accented click and a grid tick out the bar (a strong beat 1, softer subdivisions), and the current key's scale is walked note-by-note across the grid in one neck box so you always have something to play. Change key, box or tempo without leaving Practice. A coach that serves both the Rhythm and Lead pillars — mic-scored timing arrives with microphone input later.

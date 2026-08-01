@@ -206,7 +206,10 @@ if (T) {
    'a11y_palette','a11y_shapes',
    'wc_title','wc_lead','wc_ref','wc_practice','wc_got',
    'tun_custom','cl_older',
-   'prog_active','prog_due','prog_review','share_btn','share_copied'].forEach(k => {
+   'prog_active','prog_due','prog_review','share_btn','share_copied',
+   'mic_open','mic_title','mic_start','mic_stop','mic_cents','mic_string','mic_play_hint',
+   'mic_intune','mic_hint','mic_asking','mic_denied','mic_nodev','mic_busy','mic_err',
+   'mic_unsupported'].forEach(k => {
     ok('i18n new key present (uk+en): ' + k,
        T.I18N.uk[k] !== undefined && T.I18N.en[k] !== undefined);
   });
@@ -1688,6 +1691,156 @@ if (T) {
     ok('share: hash stripped after applying', (win.location.hash || '') === '');
     ok('share: a non-share hash is ignored', T.applyShareHash() === false);
     T.setKey(0, 'C', 0); T.setMode('reference');   // clean slate for any later check
+  })();
+
+  /* ---- Phase 8 / F0: chromatic mic tuner ----
+     jsdom has no getUserMedia, so what's assertable HERE is the pure pitch→readout
+     maths, the self-disable behaviour, and the DOM contract. The live capture chain
+     (real getUserMedia → AnalyserNode → vendored detector → needle) is covered by
+     tools/mic-check.js, which drives a real headless browser with a synthetic
+     guitar tone as the fake mic device. */
+  (function micTuner() {
+    const doc = win.document;
+
+    /* -- the vendored detector actually got concatenated into the bundle -- */
+    ok('F0: vendored PitchDetector is present in the shared scope',
+       typeof win.PitchDetector === 'function' || typeof T.MT_FFT === 'number');
+
+    /* -- self-disable: jsdom is a secure context (https://example.test) but has no
+          mediaDevices, so the feature must report unsupported and REMOVE its entry
+          point rather than leave a button that can only ever error. -- */
+    ok('F0: micSupported() is false without navigator.mediaDevices', T.micSupported() === false);
+    ok('F0: the mic entry button is removed when unsupported', !doc.getElementById('tb-mic'));
+    ok('F0: the reference-tone tuner still works when the mic half is disabled',
+       doc.querySelectorAll('#tb-tuner-strings .tuner-str').length === 6);
+
+    /* -- the overlay markup ships regardless (only the entry point is conditional) -- */
+    ['mic-overlay', 'mt-note', 'mt-oct', 'mt-cents', 'mt-gauge', 'mt-needle',
+     'mt-string', 'mt-status', 'mt-toggle', 'mt-close'].forEach(id => {
+      ok('F0: tuner element present: #' + id, !!doc.getElementById(id));
+    });
+    ok('F0: the tuner overlay starts hidden', doc.getElementById('mic-overlay').hidden === true);
+
+    /* -- pitch → MIDI, the core conversion -- */
+    const near = (a, b, eps) => Math.abs(a - b) < eps;
+    ok('F0: A440 maps to MIDI 69', near(T.micMidiFromHz(440), 69, 1e-9));
+    ok('F0: 82.41 Hz maps to MIDI 40 (low E)', near(T.micMidiFromHz(82.4069), 40, 0.001));
+    ok('F0: an octave up is +12 semitones', near(T.micMidiFromHz(880) - T.micMidiFromHz(440), 12, 1e-9));
+
+    /* -- cents, including the sign convention the needle depends on -- */
+    ok('F0: a perfectly in-tune note reads 0 cents', near(T.micCentsOff(69), 0, 1e-9));
+    ok('F0: sharp reads positive', T.micCentsOff(69.25) > 0);
+    ok('F0: flat reads negative', T.micCentsOff(68.75) < 0);
+    ok('F0: 40 cents sharp reads +40', near(T.micCentsOff(69.4), 40, 1e-9));
+    ok('F0: 40 cents flat reads -40', near(T.micCentsOff(68.6), -40, 1e-9));
+    // The half-semitone boundary is genuinely ambiguous — Math.round(x.5) rounds
+    // AWAY from zero, so a quarter-tone lands on the sharp side of the note above
+    // rather than +50 of the note below. Either is defensible; what must hold is
+    // that the result never escapes the needle's range.
+    ok('F0: cents stay within the +/-50 track for any input',
+       [68.5, 69.5, 69.499, 68.501, 40.5, 81.5].every(m => Math.abs(T.micCentsOff(m)) <= 50));
+    // 25 cents sharp of A440 == 446.4 Hz; the two helpers must agree end to end
+    ok('F0: 25 cents sharp round-trips through both helpers',
+       near(T.micCentsOff(T.micMidiFromHz(440 * Math.pow(2, 25 / 1200))), 25, 0.001));
+
+    /* -- nearest string follows the LIVE tuning, which is the whole point of
+          reading OPEN_MIDI instead of assuming E-A-D-G-B-e -- */
+    const std = T.getOpenMidi();                      // [64,59,55,50,45,40] high→low
+    ok('F0: MIDI 40 is nearest the 6th string in standard tuning',
+       std[T.micNearestString(40)] === 40);
+    ok('F0: MIDI 64 is nearest a high-E string', std[T.micNearestString(64)] === 64);
+    // Drop D: the 6th string becomes D (38). The nearest-string readout must follow.
+    T.setCustomTuning([64, 59, 55, 50, 45, 38]);
+    T.setTuningIdx(T.TUNINGS.length - 1);             // the Custom entry
+    const drop = T.getOpenMidi();
+    ok('F0: custom tuning applied (6th string is D)', drop[5] === 38, String(drop));
+    ok('F0: nearest string re-targets to the retuned 6th string',
+       drop[T.micNearestString(38)] === 38);
+    T.setTuningIdx(0);                                // back to standard
+    ok('F0: tuning restored to standard', T.getOpenMidi()[5] === 40);
+
+    /* -- gates are set where the measured signals actually sit: a clean plucked
+          string clarities ~0.95+, white noise measured 0.41 -- */
+    ok('F0: clarity gate rejects noise but not a clean string',
+       T.MT_CLARITY > 0.5 && T.MT_CLARITY <= 0.95);
+    ok('F0: detection band covers the guitar', T.MT_HZ_LO < 82 && T.MT_HZ_HI > 660);
+    ok('F0: the analysis window resolves low E (>= 2 periods)',
+       T.MT_FFT / 44100 >= 2 / 82.41);
+    ok('F0: in-tune tolerance is the standard +/-5 cents', T.MT_IN_TUNE === 5);
+
+    /* -- the readout itself, driven without a mic -- */
+    T.micPaintIdle();
+    ok('F0: idle shows no note', doc.getElementById('mt-note').textContent === '—');
+    ok('F0: idle prompts for a string',
+       doc.getElementById('mt-string').textContent === T.I18N[T.state().lang].mic_play_hint);
+
+    // Feed a dead-on A440 repeatedly; the easing converges, so the needle centres
+    // and the gauge flips to in-tune.
+    for (let i = 0; i < 30; i++) T.micPaint(69);
+    ok('F0: a centred reading names the note', doc.getElementById('mt-note').textContent === 'A');
+    ok('F0: a centred reading shows the octave', doc.getElementById('mt-oct').textContent === '4');
+    // parse rather than string-compare: the CSS serializer drops the trailing
+    // zero, so "50.0%" comes back as "50%"
+    ok('F0: a centred reading parks the needle at 50%',
+       near(parseFloat(doc.getElementById('mt-needle').style.left), 50, 0.05),
+       doc.getElementById('mt-needle').style.left);
+    ok('F0: a centred reading reads as in tune',
+       doc.getElementById('mt-gauge').classList.contains('in-tune'));
+    ok('F0: an in-tune gauge carries no direction flag',
+       !doc.getElementById('mt-gauge').hasAttribute('data-dir'));
+
+    // A clearly flat note: needle left of centre, and the direction is exposed as
+    // an attribute so the state never rides on colour alone.
+    T.micPaintIdle();
+    for (let i = 0; i < 30; i++) T.micPaint(68.7);     // 30 cents flat
+    const leftPct = parseFloat(doc.getElementById('mt-needle').style.left);
+    ok('F0: a flat note pushes the needle left of centre', leftPct < 50, String(leftPct));
+    ok('F0: a flat note is flagged flat',
+       doc.getElementById('mt-gauge').getAttribute('data-dir') === 'flat');
+    ok('F0: a flat note is not marked in tune',
+       !doc.getElementById('mt-gauge').classList.contains('in-tune'));
+
+    T.micPaintIdle();
+    for (let i = 0; i < 30; i++) T.micPaint(69.3);     // 30 cents sharp
+    ok('F0: a sharp note is flagged sharp',
+       doc.getElementById('mt-gauge').getAttribute('data-dir') === 'sharp');
+    ok('F0: a sharp note pushes the needle right of centre',
+       parseFloat(doc.getElementById('mt-needle').style.left) > 50);
+
+    // The needle must never escape its track, however far out of tune the reading.
+    T.micPaintIdle();
+    for (let i = 0; i < 60; i++) T.micPaint(69.5);     // pinned at the +50 edge
+    const edge = parseFloat(doc.getElementById('mt-needle').style.left);
+    ok('F0: the needle is clamped inside the track', edge >= 0 && edge <= 100, String(edge));
+
+    /* -- status messages are localized and clearable -- */
+    T.micStatus('mic_denied');
+    const st = doc.getElementById('mt-status');
+    ok('F0: an error status is shown', st.hidden === false && st.textContent.length > 0);
+    ok('F0: the status remembers its key so it can re-localize',
+       st.dataset.key === 'mic_denied');
+    T.micStatus(null);
+    ok('F0: clearing the status hides it', st.hidden === true);
+
+    /* -- open/close drives BOTH `hidden` and `.open`, like every other modal, and
+          closing must never leave a session behind -- */
+    T.micOpen();
+    const ov = doc.getElementById('mic-overlay');
+    ok('F0: opening the tuner unhides the overlay', ov.hidden === false);
+    ok('F0: opening the tuner adds the .open class', ov.classList.contains('open'));
+    T.micClose();
+    ok('F0: closing re-hides the overlay', ov.hidden === true);
+    ok('F0: closing removes the .open class', !ov.classList.contains('open'));
+    ok('F0: closing leaves no live mic session', T.getMic() === null);
+
+    /* -- language switch must not throw with the panel open (the TDZ bug that the
+          module's load-order comment exists to prevent) -- */
+    T.micOpen();
+    let threw = false;
+    try { win.__GS_TEST__ && win.document.querySelectorAll('.langbtn')[0].click(); }
+    catch (e) { threw = true; }
+    ok('F0: switching language with the tuner open does not throw', !threw);
+    T.micClose();
   })();
 }
 

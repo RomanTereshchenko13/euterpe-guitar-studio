@@ -167,7 +167,10 @@ function runSpec({ w, h }) {
     const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-prof-'));
 
     const child = spawn(browser, [
-      '--headless', '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=1',
+      // --headless=new, not the bare --headless: Chromium REMOVED the old headless
+      // mode in 132, and on a newer Edge/Chrome the legacy flag makes the browser
+      // never produce diagnostic output, so this gate silently "failed" everywhere.
+      '--headless=new', '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=1',
       '--enable-logging=stderr', '--v=1', '--no-first-run', '--no-default-browser-check',
       `--user-data-dir=${profile}`, fileUrl(wrapper),
     ]);
@@ -187,7 +190,12 @@ function runSpec({ w, h }) {
     };
     child.stderr.on('data', onData);
     child.stdout.on('data', onData);
-    const timer = setTimeout(() => finish(null), 60000);   // safety: don't hang CI
+    // Safety net so a wedged browser can't hang CI. 60 s was too tight once the
+    // diagnostic itself takes ~15 s of REAL time and a cold second browser launch
+    // (fresh profile, no warm cache) eats the rest — each viewport passed alone but
+    // the pair flaked. Generous, because the normal exit is the DIAG_RESULT above,
+    // not this timer.
+    const timer = setTimeout(() => finish(null), 150000);
   });
 }
 

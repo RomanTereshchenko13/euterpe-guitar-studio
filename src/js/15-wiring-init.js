@@ -463,7 +463,10 @@ document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey) return;
   const tg=e.target;
   if(tg && (tg.tagName==='INPUT'||tg.tagName==='SELECT'||tg.tagName==='TEXTAREA'||tg.isContentEditable)) return;
-  if(!document.getElementById('cl-overlay').hidden || !document.getElementById('kbd-overlay').hidden) return;  // modal open
+  // modal open — the mic tuner counts too, or "a" would retune the app's key while
+  // you're squinting at a needle (and it runs its own Escape handler).
+  if(!document.getElementById('cl-overlay').hidden || !document.getElementById('kbd-overlay').hidden) return;
+  { const mo=document.getElementById('mic-overlay'); if(mo && !mo.hidden) return; }
   const k=e.key;
   if(k===' '||k==='Spacebar'){
     if(tg && tg.closest && tg.closest('button,a,[role="button"],[tabindex]')) return;   // let the focused control keep Space
@@ -616,6 +619,11 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     // time signature / meter (Phase 7b)
     METERS, setMeter, curMeter, barBeats, pulseSec, barSec, midPulseSec,
     meterGroupStarts:()=>[...meterGroupStarts()], getMeterIdx:()=>meterIdx,
+    // chromatic mic tuner (Phase 8 / F0). The pitch→readout maths is pure and
+    // assertable here; the getUserMedia half needs a real browser (tools/mic-check.js).
+    micSupported, micMidiFromHz, micCentsOff, micNearestString,
+    micOpen, micClose, micStatus, micPaint, micPaintIdle, getMic:()=>mt,
+    MT_FFT, MT_CLARITY, MT_IN_TUNE, MT_HZ_LO, MT_HZ_HI,
     // accessibility + onboarding (Phase 9 feel pass)
     applyA11y, showWelcome, dismissWelcome,
     setCbPalette:(v)=>{ cbPalette=!!v; }, setFnShapes:(v)=>{ fnShapes=!!v; }, setWelcomeSeen:(v)=>{ welcomeSeen=!!v; },

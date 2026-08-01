@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 2.11.0  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 2.12.0  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="2.11.0">
+<meta name="version" content="2.12.0">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -762,6 +762,35 @@
   .wc-list b { color: var(--text); font-weight: 600; }
   .wc-actions { display: flex; justify-content: flex-end; }
   .wc-actions .btn.play { font-size: 14px; padding: 9px 24px; }
+
+
+  .mt-modal { max-width: 420px; }
+  .mt-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .mt-readout { text-align: center; }
+  .mt-note-wrap { display: flex; align-items: baseline; justify-content: center; gap: 2px; min-height: 62px; }
+  .mt-note { font-family: 'Fraunces', serif; font-size: 58px; line-height: 1; font-weight: 500; color: var(--text); }
+  .mt-oct { font-family: 'JetBrains Mono', monospace; font-size: 19px; color: var(--text-faint); }
+  .mt-cents { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--text-dim); min-height: 19px; }
+
+  .mt-track { position: relative; height: 42px; border-radius: 8px; background: var(--bg-panel-2); border: 1px solid var(--border); overflow: hidden; }
+  .mt-tick { position: absolute; top: 0; width: 1px; height: 11px; background: var(--border-strong); }
+  .mt-tick-mid { height: 100%; width: 2px; background: var(--border-strong); }
+
+  .mt-zone { position: absolute; left: 45%; width: 10%; top: 0; bottom: 0; background: color-mix(in srgb, var(--root) 16%, transparent); }
+  .mt-needle { position: absolute; top: 4px; bottom: 4px; left: 50%; width: 4px; margin-left: -2px; border-radius: 3px; background: var(--text); transition: left 0.08s linear, background 0.18s ease; }
+  .mt-scale { display: flex; justify-content: space-between; margin-top: 5px; font-size: 10.5px; color: var(--text-faint); font-family: 'JetBrains Mono', monospace; }
+
+  .mt-gauge.in-tune .mt-needle { background: var(--root); box-shadow: 0 0 12px color-mix(in srgb, var(--root) 70%, transparent); }
+  .mt-gauge[data-dir] .mt-needle { background: var(--third); }
+  .mt-gauge:not(.live) { opacity: 0.45; }
+  .mt-string { text-align: center; font-size: 12px; color: var(--text-dim); min-height: 17px; }
+  .mt-status { font-size: 12.5px; line-height: 1.5; color: var(--seventh); text-align: center; }
+  .mt-status[hidden] { display: none; }
+  .mt-actions { display: flex; justify-content: center; }
+  .mt-actions .btn { font-size: 14px; padding: 9px 24px; }
+  .mt-hint { font-size: 11px; line-height: 1.5; color: var(--text-faint); text-align: center; }
+
+  .btn.tuner-mic { padding: 5px 9px; white-space: nowrap; align-self: center; }
 </style>
 </head>
 <body>
@@ -845,10 +874,15 @@
           </div>
           <!-- Reference-tone tuner (no mic): one button per open string of the current
                tuning; tap to hold a sustained pitch and tune a real guitar against it.
-               Buttons are built from the live tuning by buildTuner(). -->
+               Buttons are built from the live tuning by buildTuner().
+               Beside it, the Phase 8/F0 chromatic MIC tuner — a different tool, not a
+               replacement: this one plays a pitch at you, that one listens. 17-mic-tuner.js
+               REMOVES the mic button when there's no secure context (file:// / jsdom),
+               so it never sits there as a control that can only report an error. -->
           <div class="tb-group tb-tuner">
             <span class="tb-label" data-i18n="tb_tuner">Тюнер</span>
             <span class="tuner-strings" id="tb-tuner-strings"></span>
+            <button class="btn tuner-mic" id="tb-mic" data-i18n="mic_open">🎤 Мікрофон</button>
           </div>
           <div class="tb-group">
             <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
@@ -1471,15 +1505,633 @@
   </div>
 </div>
 
+<!-- Chromatic mic tuner (Phase 8 / F0). Reuses the changelog overlay chrome. The
+     needle is a single absolutely-positioned marker inside a ±50-cent track, moved
+     by 17-mic-tuner.js; the gauge carries .in-tune / data-dir for the colour state,
+     so hue is never the only signal (the number and the arrow say it too). -->
+<div class="cl-overlay" id="mic-overlay" role="dialog" aria-modal="true" aria-labelledby="mt-title" hidden>
+  <div class="cl-modal mt-modal">
+    <div class="cl-head">
+      <h2 id="mt-title" data-i18n="mic_title">Хроматичний тюнер</h2>
+      <button class="cl-close" id="mt-close" aria-label="close">✕</button>
+    </div>
+    <div class="mt-body">
+      <div class="mt-readout">
+        <div class="mt-note-wrap">
+          <span class="mt-note" id="mt-note">—</span><span class="mt-oct" id="mt-oct"></span>
+        </div>
+        <div class="mt-cents" id="mt-cents"></div>
+      </div>
+      <!-- ±50 cents. The centre band is the in-tune target; flat is left, sharp right. -->
+      <div class="mt-gauge" id="mt-gauge" role="img" aria-live="polite">
+        <div class="mt-track">
+          <span class="mt-tick" style="left:0%"></span>
+          <span class="mt-tick" style="left:25%"></span>
+          <span class="mt-tick mt-tick-mid" style="left:50%"></span>
+          <span class="mt-tick" style="left:75%"></span>
+          <span class="mt-tick" style="left:100%"></span>
+          <span class="mt-zone"></span>
+          <span class="mt-needle" id="mt-needle"></span>
+        </div>
+        <div class="mt-scale">
+          <span>♭ −50</span><span data-i18n="mic_intune">У строї</span><span>+50 ♯</span>
+        </div>
+      </div>
+      <div class="mt-string" id="mt-string"></div>
+      <p class="mt-status" id="mt-status" role="status" hidden></p>
+      <div class="mt-actions">
+        <button class="btn play" id="mt-toggle" data-i18n="mic_start">Увімкнути мікрофон</button>
+      </div>
+      <p class="mt-hint" data-i18n="mic_hint">Звук з мікрофона обробляється лише у твоєму браузері — нікуди не надсилається й не записується.</p>
+    </div>
+  </div>
+</div>
+
 <!-- Update-available toast: hidden until the service worker reports a new
      waiting version (14-pwa.js fills in the localized message + buttons and
      unhides it). role=status so it's announced politely. -->
 <div class="toast" id="pwa-toast" role="status" aria-live="polite" hidden></div>
 
-<script>
+<script>var FFT = (function () {
+'use strict';
+function FFT(size) {
+  this.size = size | 0;
+  if (this.size <= 1 || (this.size & (this.size - 1)) !== 0)
+    throw new Error('FFT size must be a power of two and bigger than 1');
+  this._csize = size << 1;
+  var table = new Array(this.size * 2);
+  for (var i = 0; i < table.length; i += 2) {
+    const angle = Math.PI * i / this.size;
+    table[i] = Math.cos(angle);
+    table[i + 1] = -Math.sin(angle);
+  }
+  this.table = table;
+  var power = 0;
+  for (var t = 1; this.size > t; t <<= 1)
+    power++;
+  this._width = power % 2 === 0 ? power - 1 : power;
+  this._bitrev = new Array(1 << this._width);
+  for (var j = 0; j < this._bitrev.length; j++) {
+    this._bitrev[j] = 0;
+    for (var shift = 0; shift < this._width; shift += 2) {
+      var revShift = this._width - shift - 2;
+      this._bitrev[j] |= ((j >>> shift) & 3) << revShift;
+    }
+  }
+  this._out = null;
+  this._data = null;
+  this._inv = 0;
+}
+FFT.prototype.fromComplexArray = function fromComplexArray(complex, storage) {
+  var res = storage || new Array(complex.length >>> 1);
+  for (var i = 0; i < complex.length; i += 2)
+    res[i >>> 1] = complex[i];
+  return res;
+};
+FFT.prototype.createComplexArray = function createComplexArray() {
+  const res = new Array(this._csize);
+  for (var i = 0; i < res.length; i++)
+    res[i] = 0;
+  return res;
+};
+FFT.prototype.toComplexArray = function toComplexArray(input, storage) {
+  var res = storage || this.createComplexArray();
+  for (var i = 0; i < res.length; i += 2) {
+    res[i] = input[i >>> 1];
+    res[i + 1] = 0;
+  }
+  return res;
+};
+FFT.prototype.completeSpectrum = function completeSpectrum(spectrum) {
+  var size = this._csize;
+  var half = size >>> 1;
+  for (var i = 2; i < half; i += 2) {
+    spectrum[size - i] = spectrum[i];
+    spectrum[size - i + 1] = -spectrum[i + 1];
+  }
+};
+FFT.prototype.transform = function transform(out, data) {
+  if (out === data)
+    throw new Error('Input and output buffers must be different');
+  this._out = out;
+  this._data = data;
+  this._inv = 0;
+  this._transform4();
+  this._out = null;
+  this._data = null;
+};
+FFT.prototype.realTransform = function realTransform(out, data) {
+  if (out === data)
+    throw new Error('Input and output buffers must be different');
+  this._out = out;
+  this._data = data;
+  this._inv = 0;
+  this._realTransform4();
+  this._out = null;
+  this._data = null;
+};
+FFT.prototype.inverseTransform = function inverseTransform(out, data) {
+  if (out === data)
+    throw new Error('Input and output buffers must be different');
+  this._out = out;
+  this._data = data;
+  this._inv = 1;
+  this._transform4();
+  for (var i = 0; i < out.length; i++)
+    out[i] /= this.size;
+  this._out = null;
+  this._data = null;
+};
+FFT.prototype._transform4 = function _transform4() {
+  var out = this._out;
+  var size = this._csize;
+  var width = this._width;
+  var step = 1 << width;
+  var len = (size / step) << 1;
+  var outOff;
+  var t;
+  var bitrev = this._bitrev;
+  if (len === 4) {
+    for (outOff = 0, t = 0; outOff < size; outOff += len, t++) {
+      const off = bitrev[t];
+      this._singleTransform2(outOff, off, step);
+    }
+  } else {
+    for (outOff = 0, t = 0; outOff < size; outOff += len, t++) {
+      const off = bitrev[t];
+      this._singleTransform4(outOff, off, step);
+    }
+  }
+  var inv = this._inv ? -1 : 1;
+  var table = this.table;
+  for (step >>= 2; step >= 2; step >>= 2) {
+    len = (size / step) << 1;
+    var quarterLen = len >>> 2;
+    for (outOff = 0; outOff < size; outOff += len) {
+      var limit = outOff + quarterLen;
+      for (var i = outOff, k = 0; i < limit; i += 2, k += step) {
+        const A = i;
+        const B = A + quarterLen;
+        const C = B + quarterLen;
+        const D = C + quarterLen;
+        const Ar = out[A];
+        const Ai = out[A + 1];
+        const Br = out[B];
+        const Bi = out[B + 1];
+        const Cr = out[C];
+        const Ci = out[C + 1];
+        const Dr = out[D];
+        const Di = out[D + 1];
+        const MAr = Ar;
+        const MAi = Ai;
+        const tableBr = table[k];
+        const tableBi = inv * table[k + 1];
+        const MBr = Br * tableBr - Bi * tableBi;
+        const MBi = Br * tableBi + Bi * tableBr;
+        const tableCr = table[2 * k];
+        const tableCi = inv * table[2 * k + 1];
+        const MCr = Cr * tableCr - Ci * tableCi;
+        const MCi = Cr * tableCi + Ci * tableCr;
+        const tableDr = table[3 * k];
+        const tableDi = inv * table[3 * k + 1];
+        const MDr = Dr * tableDr - Di * tableDi;
+        const MDi = Dr * tableDi + Di * tableDr;
+        const T0r = MAr + MCr;
+        const T0i = MAi + MCi;
+        const T1r = MAr - MCr;
+        const T1i = MAi - MCi;
+        const T2r = MBr + MDr;
+        const T2i = MBi + MDi;
+        const T3r = inv * (MBr - MDr);
+        const T3i = inv * (MBi - MDi);
+        const FAr = T0r + T2r;
+        const FAi = T0i + T2i;
+        const FCr = T0r - T2r;
+        const FCi = T0i - T2i;
+        const FBr = T1r + T3i;
+        const FBi = T1i - T3r;
+        const FDr = T1r - T3i;
+        const FDi = T1i + T3r;
+        out[A] = FAr;
+        out[A + 1] = FAi;
+        out[B] = FBr;
+        out[B + 1] = FBi;
+        out[C] = FCr;
+        out[C + 1] = FCi;
+        out[D] = FDr;
+        out[D + 1] = FDi;
+      }
+    }
+  }
+};
+FFT.prototype._singleTransform2 = function _singleTransform2(outOff, off,
+                                                             step) {
+  const out = this._out;
+  const data = this._data;
+  const evenR = data[off];
+  const evenI = data[off + 1];
+  const oddR = data[off + step];
+  const oddI = data[off + step + 1];
+  const leftR = evenR + oddR;
+  const leftI = evenI + oddI;
+  const rightR = evenR - oddR;
+  const rightI = evenI - oddI;
+  out[outOff] = leftR;
+  out[outOff + 1] = leftI;
+  out[outOff + 2] = rightR;
+  out[outOff + 3] = rightI;
+};
+FFT.prototype._singleTransform4 = function _singleTransform4(outOff, off,
+                                                             step) {
+  const out = this._out;
+  const data = this._data;
+  const inv = this._inv ? -1 : 1;
+  const step2 = step * 2;
+  const step3 = step * 3;
+  const Ar = data[off];
+  const Ai = data[off + 1];
+  const Br = data[off + step];
+  const Bi = data[off + step + 1];
+  const Cr = data[off + step2];
+  const Ci = data[off + step2 + 1];
+  const Dr = data[off + step3];
+  const Di = data[off + step3 + 1];
+  const T0r = Ar + Cr;
+  const T0i = Ai + Ci;
+  const T1r = Ar - Cr;
+  const T1i = Ai - Ci;
+  const T2r = Br + Dr;
+  const T2i = Bi + Di;
+  const T3r = inv * (Br - Dr);
+  const T3i = inv * (Bi - Di);
+  const FAr = T0r + T2r;
+  const FAi = T0i + T2i;
+  const FBr = T1r + T3i;
+  const FBi = T1i - T3r;
+  const FCr = T0r - T2r;
+  const FCi = T0i - T2i;
+  const FDr = T1r - T3i;
+  const FDi = T1i + T3r;
+  out[outOff] = FAr;
+  out[outOff + 1] = FAi;
+  out[outOff + 2] = FBr;
+  out[outOff + 3] = FBi;
+  out[outOff + 4] = FCr;
+  out[outOff + 5] = FCi;
+  out[outOff + 6] = FDr;
+  out[outOff + 7] = FDi;
+};
+FFT.prototype._realTransform4 = function _realTransform4() {
+  var out = this._out;
+  var size = this._csize;
+  var width = this._width;
+  var step = 1 << width;
+  var len = (size / step) << 1;
+  var outOff;
+  var t;
+  var bitrev = this._bitrev;
+  if (len === 4) {
+    for (outOff = 0, t = 0; outOff < size; outOff += len, t++) {
+      const off = bitrev[t];
+      this._singleRealTransform2(outOff, off >>> 1, step >>> 1);
+    }
+  } else {
+    for (outOff = 0, t = 0; outOff < size; outOff += len, t++) {
+      const off = bitrev[t];
+      this._singleRealTransform4(outOff, off >>> 1, step >>> 1);
+    }
+  }
+  var inv = this._inv ? -1 : 1;
+  var table = this.table;
+  for (step >>= 2; step >= 2; step >>= 2) {
+    len = (size / step) << 1;
+    var halfLen = len >>> 1;
+    var quarterLen = halfLen >>> 1;
+    var hquarterLen = quarterLen >>> 1;
+    for (outOff = 0; outOff < size; outOff += len) {
+      for (var i = 0, k = 0; i <= hquarterLen; i += 2, k += step) {
+        var A = outOff + i;
+        var B = A + quarterLen;
+        var C = B + quarterLen;
+        var D = C + quarterLen;
+        var Ar = out[A];
+        var Ai = out[A + 1];
+        var Br = out[B];
+        var Bi = out[B + 1];
+        var Cr = out[C];
+        var Ci = out[C + 1];
+        var Dr = out[D];
+        var Di = out[D + 1];
+        var MAr = Ar;
+        var MAi = Ai;
+        var tableBr = table[k];
+        var tableBi = inv * table[k + 1];
+        var MBr = Br * tableBr - Bi * tableBi;
+        var MBi = Br * tableBi + Bi * tableBr;
+        var tableCr = table[2 * k];
+        var tableCi = inv * table[2 * k + 1];
+        var MCr = Cr * tableCr - Ci * tableCi;
+        var MCi = Cr * tableCi + Ci * tableCr;
+        var tableDr = table[3 * k];
+        var tableDi = inv * table[3 * k + 1];
+        var MDr = Dr * tableDr - Di * tableDi;
+        var MDi = Dr * tableDi + Di * tableDr;
+        var T0r = MAr + MCr;
+        var T0i = MAi + MCi;
+        var T1r = MAr - MCr;
+        var T1i = MAi - MCi;
+        var T2r = MBr + MDr;
+        var T2i = MBi + MDi;
+        var T3r = inv * (MBr - MDr);
+        var T3i = inv * (MBi - MDi);
+        var FAr = T0r + T2r;
+        var FAi = T0i + T2i;
+        var FBr = T1r + T3i;
+        var FBi = T1i - T3r;
+        out[A] = FAr;
+        out[A + 1] = FAi;
+        out[B] = FBr;
+        out[B + 1] = FBi;
+        if (i === 0) {
+          var FCr = T0r - T2r;
+          var FCi = T0i - T2i;
+          out[C] = FCr;
+          out[C + 1] = FCi;
+          continue;
+        }
+        if (i === hquarterLen)
+          continue;
+        var ST0r = T1r;
+        var ST0i = -T1i;
+        var ST1r = T0r;
+        var ST1i = -T0i;
+        var ST2r = -inv * T3i;
+        var ST2i = -inv * T3r;
+        var ST3r = -inv * T2i;
+        var ST3i = -inv * T2r;
+        var SFAr = ST0r + ST2r;
+        var SFAi = ST0i + ST2i;
+        var SFBr = ST1r + ST3i;
+        var SFBi = ST1i - ST3r;
+        var SA = outOff + quarterLen - i;
+        var SB = outOff + halfLen - i;
+        out[SA] = SFAr;
+        out[SA + 1] = SFAi;
+        out[SB] = SFBr;
+        out[SB + 1] = SFBi;
+      }
+    }
+  }
+};
+FFT.prototype._singleRealTransform2 = function _singleRealTransform2(outOff,
+                                                                     off,
+                                                                     step) {
+  const out = this._out;
+  const data = this._data;
+  const evenR = data[off];
+  const oddR = data[off + step];
+  const leftR = evenR + oddR;
+  const rightR = evenR - oddR;
+  out[outOff] = leftR;
+  out[outOff + 1] = 0;
+  out[outOff + 2] = rightR;
+  out[outOff + 3] = 0;
+};
+FFT.prototype._singleRealTransform4 = function _singleRealTransform4(outOff,
+                                                                     off,
+                                                                     step) {
+  const out = this._out;
+  const data = this._data;
+  const inv = this._inv ? -1 : 1;
+  const step2 = step * 2;
+  const step3 = step * 3;
+  const Ar = data[off];
+  const Br = data[off + step];
+  const Cr = data[off + step2];
+  const Dr = data[off + step3];
+  const T0r = Ar + Cr;
+  const T1r = Ar - Cr;
+  const T2r = Br + Dr;
+  const T3r = inv * (Br - Dr);
+  const FAr = T0r + T2r;
+  const FBr = T1r;
+  const FBi = -T3r;
+  const FCr = T0r - T2r;
+  const FDr = T1r;
+  const FDi = T3r;
+  out[outOff] = FAr;
+  out[outOff + 1] = 0;
+  out[outOff + 2] = FBr;
+  out[outOff + 3] = FBi;
+  out[outOff + 4] = FCr;
+  out[outOff + 5] = 0;
+  out[outOff + 6] = FDr;
+  out[outOff + 7] = FDi;
+};
+return FFT;
+})();
+var PitchDetector = (function () {
+'use strict';
+class Autocorrelator {
+  _inputLength;
+  _fft;
+  _bufferSupplier;
+  _paddedInputBuffer;
+  _transformBuffer;
+  _inverseBuffer;
+  static forFloat32Array(inputLength) {
+    return new Autocorrelator(
+      inputLength,
+      (length) => new Float32Array(length),
+    );
+  }
+  static forFloat64Array(inputLength) {
+    return new Autocorrelator(
+      inputLength,
+      (length) => new Float64Array(length),
+    );
+  }
+  static forNumberArray(inputLength) {
+    return new Autocorrelator(inputLength, (length) => Array(length));
+  }
+  constructor(inputLength, bufferSupplier) {
+    if (inputLength < 1) {
+      throw new Error(`Input length must be at least one`);
+    }
+    this._inputLength = inputLength;
+    this._fft = new FFT(ceilPow2(2 * inputLength));
+    this._bufferSupplier = bufferSupplier;
+    this._paddedInputBuffer = this._bufferSupplier(this._fft.size);
+    this._transformBuffer = this._bufferSupplier(2 * this._fft.size);
+    this._inverseBuffer = this._bufferSupplier(2 * this._fft.size);
+  }
+  get inputLength() {
+    return this._inputLength;
+  }
+  autocorrelate(input, output = this._bufferSupplier(input.length)) {
+    if (input.length !== this._inputLength) {
+      throw new Error(
+        `Input must have length ${this._inputLength} but had length ${input.length}`,
+      );
+    }
+    for (let i = 0; i < input.length; i++) {
+      this._paddedInputBuffer[i] = input[i];
+    }
+    for (let i = input.length; i < this._paddedInputBuffer.length; i++) {
+      this._paddedInputBuffer[i] = 0;
+    }
+    this._fft.realTransform(this._transformBuffer, this._paddedInputBuffer);
+    this._fft.completeSpectrum(this._transformBuffer);
+    const tb = this._transformBuffer;
+    for (let i = 0; i < tb.length; i += 2) {
+      tb[i] = tb[i] * tb[i] + tb[i + 1] * tb[i + 1];
+      tb[i + 1] = 0;
+    }
+    this._fft.inverseTransform(this._inverseBuffer, this._transformBuffer);
+    for (let i = 0; i < input.length; i++) {
+      output[i] = this._inverseBuffer[2 * i];
+    }
+    return output;
+  }
+}
+function getKeyMaximumIndices(input) {
+   const keyIndices = [];
+  let lookingForMaximum = false;
+  let max = -Infinity;
+  let maxIndex = -1;
+  for (let i = 1; i < input.length - 1; i++) {
+    if (input[i - 1] <= 0 && input[i] > 0) {
+      lookingForMaximum = true;
+      maxIndex = i;
+      max = input[i];
+    } else if (input[i - 1] > 0 && input[i] <= 0) {
+      lookingForMaximum = false;
+      if (maxIndex !== -1) {
+        keyIndices.push(maxIndex);
+      }
+    } else if (lookingForMaximum && input[i] > max) {
+      max = input[i];
+      maxIndex = i;
+    }
+  }
+  return keyIndices;
+}
+function refineResultIndex(index, data) {
+  const [x0, x1, x2] = [index - 1, index, index + 1];
+  const [y0, y1, y2] = [data[x0], data[x1], data[x2]];
+  const a = y0 / 2 - y1 + y2 / 2;
+  const b = -(y0 / 2) * (x1 + x2) + y1 * (x0 + x2) - (y2 / 2) * (x0 + x1);
+  const c = (y0 * x1 * x2) / 2 - y1 * x0 * x2 + (y2 * x0 * x1) / 2;
+  const xMax = -b / (2 * a);
+  const yMax = a * xMax * xMax + b * xMax + c;
+  return [xMax, yMax];
+}
+class PitchDetector {
+  _autocorrelator;
+  _nsdfBuffer;
+  _clarityThreshold = 0.9;
+  _minVolumeAbsolute = 0.0;
+  _maxInputAmplitude = 1.0;
+  static forFloat32Array(inputLength) {
+    return new PitchDetector(inputLength, (length) => new Float32Array(length));
+  }
+  static forFloat64Array(inputLength) {
+    return new PitchDetector(inputLength, (length) => new Float64Array(length));
+  }
+  static forNumberArray(inputLength) {
+    return new PitchDetector(inputLength, (length) => Array(length));
+  }
+  constructor(inputLength, bufferSupplier) {
+    this._autocorrelator = new Autocorrelator(inputLength, bufferSupplier);
+    this._nsdfBuffer = bufferSupplier(inputLength);
+  }
+  get inputLength() {
+    return this._autocorrelator.inputLength;
+  }
+  set clarityThreshold(threshold) {
+    if (!Number.isFinite(threshold) || threshold <= 0 || threshold > 1) {
+      throw new Error("clarityThreshold must be a number in the range (0, 1]");
+    }
+    this._clarityThreshold = threshold;
+  }
+  set minVolumeAbsolute(volume) {
+    if (
+      !Number.isFinite(volume) ||
+      volume < 0 ||
+      volume > this._maxInputAmplitude
+    ) {
+      throw new Error(
+        `minVolumeAbsolute must be a number in the range [0, ${this._maxInputAmplitude}]`,
+      );
+    }
+    this._minVolumeAbsolute = volume;
+  }
+  set minVolumeDecibels(db) {
+    if (!Number.isFinite(db) || db > 0) {
+      throw new Error("minVolumeDecibels must be a number <= 0");
+    }
+    this._minVolumeAbsolute = this._maxInputAmplitude * 10 ** (db / 10);
+  }
+  set maxInputAmplitude(amplitude) {
+    if (!Number.isFinite(amplitude) || amplitude <= 0) {
+      throw new Error("maxInputAmplitude must be a number > 0");
+    }
+    this._maxInputAmplitude = amplitude;
+  }
+  findPitch(input, sampleRate) {
+    if (this._belowMinimumVolume(input)) return [0, 0];
+    this._nsdf(input);
+    const keyMaximumIndices = getKeyMaximumIndices(this._nsdfBuffer);
+    if (keyMaximumIndices.length === 0) {
+      return [0, 0];
+    }
+    const nMax = Math.max(...keyMaximumIndices.map((i) => this._nsdfBuffer[i]));
+    const resultIndex = keyMaximumIndices.find(
+      (i) => this._nsdfBuffer[i] >= this._clarityThreshold * nMax,
+    );
+    const [refinedResultIndex, clarity] = refineResultIndex(
+      resultIndex,
+      this._nsdfBuffer,
+    );
+    return [sampleRate / refinedResultIndex, Math.min(clarity, 1.0)];
+  }
+  _belowMinimumVolume(input) {
+    if (this._minVolumeAbsolute === 0) return false;
+    let squareSum = 0;
+    for (let i = 0; i < input.length; i++) {
+      squareSum += input[i] ** 2;
+    }
+    return Math.sqrt(squareSum / input.length) < this._minVolumeAbsolute;
+  }
+  _nsdf(input) {
+    this._autocorrelator.autocorrelate(input, this._nsdfBuffer);
+    let m = 2 * this._nsdfBuffer[0];
+     let i;
+    for (i = 0; i < this._nsdfBuffer.length && m > 0; i++) {
+      this._nsdfBuffer[i] = (2 * this._nsdfBuffer[i]) / m;
+      m -= input[i] ** 2 + input[input.length - i - 1] ** 2;
+    }
+    for (; i < this._nsdfBuffer.length; i++) {
+      this._nsdfBuffer[i] = 0;
+    }
+  }
+}
+function ceilPow2(v) {
+  v--;
+  v |= v >> 1;
+  v |= v >> 2;
+  v |= v >> 4;
+  v |= v >> 8;
+  v |= v >> 16;
+  v++;
+  return v;
+}
+return PitchDetector;
+})();
 
-const APP_VERSION = '2.11.0';
-const CHANGELOG = [{"v":"2.11.0","date":"2026-08-01","en":["New Foundations drill — Subdivision & timing: a smart visual metronome for locking in your time. Pick a subdivision (quarter notes → eighths → triplets → sixteenths) and a tempo; an accented click and a grid tick out the bar (a strong beat 1, softer subdivisions), and the current key's scale is walked note-by-note across the grid in one neck box so you always have something to play. Change key, box or tempo without leaving Practice. A coach that serves both the Rhythm and Lead pillars — mic-scored timing arrives with microphone input later.","Time signatures: a new Meter picker in Settings (2/4, 3/4, 4/4, 6/8, 12/8). The metronome accent, the backing groove (kick/snare pattern), the bass, the single-chord loop and the whole progression / comping / targeting bar length all follow the meter — so you can jam a waltz in 3/4 or a 6/8 feel, not just 4/4.","Fixed: with the Subdivision & timing drill open, tapping \"Practice\" again drew the drill list on top of the still-running drill. Switching modes now handles every drill the same way.","Leaner app: the release-notes archive no longer ships with the page — only the newest releases are in-app, and the full history lives in CHANGELOG.md — and the timing-calibration control (which nothing used yet) is gone. The download is about 15% smaller.","Settings now starts closed and reads as three groups — Instrument, Neck & meter, App — instead of eleven controls in one flat row. The colour-blind palette and note-shape toggles moved in with the app settings, where set-once preferences belong.","Strumming patterns and Groove & feel are now one drill, Strumming & feel: pick a pattern AND how it feels — swing, backbeat accent, palm-muting, and an optional drums+bass band. Combinations neither drill could reach before (a swung folk pattern, a palm-muted strum over the band) now just work.","Comp the progression and Chord tones over changes are now one drill with a You-play switch: Chords (comp it, with shapes in Now/Next) or Chord tones (aim at the tones on the neck, with Position and Target). Both practice cards still open it, each in the mode it teaches, and your recorded progress for either is unchanged.","Every drill now shares one Key picker and one Exit button at the top of Practice instead of carrying its own copy. The Key picker also only appears for drills that actually use it — ear training and note naming no longer show you a control that changes nothing.","Ear training is no longer a separate mode: its three drills moved into Practice as an Ear group, alongside Fretboard, Timing, Rhythm and Lead. One drill list, one progress card, one Exit — it was always the same learner model behind both screens. Everything you had recorded still counts, and an old link or saved session that opened Ear now opens Practice.","Much smaller download: the page no longer ships the developer comments written for whoever edits the source. Together with the earlier trims the page is about 36% smaller than last release, and roughly a third smaller over the wire."],"uk":["Нова вправа-основа — «Поділ і тайминг»: розумний візуальний метроном, щоб тримати час. Обери поділ (чвертки → вісімки → тріолі → шістнадцятки) і темп; акцентоване клацання й сітка відбивають такт (сильний «раз», тихіші поділи), а гама поточної тональності «прокрокує» по сітці нота за нотою в одній позиції на грифі — тож завжди є що грати. Змінюй тональність, позицію чи темп, не виходячи з «Практики». Коуч, що працює і на ритм-, і на соло-пілон — оцінку тайминга з мікрофоном додамо згодом.","Розміри такту: у «Налаштуваннях» зʼявився вибір розміру (2/4, 3/4, 4/4, 6/8, 12/8). Акцент метронома, грув супроводу (малюнок бочки/малого), бас, луп одного акорду й довжина такту всієї прогресії / акомпанементу / прицілювання — усе слідує за розміром, тож можна зіграти вальс у 3/4 чи відчуття 6/8, а не лише 4/4.","Виправлено: якщо була відкрита вправа «Поділ і тайминг», повторне натискання «Практики» малювало список вправ поверх тієї, що ще працювала. Тепер перемикання режимів однаково опрацьовує всі вправи.","Легший застосунок: архів нотаток до випусків більше не вантажиться зі сторінкою — у застосунку лишились найновіші випуски, а повна історія в CHANGELOG.md — і зник регулятор зсуву часу, який ще нічим не використовувався. Завантаження приблизно на 15% менше.","«Налаштування» тепер стартують згорнутими й читаються як три групи — Інструмент, Гриф і розмір, Застосунок — замість одинадцяти контролів в один ряд. Палітра для дальтоніків і форми на нотах переїхали до налаштувань застосунку, де й місце разовим уподобанням.","«Малюнки боя» і «Грув і відчуття» тепер одна вправа — «Бій і відчуття»: обирай і малюнок, і відчуття — свінг, бекбіт-акцент, глушіння та гурт (барабани з басом). Поєднання, недосяжні раніше в жодній із них (фолк-малюнок зі свінгом, приглушений бій під гурт), тепер просто працюють.","«Акомпанемент прогресії» і «Тони акорду в прогресії» тепер одна вправа з перемикачем «Що граєш»: «Акорди» (акомпануй, з формами у «Зараз/Далі») або «Тони акорду» (влучай у тони на грифі, з позицією та ціллю). Обидві картки в «Практиці» відкривають її — кожна у своєму режимі, а збережений прогрес для обох лишився без змін.","Усі вправи тепер мають один спільний вибір тональності й одну кнопку «Вийти» вгорі «Практики» замість власної копії в кожній. А вибір тональності зʼявляється лише для вправ, які його справді використовують — у вправах на слух і в назвах нот більше немає контролю, що нічого не змінює.","«Слух» більше не окремий режим: три вправи на слух переїхали в «Практику» окремою групою «Слух» — поруч із «Грифом», «Таймингом», «Ритмом» і «Соло». Один список вправ, одна картка прогресу, один «Вийти» — за обома екранами й так стояла та сама модель навчання. Увесь збережений прогрес лишився, а старе посилання чи сесія, що відкривали «Слух», тепер відкривають «Практику».","Значно менше завантаження: сторінка більше не вантажить коментарі розробника, написані для тих, хто редагує вихідний код. Разом із попередніми скороченнями сторінка приблизно на 36% менша, ніж у минулому випуску, і приблизно на третину менша «по дротах»."]},{"v":"2.10.0","date":"2026-07-12","en":["New Lead drill — Call & response: the app plays a short phrase from the key's scale in one neck box, then you echo it back on the fretboard in the same order. Listen while it plays, answer in the space it leaves — the turn structure itself trains soloing phrasing (when to play, when to leave space). Scored on how cleanly you echo each phrase; the phrases grow as you go. This completes the Lead pillar's coach tiers."],"uk":["Нова соло-вправа — «Запитання-відповідь»: застосунок грає коротку фразу з гами тональності в одній позиції на грифі, а ти повторюєш її на грифі в тому ж порядку. Слухай, поки грає, і відповідай у паузі — сама структура «запит-відповідь» тренує фразування (коли грати, а коли лишити тишу). Рахунок — наскільки чисто ти повторюєш кожну фразу; фрази довшають по ходу. Це завершує коуч-рівні соло-пілона."]},{"v":"2.9.0","date":"2026-07-12","en":["Target-note soloing: the Chord-tones drill gains a Target picker — instead of all the chord tones, light up just the root, 3rd, 5th or 7th and aim to land on that one tone as the chords change (the heart of melodic phrasing). Other chord tones just sound (they are fair game in a solo); only off-chord notes miss."],"uk":["Соло по цільових тонах: у вправі «Тони акорду» зʼявився вибір цілі — замість усіх тонів акорду підсвічується лише тоніка, терція, квінта чи септима, і ти щоразу «приземляєшся» саме на неї, поки акорди змінюються (основа мелодичної фрази). Інші тони акорду просто звучать (у соло вони доречні); промах — лише на позаакордових нотах."]},{"v":"2.8.0","date":"2026-07-12","en":["Arpeggios over changes: the Chord-tones drill gains a Position picker — choose one of the five neck boxes and only that arpeggio shape lights up, so you play a single moveable shape through the whole progression instead of chasing tones all over the neck. \"All\" keeps the full-neck targeting."],"uk":["Арпеджіо крізь зміни: у вправі «Тони акорду» зʼявився вибір позиції — обери одну з пʼяти форм на грифі, і підсвічуватиметься лише вона, тож ти граєш одну рухому форму арпеджіо крізь усю прогресію, а не ловиш тони по всьому грифу. «Усі» лишає прицілювання по всьому грифу."]},{"v":"2.7.0","date":"2026-07-12","en":["Practice gains its first Lead drill — Chord tones over changes: a progression loops with a full backing band, and the tones of the chord playing now light up on a tappable neck for you to target. Hit the lit tones, dodge the rest; it tracks your accuracy as you follow the changes through any key or progression.","An honest coach, like the Rhythm drills: it trains where the chord tones live under a real progression — playing your actual guitar and getting scored arrives with microphone input later."],"uk":["У «Практиці» зʼявилася перша соло-вправа — «Тони акорду в прогресії»: прогресія крутиться з повним гуртом супроводу, а тони акорду, що звучить зараз, підсвічуються на грифі, у який можна тицяти. Влучай у підсвічені тони, оминай решту — вправа веде облік твоєї точності, поки ти йдеш за змінами в будь-якій тональності чи прогресії.","Чесний коуч, як і ритм-вправи: він тренує, де лежать тони акорду під справжньою прогресією — а гру на власній гітарі з оцінкою додамо згодом разом зі входом із мікрофона."]}];
+
+const APP_VERSION = '2.12.0';
+const CHANGELOG = [{"v":"2.12.0","date":"2026-08-01","en":["New: a microphone tuner. Play any note on the guitar and see which note it is and how far off you are, on a needle that reads up to 50 cents sharp or flat — plus the nearest open string of whatever tuning you are in, so Drop D and the rest re-label themselves. It is chromatic, so you can also check your intonation at the 12th fret, not just tune the open strings. Open it with the Mic button next to the Tuner in Settings.","The existing reference-tone tuner stays exactly as it was — that one plays a pitch for you to tune against by ear, the new one listens to you. Use whichever suits the room you are in; the mic tuner needs a microphone and a secure (https) connection, and quietly hides itself when it cannot work, so nothing on screen ever pretends to do something it can't.","Your audio never leaves the browser: the microphone is only on while the tuner panel is open, is released the moment you close it or switch tabs, and nothing is sent anywhere or recorded."],"uk":["Нове: тюнер із мікрофоном. Зіграй будь-яку ноту на гітарі — і побачиш, що це за нота й наскільки ти відхилився, на шкалі до 50 центів вгору чи вниз, а ще найближчу відкриту струну твого поточного строю, тож Drop D та інші перепозначаються самі. Тюнер хроматичний, тож ним можна перевірити й інтонацію на 12-му ладі, а не лише налаштувати відкриті струни. Відкривається кнопкою «Мікрофон» поруч із «Тюнером» у «Налаштуваннях».","Старий тюнер з еталонним тоном лишився без змін — той грає висоту, щоб ти підстроївся на слух, а новий слухає тебе. Обирай, що зручніше в конкретній кімнаті; тюнер із мікрофоном потребує мікрофона й захищеного зʼєднання (https) і тихо ховається, коли працювати не може, — щоб на екрані не було кнопок, які нічого не роблять.","Звук нікуди не йде з браузера: мікрофон увімкнений лише поки відкрита панель тюнера, вимикається щойно ти її закриваєш або перемикаєш вкладку, і нічого не надсилається й не записується."]},{"v":"2.11.0","date":"2026-08-01","en":["New Foundations drill — Subdivision & timing: a smart visual metronome for locking in your time. Pick a subdivision (quarter notes → eighths → triplets → sixteenths) and a tempo; an accented click and a grid tick out the bar (a strong beat 1, softer subdivisions), and the current key's scale is walked note-by-note across the grid in one neck box so you always have something to play. Change key, box or tempo without leaving Practice. A coach that serves both the Rhythm and Lead pillars — mic-scored timing arrives with microphone input later.","Time signatures: a new Meter picker in Settings (2/4, 3/4, 4/4, 6/8, 12/8). The metronome accent, the backing groove (kick/snare pattern), the bass, the single-chord loop and the whole progression / comping / targeting bar length all follow the meter — so you can jam a waltz in 3/4 or a 6/8 feel, not just 4/4.","Fixed: with the Subdivision & timing drill open, tapping \"Practice\" again drew the drill list on top of the still-running drill. Switching modes now handles every drill the same way.","Leaner app: the release-notes archive no longer ships with the page — only the newest releases are in-app, and the full history lives in CHANGELOG.md — and the timing-calibration control (which nothing used yet) is gone. The download is about 15% smaller.","Settings now starts closed and reads as three groups — Instrument, Neck & meter, App — instead of eleven controls in one flat row. The colour-blind palette and note-shape toggles moved in with the app settings, where set-once preferences belong.","Strumming patterns and Groove & feel are now one drill, Strumming & feel: pick a pattern AND how it feels — swing, backbeat accent, palm-muting, and an optional drums+bass band. Combinations neither drill could reach before (a swung folk pattern, a palm-muted strum over the band) now just work.","Comp the progression and Chord tones over changes are now one drill with a You-play switch: Chords (comp it, with shapes in Now/Next) or Chord tones (aim at the tones on the neck, with Position and Target). Both practice cards still open it, each in the mode it teaches, and your recorded progress for either is unchanged.","Every drill now shares one Key picker and one Exit button at the top of Practice instead of carrying its own copy. The Key picker also only appears for drills that actually use it — ear training and note naming no longer show you a control that changes nothing.","Ear training is no longer a separate mode: its three drills moved into Practice as an Ear group, alongside Fretboard, Timing, Rhythm and Lead. One drill list, one progress card, one Exit — it was always the same learner model behind both screens. Everything you had recorded still counts, and an old link or saved session that opened Ear now opens Practice.","Much smaller download: the page no longer ships the developer comments written for whoever edits the source. Together with the earlier trims the page is about 36% smaller than last release, and roughly a third smaller over the wire."],"uk":["Нова вправа-основа — «Поділ і тайминг»: розумний візуальний метроном, щоб тримати час. Обери поділ (чвертки → вісімки → тріолі → шістнадцятки) і темп; акцентоване клацання й сітка відбивають такт (сильний «раз», тихіші поділи), а гама поточної тональності «прокрокує» по сітці нота за нотою в одній позиції на грифі — тож завжди є що грати. Змінюй тональність, позицію чи темп, не виходячи з «Практики». Коуч, що працює і на ритм-, і на соло-пілон — оцінку тайминга з мікрофоном додамо згодом.","Розміри такту: у «Налаштуваннях» зʼявився вибір розміру (2/4, 3/4, 4/4, 6/8, 12/8). Акцент метронома, грув супроводу (малюнок бочки/малого), бас, луп одного акорду й довжина такту всієї прогресії / акомпанементу / прицілювання — усе слідує за розміром, тож можна зіграти вальс у 3/4 чи відчуття 6/8, а не лише 4/4.","Виправлено: якщо була відкрита вправа «Поділ і тайминг», повторне натискання «Практики» малювало список вправ поверх тієї, що ще працювала. Тепер перемикання режимів однаково опрацьовує всі вправи.","Легший застосунок: архів нотаток до випусків більше не вантажиться зі сторінкою — у застосунку лишились найновіші випуски, а повна історія в CHANGELOG.md — і зник регулятор зсуву часу, який ще нічим не використовувався. Завантаження приблизно на 15% менше.","«Налаштування» тепер стартують згорнутими й читаються як три групи — Інструмент, Гриф і розмір, Застосунок — замість одинадцяти контролів в один ряд. Палітра для дальтоніків і форми на нотах переїхали до налаштувань застосунку, де й місце разовим уподобанням.","«Малюнки боя» і «Грув і відчуття» тепер одна вправа — «Бій і відчуття»: обирай і малюнок, і відчуття — свінг, бекбіт-акцент, глушіння та гурт (барабани з басом). Поєднання, недосяжні раніше в жодній із них (фолк-малюнок зі свінгом, приглушений бій під гурт), тепер просто працюють.","«Акомпанемент прогресії» і «Тони акорду в прогресії» тепер одна вправа з перемикачем «Що граєш»: «Акорди» (акомпануй, з формами у «Зараз/Далі») або «Тони акорду» (влучай у тони на грифі, з позицією та ціллю). Обидві картки в «Практиці» відкривають її — кожна у своєму режимі, а збережений прогрес для обох лишився без змін.","Усі вправи тепер мають один спільний вибір тональності й одну кнопку «Вийти» вгорі «Практики» замість власної копії в кожній. А вибір тональності зʼявляється лише для вправ, які його справді використовують — у вправах на слух і в назвах нот більше немає контролю, що нічого не змінює.","«Слух» більше не окремий режим: три вправи на слух переїхали в «Практику» окремою групою «Слух» — поруч із «Грифом», «Таймингом», «Ритмом» і «Соло». Один список вправ, одна картка прогресу, один «Вийти» — за обома екранами й так стояла та сама модель навчання. Увесь збережений прогрес лишився, а старе посилання чи сесія, що відкривали «Слух», тепер відкривають «Практику».","Значно менше завантаження: сторінка більше не вантажить коментарі розробника, написані для тих, хто редагує вихідний код. Разом із попередніми скороченнями сторінка приблизно на 36% менша, ніж у минулому випуску, і приблизно на третину менша «по дротах»."]},{"v":"2.10.0","date":"2026-07-12","en":["New Lead drill — Call & response: the app plays a short phrase from the key's scale in one neck box, then you echo it back on the fretboard in the same order. Listen while it plays, answer in the space it leaves — the turn structure itself trains soloing phrasing (when to play, when to leave space). Scored on how cleanly you echo each phrase; the phrases grow as you go. This completes the Lead pillar's coach tiers."],"uk":["Нова соло-вправа — «Запитання-відповідь»: застосунок грає коротку фразу з гами тональності в одній позиції на грифі, а ти повторюєш її на грифі в тому ж порядку. Слухай, поки грає, і відповідай у паузі — сама структура «запит-відповідь» тренує фразування (коли грати, а коли лишити тишу). Рахунок — наскільки чисто ти повторюєш кожну фразу; фрази довшають по ходу. Це завершує коуч-рівні соло-пілона."]},{"v":"2.9.0","date":"2026-07-12","en":["Target-note soloing: the Chord-tones drill gains a Target picker — instead of all the chord tones, light up just the root, 3rd, 5th or 7th and aim to land on that one tone as the chords change (the heart of melodic phrasing). Other chord tones just sound (they are fair game in a solo); only off-chord notes miss."],"uk":["Соло по цільових тонах: у вправі «Тони акорду» зʼявився вибір цілі — замість усіх тонів акорду підсвічується лише тоніка, терція, квінта чи септима, і ти щоразу «приземляєшся» саме на неї, поки акорди змінюються (основа мелодичної фрази). Інші тони акорду просто звучать (у соло вони доречні); промах — лише на позаакордових нотах."]},{"v":"2.8.0","date":"2026-07-12","en":["Arpeggios over changes: the Chord-tones drill gains a Position picker — choose one of the five neck boxes and only that arpeggio shape lights up, so you play a single moveable shape through the whole progression instead of chasing tones all over the neck. \"All\" keeps the full-neck targeting."],"uk":["Арпеджіо крізь зміни: у вправі «Тони акорду» зʼявився вибір позиції — обери одну з пʼяти форм на грифі, і підсвічуватиметься лише вона, тож ти граєш одну рухому форму арпеджіо крізь усю прогресію, а не ловиш тони по всьому грифу. «Усі» лишає прицілювання по всьому грифу."]}];
 
 const I18N = {
   uk: {
@@ -1573,6 +2225,17 @@ const I18N = {
     inv_2nd_desc:'Друге обернення — у басу квінта',
     tb_settings:'Налаштування', tb_volume:'Гучність', tb_tuner:'Тюнер',
     tb_tuning:'Стрій', tb_lefty:'Ліворукий', tb_frets:'Лади', tb_tempo:'Темп', tb_capo:'Каподастр', capo_off:'без', tb_meter:'Розмір',
+    mic_open:'🎤 Мікрофон', mic_title:'Хроматичний тюнер',
+    mic_start:'Увімкнути мікрофон', mic_stop:'Зупинити',
+    mic_cents:'центів', mic_string:'Найближча струна', mic_play_hint:'Зіграй одну струну',
+    mic_intune:'У строї',
+    mic_hint:'Звук обробляється лише у твоєму браузері — нічого не надсилається й не записується.',
+    mic_asking:'Чекаю на дозвіл до мікрофона…',
+    mic_denied:'Немає доступу до мікрофона. Дозволь його в налаштуваннях сайту й спробуй ще раз.',
+    mic_nodev:'Мікрофон не знайдено.',
+    mic_busy:'Мікрофон зайнятий іншим застосунком.',
+    mic_err:'Не вдалося увімкнути мікрофон.',
+    mic_unsupported:'Тюнер з мікрофоном працює лише через захищене зʼєднання (https).',
     a11y_palette:'Палітра для дальтоніків', a11y_shapes:'Форми на нотах',
     tun_custom:'Власний стрій',
       prog_active:'Активних днів', prog_due:'До повтору', prog_review:'Повторити',
@@ -1695,6 +2358,17 @@ const I18N = {
     inv_2nd_desc:'Second inversion — fifth in the bass',
     tb_settings:'Settings', tb_volume:'Volume', tb_tuner:'Tuner',
     tb_tuning:'Tuning', tb_lefty:'Left-handed', tb_frets:'Frets', tb_tempo:'Tempo', tb_capo:'Capo', capo_off:'off', tb_meter:'Meter',
+    mic_open:'🎤 Mic', mic_title:'Chromatic tuner',
+    mic_start:'Enable microphone', mic_stop:'Stop',
+    mic_cents:'cents', mic_string:'Nearest string', mic_play_hint:'Play a single string',
+    mic_intune:'In tune',
+    mic_hint:'Audio is processed only in your browser — nothing is sent anywhere or recorded.',
+    mic_asking:'Waiting for microphone permission…',
+    mic_denied:'Microphone access was denied. Allow it in your browser\'s site settings and try again.',
+    mic_nodev:'No microphone found.',
+    mic_busy:'The microphone is being used by another app.',
+    mic_err:'Could not start the microphone.',
+    mic_unsupported:'The mic tuner only works over a secure (https) connection.',
     a11y_palette:'Colour-blind palette', a11y_shapes:'Shapes on dots',
     tun_custom:'Custom tuning',
       prog_active:'Active days', prog_due:'Due to review', prog_review:'Review',
@@ -3173,6 +3847,7 @@ function applyLang(){
   refreshDrillsLang();   
   setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
+  if(typeof micRefreshLang==='function') micRefreshLang();   
   activateRoot(document.getElementById('g-roots'), gRoot);
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));
@@ -4797,6 +5472,167 @@ registerDrill({ id:'timing', area:'sd-area',
   wire('sd-slower', ()=>sdSetTempo(tempo-5));
   wire('sd-faster', ()=>sdSetTempo(tempo+5));
 })();
+const MT_FFT = 2048;
+const MT_CLARITY = 0.9, MT_RMS = 0.008;
+const MT_HZ_LO = 60, MT_HZ_HI = 1400;
+const MT_HIST = 7;
+const MT_IN_TUNE = 5;
+const MT_HOLD = 40;
+let mt = null;          
+let mtCents = null;
+function micSupported(){
+  if(typeof window==='undefined' || typeof navigator==='undefined') return false;
+  if(!window.isSecureContext) return false;
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+  return !!(window.AudioContext || window.webkitAudioContext);
+}
+function micMidiFromHz(hz){ return 69 + 12*Math.log2(hz/440); }
+function micCentsOff(midi){ return (midi - Math.round(midi))*100; }
+function micNearestString(midi){
+  let best=0, bestD=Infinity;
+  for(let i=0;i<OPEN_MIDI.length;i++){ const d=Math.abs(midi-OPEN_MIDI[i]); if(d<bestD){ bestD=d; best=i; } }
+  return best;
+}
+function micMedian(a){ const s=a.slice().sort((x,y)=>x-y); return s[(s.length-1)>>1]; }
+function micFrame(){
+  if(!mt) return;
+  mt.raf = requestAnimationFrame(micFrame);
+  mt.analyser.getFloatTimeDomainData(mt.buf);
+  const [hz, clarity] = mt.detector.findPitch(mt.buf, mt.rate);
+  const good = hz>=MT_HZ_LO && hz<=MT_HZ_HI && clarity>=MT_CLARITY;
+  if(good){
+    mt.quiet = 0;
+    mt.hist.push(micMidiFromHz(hz));
+    if(mt.hist.length>MT_HIST) mt.hist.shift();
+    micPaint(micMedian(mt.hist));
+  } else if(mt.hist.length){
+    if(++mt.quiet > MT_HOLD){ mt.hist.length=0; micPaintIdle(); }
+  }
+}
+function micEl(id){ return document.getElementById(id); }
+function micPaintIdle(){
+  mtCents=null;                    
+  const n=micEl('mt-note'); if(n) n.textContent='—';
+  const o=micEl('mt-oct');  if(o) o.textContent='';
+  const c=micEl('mt-cents');if(c) c.textContent='';
+  const s=micEl('mt-string');if(s) s.textContent=t('mic_play_hint');
+  const nd=micEl('mt-needle'); if(nd) nd.style.left='50%';
+  const g=micEl('mt-gauge'); if(g){ g.classList.remove('in-tune'); g.removeAttribute('data-dir'); }
+}
+function micPaint(midi){
+  const near=Math.round(midi), cents=micCentsOff(midi);
+  mtCents = (mtCents==null) ? cents : mtCents + (cents-mtCents)*0.35;
+  const shown=mtCents;
+  const n=micEl('mt-note');
+  if(n) n.textContent=NOTES[mod(near,12)].replace('#','♯');
+  const o=micEl('mt-oct');
+  if(o) o.textContent=String(Math.floor(near/12)-1);
+  const c=micEl('mt-cents');
+  if(c) c.textContent=(shown>0?'+':'')+shown.toFixed(0)+' ' + t('mic_cents');
+  const si=micNearestString(near);
+  const s=micEl('mt-string');
+  if(s) s.textContent = t('mic_string')+': '+SNAMES[si]+' ('+midiLabel(OPEN_MIDI[si])+')';
+  const nd=micEl('mt-needle');
+  if(nd) nd.style.left = (50 + Math.max(-50, Math.min(50, shown))).toFixed(1)+'%';
+  const g=micEl('mt-gauge');
+  if(g){
+    const inTune=Math.abs(shown)<=MT_IN_TUNE;
+    g.classList.toggle('in-tune', inTune);
+    if(inTune) g.removeAttribute('data-dir');
+    else g.setAttribute('data-dir', shown<0 ? 'flat' : 'sharp');
+  }
+}
+function micStatus(key){
+  const el=micEl('mt-status'); if(!el) return;
+  if(key) el.dataset.key=key; else delete el.dataset.key;
+  el.textContent = key ? t(key) : '';
+  el.hidden = !key;
+}
+async function micStart(){
+  if(mt) return;
+  if(!micSupported()){ micStatus('mic_unsupported'); return; }
+  const ctx=audio();
+  if(!ctx){ micStatus('mic_unsupported'); return; }
+  tunerStop();
+  micStatus('mic_asking');
+  let stream;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false }
+    });
+  }catch(err){
+    const name = err && err.name;
+    if(name==='NotAllowedError' || name==='SecurityError') micStatus('mic_denied');
+    else if(name==='NotFoundError' || name==='OverconstrainedError') micStatus('mic_nodev');
+    else if(name==='NotReadableError' || name==='AbortError') micStatus('mic_busy');
+    else micStatus('mic_err');
+    devWarn('mic tuner: getUserMedia failed', err);
+    micSyncButtons(false);
+    return;
+  }
+  const src=ctx.createMediaStreamSource(stream);
+  const analyser=ctx.createAnalyser();
+  analyser.fftSize=MT_FFT;
+  src.connect(analyser);
+  const detector=PitchDetector.forFloat32Array(analyser.fftSize);
+  detector.minVolumeDecibels = 20*Math.log10(MT_RMS);
+  mt={ stream, src, analyser, detector,
+       buf:new Float32Array(analyser.fftSize), rate:ctx.sampleRate,
+       raf:null, hist:[], quiet:0 };
+  micStatus(null);
+  micPaintIdle();
+  micSyncButtons(true);
+  mt.raf=requestAnimationFrame(micFrame);
+}
+function micStop(){
+  if(!mt) return;
+  const s=mt;
+  mt=null;
+  if(s.raf) cancelAnimationFrame(s.raf);
+  try{ s.src.disconnect(); }catch(_){}
+  try{ s.stream.getTracks().forEach(tr=>tr.stop()); }catch(_){}
+  micSyncButtons(false);
+  micPaintIdle();
+}
+function micSyncButtons(on){
+  const b=micEl('mt-toggle');
+  if(b){ b.textContent = on ? t('mic_stop') : t('mic_start'); b.classList.toggle('play', !on); }
+  const g=micEl('mt-gauge'); if(g) g.classList.toggle('live', on);
+}
+function micOpen(){
+  const o=micEl('mic-overlay'); if(!o) return;
+  o.hidden=false; o.classList.add('open');
+  micStatus(null);
+  micPaintIdle();
+  micSyncButtons(!!mt);
+  const b=micEl('mt-toggle'); if(b) try{ b.focus(); }catch(_){}
+}
+function micClose(){
+  micStop();                       
+  const o=micEl('mic-overlay'); if(!o) return;
+  o.classList.remove('open'); o.hidden=true;
+}
+function micRefreshLang(){
+  micSyncButtons(!!mt);
+  if(!mt) micPaintIdle();
+  const st=micEl('mt-status');
+  if(st && !st.hidden && st.dataset.key) st.textContent=t(st.dataset.key);
+}
+(function(){
+  const open=micEl('tb-mic');
+  if(!micSupported()){ if(open && open.parentNode) open.parentNode.removeChild(open); return; }
+  if(open) open.onclick=micOpen;
+  const close=micEl('mt-close'); if(close) close.onclick=micClose;
+  const tog=micEl('mt-toggle'); if(tog) tog.onclick=()=>{ mt ? micStop() : micStart(); };
+  const ov=micEl('mic-overlay');
+  if(ov) ov.addEventListener('click', e=>{ if(e.target===ov) micClose(); });
+  document.addEventListener('keydown', e=>{
+    const o=micEl('mic-overlay');
+    if(e.key==='Escape' && o && !o.hidden){ e.preventDefault(); micClose(); }
+  });
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden) micStop(); });
+  addEventListener('pagehide', micStop);
+})();
 
 
 
@@ -5185,7 +6021,8 @@ document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey) return;
   const tg=e.target;
   if(tg && (tg.tagName==='INPUT'||tg.tagName==='SELECT'||tg.tagName==='TEXTAREA'||tg.isContentEditable)) return;
-  if(!document.getElementById('cl-overlay').hidden || !document.getElementById('kbd-overlay').hidden) return;  
+  if(!document.getElementById('cl-overlay').hidden || !document.getElementById('kbd-overlay').hidden) return;
+  { const mo=document.getElementById('mic-overlay'); if(mo && !mo.hidden) return; }
   const k=e.key;
   if(k===' '||k==='Spacebar'){
     if(tg && tg.closest && tg.closest('button,a,[role="button"],[tabindex]')) return;   
@@ -5300,6 +6137,9 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     setCapo:(i)=>{ capo=i; }, getCapo:()=>capo,
     METERS, setMeter, curMeter, barBeats, pulseSec, barSec, midPulseSec,
     meterGroupStarts:()=>[...meterGroupStarts()], getMeterIdx:()=>meterIdx,
+    micSupported, micMidiFromHz, micCentsOff, micNearestString,
+    micOpen, micClose, micStatus, micPaint, micPaintIdle, getMic:()=>mt,
+    MT_FFT, MT_CLARITY, MT_IN_TUNE, MT_HZ_LO, MT_HZ_HI,
     applyA11y, showWelcome, dismissWelcome,
     setCbPalette:(v)=>{ cbPalette=!!v; }, setFnShapes:(v)=>{ fnShapes=!!v; }, setWelcomeSeen:(v)=>{ welcomeSeen=!!v; },
     getA11y:()=>({ cbPalette, fnShapes, welcomeSeen }),

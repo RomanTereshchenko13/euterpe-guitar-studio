@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-08-01 · shipping: v2.11.0_
+_Last updated: 2026-08-01 · shipping: v2.12.0_
 
 > **Consolidation note (v2.11.0).** Two debloat passes reshaped the *packaging* of what shipped
 > below, not its substance — worth knowing when reading the ✅ entries: **Ear folded from a
@@ -113,10 +113,21 @@ audited, and concatenated by `build.js` so nothing is fetched at runtime — and
 genuinely hard, already-solved problem we shouldn't re-derive. Under that bar, the sanctioned
 additions are:
 
-- **Pitch detection — `pitchy` (0BSD), vendored.** The one code dependency; re-deriving
-  YIN/McLeod badly is the moonshot's main failure mode. Lands at **Phase 8 / F0** (the mic
-  tuner — a sustained open string is the gentlest possible first test of it) and carries
-  through to **F2**. _(Rejected: `pitchfinder` — GPL-3.0, would relicense the app.)_
+- **Pitch detection — `pitchy` + `fft.js`, vendored. ✅ Landed v2.12.0 (F0).** Re-deriving
+  YIN/McLeod badly is the moonshot's main failure mode, so this is the borrowed part; it
+  carries through to **F2**. _(Rejected: `pitchfinder` — GPL-3.0, would relicense the app.)_
+  Two corrections to what this line used to promise, both found at vendoring time:
+  - **Not 0BSD.** `pitchy` 4.1.0 ships MIT in its npm metadata and an ISC/0BSD-style grant in
+    its repo `LICENSE`. All permissive, nothing copyleft, so the policy holds unchanged —
+    only the label was wrong.
+  - **Not one library.** `pitchy` computes the NSDF via an FFT-based autocorrelation and
+    imports **`fft.js` 4.0.4 (MIT)**. So the vendored set is two files
+    (`src/js/00-vendor-fft.js`, `00-vendor-pitchy.js`), ~+14 KB raw / ~+4 KB gzip. Both are
+    copied in verbatim apart from stripping the module syntax and wrapping each in an IIFE;
+    the wrapper also keeps upstream's `'use strict'` from becoming the whole app's directive.
+    The alternative — keeping pitchy's MPM and swapping its FFT autocorrelator for a bounded
+    time-domain one — was rejected: it saves ~12 KB but forks a vendored library, which is a
+    worse maintenance story than carrying the extra file.
 - **Free platform API (no dependency):** `AudioWorklet` (off-main-thread synth + mic analysis).
 - **Small inlined sound assets (CC0 / public-domain only):** a few drum one-shots and a guitar-
   body / room **convolution impulse response**. Assets, not libraries; base64-inlined, license
@@ -650,8 +661,11 @@ own scale/triad content. A core improviser *and* rhythm-guitar skill; serves bot
 Mic via `AnalyserNode`, split by difficulty. This is what turns every "coach" tier above into
 *scored training* on a real guitar — the app's true differentiator. Gate carefully.
 
-- **F0 — Chromatic tuner (the de-risking slice).** A mic tuner: play any note, see the note name
-  and how many cents sharp/flat. Ships *first*, before any scoring, because it needs none of what
+- **F0 — Chromatic tuner (the de-risking slice). ✅ Shipped v2.12.0.** A mic tuner: play any note,
+  see the note name, octave and how many cents sharp/flat on a ±50-cent needle, plus the nearest
+  open string of your current tuning. Lives behind a **🎤 Mic** button beside the reference-tone
+  tuner in Settings ▸ Instrument and opens as a focused overlay. Shipped *first*, before any
+  scoring, because it needs none of what
   makes the rest of this phase risky — **no AudioWorklet** (a needle reading ~20×/s on the main
   thread is fine), **no latency compensation** (nobody notices an 80 ms lag on a tuner), **no
   onset detection** (it reads a sustained note), **no polyphony**. What it *does* buy is the
@@ -674,12 +688,30 @@ Mic via `AnalyserNode`, split by difficulty. This is what turns every "coach" ti
     behind an explicit user gesture, never fired on load. Speaker→mic feedback is real: suspend
     the reference tone while listening. Low E (82.4 Hz, weak fundamental) is the accuracy case to
     test against, not A440.
+  - _How it actually landed (all of the above held):_ the entry button is **removed** rather than
+    disabled where there's no secure context, so it can never be a control that only errors; the
+    mic is requested from a click, released on close / tab-hide / pagehide, and `tunerStop()` runs
+    before listening. `getUserMedia` asks for the **raw** signal — `echoCancellation`,
+    `noiseSuppression` and `autoGainControl` all off, since voice-call DSP pumps the level and
+    carves out exactly the sustained tones a tuner needs. The mic is never connected to
+    `destination`. Readings are median-filtered then eased, because MPM's failure mode on a
+    plucked string is a one-frame octave jump that an average would smear instead of discard.
+  - _Validation:_ the detector was measured before anything was built on it — **<0.05 cents**
+    across E2→E5 on synthetic harmonic tones, silence rejected, white noise clarity 0.41 (so the
+    0.9 gate holds). The full chain is then checked end to end in a real browser by
+    **`tools/mic-check.js`**, which feeds Chromium a synthetic guitar WAV as a fake mic over a
+    localhost secure context: low E, open A, high e, and deliberately ±30/−22-cent detuned cases
+    all read the right note and direction. jsdom covers the maths and the DOM contract (+71 checks).
 - **F1 — Onset (when).** Energy / spectral-flux attack detection — **hand-rolled** (the light
   lift). The enabler for the **Rhythm pillar** and **Timing** scored tiers; the first *scoring*
   feature, and onset is *easier* on a strum's big transient than on a single note.
-- **F2 — Pitch (which).** Monophonic YIN/McLeod via **vendored `pitchy` (0BSD)** — the one
-  sanctioned dependency, rather than re-deriving it badly; already proven by F0 on sustained
-  notes, so what F2 adds is doing it *under time pressure*. Unlocks the **Lead pillar** scored
+  **Carries the latency-calibration debt:** the round-trip offset shipped in v2.5.0 and was cut
+  again in v2.11.0 for having no caller (see Phase 3), so F1 has to rebuild it — a scoring window
+  without it measures the audio stack, not the player. The v2.5.0 design is the spec.
+  F0 already landed everything else F1 needs: permission, device errors, lifecycle.
+- **F2 — Pitch (which).** Monophonic McLeod (MPM) via **the `pitchy` + `fft.js` pair already
+  vendored by F0** — no new dependency to take, and proven there on sustained notes, so what F2
+  adds is doing it *under time pressure*. Unlocks the **Lead pillar** scored
   tier and real-guitar note-naming. Single notes first; polyphonic chord recognition remains
   the moonshot.
 
@@ -745,8 +777,8 @@ Phase 1  Unify (spine + reference)           ← foundational; everything reuses
          ├─ Phase 6  Lead pillar                ────────────────────────────────── needs F2 to score
          └─ Phase 7  Timing & subdivision       (small; feeds 5 & 6) ───────────── needs F1 to score
                │
-               └─ Phase 8  Mic input            F0 (tuner) → ships first; no scoring, low risk
-                                                F1 (onset) → scores 5 & 7
+               └─ Phase 8  Mic input            F0 (tuner) ✅ shipped v2.12.0 — no scoring, low risk
+                                                F1 (onset) → scores 5 & 7  (+ rebuild latency calibration)
                                                 F2 (pitch) → scores 6 + real note-naming
 
 Phase 9  Product layer                          (curriculum / distribution / polish — throughout)

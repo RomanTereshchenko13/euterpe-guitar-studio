@@ -875,3 +875,37 @@
   .wc-list b { color: var(--text); font-weight: 600; }
   .wc-actions { display: flex; justify-content: flex-end; }
   .wc-actions .btn.play { font-size: 14px; padding: 9px 24px; }
+
+  /* ---- chromatic mic tuner (Phase 8 / F0) — reuses the .cl-overlay / .cl-modal look ----
+     Everything here is sized to be read at arm's length with a guitar in your hands,
+     so the note is deliberately huge and the needle track spans the full panel. */
+  .mt-modal { max-width: 420px; }
+  .mt-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .mt-readout { text-align: center; }
+  .mt-note-wrap { display: flex; align-items: baseline; justify-content: center; gap: 2px; min-height: 62px; }
+  .mt-note { font-family: 'Fraunces', serif; font-size: 58px; line-height: 1; font-weight: 500; color: var(--text); }
+  .mt-oct { font-family: 'JetBrains Mono', monospace; font-size: 19px; color: var(--text-faint); }
+  .mt-cents { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--text-dim); min-height: 19px; }
+  /* ±50 cents of travel. The needle is positioned by `left` in %, so the track
+     must be the positioning context and the needle offset by half its own width. */
+  .mt-track { position: relative; height: 42px; border-radius: 8px; background: var(--bg-panel-2); border: 1px solid var(--border); overflow: hidden; }
+  .mt-tick { position: absolute; top: 0; width: 1px; height: 11px; background: var(--border-strong); }
+  .mt-tick-mid { height: 100%; width: 2px; background: var(--border-strong); }
+  /* the in-tune target band: ±5 cents == ±5% of a ±50 track */
+  .mt-zone { position: absolute; left: 45%; width: 10%; top: 0; bottom: 0; background: color-mix(in srgb, var(--root) 16%, transparent); }
+  .mt-needle { position: absolute; top: 4px; bottom: 4px; left: 50%; width: 4px; margin-left: -2px; border-radius: 3px; background: var(--text); transition: left 0.08s linear, background 0.18s ease; }
+  .mt-scale { display: flex; justify-content: space-between; margin-top: 5px; font-size: 10.5px; color: var(--text-faint); font-family: 'JetBrains Mono', monospace; }
+  /* State is carried by colour AND by the ♭/♯ glyph the scale row already shows,
+     so the reading never depends on hue alone (same rule as the dot palette). */
+  .mt-gauge.in-tune .mt-needle { background: var(--root); box-shadow: 0 0 12px color-mix(in srgb, var(--root) 70%, transparent); }
+  .mt-gauge[data-dir] .mt-needle { background: var(--third); }
+  .mt-gauge:not(.live) { opacity: 0.45; }
+  .mt-string { text-align: center; font-size: 12px; color: var(--text-dim); min-height: 17px; }
+  .mt-status { font-size: 12.5px; line-height: 1.5; color: var(--seventh); text-align: center; }
+  .mt-status[hidden] { display: none; }
+  .mt-actions { display: flex; justify-content: center; }
+  .mt-actions .btn { font-size: 14px; padding: 9px 24px; }
+  .mt-hint { font-size: 11px; line-height: 1.5; color: var(--text-faint); text-align: center; }
+  /* align-self stops the button stretching to the full height of the wrapped
+     two-row string grid beside it on a phone; nowrap keeps "🎤 Mic" on one line. */
+  .btn.tuner-mic { padding: 5px 9px; white-space: nowrap; align-self: center; }
