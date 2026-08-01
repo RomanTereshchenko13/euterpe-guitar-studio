@@ -1,7 +1,7 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
-  { v:'2.11.0', date:'2026-07-12',
+  { v:'2.11.0', date:'2026-08-01',
     en:['New Foundations drill — Subdivision & timing: a smart visual metronome for locking in your time. Pick a subdivision (quarter notes → eighths → triplets → sixteenths) and a tempo; an accented click and a grid tick out the bar (a strong beat 1, softer subdivisions), and the current key\'s scale is walked note-by-note across the grid in one neck box so you always have something to play. Change key, box or tempo without leaving Practice. A coach that serves both the Rhythm and Lead pillars — mic-scored timing arrives with microphone input later.',
         'Time signatures: a new Meter picker in Settings (2/4, 3/4, 4/4, 6/8, 12/8). The metronome accent, the backing groove (kick/snare pattern), the bass, the single-chord loop and the whole progression / comping / targeting bar length all follow the meter — so you can jam a waltz in 3/4 or a 6/8 feel, not just 4/4.',
         'Fixed: with the Subdivision & timing drill open, tapping "Practice" again drew the drill list on top of the still-running drill. Switching modes now handles every drill the same way.',

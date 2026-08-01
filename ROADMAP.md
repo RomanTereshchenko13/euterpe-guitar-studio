@@ -10,7 +10,16 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-07-12 · shipping: v2.11.0_
+_Last updated: 2026-08-01 · shipping: v2.11.0_
+
+> **Consolidation note (v2.11.0).** Two debloat passes reshaped the *packaging* of what shipped
+> below, not its substance — worth knowing when reading the ✅ entries: **Ear folded from a
+> top-level mode into a Practice group** (it was a duplicate shell over the same learner model),
+> **9 drills became 7** (strum 5b + groove 5d → one *Strumming & feel*; comp 5c + targeting 6a/b/c →
+> one *Over the changes* with a You-play switch), every drill now shares **one Key picker + one
+> Exit** via a drill registry, and the bundle shrank ~36%. Recorded progress and session
+> namespaces were preserved across all of it. Where a phase entry below names a drill or a mode,
+> read it as *the capability shipped* — the surface it lives on may have since merged.
 
 ---
 
@@ -399,12 +408,14 @@ The **Practice** surface and the machinery every drill shares. **Settle the navi
   The SRS fields (`ease`/`due`) are an SM-2-lite the queue reads to decide what to resurface. The
   shape grows by adding item namespaces, never by reshaping; a `v` bump + migration is the only
   sanctioned way it changes.
-- **Latency calibration.** ✅ **Shipped v2.5.0** (the deferred Phase-3 debt, built ahead of its
-  first consumer). A one-time round-trip offset (`calMs`) the scoring window reads via
-  `calOffsetSec()` — needed for tap windows, reused later by mic windows. Settings carries a
-  tap-test (steady click → tap along → `calcLatencyOffset` trims + means the nearest-beat deltas)
-  plus a manual slider; bounds-checked persistence. No scored tap drill consumes it yet — the
-  prerequisite is in place, not a feature with a UI elsewhere.
+- **Latency calibration.** ⚠️ **Shipped v2.5.0, removed in v2.11.0 — rebuild with Phase 8/F1.**
+  A one-time round-trip offset (`calMs`) read via `calOffsetSec()`: a Settings tap-test (steady
+  click → tap along → `calcLatencyOffset` trims + means the nearest-beat deltas) plus a manual
+  slider, bounds-checked. It was built ahead of its first consumer and nothing ever called it —
+  every coach tier that landed since is unscored — so the debloat pass cut it as dead weight
+  rather than ship a calibration UI that adjusted nothing. **This is a real prerequisite, not a
+  dropped feature:** the first scored tier (F1's onset windows) has to bring it back, and the
+  design above is the spec to rebuild from.
 - **First drill: fretboard note-naming.** App asks for a note; you tap every instance; timed
   and scored. Pure-screen, low-risk — the table-stakes floor of the tab.
 - **The seam** (spine #2) wired in: jump from any reference view into a drill on that content. The
@@ -435,8 +446,11 @@ persistence of stats + streak/SRS state.
 ## Phase 4 — Ear  (foundation · parallel, independent)
 
 **Size:** S · **Risk:** low — multiple-choice on the existing audio buses; nothing new underneath.
-**✅ Shipped v2.1.0.** Ear lands as the **third primary mode** (Reference · Practice · Ear) the
-two-axis nav was built to hold — the bottom bar flexes to three on a phone. One shared
+**✅ Shipped v2.1.0** as the **third primary mode** (Reference · Practice · Ear) the two-axis nav
+was built to hold. _Superseded in v2.11.0:_ that mode was a duplicate of Practice's shell — same
+drill-card list, same progress card off the same learner model — so **Ear folded into Practice as
+an Ear group**, and the mode axis is Reference vs Practice again. The drills and their recorded
+progress are unchanged; a save or share link pinned to `m=ear` lands on Practice. One shared
 recognition engine (prompt on the audio buses → multiple-choice → cue feedback → scored on
 accuracy) drives three drills, each writing the learner model (spine #3) under its own id
 namespace so due items resurface and the global progress card counts them.
@@ -471,19 +485,23 @@ mode, to keep the bottom nav at three and leave slot 4 for Progress) under a **R
   pinned item shape (spine #3) is untouched and no per-item SRS is minted. Optional metronome on its
   own scheduler clock; count-in + a new-best fanfare on the cue bus. _Honest coach framing: it counts
   your taps, not your guitar — which is the authentic form of this exercise; mic scoring is Phase 8/F1._
-- **Strumming-pattern trainer** ✅ **Shipped v2.4.0** (5b). A coach *visualizer*: five common down/up patterns on a one-bar 8th-note
+- **Strumming-pattern trainer** ✅ **Shipped v2.4.0** (5b) _· merged with 5d into **Strumming &
+  feel** in v2.11.0_. A coach *visualizer*: five common down/up patterns on a one-bar 8th-note
   grid (1 & 2 & 3 & 4 &), looped over the current context chord (spine #1) on its own scheduler clock and
   highlighted slot-by-slot in time — so you **see and hear** the pattern and strum along. `strumMidi`
   sweeps down (low→high) / up (high→low); optional beat-reference click. A practiced run (≥1 full bar)
   records a session (`strum:<id>`, bars played) so Practice progress reflects it, but mints no per-item SRS.
   _Honest coach framing: no timing score — mic onset scoring is Phase 8/F1._
-- **Comping the progression** ✅ **Shipped v2.4.0** (5c). The rhythm-side
+- **Comping the progression** ✅ **Shipped v2.4.0** (5c) _· merged with 6a/6b/6c into **Over the
+  changes** in v2.11.0 (a `tgMode` switch picks Chords vs Chord tones); both practice cards still
+  open it in their own pillar's mode, and both session namespaces are kept_. The rhythm-side
   mirror of chord-tone targeting: a chosen preset (`SEQ_PRESETS`, resolved to the context key, spine #1)
   cycles with a forced backing band (bass + groove + a guide comp via `compStrum`/`scheduleBand(force)`)
   on its own scheduler clock; a big **NOW** chord + a **NEXT** preview (reusing `cmChord`/`cmChordBox`)
   + a 4-beat indicator make the change land in time. Switch the progression live. A practiced run
   records a session (bars comped), minting no per-item SRS. _Coach tier — no timing score (Phase 8/F1)._
-- **Groove / feel** ✅ **Shipped v2.4.0** (5d). A feel *lab*: loop a one-bar
+- **Groove / feel** ✅ **Shipped v2.4.0** (5d) _· merged into **Strumming & feel** in v2.11.0, so
+  the pattern picker and the feel controls now cross-combine_. A feel *lab*: loop a one-bar
   groove (swung hats + kick/snare backbeat + bass + a down-up comp) over the context chord on one
   8th-note scheduler clock, with swing baked into the off-beats, and toggle the things that make a
   groove feel right — **swing** (straight → swing → shuffle), a **backbeat accent**, and **palm-mute**
@@ -525,6 +543,10 @@ reflected `gRoot`/`chQual` but gave no way to change it without leaving Practice
   without leaving Practice. Still one shared context — you're just *setting* it from inside the drill,
   not only from Reference — so spine #1 is intact; comp re-resolves its bars (`compBuildBars`) live on
   a key change. Symmetric EN/UK (`dr_key`), no new persisted state (rides the existing context).
+  _Generalized in v2.11.0:_ the three per-drill copies collapsed into **one shared `#drill-ctx` strip**
+  (one Key picker + one Exit for every drill), and the key half is derived — it appears only for a
+  drill that declares an `onKey` handler, so the ear / note-naming / one-minute-changes drills no
+  longer show a picker that adjusts nothing.
 
 _Still open (the rest of "make practice flexible as a whole"):_
 - **In-drill chord *quality*** for the single-chord coaches (5b/5d) — pick maj/min/7 inline, not just
@@ -548,7 +570,9 @@ they can trickle alongside Phase 6 or land as small follow-ups, each independent
 
 The improviser's half — turning fretboard knowledge into melody:
 
-- **Chord-tone targeting** ✅ **Shipped v2.7.0** (6a). The progression loops with a forced backing
+- **Chord-tone targeting** ✅ **Shipped v2.7.0** (6a) _· merged with the 5c comp coach into **Over
+  the changes** in v2.11.0 — they were one machine (same bar expansion, same clock, same comp bed),
+  so a `tgMode` switch now picks what you play; the `tg-*` DOM ids stayed_. The progression loops with a forced backing
   band (reusing `SEQ_PRESETS`/`scheduleBand`/`compStrum` like the comp coach, resolved to the context
   key, spine #1) on its own scheduler clock; each bar the current chord's tones (`tgNewBar` recomputes
   the pitch-class + degree map synchronously in the tick) light as targets on a tappable neck (its own
@@ -612,8 +636,8 @@ own scale/triad content. A core improviser *and* rhythm-guitar skill; serves bot
   single-chord loop, the sequencer bar length, and the comp (5c) + targeting (6a) drill loops +
   beat indicators all follow it. **4/4 is byte-identical** to the old bar math (asserted in the
   harness), so the shipped backing band is untouched; other meters shrink/regroup the bar. Bounds-
-  checked persistence via `saveState`/`loadState`. _(The single-bar pattern coaches — strum 5b,
-  groove 5d, subdivision 7a — keep their own 4/4 grids; they don't ride the shared band.)_
+  checked persistence via `saveState`/`loadState`. _(The single-bar pattern coaches — Strumming &
+  feel (5b/5d), subdivision 7a — keep their own 4/4 grids; they don't ride the shared band.)_
 - **Scored tier (needs Phase 8 / F1):** score timing accuracy and evenness, flag rushing/
   dragging, and ladder the tempo (auto-bump BPM when consistently in the pocket).
 
