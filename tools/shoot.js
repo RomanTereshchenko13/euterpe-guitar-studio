@@ -95,7 +95,9 @@ function appFor(panel) {
   // bottom-nav Practice button, so the shot lands on the Practice surface.
   const clicks = [];
   if (panel) clicks.push(`var b=document.querySelector('.tab[data-panel="${panel}"]');if(b)b.click();`);
-  if (mode === 'practice' || mode === 'drill' || mode === 'changes' || mode === 'changes-run' || mode === 'strum' || mode === 'strum-run' || mode === 'comp' || mode === 'comp-run' || mode === 'target' || mode === 'target-run' || mode === 'callresp' || mode === 'timing' || mode === 'timing-run') clicks.push(`var m=document.querySelector('.modebtn[data-mode="practice"]');if(m)m.click();`);
+  // every drill lives under Practice now (the Ear mode folded in), so any non-reference
+  // token starts by entering Practice — the ear tokens included.
+  if (mode) clicks.push(`var m=document.querySelector('.modebtn[data-mode="practice"]');if(m)m.click();`);
   if (mode === 'drill') clicks.push(`var s=document.getElementById('start-notes');if(s)s.click();`);
   if (mode === 'changes' || mode === 'changes-run') clicks.push(`var s=document.getElementById('start-changes');if(s)s.click();`);
   if (mode === 'changes-run') clicks.push(`var g=document.getElementById('cm-start-btn');if(g)g.click();`);
@@ -108,7 +110,6 @@ function appFor(panel) {
   if (mode === 'callresp') clicks.push(`var s=document.getElementById('start-callresp');if(s)s.click();`);
   if (mode === 'timing' || mode === 'timing-run') clicks.push(`var s=document.getElementById('start-timing');if(s)s.click();`);
   if (mode === 'timing-run') clicks.push(`var g=document.getElementById('sd-play');if(g)g.click();`);
-  if (mode && mode.indexOf('ear') === 0) clicks.push(`var m=document.querySelector('.modebtn[data-mode="ear"]');if(m)m.click();`);
   const earStart = { 'ear-interval': 'start-interval', 'ear-chordq': 'start-chordq', 'ear-rhythm': 'start-rhythm' }[mode];
   if (earStart) clicks.push(`var s=document.getElementById('${earStart}');if(s)s.click();`);
   // accessibility toggles (additive): flip the colour-blind palette and/or dot shapes

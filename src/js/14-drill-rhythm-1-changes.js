@@ -181,7 +181,7 @@ function refreshChangesLang(){ if(cmDrill) renderCm(); }
 
 /* card starter + in-drill controls — wired once at load (guarded so a missing panel
    never throws, mirroring initDrill / initEar). */
-registerDrill({ id:'changes', mode:'practice', area:'cm-area',
+registerDrill({ id:'changes', area:'cm-area',
                 isActive:()=>!!cmDrill, exit:exitChanges, refreshLang:refreshChangesLang });
 
 (function initChanges(){

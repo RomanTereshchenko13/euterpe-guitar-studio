@@ -57,7 +57,6 @@
     <nav class="modenav" id="modenav" aria-label="Mode">
       <button class="modebtn active" data-mode="reference" aria-pressed="true" data-i18n="mode_reference">Довідник</button>
       <button class="modebtn" data-mode="practice" aria-pressed="false" data-i18n="mode_practice">Практика</button>
-      <button class="modebtn" data-mode="ear" aria-pressed="false" data-i18n="mode_ear">Слух</button>
     </nav>
     <nav class="tabs" id="tabs">
       <button class="tab active" data-panel="harmony" data-i18n="tab_harmony">Акорди / тріади</button>
@@ -377,6 +376,27 @@
           </button></li>
         </ul>
       </div>
+      <!-- Ear pillar (Phase 4): recognition by sound. Was its own top-level mode with a
+           duplicate home — the same drill-card list, the same progress card rendering the
+           same learner model, its own Quit. It's a pillar like the others, so it lives
+           here and rides the shared shell. -->
+      <div class="practice-section">
+        <div class="ps-label" data-i18n="practice_grp_ear">Слух</div>
+        <ul class="practice-list">
+          <li><button type="button" class="drill-card" id="start-interval">
+            <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span>
+            <span class="dc-meta" data-i18n="ear_intervals_meta">Почуй дві ноти · назви інтервал</span>
+          </button></li>
+          <li><button type="button" class="drill-card" id="start-chordq">
+            <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span>
+            <span class="dc-meta" data-i18n="ear_chords_meta">Почуй акорд · визнач його тип</span>
+          </button></li>
+          <li><button type="button" class="drill-card" id="start-rhythm">
+            <span class="dc-name" data-i18n="ear_rhythm">Ритм на слух</span>
+            <span class="dc-meta" data-i18n="ear_rhythm_meta">Почуй такт · обери ритмічний малюнок</span>
+          </button></li>
+        </ul>
+      </div>
       <!-- Progress readout (3b): the learner model's aggregate stats; renderPractice()
            fills #practice-progress, empty until the drill writes the first attempt. -->
       <div class="practice-progress-card">
@@ -391,9 +411,14 @@
          #drill-ctx), and drillKeyChanged() tells the running drill to re-derive. -->
     <div class="row" id="drill-ctx">
       <button type="button" class="btn" id="drill-ctx-quit" data-i18n="drill_quit">Вийти</button>
-      <div class="divider"></div>
-      <span class="ctrl-label" data-i18n="dr_key">Тональність</span>
-      <div class="group root-row" id="drill-ctx-key"></div>
+      <!-- The key half is only meaningful to a drill that re-derives from the key, i.e.
+           one that declares onKey(). The ear + note-naming + one-minute-changes drills
+           don't, so applyDrillCtx() hides these three rather than parking a control
+           that adjusts nothing. Kept as direct .row children so the flex layout of the
+           visible case is byte-identical to before. -->
+      <div class="divider" id="drill-ctx-div" hidden></div>
+      <span class="ctrl-label" id="drill-ctx-keylbl" data-i18n="dr_key" hidden>Тональність</span>
+      <div class="group root-row" id="drill-ctx-key" hidden></div>
     </div>
 
     <!-- Chord-change fluency / "one-minute changes" (Phase 5a): a coach drill with a
@@ -570,47 +595,13 @@
       </div>
       <div class="drill-summary" id="drill-summary" hidden></div>
     </div>
-  </section>
 
-  <!-- Ear-training panel (Phase 4): the third primary mode (Reference · Practice ·
-       Ear). Recognition-by-sound drills — multiple-choice on the audio buses,
-       scored on accuracy, writing the same learner model (spine #3). A sibling of
-       the reference panels inside .main, off the .panel machinery (it's an
-       .ear-panel, shown only under body.mode-ear) so the two nav axes never fight. -->
-  <section class="ear-panel" id="panel-ear" aria-labelledby="ear-h">
-    <div class="panel-head">
-      <div class="ph-top"><h2 id="ear-h" data-i18n="ear_h">Тренування слуху</h2></div>
-    </div>
-    <!-- Ear home: the drill picker + the shared progress readout. Swapped out for
-         the active drill (#ear-area) while a session runs. -->
-    <div id="ear-home">
-      <p class="practice-soon" data-i18n="ear_intro">Розпізнавання на слух — почуй і обери відповідь. Кожна спроба йде в облік прогресу й повертає те, що даєш важче.</p>
-      <ul class="practice-list">
-        <li><button type="button" class="drill-card" id="start-interval">
-          <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span>
-          <span class="dc-meta" data-i18n="ear_intervals_meta">Почуй дві ноти · назви інтервал</span>
-        </button></li>
-        <li><button type="button" class="drill-card" id="start-chordq">
-          <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span>
-          <span class="dc-meta" data-i18n="ear_chords_meta">Почуй акорд · визнач його тип</span>
-        </button></li>
-        <li><button type="button" class="drill-card" id="start-rhythm">
-          <span class="dc-name" data-i18n="ear_rhythm">Ритм на слух</span>
-          <span class="dc-meta" data-i18n="ear_rhythm_meta">Почуй такт · обери ритмічний малюнок</span>
-        </button></li>
-      </ul>
-      <div class="practice-progress-card">
-        <div class="pp-title" data-i18n="prog_title">Прогрес</div>
-        <div id="ear-progress"></div>
-      </div>
-    </div>
-
-    <!-- Active ear drill: a central prompt, a Replay button, the multiple-choice
-         answer grid (thumb-zone), a feedback line and a Next button. Hidden until
-         started; swapped for #ear-summary at the end. -->
+    <!-- Active ear drill (Phase 4): a central prompt, a Replay button, the multiple-
+         choice answer grid (thumb-zone), a feedback line and a Next button. Hidden
+         until started; swapped for #ear-summary at the end. Quit comes from the
+         shared #drill-ctx strip like every other drill's. -->
     <div id="ear-area" hidden>
       <div class="drill-head">
-        <button type="button" class="btn" id="ear-quit" data-i18n="drill_quit">Вийти</button>
         <span class="drill-count" id="ear-count"></span>
       </div>
       <div id="ear-active">
@@ -722,7 +713,6 @@
       <ul class="wc-list">
         <li><b data-i18n="mode_reference">Довідник</b> — <span data-i18n="wc_ref">обери тональність і досліджуй акорди, гами й гриф.</span></li>
         <li><b data-i18n="mode_practice">Практика</b> — <span data-i18n="wc_practice">вправи, що ведуть облік прогресу й повертають складне.</span></li>
-        <li><b data-i18n="mode_ear">Слух</b> — <span data-i18n="wc_ear">тренуй слух — впізнавай інтервали, акорди й ритм на звук.</span></li>
       </ul>
       <div class="wc-actions"><button class="btn play" id="wc-got" data-i18n="wc_got">Зрозуміло</button></div>
     </div>

@@ -46,6 +46,107 @@ function locate(concatLine) {
   return { rel: hit.rel, line: concatLine - hit.startLine + 1 };
 }
 
+/* ---------------------------------------------------------------------------
+   Dead-resource checks. ESLint sees unused *bindings*; it can't see a
+   translation key or a CSS class nobody references, because those are strings.
+   That's the drift this catches: merging or removing a feature reliably leaves
+   orphans behind (the 5c/6a and 5b/5d merges left 7 dead i18n keys and a dead
+   .btn.co-prog rule, and the smoke suite was actively pinning two of them).
+
+   Dynamic lookups are the tricky part — `t('qg_'+g)` and `t(head+'_h')` build
+   keys at runtime. Rather than hand-maintaining an allowlist that goes stale,
+   we harvest the literal fragments that flank a `+` inside a t(...) call and
+   treat them as prefixes/suffixes: any key matching one counts as used. Same
+   trick for class names assembled as `'ear-'+type`.
+   --------------------------------------------------------------------------- */
+const tplPath = path.join(root, 'src', 'index.template.html');
+const cssPath = path.join(root, 'src', 'styles.css');
+const I18N_FILE = '03-i18n.js';
+
+// keys declared in a given `uk:{...}` / `en:{...}` block of 03-i18n.js
+function i18nBlock(src, name) {
+  const at = src.search(new RegExp('\\b' + name + '\\s*:\\s*\\{'));
+  if (at < 0) return null;
+  let depth = 0, i = src.indexOf('{', at);
+  const start = i;
+  for (; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}' && --depth === 0) break;
+  }
+  return src.slice(start, i);
+}
+function blockKeys(block) {
+  const keys = new Set();
+  // a key sits at the start of the file/line or right after `,` — never inside a
+  // value string, which is what a naive /\w+:/ would happily match.
+  const re = /(?:^|[{,])\s*([A-Za-z_]\w*)\s*:/gm;
+  let m;
+  while ((m = re.exec(block))) keys.add(m[1]);
+  return keys;
+}
+
+function deadResourceReport() {
+  const problems = [];
+  const i18nSrc = fs.readFileSync(path.join(jsDir, I18N_FILE), 'utf8');
+  const tpl = fs.existsSync(tplPath) ? fs.readFileSync(tplPath, 'utf8') : '';
+  const css = fs.existsSync(cssPath) ? fs.readFileSync(cssPath, 'utf8') : '';
+  const otherJs = jsFiles.filter(f => f !== I18N_FILE)
+    .map(f => fs.readFileSync(path.join(jsDir, f), 'utf8')).join('\n');
+  const hay = otherJs + '\n' + tpl;
+
+  /* ---- error-handling guardrail: no silent swallows. Lives here rather than in
+     the smoke suite because it's a rule about how src/ is written — the bundle
+     ships comment-stripped, so the explanatory comment that satisfies the rule
+     isn't visible in the built file any more.
+
+     `catch(_){}` is the codebase's deliberate-swallow marker and stays allowed;
+     an empty catch under any other binding is the accidental kind. */
+  jsFiles.forEach(f => {
+    const lines = fs.readFileSync(path.join(jsDir, f), 'utf8').split('\n');
+    lines.forEach((ln, k) => {
+      const m = ln.match(/catch\s*\(\s*(\w+)\s*\)\s*\{\s*\}/);
+      if (m && m[1] !== '_')
+        problems.push(`src/js/${f}:${k + 1} silent catch(${m[1]}){} — explain it, or use catch(_){} to mark it deliberate`);
+    });
+  });
+
+  // ---- i18n symmetry (the smoke suite enforces it too; failing here is faster)
+  const uk = i18nBlock(i18nSrc, 'uk'), en = i18nBlock(i18nSrc, 'en');
+  if (uk && en) {
+    const a = blockKeys(uk), b = blockKeys(en);
+    [...a].filter(k => !b.has(k)).forEach(k => problems.push(`i18n key '${k}' exists in uk but not en`));
+    [...b].filter(k => !a.has(k)).forEach(k => problems.push(`i18n key '${k}' exists in en but not uk`));
+  }
+
+  // ---- unreferenced i18n keys
+  // literal fragments flanking a `+` inside t(...) => dynamic prefixes / suffixes
+  const dynPrefix = [...otherJs.matchAll(/\bt\(\s*'([A-Za-z_]\w*)'\s*\+/g)].map(m => m[1]);
+  const dynSuffix = [...otherJs.matchAll(/\+\s*'(\w+)'\s*\)/g)].map(m => m[1]);
+  const keys = uk ? blockKeys(uk) : new Set();
+  const usedKey = k =>
+    new RegExp(`(['"\`])${k}\\1`).test(hay) ||
+    new RegExp(`data-i18n=["']${k}["']`).test(tpl) ||
+    dynPrefix.some(p => k.startsWith(p)) ||
+    dynSuffix.some(s => k.endsWith(s));
+  [...keys].filter(k => !usedKey(k)).sort()
+    .forEach(k => problems.push(`i18n key '${k}' is never referenced (dead string in both languages)`));
+
+  // ---- unreferenced CSS classes
+  // selector text only: blank out declaration blocks so property values can't
+  // masquerade as selectors.
+  const selectorText = css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\{[^{}]*\}/g, '{}');
+  const classes = new Set([...selectorText.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)].map(m => m[1]));
+  // class names built by concatenation, e.g. `'ear-'+ear.type` or `'pp-'+kind`
+  const dynClass = [...otherJs.matchAll(/'([a-zA-Z][\w-]*-)'\s*\+/g)].map(m => m[1]);
+  const usedClass = c =>
+    new RegExp(`(^|[^\\w-])${c.replace(/-/g, '\\-')}([^\\w-]|$)`).test(hay) ||
+    dynClass.some(p => c.startsWith(p));
+  [...classes].filter(c => !usedClass(c)).sort()
+    .forEach(c => problems.push(`CSS class '.${c}' is styled but never applied in markup or JS`));
+
+  return problems;
+}
+
 (async () => {
   try {
     const eslint = new ESLint({ cwd: root });
@@ -61,8 +162,11 @@ function locate(concatLine) {
       if (m.severity === 2) errors++; else warnings++;
     }
 
-    if (msgs.length === 0) {
-      console.log(`lint: clean — ${jsFiles.length} modules linted as one scope.`);
+    const dead = deadResourceReport();
+    errors += dead.length;
+
+    if (msgs.length === 0 && dead.length === 0) {
+      console.log(`lint: clean — ${jsFiles.length} modules linted as one scope, no dead strings.`);
     } else {
       for (const [rel, list] of byFile) {
         console.log('\n' + rel);
@@ -71,6 +175,10 @@ function locate(concatLine) {
           const tag = m.sev === 2 ? 'error  ' : 'warning';
           console.log(`  ${String(m.line).padStart(4)}:${m.col}  ${tag}  ${m.message}  ${m.ruleId || ''}`);
         }
+      }
+      if (dead.length) {
+        console.log('\ndead resources (src/js/03-i18n.js · src/styles.css)');
+        dead.forEach(p => console.log(`  error    ${p}`));
       }
       console.log(`\nlint: ${errors} error(s), ${warnings} warning(s).`);
     }

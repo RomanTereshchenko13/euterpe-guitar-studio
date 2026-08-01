@@ -15,10 +15,16 @@
    DRILLS. Adding a drill is: one file + its markup. Nothing to remember.
 
    An entry:
-     { id, mode:'practice'|'ear', area:'<area element id>',
+     { id, area:'<area element id>',
        isActive:()=>boolean,       // is this drill running right now?
        exit:fn,                    // tear it down + restore the home view
-       refreshLang:fn|undefined }  // optional: re-paint an in-flight drill
+       refreshLang:fn|undefined,   // optional: re-paint an in-flight drill
+       onKey:fn|undefined }        // optional: re-derive from a new context key
+
+   There used to be a `mode` field too ('practice' | 'ear'), because ear training was
+   its own top-level mode with its own duplicate home view. It's a pillar like Rhythm
+   or Lead, not a mode, so it folded into Practice and the field became a constant —
+   every drill now lives under one home, and the mode axis is Reference vs Practice.
 
    Load order note: this file sits at slot 13 so DRILLS exists before the slot-14
    drill files register into it (a `const` is not hoisted the way a function
@@ -32,14 +38,14 @@ function registerDrill(d){ DRILLS.push(d); return d; }
 // drill can never take down a mode switch.
 function drillIsActive(d){ try{ return !!d.isActive(); }catch(_){ return false; } }
 
-// the running drill (optionally restricted to one mode), or null
-function activeDrill(mode){
-  return DRILLS.find(d => (!mode || d.mode===mode) && drillIsActive(d)) || null;
+// the running drill, or null
+function activeDrill(){
+  return DRILLS.find(drillIsActive) || null;
 }
 
-// end every running drill that does NOT belong to `mode` (pass 'reference' to end them all)
-function exitDrillsExcept(mode){
-  DRILLS.forEach(d=>{ if(d.mode!==mode && drillIsActive(d) && typeof d.exit==='function') d.exit(); });
+// end every running drill (leaving Practice, or starting a different drill)
+function exitAllDrills(){
+  DRILLS.forEach(d=>{ if(drillIsActive(d) && typeof d.exit==='function') d.exit(); });
 }
 
 /* The shared drill key picker (#drill-ctx) changed the context key. Every practice drill
@@ -48,20 +54,30 @@ function exitDrillsExcept(mode){
    when the key moves (rebuild its bars, restart its round, repaint its board). Optional: a
    drill with nothing key-dependent just omits onKey. */
 function drillKeyChanged(){
-  const d=activeDrill('practice');
+  const d=activeDrill();
   if(d && typeof d.onKey==='function'){ try{ d.onKey(); }catch(_){} }
 }
 
-function drillHomeId(mode){ return mode==='ear' ? 'ear-home' : 'practice-home'; }
+/* The strip's Quit is universal, but its key picker only means something to a drill
+   that declares onKey() — the ear, note-naming and one-minute-changes drills don't
+   re-derive from the key, so showing them a key picker would be a control that
+   adjusts nothing. Derived from the registry, so a drill opts in by having onKey. */
+function applyDrillCtx(){
+  const d=activeDrill(), on=!!(d && typeof d.onKey==='function');
+  ['drill-ctx-div','drill-ctx-keylbl','drill-ctx-key'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.hidden=!on;
+  });
+}
 
-// show a mode's home view and hide every drill area belonging to that mode
-function showDrillHome(mode){
-  const home=document.getElementById(drillHomeId(mode));
+// show the practice home and hide every drill area
+function showDrillHome(){
+  const home=document.getElementById('practice-home');
   if(home) home.hidden=false;
   DRILLS.forEach(d=>{
-    if(d.mode!==mode || !d.area) return;
+    if(!d.area) return;
     const a=document.getElementById(d.area); if(a) a.hidden=true;
   });
+  applyDrillCtx();
 }
 
 /* re-paint whatever drill is in flight. Called on a language switch (applyLang)

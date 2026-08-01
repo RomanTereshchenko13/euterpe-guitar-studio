@@ -148,7 +148,7 @@ function spHighlightSlot(slot){
 // re-localize an in-flight strum trainer on a language switch (called from applyLang)
 function refreshStrumLang(){ if(spDrill) renderStrum(); }
 
-registerDrill({ id:'strum', mode:'practice', area:'sp-area',
+registerDrill({ id:'strum', area:'sp-area',
                 isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang,
                 // the loop reads currentChordVoicing() live, so a key change only needs a repaint
                 onKey:()=>{ if(spDrill) renderStrum(); } });

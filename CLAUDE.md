@@ -22,7 +22,13 @@ will be overwritten:
 
 - `index.html`   → generated from `src/index.template.html` + `src/styles.css` + `src/js/*.js`
   (the changelog is **sliced**: `build.js` inlines only the newest `CHANGELOG_KEEP` releases
-  into the bundle — the full history was 15% of the file — and the modal links to `CHANGELOG.md`)
+  into the bundle — the full history was 15% of the file — and the modal links to `CHANGELOG.md`.
+  **Comments are stripped** from the bundled JS + CSS: they were ~22% / ~28% of those files,
+  i.e. a fifth of every visitor's download was commentary addressed to whoever edits `src/`.
+  `stripJs`/`stripCss` in `build.js` are character scanners, not regexes — a regex hunting
+  `/*` corrupts `https://` inside a string, a `/regex/` literal, or `content: "/*"` — and the
+  stripped JS is syntax-checked before use, falling back to the unstripped source if it fails,
+  so a scanner bug can cost bytes but never ship a broken app. **`src/` keeps every comment.**)
 - `sw.js`        → generated from `src/sw.template.js` (`APP_VERSION` stamped into the cache name)
 - `CHANGELOG.md` → generated from `src/js/02-changelog.js`
 - `icons/icon.svg` → copied from `src/icons/icon.svg`
@@ -51,21 +57,31 @@ Edit the sources, then run the build.
   - `10-scales.js` · `11-notes-circle-lang.js` · `12-toolbar-state.js` (state save/load +
     the custom-tuning editor + the share-link codec `encodeShareState`/`applyShareHash`)
   - `13-drill-registry.js` — the **drill registry**: `DRILLS` + `registerDrill()`, plus the
-    generic shell helpers `activeDrill`/`exitDrillsExcept`/`showDrillHome`/`refreshDrillsLang`/
-    `drillKeyChanged`. Every drill file self-registers at load
-    (`{id, mode, area, isActive, exit, refreshLang, onKey?}`), and `setMode` (15) / `applyLang`
+    generic shell helpers `activeDrill`/`exitAllDrills`/`showDrillHome`/`refreshDrillsLang`/
+    `drillKeyChanged`/`applyDrillCtx`. Every drill file self-registers at load
+    (`{id, area, isActive, exit, refreshLang?, onKey?}`), and `setMode` (15) / `applyLang`
     (11) iterate `DRILLS` instead of naming drills — so **adding a drill is one new `14-*.js`
     file + its markup, with nothing to register by hand**.
+    There used to be a `mode:'practice'|'ear'` field; **Ear was folded into Practice** (it was
+    a pillar, not a mode — same home shell, same progress card, same learner model), so the
+    field went away and the mode axis is Reference vs Practice again.
     Loads at slot 13 (before the slot-14 drills) because `const DRILLS` isn't hoisted. The
     smoke suite guards the seam: every `*-area` in the markup must be claimed by a registered
     drill, so an unregistered drill fails the build rather than silently half-working.
     **Shared drill chrome** (`#drill-ctx` in the template, built in 15): one Key picker + one
-    Exit button for *all* practice drills, instead of the identical copy each drill used to
-    carry. Exit calls `activeDrill('practice').exit()`; the key picker calls `setKey` then
+    Exit button for *all* drills, instead of the identical copy each drill used to
+    carry. Exit calls `activeDrill().exit()`; the key picker calls `setKey` then
     `drillKeyChanged()`, which invokes the running drill's optional `onKey()` — "re-derive
     yourself from the new key" (rebuild bars, deal a new round, repaint the board). A drill
     with nothing key-dependent just omits `onKey`. CSS derives the strip's visibility from
-    `#practice-home:not([hidden]) ~ #drill-ctx`, so no drill manages it.
+    `#practice-home:not([hidden]) ~ #drill-ctx`, so no drill manages it. The *key half* of the
+    strip is derived too: `applyDrillCtx()` shows it only for a drill that declares `onKey`,
+    so the ear / note-naming / one-minute-changes drills don't get a picker that adjusts
+    nothing. It's called from one delegated listener on `#practice-home` (every drill starts
+    from a card or the Review button in there), so drills still register nothing by hand.
+    **Watch the `[hidden]` trap**: `#drill-ctx-key` is a `.group` (`display:flex`), which
+    outranks the UA `[hidden]{display:none}` — hiding it needs the explicit CSS rule, and
+    jsdom's `.hidden` property will happily report success without it.
   - `13-learner.js` — learner model (spine #3): per-item SRS history + sessions ring
     buffer; persists via `12-toolbar-state.js`'s `saveState`/`loadState`. Exposes the
     progress-card readouts `learnerReview` (due-for-review queue) + `learnerActivity` (active days)
@@ -74,7 +90,13 @@ Edit the sources, then run the build.
     `14-drill-timing.js`
     — the drills (all at load slot 14, before wiring). `14-drill-notes.js` is the Practice
     note-naming drill (3c); `14-drill-ear.js` is Ear training (Phase 4) — interval /
-    chord-quality / rhythm recognition, multiple-choice on the audio buses.
+    chord-quality / rhythm recognition, multiple-choice on the audio buses. It's **three
+    drills behind one registry entry** (they share the `ear` state and `#ear-area`), and it
+    lives in the Practice home's Ear group: Phase 4 gave it its own top-level mode, but that
+    mode was a duplicate of Practice's shell (same drill-card list, same progress card
+    rendering the same `renderProgressInto` from the same learner model, its own Quit), so it
+    folded in. `#ear-home`, `#ear-progress`, `#ear-quit`, `.ear-panel`, `body.mode-ear` and
+    `body.mode-activity` are all gone; a save or share link pinned to `m=ear` lands on Practice.
     `14-drill-rhythm-1-changes.js` (`cm*`) is the "one-minute changes" chord-change coach (5a),
     a setup→timed run→summary flow. `14-drill-rhythm-2-strum.js` (`sp*`) is **Strumming & feel**
     — the 5b pattern trainer and the 5d groove lab **merged**: one 8th-note clock over the
@@ -171,6 +193,17 @@ devDependencies in the **root** `package.json` (same status as jsdom in
   second job (`.github/workflows/test.yml`). Config: `eslint.config.js`.
   `no-use-before-define` is deliberately OFF — cross-file refs execute post-load,
   so the lexical check is all false positives here.
+  It also runs **dead-resource + source-hygiene checks** ESLint structurally can't:
+  an i18n key present in one language but not the other; an i18n key no longer
+  referenced anywhere; a CSS class styled but never applied; and a silent
+  `catch(e){}` (`catch(_){}` is the codebase's deliberate-swallow marker and is
+  allowed). Dynamic lookups are handled without an allowlist that could go stale:
+  the literal fragments flanking a `+` inside `t(...)` are harvested as
+  prefixes/suffixes, so `t('qg_'+g)` keeps every `qg_*` key alive and
+  `t(head+'_h')` keeps every `*_h` key alive; the same trick covers class names
+  built as `'ear-'+type`. The silent-catch rule used to live in the smoke suite,
+  but the bundle now ships comment-stripped, so the explanatory comment that
+  satisfies it is no longer visible in the built file.
 
 **Visual / orientation review** is not a script — run `node tools/shoot.js` with the
 orientation matrix and have an AI (e.g. this Claude Code session) review the PNGs.

@@ -182,7 +182,7 @@ function renderCr(){
 function refreshCallRespLang(){ if(cr) renderCr(); }
 
 /* card starter + in-drill controls — wired once at load (guarded, mirroring initTarget). */
-registerDrill({ id:'callresp', mode:'practice', area:'cr-area',
+registerDrill({ id:'callresp', area:'cr-area',
                 isActive:()=>!!cr, exit:exitCallResp, refreshLang:refreshCallRespLang,
                 // the motif is drawn from the key's scale, so a key change deals a new round
                 onKey:()=>{ if(cr) crNewRound(); } });

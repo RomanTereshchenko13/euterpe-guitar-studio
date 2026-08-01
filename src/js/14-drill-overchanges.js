@@ -253,7 +253,7 @@ function refreshTargetLang(){ if(tgDrill) renderTarget(); }
 
 /* card starters + in-drill controls — wired once at load (guarded so a missing panel
    never throws, mirroring initDrill). */
-registerDrill({ id:'overchanges', mode:'practice', area:'tg-area',
+registerDrill({ id:'overchanges', area:'tg-area',
                 isActive:()=>!!tgDrill, exit:exitTarget, refreshLang:refreshTargetLang,
                 // the progression is stored resolved to the key, so a key change rebuilds the bars
                 onKey:()=>{ if(!tgDrill) return;

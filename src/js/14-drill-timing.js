@@ -181,7 +181,7 @@ function sdSetTempo(bpm){
 // re-localize an in-flight timing drill on a language switch (called from applyLang)
 function refreshTimingLang(){ if(sd) renderTiming(); }
 
-registerDrill({ id:'timing', mode:'practice', area:'sd-area',
+registerDrill({ id:'timing', area:'sd-area',
                 isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang,
                 // the grid walks the key's scale, so a key change repaints the board and restarts
                 onKey:()=>{ if(!sd) return; sdRenderBoard(); sdRestart(); renderTiming(); } });

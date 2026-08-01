@@ -82,9 +82,9 @@ const html = fs.readFileSync(htmlPath, 'utf8');
   ok('responsive board: no hard min-width:1150px', !/\.board\s*\{[^}]*min-width:\s*1150px/.test(html),
      'fixed 1150px min-width still on .board');
 
-  // Error-handling guardrail: no remaining silent swallows of the form catch(e){}.
-  ok('no silent catch(e){} swallows remain', !/catch\s*\(\s*e\s*\)\s*\{\s*\}/.test(html),
-     'an empty catch(e){} block remains');
+  // The "no silent catch(e){}" guardrail moved to tools/lint.js: it's a rule about
+  // how src/ is written, and the bundle now ships with comments stripped, so the
+  // `catch(e){ /* why */ }` that satisfies it isn't visible in the built file.
 })();
 
 /* ---------- Layer 2: runtime jsdom checks ---------------------------------- */
@@ -189,7 +189,7 @@ if (T) {
    'drill_quit','drill_find_pre','drill_find_sub','drill_complete','drill_score','drill_clean',
    'drill_misses','drill_time','drill_again','drill_done','seam_drill_notes',
    'prog_title','prog_empty','prog_tracked','prog_accuracy','prog_streak','prog_sessions',
-   'mode_ear','ear_h','ear_intro','ear_intervals','ear_intervals_meta','ear_chords','ear_chords_meta',
+   'practice_grp_ear','ear_intervals','ear_intervals_meta','ear_chords','ear_chords_meta',
    'ear_rhythm','ear_rhythm_meta','ear_int_prompt','ear_chord_prompt','ear_rhythm_prompt',
    'ear_replay','ear_next','ear_right','ear_wrong','ear_got',
    'pwa_install','pwa_install_tip','pwa_update','pwa_update_btn','pwa_dismiss',
@@ -198,13 +198,13 @@ if (T) {
    'cm_pair','cm_dur','cm_sec','cm_click','cm_start','cm_stop','cm_setup_note',
    'cm_changes','cm_cpm','cm_best','cm_tap_hint','cm_undo','cm_newbest',
    'drill_strum','drill_strum_meta','sp_pattern','sp_chord','sp_play','sp_stop','sp_hint',
-   'drill_comp','drill_comp_meta','co_prog','co_now','co_next','co_hint',
+   'drill_comp','drill_comp_meta','co_now','co_next','co_hint',
    'oc_mode','oc_chords','oc_tones',
    'sp_swing','sp_accent','sp_mute','sp_band',
    'practice_grp_lead','drill_target','drill_target_meta','tg_prog','tg_pos','tg_deg','tg_hits','tg_acc','tg_hint',
    'drill_callresp','drill_callresp_meta','cr_listen','cr_your_turn','cr_replay','cr_echoed','cr_rounds','cr_hint',
-   'a11y_label','a11y_palette','a11y_shapes',
-   'wc_title','wc_lead','wc_ref','wc_practice','wc_ear','wc_got',
+   'a11y_palette','a11y_shapes',
+   'wc_title','wc_lead','wc_ref','wc_practice','wc_got',
    'tun_custom','cl_older',
    'prog_active','prog_due','prog_review','share_btn','share_copied'].forEach(k => {
     ok('i18n new key present (uk+en): ' + k,
@@ -388,33 +388,37 @@ if (T) {
     T.resetLearner();
   })();
 
-  /* ---- Phase 4: Ear-training mode + three recognition drills ---- */
+  /* ---- Phase 4: the three recognition drills, now an Ear group under Practice ---- */
   (function earMode() {
     const doc = win.document;
     const nav = doc.getElementById('modenav');
     const modes = nav ? [...nav.querySelectorAll('.modebtn')].map(b => b.dataset.mode) : [];
-    ok('P4: modenav gains an ear button (3 modes)',
-       modes.length === 3 && modes.indexOf('ear') >= 0, modes.join(','));
-    const ep = doc.getElementById('panel-ear');
-    ok('P4: ear panel present, off the .panel machinery',
-       !!ep && !ep.classList.contains('panel') && ep.classList.contains('ear-panel'));
+    ok('P4: ear folded into Practice — 2 modes, no ear mode',
+       modes.length === 2 && modes.indexOf('ear') < 0, modes.join(','));
+    ok('P4: the separate ear panel + home are gone',
+       !doc.getElementById('panel-ear') && !doc.getElementById('ear-home')
+       && !doc.getElementById('ear-progress') && !doc.querySelector('.ear-panel'));
+    ok('P4: ear drill area now lives inside the practice panel',
+       !!doc.querySelector('#panel-practice #ear-area'));
     ok('P4: reference shell still 3 tabs / 3 reference panels',
        doc.querySelectorAll('.tab').length === 3 && doc.querySelectorAll('.main > .panel').length === 3);
-    // three ear drill starters
+    // three ear drill starters, now cards in the practice home
     ['start-interval', 'start-chordq', 'start-rhythm'].forEach(id =>
-      ok('P4: ear drill starter present: ' + id, !!doc.getElementById(id)));
+      ok('P4: ear drill starter present in practice home: ' + id,
+         !!doc.querySelector('#practice-home #' + id)));
 
-    // enter Ear mode: body classes + button state + persistence
-    T.setMode('ear');
-    ok('P4: body marks ear + activity mode',
-       doc.body.classList.contains('mode-ear') && doc.body.classList.contains('mode-activity')
-       && !doc.body.classList.contains('mode-practice') && !doc.body.classList.contains('mode-reference'));
-    const eBtn = nav.querySelector('.modebtn[data-mode="ear"]');
-    ok('P4: ear button active + aria-pressed',
+    // the ear drills ride the Practice mode: body classes + button state + persistence
+    T.setMode('practice');
+    ok('P4: body marks practice mode only',
+       doc.body.classList.contains('mode-practice')
+       && !doc.body.classList.contains('mode-ear') && !doc.body.classList.contains('mode-activity')
+       && !doc.body.classList.contains('mode-reference'));
+    const eBtn = nav.querySelector('.modebtn[data-mode="practice"]');
+    ok('P4: practice button active + aria-pressed',
        eBtn.classList.contains('active') && eBtn.getAttribute('aria-pressed') === 'true');
-    ok('P4: state() / persistence carry mode ear',
-       T.state().currentMode === 'ear' &&
-       JSON.parse(win.localStorage.getItem('guitarStudio.v1') || '{}').mode === 'ear');
+    ok('P4: state() / persistence carry mode practice',
+       T.state().currentMode === 'practice' &&
+       JSON.parse(win.localStorage.getItem('guitarStudio.v1') || '{}').mode === 'practice');
 
     // ---- interval drill: ids namespaced interval:*, fixed 12-choice grid ----
     T.resetLearner();
@@ -992,10 +996,14 @@ if (T) {
     // no drill-count literal here on purpose: merging or adding a drill changes the
     // count legitimately, and the markup-vs-registry check below already pins it
     // exactly. This one guards the SHAPE of each registration.
-    ok('registry: every drill is registered with a mode + area + isActive + exit',
+    ok('registry: every drill is registered with an id + area + isActive + exit',
        Array.isArray(R) && R.length > 0 &&
-       R.every(d => d.id && (d.mode === 'practice' || d.mode === 'ear') &&
-                    d.area && typeof d.isActive === 'function' && typeof d.exit === 'function'));
+       R.every(d => d.id && d.area &&
+                    typeof d.isActive === 'function' && typeof d.exit === 'function'));
+
+    // the `mode` field went away with the Ear mode — every drill lives under Practice
+    ok('registry: no drill carries a mode field any more',
+       R.every(d => d.mode === undefined));
 
     ok('registry: drill ids are unique',
        new Set(R.map(d => d.id)).size === R.length);
@@ -1030,20 +1038,20 @@ if (T) {
     ok('registry: leaving Practice exits the drill and restores the home',
        T.getSd() === null && !vis('sd-area') && vis('practice-home'));
 
-    // the ear mode is registered separately and must not be hidden by a practice switch
-    T.setMode('ear');
-    T.startEar('interval');
-    ok('registry: an ear drill hides the ear home', vis('ear-area') && !vis('ear-home'));
+    // the ear drills are ordinary practice drills now: same home, same teardown
     T.setMode('practice');
-    ok('registry: switching to Practice exits the ear drill', T.getEar() === null && vis('ear-home'));
-    ok('registry: switching to Practice shows the practice home', vis('practice-home'));
+    T.startEar('interval');
+    ok('registry: an ear drill hides the shared practice home',
+       vis('ear-area') && !vis('practice-home'));
+    T.setMode('reference');
+    ok('registry: leaving Practice exits the ear drill and restores the home',
+       T.getEar() === null && !vis('ear-area') && vis('practice-home'));
 
-    // activeDrill() reports the running drill, scoped by mode
+    // activeDrill() reports the running drill
+    T.setMode('practice');
     T.startStrum();
     const a = T.activeDrill();
     ok('registry: activeDrill() finds the running drill', !!a && a.id === 'strum');
-    ok('registry: activeDrill(mode) is mode-scoped',
-       !!T.activeDrill('practice') && T.activeDrill('ear') === null);
 
     // refreshDrillsLang is what applyLang now calls — it must repaint, not throw
     let threw = false;
@@ -1068,18 +1076,47 @@ if (T) {
        doc.getElementById('drill-ctx-key').children.length >= 12);
     // Quit was a seventh identical per-drill button; the shell owns it now
     ok('drill ctx: one shared Quit button', !!doc.getElementById('drill-ctx-quit'));
-    ok('drill ctx: no per-drill quit buttons remain in practice',
-       ['cm-quit', 'sp-quit', 'tg-quit', 'cr-quit', 'sd-quit', 'drill-quit']
+    // with Ear folded in, the ear drill drops its own quit too — the strip serves all
+    ok('drill ctx: no per-drill quit buttons remain at all',
+       ['cm-quit', 'sp-quit', 'tg-quit', 'cr-quit', 'sd-quit', 'drill-quit', 'ear-quit']
          .every(id => !doc.getElementById(id)));
-    ok('drill ctx: the ear drill keeps its own quit (its own panel)',
-       !!doc.getElementById('ear-quit'));
     // the shared Quit must end whichever drill is up
     T.setMode('practice');
     T.startTiming();
     doc.getElementById('drill-ctx-quit').click();
-    ok('drill ctx: the shared Quit exits the running drill', T.activeDrill('practice') === null);
+    ok('drill ctx: the shared Quit exits the running drill', T.activeDrill() === null);
     ok('drill ctx: quitting restores the practice home',
        doc.getElementById('practice-home').hidden === false);
+    // ...including an ear drill, which used to carry its own
+    T.setMode('practice');
+    T.startEar('interval');
+    doc.getElementById('drill-ctx-quit').click();
+    ok('drill ctx: the shared Quit exits an ear drill too',
+       T.getEar() === null && doc.getElementById('practice-home').hidden === false);
+
+    /* The key half of the strip is only shown to a drill that declares onKey(). The
+       ear / note-naming / one-minute-changes drills don't re-derive from the key, so
+       parking a key picker in front of them would be a control that adjusts nothing —
+       the same defect the timing-calibration slider was removed for. */
+    const keyShown = () => !doc.getElementById('drill-ctx-key').hidden;
+    T.startTiming();
+    T.applyDrillCtx();
+    ok('drill ctx: a key-dependent drill (timing) shows the key picker', keyShown());
+    T.exitTiming();
+    T.startEar('interval');
+    T.applyDrillCtx();
+    ok('drill ctx: a key-independent drill (ear) hides the key picker', !keyShown());
+    ok('drill ctx: the divider + label hide with it',
+       doc.getElementById('drill-ctx-div').hidden && doc.getElementById('drill-ctx-keylbl').hidden);
+    /* the .hidden property above is necessary but NOT sufficient: #drill-ctx-key is a
+       .group (display:flex), which outranks the UA [hidden]{display:none}, so without
+       an explicit rule the picker stays on screen in a real browser while jsdom
+       happily reports it hidden. Pin the rule itself. */
+    ok('drill ctx: CSS actually hides the key parts (display:flex outranks [hidden])',
+       /#drill-ctx-key\[hidden\][^{]*\{[^}]*display:\s*none/.test(html)
+       && /#drill-ctx-div\[hidden\]/.test(html) && /#drill-ctx-keylbl\[hidden\]/.test(html));
+    T.exitEar();
+    ok('drill ctx: returning to the home hides the key picker', !keyShown());
 
     // drillKeyChanged() must reach the RUNNING drill's onKey — for the over-the-changes
     // drill that means its bars are re-resolved into the new key, which is the behaviour

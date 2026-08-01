@@ -269,32 +269,31 @@ function selectTab(name){
   renderActiveContext();
   saveState();
 }
-// Phase 3a — the mode axis, extended to three modes in Phase 4 (Reference ·
-// Practice · Ear). Orthogonal to selectTab (the reference sub-axis): body classes
-// drive the show/hide CSS, so reference content is untouched. `mode-activity` is
-// set for either activity mode so the "collapse the reference shell" rule stays one
-// list. Leaving an activity mode ends its running drill; playback persists across
-// modes (the transport bar acts as a backing track, like it does across tabs).
+// Phase 3a — the mode axis. Orthogonal to selectTab (the reference sub-axis): body
+// classes drive the show/hide CSS, so reference content is untouched. Phase 4 added
+// a third mode for ear training; it turned out to be a Practice pillar rather than a
+// mode (same home shell, same progress card, same learner model), so it folded back
+// in and the axis is Reference vs Practice again. Leaving Practice ends the running
+// drill; playback persists across modes (the transport bar acts as a backing track,
+// like it does across tabs).
 function setMode(mode){
-  currentMode = (mode==='practice'||mode==='ear') ? mode : 'reference';
+  currentMode = mode==='practice' ? 'practice' : 'reference';
   document.body.classList.toggle('mode-reference', currentMode==='reference');
   document.body.classList.toggle('mode-practice', currentMode==='practice');
-  document.body.classList.toggle('mode-ear', currentMode==='ear');
-  document.body.classList.toggle('mode-activity', currentMode!=='reference');
   document.querySelectorAll('.modebtn').forEach(b=>{
     const on=b.dataset.mode===currentMode; b.classList.toggle('active',on); b.setAttribute('aria-pressed',on?'true':'false');
   });
-  // end the running drills that don't belong to the mode we're entering. Registry-
-  // driven (13-drill-registry.js): every drill self-registers, so this can't go
-  // stale the way the old hand-written list did.
-  exitDrillsExcept(currentMode);
   if(currentMode==='reference'){
+    // leaving Practice ends whatever was running. Registry-driven
+    // (13-drill-registry.js): every drill self-registers, so this can't go stale
+    // the way the old hand-written list did.
+    exitAllDrills();
     applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
   } else {
-    // entering an activity mode with no drill running: show that mode's home view
-    // (a drill starter swaps it for the drill's own area right after)
-    if(!activeDrill(currentMode)) showDrillHome(currentMode);
-    if(currentMode==='practice') renderPractice(); else renderEar();
+    // entering Practice with no drill running: show the home view (a drill starter
+    // swaps it for the drill's own area right after)
+    if(!activeDrill()) showDrillHome();
+    renderPractice();
   }
   updateGlobalPlay();
   saveState();
@@ -390,13 +389,12 @@ function shareFallback(){ try{ location.hash=encodeShareState(); }catch(e){ /* i
    drill for the namespace with the most overdue items; the drills already prefer
    due items, so this just opens the right one. */
 function startReview(ns){
-  if(ns==='note'){ setMode('practice'); startDrill(); }
-  else if(ns==='interval'){ setMode('ear'); startEar('interval'); }
-  else if(ns==='chordq'){ setMode('ear'); startEar('chordq'); }
-  else if(ns==='rhythm'){ setMode('ear'); startEar('rhythm'); }
+  setMode('practice');
+  if(ns==='note') startDrill();
+  else if(ns==='interval'||ns==='chordq'||ns==='rhythm') startEar(ns);
 }
-['practice-progress','ear-progress'].forEach(id=>{ const h=document.getElementById(id);
-  if(h) h.addEventListener('click', e=>{ const b=e.target.closest('[data-review]'); if(b) startReview(b.dataset.review); }); });
+{ const h=document.getElementById('practice-progress');
+  if(h) h.addEventListener('click', e=>{ const b=e.target.closest('[data-review]'); if(b) startReview(b.dataset.review); }); }
 document.getElementById('tb-lefty').onclick=function(){ lefty=!lefty; this.classList.toggle('active',lefty); this.setAttribute('aria-pressed',lefty); renderAllBoards(); renderCircle(); saveState(); };
 /* the metronome / loop / sequencer clocks read beat() live, so the tempo glides
    without restarting — just update the value and the label here. */
@@ -536,7 +534,14 @@ applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
   // Quit was a seventh identical button, one per drill area. The registry already knows
   // which drill is running and how to end it, so the shell owns the button.
   const dq=document.getElementById('drill-ctx-quit');
-  if(dq) dq.onclick=function(){ const d=activeDrill('practice'); if(d && typeof d.exit==='function') d.exit(); }; }
+  if(dq) dq.onclick=function(){ const d=activeDrill(); if(d && typeof d.exit==='function') d.exit(); }; }
+/* Every drill starts from inside #practice-home — a drill card, or the progress
+   card's Review button — so one delegated listener here keeps the shared strip in
+   step with whichever drill just took over, with no per-drill bookkeeping. It
+   bubbles after the starter's own onclick, so the drill's state is already set by
+   the time applyDrillCtx() reads the registry. */
+{ const ph=document.getElementById('practice-home');
+  if(ph) ph.addEventListener('click', ()=>applyDrillCtx()); }
 // Deep link (Phase 9): if the URL hash carries a shared context, apply it over the
 // restored state now that the shell + setters are up, then strip the hash.
 const fromShare = (typeof applyShareHash==='function') && applyShareHash();
@@ -570,7 +575,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     // shareable deep links (Phase 9)
     encodeShareState, applyShareHash, shareURL,
     // drill registry (13): the one list the shell iterates instead of naming drills
-    DRILLS, activeDrill, showDrillHome, exitDrillsExcept, refreshDrillsLang, drillKeyChanged,
+    DRILLS, activeDrill, showDrillHome, exitAllDrills, refreshDrillsLang, drillKeyChanged, applyDrillCtx,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
     renderAllBoards,
     // learner model (spine #3, 3b)

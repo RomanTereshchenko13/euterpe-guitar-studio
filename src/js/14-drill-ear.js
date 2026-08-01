@@ -124,16 +124,17 @@ function startEar(type){
   const cfg=EAR[type]; if(!cfg) return;
   ear={ type, cfg, queue:buildEarQueue(cfg.pool(), cfg.len), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, cur:null, answered:false };
   ear.total=ear.queue.length;
-  const home=document.getElementById('ear-home'), area=document.getElementById('ear-area'),
+  const home=document.getElementById('practice-home'), area=document.getElementById('ear-area'),
         act=document.getElementById('ear-active'), sum=document.getElementById('ear-summary');
   if(home) home.hidden=true; if(area) area.hidden=false; if(act) act.hidden=false; if(sum) sum.hidden=true;
   nextEarPrompt();
 }
 function exitEar(){
   ear=null;
-  const home=document.getElementById('ear-home'), area=document.getElementById('ear-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  if(typeof renderEar==='function') renderEar();
+  const area=document.getElementById('ear-area');
+  if(area) area.hidden=true;
+  showDrillHome();
+  renderPractice();
 }
 function nextEarPrompt(){
   if(!ear.queue.length){ finishEar(); return; }
@@ -162,7 +163,7 @@ function finishEar(){
   const acc=ear.total ? ear.correctPrompts/ear.total : 0;
   recordSession(ear.cfg.sess, Math.round(acc*100));
   saveState();
-  if(typeof renderEar==='function') renderEar();
+  renderPractice();
   renderEarSummary(elapsed, acc);
 }
 
@@ -176,8 +177,8 @@ function earAnswerLabel(){
 
 /* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
 // shared progress readout: the learner model's aggregate stats as chips, or an
-// empty state until a drill writes the first attempt. Used by both the Practice
-// home (#practice-progress) and the Ear home (#ear-progress) — one model (spine #3).
+// empty state until a drill writes the first attempt. One model (spine #3), and
+// since the Ear home folded into the Practice home, one host too.
 function renderProgressInto(hostId){
   const host=document.getElementById(hostId); if(!host) return;
   const s=learnerStats();
@@ -200,7 +201,6 @@ function renderProgressInto(hostId){
   }
   host.innerHTML=html;
 }
-function renderEar(){ renderProgressInto('ear-progress'); }
 function renderEarPrompt(){
   const p=document.getElementById('ear-prompt'); if(p) p.textContent=ear.cfg.prompt();
   const c=document.getElementById('ear-count'); if(c) c.textContent=Math.min(ear.done+1, ear.total)+' / '+ear.total;
@@ -252,16 +252,15 @@ function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPr
 /* drill-card starters + the in-drill controls — wired once at load (guarded so a
    missing panel never throws, mirroring initDrill in 14-drill-notes.js). */
 /* one entry for all three ear drills — they share the `ear` state and one area */
-registerDrill({ id:'ear', mode:'ear', area:'ear-area',
+registerDrill({ id:'ear', area:'ear-area',
                 isActive:()=>!!ear, exit:exitEar, refreshLang:refreshEarLang });
 
 (function initEar(){
-  const home=document.getElementById('ear-home'); if(!home) return;
+  const area=document.getElementById('ear-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('start-interval', ()=>startEar('interval'));
   wire('start-chordq',   ()=>startEar('chordq'));
   wire('start-rhythm',   ()=>startEar('rhythm'));
-  wire('ear-quit',   exitEar);
   wire('ear-replay', earReplay);
   wire('ear-next',   earNext);
   const ch=document.getElementById('ear-choices');

@@ -203,7 +203,11 @@ function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
 function loadState(){ try{
   const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(!s) return false;
   if(s.lang==='uk'||s.lang==='en') lang=s.lang;
-  if(s.mode==='reference'||s.mode==='practice'||s.mode==='ear') currentMode=s.mode;   // mode axis (3a; Ear added in Phase 4) — default reference
+  // mode axis (3a) — default reference. Phase 4's 'ear' mode folded into Practice,
+  // so an older save that pinned it lands on Practice rather than falling back to
+  // Reference: the ear drills are still right there, one group down.
+  if(s.mode==='practice'||s.mode==='ear') currentMode='practice';
+  else if(s.mode==='reference') currentMode='reference';
   if(Number.isInteger(s.tuningIdx)&&TUNINGS[s.tuningIdx]) tuningIdx=s.tuningIdx;
   if(Array.isArray(s.customTuning)&&s.customTuning.length===6&&s.customTuning.every(m=>Number.isInteger(m)&&m>=TUNE_LO&&m<=TUNE_HI)) customTuning=s.customTuning.slice();
   if(Number.isInteger(s.fretRangeIdx)&&FRET_RANGES[s.fretRangeIdx]) fretRangeIdx=s.fretRangeIdx;
@@ -294,7 +298,8 @@ function applyShareHash(){
   const hv=p.get('hv'); if(hv==='chords'||hv==='triads'||hv==='arp'||hv==='identify') setHView(hv);
   const q=parseInt(p.get('q'),10); if(Number.isInteger(q) && QUALITIES[q]){ chQual=q; chVoicing=0; }
   const tab=p.get('t'); if(tab==='harmony'||tab==='scales'||tab==='circle') selectTab(tab);
-  const m=p.get('m'); setMode(m==='practice'||m==='ear'?m:'reference');
+  // 'ear' is an older link's mode; it folded into Practice (see loadState)
+  const m=p.get('m'); setMode(m==='practice'||m==='ear'?'practice':'reference');
   // strip the hash so a reload / later nav isn't re-pinned to the shared state
   try{ history.replaceState(null, '', location.pathname+location.search); }catch(e){ /* ignore */ }
   return true;

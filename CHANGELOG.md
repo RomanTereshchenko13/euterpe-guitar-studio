@@ -11,7 +11,9 @@ _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 - Settings now starts closed and reads as three groups — Instrument, Neck & meter, App — instead of eleven controls in one flat row. The colour-blind palette and note-shape toggles moved in with the app settings, where set-once preferences belong.
 - Strumming patterns and Groove & feel are now one drill, Strumming & feel: pick a pattern AND how it feels — swing, backbeat accent, palm-muting, and an optional drums+bass band. Combinations neither drill could reach before (a swung folk pattern, a palm-muted strum over the band) now just work.
 - Comp the progression and Chord tones over changes are now one drill with a You-play switch: Chords (comp it, with shapes in Now/Next) or Chord tones (aim at the tones on the neck, with Position and Target). Both practice cards still open it, each in the mode it teaches, and your recorded progress for either is unchanged.
-- Every drill now shares one Key picker and one Exit button at the top of Practice instead of carrying its own copy.
+- Every drill now shares one Key picker and one Exit button at the top of Practice instead of carrying its own copy. The Key picker also only appears for drills that actually use it — ear training and note naming no longer show you a control that changes nothing.
+- Ear training is no longer a separate mode: its three drills moved into Practice as an Ear group, alongside Fretboard, Timing, Rhythm and Lead. One drill list, one progress card, one Exit — it was always the same learner model behind both screens. Everything you had recorded still counts, and an old link or saved session that opened Ear now opens Practice.
+- Much smaller download: the page no longer ships the developer comments written for whoever edits the source. Together with the earlier trims the page is about 36% smaller than last release, and roughly a third smaller over the wire.
 
 ## v2.10.0 — 2026-07-12
 

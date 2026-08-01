@@ -153,32 +153,37 @@
   .modebtn.active { background: var(--accent); color: #07203a; border-color: var(--accent); }
   .modebtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  /* The Practice + Ear panels are siblings of the reference panels inside .main,
-     hidden until their mode is active — kept OFF the .panel/.panel.active machinery
-     so the two navigation axes never fight. */
-  .practice-panel, .ear-panel { display: none; animation: fade 0.25s ease; }
+  /* The Practice panel is a sibling of the reference panels inside .main, hidden
+     until its mode is active — kept OFF the .panel/.panel.active machinery so the
+     two navigation axes never fight. */
+  .practice-panel { display: none; animation: fade 0.25s ease; }
   body.mode-practice .practice-panel { display: block; }
   /* The drills' one shared key row sits between the practice home and the drill areas.
      It belongs to whichever drill is running, so it's visible exactly when the home is
      NOT — derived from the home's own [hidden] rather than managed by every drill's
      start/exit, which is what the six duplicated per-drill key rows used to cost. */
   #practice-home:not([hidden]) ~ #drill-ctx { display: none; }
-  body.mode-ear .ear-panel { display: block; }
-  /* In any activity mode (Practice / Ear) collapse the reference shell: hide the
-     active reference panel, the context bar, the shared board (+ meta), harmony
-     extras, suggester, shapes card and the reference sub-tab strip. Driven by a
-     `mode-activity` body class (set whenever the mode isn't Reference) so the rule
-     stays one list across both activity modes. Reference is the untouched default. */
-  body.mode-activity .panel.active,
-  body.mode-activity #context-bar,
-  body.mode-activity #board-region,
-  body.mode-activity .board-meta,
-  body.mode-activity #harmony-extras,
-  body.mode-activity .aside,
-  body.mode-activity #shapes-card,
-  body.mode-activity #tabs { display: none; }
+  /* The key half of that row is hidden for drills that don't declare onKey (see
+     applyDrillCtx). #drill-ctx-key is a .group, whose display:flex outranks the UA
+     [hidden]{display:none} — the same trap the toolbar groups hit below — so the
+     three parts need an explicit rule or the picker stays on screen. */
+  #drill-ctx-div[hidden], #drill-ctx-keylbl[hidden], #drill-ctx-key[hidden] { display: none; }
+  /* In Practice, collapse the reference shell: hide the active reference panel, the
+     context bar, the shared board (+ meta), harmony extras, suggester, shapes card
+     and the reference sub-tab strip. This used to key off a `mode-activity` class
+     that existed only to cover Practice AND Ear with one list; with Ear folded into
+     Practice there is one activity mode, so it keys off that. Reference is the
+     untouched default. */
+  body.mode-practice .panel.active,
+  body.mode-practice #context-bar,
+  body.mode-practice #board-region,
+  body.mode-practice .board-meta,
+  body.mode-practice #harmony-extras,
+  body.mode-practice .aside,
+  body.mode-practice #shapes-card,
+  body.mode-practice #tabs { display: none; }
   /* with the board + suggester gone, let .main use the full width */
-  body.mode-activity .layout, body.mode-activity .layout.no-aside {
+  body.mode-practice .layout, body.mode-practice .layout.no-aside {
     grid-template-columns: minmax(0,1fr); grid-template-areas: "main";
   }
   .practice-soon { color: var(--text-dim); font-size: 15px; max-width: 620px; }
@@ -313,7 +318,6 @@
   .sd-dot.on { opacity: 1; background: var(--root); }
 
   /* ---- comp-the-progression (Phase 5c) ---- */
-  .btn.co-prog { font-size: 12px; }
   .co-stage { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 14px 0 6px; flex-wrap: wrap; }
   .co-slot { text-align: center; }
   .co-lab { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin-bottom: 6px; }
