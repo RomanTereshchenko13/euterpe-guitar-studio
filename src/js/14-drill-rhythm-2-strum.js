@@ -91,8 +91,9 @@ function spStop(){
   if(spDrill.clock){ if(typeof removeClock==='function') removeClock(spDrill.clock); spDrill.clock=null; }
   if(typeof clearVisualQ==='function') clearVisualQ();
   spDrill.playing=false; spDrill.slot=-1;
-  spScore.end();
-  if(spDrill.bars>=1){ recordSession('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars); saveState(); if(typeof renderPractice==='function') renderPractice(); }
+  const sc=spScore.end();
+  // bars played stays the session score; the scored tier's timing error rides along (B1)
+  if(spDrill.bars>=1){ recordSession('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars, undefined, scoredErr(sc)); saveState(); if(typeof renderPractice==='function') renderPractice(); }
   renderStrum();
 }
 /* a strum that can be palm-muted (short, chunky) or open (ringing) — pluckAt lets us set
@@ -176,7 +177,9 @@ function spHighlightSlot(slot){
 // re-localize an in-flight strum trainer on a language switch (called from applyLang)
 function refreshStrumLang(){ if(spDrill){ renderStrum(); spScore.refreshLang(); } }
 
-registerDrill({ id:'strum', area:'sp-area',
+registerDrill({ id:'strum', area:'sp-area', tempo:true,   // the 8th-note clock is beat()-driven
+                tracks:[{ id:'strum', kind:'perf', sess:'strum', label:'drill_strum',
+                          better:'high', unit:'bars', start:startStrum }],
                 isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang,
                 // the loop reads currentChordVoicing() live, so a key change only needs a repaint
                 onKey:()=>{ if(spDrill) renderStrum(); } });

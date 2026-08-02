@@ -77,18 +77,30 @@ document.getElementById('sv-scale').onclick=()=>setScView('scale');
 document.getElementById('sv-notes').onclick=()=>setScView('notes');
 
 function applyContextBar(){
-  document.getElementById('context-bar').hidden = !(currentTab==='harmony' || currentTab==='scales');
-  // only the active tab's view switch lives in the shared bar (1e)
-  const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
-  const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
+  // Phase 10/A1 — the bar shows wherever any of its groups still has a job. It used
+  // to be hidden outright on Circle, which took the ROOT PICKER with it: the app's
+  // single most important piece of state (spine #1) simply had no control on one of
+  // its three reference tabs, and you set the key by knowing to click the wheel. The
+  // groups already hide themselves individually, so the bar only has to stand down
+  // when they all have.
+  // A2 moved the view switch out of here entirely — see applyBoardRegion.
+  const key = currentTab==='harmony' || currentTab==='scales' || currentTab==='circle';
+  document.getElementById('context-bar').hidden = !key;
   // the Names/Intervals display toggle does nothing in the Notes reference (it always
-  // shows note names), so hide it there (#4) to keep the bar honest
-  const cd=document.querySelector('.ctx-display'); if(cd) cd.hidden = (currentTab==='scales' && scView==='notes');
+  // shows note names) and there are no fretboard dots to label on Circle, so hide it
+  // in both (#4) to keep the bar honest
+  const cd=document.querySelector('.ctx-display');
+  if(cd) cd.hidden = currentTab==='circle' || (currentTab==='scales' && scView==='notes');
 }
 function applyBoardRegion(){
   const show = (currentTab==='harmony' || currentTab==='scales');
   document.getElementById('board-region').hidden = !show;
   const bm=document.getElementById('board-meta'); if(bm) bm.hidden = !show;   // legend+hint follow the board
+  // A2: the view switch is a lens ON the board, so it lives in #board-region and only
+  // the active subject's group shows. It hides with the board for free — one fewer
+  // thing to remember on a tab that has no neck.
+  const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
+  const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
 }
 /* voicing cards + sequencer (now below the board) belong only to Harmony's
    chord-tones view; hide them everywhere else so the board stays the last thing. */
@@ -259,8 +271,8 @@ function selectTab(name){
   // Playback (loop / progression) deliberately persists across tabs — it acts
   // as a backing track. The global transport chip lets you stop it from anywhere.
   currentTab=name;
-  document.querySelectorAll('.tab').forEach(x=>{ const on=x.dataset.panel===name; x.classList.toggle('active',on); x.setAttribute('aria-selected',on); x.tabIndex=on?0:-1; });
   document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active', x.id==='panel-'+name));
+  if(typeof applyNav==='function') applyNav();   // A2: the one nav follows the state, however it changed
   applyAsideState();
   applyContextBar();
   applyBoardRegion();
@@ -274,15 +286,20 @@ function selectTab(name){
 // a third mode for ear training; it turned out to be a Practice pillar rather than a
 // mode (same home shell, same progress card, same learner model), so it folded back
 // in and the axis is Reference vs Practice again. Leaving Practice ends the running
-// drill; playback persists across modes (the transport bar acts as a backing track,
-// like it does across tabs).
+// drill.
+//
+// Phase 10/A1 — playback no longer persists across MODES. It still persists across
+// tabs, where it makes sense (same subject, same board, the transport genuinely acts
+// as a backing track). A mode switch is different: a drill brings its own click, its
+// own bed and its own scheduler, so a surviving reference loop just strummed the
+// reference chord over the top of it, on a clock the drill doesn't control — and its
+// controls are hidden in Practice, so it couldn't even be stopped. Reference owns the
+// transport, Practice owns the drill.
 function setMode(mode){
   currentMode = mode==='practice' ? 'practice' : 'reference';
   document.body.classList.toggle('mode-reference', currentMode==='reference');
   document.body.classList.toggle('mode-practice', currentMode==='practice');
-  document.querySelectorAll('.modebtn').forEach(b=>{
-    const on=b.dataset.mode===currentMode; b.classList.toggle('active',on); b.setAttribute('aria-pressed',on?'true':'false');
-  });
+  if(typeof applyNav==='function') applyNav();   // A2: one strip, painted from the live state
   if(currentMode==='reference'){
     // leaving Practice ends whatever was running. Registry-driven
     // (13-drill-registry.js): every drill self-registers, so this can't go stale
@@ -290,6 +307,7 @@ function setMode(mode){
     exitAllDrills();
     applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
   } else {
+    stopReferenceTransport();
     // entering Practice with no drill running: show the home view (a drill starter
     // swaps it for the drill's own area right after)
     if(!activeDrill()) showDrillHome();
@@ -298,30 +316,53 @@ function setMode(mode){
   updateGlobalPlay();
   saveState();
 }
-(function initTabs(){
-  const tablist=document.getElementById('tabs'); tablist.setAttribute('role','tablist');
-  document.querySelectorAll('.tab').forEach(tb=>{ tb.setAttribute('role','tab'); tb.id='tab-'+tb.dataset.panel; tb.setAttribute('aria-controls','panel-'+tb.dataset.panel); const on=tb.classList.contains('active'); tb.setAttribute('aria-selected',on); tb.tabIndex=on?0:-1; });
-  document.querySelectorAll('.panel').forEach(p=>{ p.setAttribute('role','tabpanel'); p.setAttribute('aria-labelledby','tab-'+p.id.replace('panel-','')); });
-  tablist.addEventListener('keydown',e=>{
-    if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft') return;
-    const tabs=[...document.querySelectorAll('.tab')], cur=tabs.findIndex(x=>x.classList.contains('active'));
-    const nxt=tabs[(cur+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];
-    selectTab(nxt.dataset.panel); nxt.focus(); e.preventDefault();
+/* One navigation surface (Phase 10/A2). Four destinations, four panels: three
+   reference subjects and Practice. `navTo` is the only entry point — it sets the mode
+   the destination belongs to and, for a reference destination, the tab. Practice's
+   panel is a real sibling section (#panel-practice), so all four are genuine tabpanels
+   and the tablist semantics are honest rather than a shape forced onto a mode switch. */
+function navTo(panel){
+  if(panel==='practice'){ setMode('practice'); }
+  else { if(currentMode!=='reference') setMode('reference'); selectTab(panel); }
+  applyNav();
+}
+// paint the strip from the live state — called by setMode and selectTab, so the nav
+// follows a keyboard shortcut, a seam jump or a restored share link, not just a click
+function applyNav(){
+  const cur = currentMode==='practice' ? 'practice' : currentTab;
+  document.querySelectorAll('.navbtn').forEach(b=>{
+    const on = b.dataset.panel===cur;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on?'true':'false');
+    b.tabIndex = on?0:-1;
   });
+}
+(function initNav(){
+  const nav=document.getElementById('mainnav'); if(!nav) return;
+  nav.setAttribute('role','tablist');
+  document.querySelectorAll('.navbtn').forEach(b=>{
+    b.setAttribute('role','tab'); b.id='tab-'+b.dataset.panel;
+    b.setAttribute('aria-controls','panel-'+b.dataset.panel);
+  });
+  document.querySelectorAll('.panel, .practice-panel').forEach(p=>{
+    p.setAttribute('role','tabpanel'); p.setAttribute('aria-labelledby','tab-'+p.id.replace('panel-',''));
+  });
+  nav.addEventListener('keydown',e=>{
+    if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft') return;
+    const btns=[...document.querySelectorAll('.navbtn')], cur=btns.findIndex(x=>x.classList.contains('active'));
+    const nxt=btns[(cur+(e.key==='ArrowRight'?1:btns.length-1))%btns.length];
+    navTo(nxt.dataset.panel); nxt.focus(); e.preventDefault();
+  });
+  nav.addEventListener('click',e=>{
+    const b=e.target.closest('.navbtn'); if(!b) return;
+    navTo(b.dataset.panel);
+  });
+  applyNav();
 })();
-document.getElementById('tabs').addEventListener('click',e=>{
-  const tb=e.target.closest('.tab'); if(!tb) return;
-  selectTab(tb.dataset.panel);
-});
-document.getElementById('modenav').addEventListener('click',e=>{
-  const b=e.target.closest('.modebtn'); if(!b) return;
-  setMode(b.dataset.mode);
-});
 // Practice: start the note-naming drill from its card (3c)
 { const s=document.getElementById('start-notes'); if(s) s.onclick=startDrill; }
 // Seam (spine #2): jump from the reference Notes view into the drill on the same neck
 { const d=document.getElementById('nt-drill'); if(d) d.onclick=function(){ setMode('practice'); startDrill(); }; }
-document.getElementById('tabs').addEventListener('scroll', syncTabsScroll, {passive:true});
 document.getElementById('lang-switch').addEventListener('click',e=>{
   const b=e.target.closest('.langbtn'); if(!b||b.dataset.lang===lang) return;
   lang=b.dataset.lang; applyLang(); saveState();
@@ -386,20 +427,29 @@ function shareFallback(){ try{ location.hash=encodeShareState(); }catch(e){ /* i
   }; }
 
 /* ---- review routing (spine #3): the progress card's Review button drops into the
-   drill for the namespace with the most overdue items; the drills already prefer
-   due items, so this just opens the right one. */
-function startReview(ns){
+   track the queue named; the drills already prefer due items, so this just opens the
+   right one.
+
+   Phase 10/B1 — this was a hand-written `if(ns==='note') … else if(ns==='interval'
+   …)` that covered four of the nine tracks, the second of the three lists that
+   encoded the same knowledge incompletely. It now goes through the registry's own
+   `start`, so a track is routable the moment it is declared. */
+function startReview(track){
   setMode('practice');
-  if(ns==='note') startDrill();
-  else if(ns==='interval'||ns==='chordq'||ns==='rhythm') startEar(ns);
+  startTrack(track);
 }
 { const h=document.getElementById('practice-progress');
   if(h) h.addEventListener('click', e=>{ const b=e.target.closest('[data-review]'); if(b) startReview(b.dataset.review); }); }
 document.getElementById('tb-lefty').onclick=function(){ lefty=!lefty; this.classList.toggle('active',lefty); this.setAttribute('aria-pressed',lefty); renderAllBoards(); renderCircle(); saveState(); };
 /* the metronome / loop / sequencer clocks read beat() live, so the tempo glides
    without restarting — just update the value and the label here. */
-document.getElementById('tb-tempo').oninput=function(){ tempo=+this.value; document.getElementById('tb-bpm').textContent=tempo+' BPM'; };
+document.getElementById('tb-tempo').oninput=function(){ setTempo(+this.value); };
 document.getElementById('tb-tempo').onchange=function(){ saveState(); };
+/* The same tempo, stepped from the drill strip (A1). Both controls go through the one
+   setter, so neither has to know the other exists. */
+{ const step=d=>{ setTempo(tempo+d); saveState(); };
+  const sl=document.getElementById('drill-ctx-slower'); if(sl) sl.onclick=()=>step(-5);
+  const fa=document.getElementById('drill-ctx-faster'); if(fa) fa.onclick=()=>step(5); }
 document.getElementById('tb-metro').onclick=metroToggle;
 document.getElementById('tb-bass').onclick=bassToggle;
 document.getElementById('tb-drums').onclick=drumsToggle;
@@ -468,8 +518,14 @@ document.addEventListener('keydown',e=>{
   if(!document.getElementById('cl-overlay').hidden || !document.getElementById('kbd-overlay').hidden) return;
   { const mo=document.getElementById('mic-overlay'); if(mo && !mo.hidden) return; }
   const k=e.key;
+  // Phase 10/A1 — Space / L / M drive the REFERENCE transport, which is scoped out of
+  // Practice. Without this guard they'd still reach it from a drill screen: an
+  // invisible metronome beating against the drill's own click, with no control on
+  // screen to stop it. The shortcut follows the control it stands for.
+  const refTransport = currentMode!=='practice';
   if(k===' '||k==='Spacebar'){
     if(tg && tg.closest && tg.closest('button,a,[role="button"],[tabindex]')) return;   // let the focused control keep Space
+    if(!refTransport) return;
     e.preventDefault();
     if(typeof seqClock!=='undefined' && seqClock) seqStop();
     else if(typeof loopClock!=='undefined' && loopClock) stopLoop();
@@ -477,14 +533,17 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(k==='?'){ e.preventDefault(); openKbd(); return; }
-  if(k==='1'){ setMode('reference'); selectTab('harmony'); return; }   // 1/2/3 also exit Practice
-  if(k==='2'){ setMode('reference'); selectTab('scales'); return; }
-  if(k==='3'){ setMode('reference'); selectTab('circle'); return; }
+  // A2: the number keys are the nav, in nav order — so 4 is Practice, which the
+  // shortcuts had no key for while it was a separate axis
+  if(k==='1'){ navTo('harmony'); return; }
+  if(k==='2'){ navTo('scales'); return; }
+  if(k==='3'){ navTo('circle'); return; }
+  if(k==='4'){ navTo('practice'); return; }
   if(k==='['){ transposeKey(-1); return; }
   if(k===']'){ transposeKey(1); return; }
   const lk = k.length===1 ? k.toLowerCase() : '';
-  if(lk==='l'){ const lp=document.getElementById('g-loop'); if(lp && !lp.hidden && !lp.disabled) loopToggle(); return; }
-  if(lk==='m'){ const mb=document.getElementById('tb-metro'); if(mb && !mb.disabled) metroToggle(); return; }
+  if(lk==='l'){ const lp=document.getElementById('g-loop'); if(refTransport && lp && !lp.hidden && !lp.disabled) loopToggle(); return; }
+  if(lk==='m'){ const mb=document.getElementById('tb-metro'); if(refTransport && mb && !mb.disabled) metroToggle(); return; }
   if(lk && NOTE_KEY[lk]!==undefined){ const pc=NOTE_KEY[lk]; setKey(pc, ROOTS[pc]); return; }
 });
 
@@ -520,7 +579,6 @@ applyTuning();
 applyLang();
 selectTab(currentTab);
 setMode(currentMode);   // Phase 3a: apply the restored mode axis after the reference shell is up
-syncTabsScroll();
 markScrollables();
 // re-measure swipe-group overflow when the viewport changes (rotate / resize), and once
 // the webfont has loaded — button widths shift on the font swap, so a measure taken with
@@ -579,11 +637,16 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     encodeShareState, applyShareHash, shareURL,
     // drill registry (13): the one list the shell iterates instead of naming drills
     DRILLS, activeDrill, showDrillHome, exitAllDrills, refreshDrillsLang, drillKeyChanged, applyDrillCtx,
+    // one practice model (Phase 10/B1)
+    drillTracks, trackById, trackBySess, trackByItems, sessNs, startTrack, learnerTrend, learnerBest, scoredErr,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
+    // one function, one home (Phase 10/A1)
+    setTempo, getTempo:()=>tempo, stopReferenceTransport, transportActive, applyContextBar, updateGlobalPlay,
     renderAllBoards,
     // learner model (spine #3, 3b)
     recordAttempt, dueItems, recordSession, learnerStats, srsInterval, normalizeLearner,
     getLearner:()=>learner, resetLearner:()=>{ learner=newLearner(); }, LEARNER_V,
+    setLearner:(l)=>{ learner=l; }, SESS_PER_ID, SESS_MAX, PERF_STALE_DAYS,
     // note-naming drill (3c)
     startDrill, drillAnswer, drillTargetsFor, exitDrill, DRILL_LEN, getDrill:()=>drill,
     // ear-training drills (Phase 4)

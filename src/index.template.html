@@ -50,18 +50,23 @@
            Share → Add to Home Screen instead). -->
       <button class="install-btn" id="pwa-install" data-i18n="pwa_install" hidden>Встановити</button>
     </div>
-    <!-- Mode axis (Phase 3a): the primary Reference · Practice switch — a second
-         navigation axis ABOVE the reference sub-tabs (Harmony/Scales/Circle nest
-         inside Reference). Desktop renders it as an inline strip here in the header;
-         on a phone CSS pins it as a fixed bottom bar in the thumb zone. -->
-    <nav class="modenav" id="modenav" aria-label="Mode">
-      <button class="modebtn active" data-mode="reference" aria-pressed="true" data-i18n="mode_reference">Довідник</button>
-      <button class="modebtn" data-mode="practice" aria-pressed="false" data-i18n="mode_practice">Практика</button>
-    </nav>
-    <nav class="tabs" id="tabs">
-      <button class="tab active" data-panel="harmony" data-i18n="tab_harmony">Акорди / тріади</button>
-      <button class="tab" data-panel="scales" data-i18n="tab_scales">Гами / моди</button>
-      <button class="tab" data-panel="circle" data-i18n="tab_circle">Коло квінт</button>
+    <!-- ONE navigation surface (Phase 10/A2). This was two strips stacked on top of
+         each other — a mode pill row (Reference · Practice) above a tab underline row
+         (Harmony · Scales · Circle) — plus a third, the view switch, down in the
+         context bar. Three visual languages in three places, all answering "what am I
+         looking at". They are one question with four answers, so they are now one
+         control with four buttons: the three reference subjects and Practice.
+         The MODE AXIS SURVIVES IN CODE — setMode still drives body.mode-practice and
+         the reference/practice split is still orthogonal to the tab — it just stops
+         being a second thing to look at. Each button carries `data-panel`, and
+         Practice additionally `data-mode`, so the nav needs no special case.
+         On a phone CSS pins this as a fixed bottom bar in the thumb zone (which the
+         2-item mode nav already was); it is now a conventional 4-item bottom nav. -->
+    <nav class="mainnav" id="mainnav" aria-label="Sections">
+      <button class="navbtn active" data-panel="harmony" data-i18n="tab_harmony">Акорди</button>
+      <button class="navbtn" data-panel="scales" data-i18n="tab_scales">Гами</button>
+      <button class="navbtn" data-panel="circle" data-i18n="tab_circle">Коло квінт</button>
+      <button class="navbtn" data-panel="practice" data-mode="practice" data-i18n="mode_practice">Практика</button>
     </nav>
     <!-- Lean transport bar: the primary verbs (Listen / Loop) + Tempo stay visible;
          the studio extras (tuning/frets/capo and the metronome+backing band) tuck
@@ -159,6 +164,16 @@
       <div class="tb-cluster">
         <span class="tbc-label" data-i18n="tbc_app">Застосунок</span>
         <div class="tbc-items">
+          <!-- Master volume (Phase 10/A1). It used to live inside the Backing panel,
+               which made an app-level output control read as a property of the backing
+               band — and put it out of reach in Practice, where the whole Backing panel
+               is a Reference tool. It scales everything the app makes, so it belongs
+               here with the other set-and-forget app settings. -->
+          <div class="tb-group">
+            <span class="tb-label" data-i18n="tb_volume">Гучність</span>
+            <input type="range" id="tb-vol" min="0" max="100" step="1" value="100" aria-label="Volume">
+            <span class="bpm-val" id="tb-vol-val">100%</span>
+          </div>
           <!-- Accessibility (Phase 9 feel pass): the function colours carry meaning by
                hue alone, so offer a colour-blind-safe palette + distinct per-function
                dot shapes. Both are body-class toggles (applyA11y) and persisted — set
@@ -176,11 +191,6 @@
          see backing is running without expanding the panel. -->
     <div class="toolbar collapsed" id="backing-panel">
       <div class="tb-group">
-        <span class="tb-label" data-i18n="tb_volume">Гучність</span>
-        <input type="range" id="tb-vol" min="0" max="100" step="1" value="100" aria-label="Volume">
-        <span class="bpm-val" id="tb-vol-val">100%</span>
-      </div>
-      <div class="tb-group">
         <span class="tb-label" data-i18n="tb_backing">Супровід</span>
         <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
         <button class="btn band" id="tb-bass" aria-pressed="false"></button>
@@ -192,29 +202,17 @@
 
 <main class="wrap">
 <div class="layout">
-<div class="main">
 
-  <!-- shared control header (1e): View · Root · Display on one bar. The per-tab
-       view switch was folded up out of each panel so Harmony / Scales no longer
-       carry a separate ВИД row — fewer control layers before the board. Only the
-       active tab's view group is shown (toggled in applyContextBar). -->
+  <!-- shared control header (1e): Root · Display on one bar. The per-tab view switch
+       was folded up out of each panel (and in Phase 10/A2 down onto the board itself,
+       as a lens) so Harmony / Scales carry no separate ВИД row — fewer control layers
+       before the board.
+       A direct child of .layout, NOT of .main, since Phase 10/A3: it is the one band
+       that has to stay ABOVE the neck (it answers "in what key", which the neck is an
+       answer to), while everything else in .main — the view's own controls and its
+       info readout — moved BELOW it. Being its own grid item is what lets the area
+       maps order those three independently on each shape. -->
   <div class="context-bar" id="context-bar">
-    <div class="ctx-group ctx-view" id="ctx-view-harmony">
-      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
-      <div class="group">
-        <button class="btn active" id="hv-chords" data-i18n="view_chords">Тони акорду</button>
-        <button class="btn" id="hv-triads" data-i18n="view_triads">Форми тріад</button>
-        <button class="btn" id="hv-arp" data-i18n="view_arp">Арпеджіо</button>
-        <button class="btn" id="hv-identify" data-i18n="view_identify">Розпізнати</button>
-      </div>
-    </div>
-    <div class="ctx-group ctx-view" id="ctx-view-scales" hidden>
-      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
-      <div class="group">
-        <button class="btn active" id="sv-scale" data-i18n="view_scale">Гама</button>
-        <button class="btn" id="sv-notes" data-i18n="view_notes">Ноти</button>
-      </div>
-    </div>
     <div class="ctx-group"><span class="ctrl-label" data-i18n="lbl_root">Тоніка</span><div class="group" id="g-roots"></div></div>
     <div class="ctx-group ctx-display">
       <span class="ctrl-label" data-i18n="lbl_display">Показ</span>
@@ -222,6 +220,47 @@
       <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
     </div>
   </div>
+
+<!-- One shared fretboard (1b): every board-bearing mode (chord tones, triads,
+     scale, notes) renders into this single board; the legend + hint switch with
+     the active mode. Hidden on the Circle tab. A direct child of .layout (not
+     .main) so the grid can slot the suggester between it and the chord reference
+     on a phone (1e).
+     BOARD-FIRST (Phase 10/A3): it sits here, BEFORE .main, in the source too — not
+     only in the area maps. The grid alone would have put the neck above controls that
+     still came first in the DOM, so a keyboard or screen-reader user would meet the
+     chord picker before the neck it changes and the lens after it. Source order is the
+     focus order; moving the markup is what keeps the two telling the same story. -->
+<!-- The view switch, as a LENS ON THE BOARD (Phase 10/A2). It used to be a third
+     navigation strip up in the header's context bar, which is where you look to
+     answer "where am I", not "how am I reading this neck". Phase 1b already made it
+     a lens underneath — one board with four renderers — and the UI never followed.
+     It now sits on the board it changes, inside #board-region so it moves, hides and
+     sticks with the neck instead of being managed separately (applyBoardRegion). -->
+<div class="board-region" id="board-region">
+  <div class="board-lens" id="board-lens">
+    <div class="lens-group" id="ctx-view-harmony">
+      <button class="btn active" id="hv-chords" data-i18n="view_chords">Тони акорду</button>
+      <button class="btn" id="hv-triads" data-i18n="view_triads">Форми тріад</button>
+      <button class="btn" id="hv-arp" data-i18n="view_arp">Арпеджіо</button>
+      <button class="btn" id="hv-identify" data-i18n="view_identify">Розпізнати</button>
+    </div>
+    <div class="lens-group" id="ctx-view-scales" hidden>
+      <button class="btn active" id="sv-scale" data-i18n="view_scale">Гама</button>
+      <button class="btn" id="sv-notes" data-i18n="view_notes">Ноти</button>
+    </div>
+  </div>
+  <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
+</div>
+<!-- Board legend + hint sit in their own row below the neck, OUTSIDE #board-region,
+     so the sticky-on-mobile board pins the neck only (these scroll away). Toggled
+     with the board by applyBoardRegion(). -->
+<div class="board-meta" id="board-meta">
+  <div class="legend" id="legend"></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<div class="main">
 
   <section class="panel active" id="panel-harmony">
     <div class="panel-head">
@@ -338,6 +377,13 @@
     <!-- Practice home: the drill picker + the progress readout. Swapped out for the
          active drill (#drill-area) while a session runs. -->
     <div id="practice-home">
+      <!-- The drill picker (left) and the progress card (right) are two columns on a
+           desktop viewport (Phase 10/A3) — hence the wrapper: it is what the progress
+           card sits BESIDE. Ten cards in one stretched column pushed "what should I
+           practise next?" ~1700px down the page, which is the one question the home
+           screen exists to answer. Below 940px the wrapper is inert and the card falls
+           back under the lists, in source order. -->
+      <div class="ph-drills">
       <p class="practice-soon" data-i18n="practice_intro">Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.</p>
       <!-- Drills grouped by pillar (Phase 5 adds the Rhythm group): Fretboard
            knowledge vs playing THE changes. -->
@@ -414,6 +460,7 @@
           </button></li>
         </ul>
       </div>
+      </div>
       <!-- Progress readout (3b): the learner model's aggregate stats; renderPractice()
            fills #practice-progress, empty until the drill writes the first attempt. -->
       <div class="practice-progress-card">
@@ -436,6 +483,20 @@
       <div class="divider" id="drill-ctx-div" hidden></div>
       <span class="ctrl-label" id="drill-ctx-keylbl" data-i18n="dr_key" hidden>Тональність</span>
       <div class="group root-row" id="drill-ctx-key" hidden></div>
+      <!-- Tempo, scoped (Phase 10/A1). FOUR drills run on the shared scheduler, and all
+           four used to reach for the header slider — which the condensing header folds
+           away exactly when a run starts. So the timing drill grew a private −/BPM/+ (two
+           tempo controls on one screen, two visual languages) and the other three got
+           nothing. One control, in the shell, shown for the drills that declare
+           `tempo:true`; applyDrillCtx() derives it from the registry the same way it
+           derives the key half. -->
+      <div class="divider" id="drill-ctx-tdiv" hidden></div>
+      <span class="ctrl-label" id="drill-ctx-tlbl" data-i18n="tb_tempo" hidden>Темп</span>
+      <div class="group tempo-group" id="drill-ctx-tempo" hidden>
+        <button type="button" class="btn" id="drill-ctx-slower" aria-label="−5 BPM">&#8722;</button>
+        <span class="tempo-bpm" id="drill-ctx-bpm"></span>
+        <button type="button" class="btn" id="drill-ctx-faster" aria-label="+5 BPM">&#43;</button>
+      </div>
     </div>
 
     <!-- Chord-change fluency / "one-minute changes" (Phase 5a): a coach drill with a
@@ -599,14 +660,10 @@
       </div>
       <div class="row"><span class="ctrl-label" data-i18n="sd_subdiv">Поділ</span><div class="group" id="sd-subs"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="sd-pos"></div></div>
+      <!-- Tempo used to sit here as a private −/BPM/+ copy. It moved to the shared
+           #drill-ctx strip in Phase 10/A1 — one home, and now the three other
+           tempo-driven drills reach it too. -->
       <div class="row">
-        <span class="ctrl-label" data-i18n="sd_tempo">Темп</span>
-        <div class="group sd-tempo">
-          <button type="button" class="btn" id="sd-slower" aria-label="−5 BPM">&#8722;</button>
-          <span class="sd-bpm" id="sd-bpm"></span>
-          <button type="button" class="btn" id="sd-faster" aria-label="+5 BPM">&#43;</button>
-        </div>
-        <div class="divider"></div>
         <button type="button" class="btn" id="sd-notes" aria-pressed="true"></button>
         <!-- Phase 8/F1: flips this drill from the screen-only coach tier to a scored
              one. 13-scored.js hides it wherever onset detection can't run, so
@@ -660,21 +717,6 @@
 
 </div>
 
-<!-- One shared fretboard (1b): every board-bearing mode (chord tones, triads,
-     scale, notes) renders into this single board; the legend + hint switch with
-     the active mode. Hidden on the Circle tab. A direct child of .layout (not
-     .main) so the grid can slot the suggester between it and the chord reference
-     on a phone (1e). -->
-<div class="board-region" id="board-region">
-  <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
-</div>
-<!-- Board legend + hint sit in their own row below the neck, OUTSIDE #board-region,
-     so the sticky-on-mobile board pins the neck only (these scroll away). Toggled
-     with the board by applyBoardRegion(). -->
-<div class="board-meta" id="board-meta">
-  <div class="legend" id="legend"></div>
-  <div class="hint" id="hint"></div>
-</div>
 
 <!-- Progression sequencer (1e): a full-width row below the board. Shown only in
      Harmony → Chord-tones; toggled by applyHarmonyExtras(). The chord-shape cards
@@ -774,7 +816,7 @@
       <div class="kbd-row"><span class="kbd-keys"><kbd>Space</kbd></span><span data-i18n="kbd_play">Прослухати / Стоп</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>L</kbd></span><span data-i18n="kbd_loop">Луп — увімк/вимк</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>M</kbd></span><span data-i18n="kbd_metro">Метроном — увімк/вимк</span></div>
-      <div class="kbd-row"><span class="kbd-keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><span data-i18n="kbd_tabs">Перемкнути вкладки</span></div>
+      <div class="kbd-row"><span class="kbd-keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd></span><span data-i18n="kbd_tabs">Перемкнути розділи</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>A</kbd>–<kbd>G</kbd></span><span data-i18n="kbd_root">Задати тоніку</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>[</kbd><kbd>]</kbd></span><span data-i18n="kbd_transpose">Транспонувати на півтон</span></div>
     </div>

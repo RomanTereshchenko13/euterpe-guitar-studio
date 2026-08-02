@@ -40,12 +40,13 @@ function cmChord(spec){ const [pc,qi]=spec, q=QUALITIES[qi]; return { pc, qi, q,
 function cmPairName(i){ const p=CM_PAIRS[i]; return cmChord(p[0]).lbl+' ↔ '+cmChord(p[1]).lbl; }
 function cmPairId(i){ const p=CM_PAIRS[i]; return 'changes:'+cmChord(p[0]).lbl+'-'+cmChord(p[1]).lbl; }   // stable session id
 
-/* Personal best (max changes-per-minute) for a pair, derived from the sessions ring
-   buffer so the pinned learner item shape (spine #3) needs no new field. */
+/* Personal best (max changes-per-minute) for a pair. This used to scan the sessions
+   ring buffer by hand, which meant the best silently reset once 50 sessions across
+   nine drills pushed this pair's runs off the end. Phase 10/B1 made the best a
+   stored, per-id fact for exactly that reason — one helper, every track. */
 function cmPairBest(i){
-  const id=cmPairId(i); let best=0;
-  learner.sessions.forEach(s=>{ if(s.drill===id && s.score>best) best=s.score; });
-  return best;
+  const b=learnerBest(cmPairId(i));
+  return b ? b.score : 0;
 }
 
 /* ---- lifecycle ---- */
@@ -181,7 +182,9 @@ function refreshChangesLang(){ if(cmDrill) renderCm(); }
 
 /* card starter + in-drill controls — wired once at load (guarded so a missing panel
    never throws, mirroring initDrill / initEar). */
-registerDrill({ id:'changes', area:'cm-area',
+registerDrill({ id:'changes', area:'cm-area', tempo:true,   // the optional beat-reference click rides pulseSec()
+                tracks:[{ id:'changes', kind:'perf', sess:'changes', label:'drill_changes',
+                          better:'high', unit:'cpm', start:startChanges }],
                 isActive:()=>!!cmDrill, exit:exitChanges, refreshLang:refreshChangesLang });
 
 (function initChanges(){

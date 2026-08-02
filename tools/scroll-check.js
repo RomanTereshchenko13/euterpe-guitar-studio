@@ -202,7 +202,15 @@ function runSpec({ w, h }) {
 (async function () {
   let anyFail = false;
   for (const spec of specs) {
-    const r = await runSpec(spec);
+    /* One retry on a NO-OUTPUT result only. This gate kept reporting a phantom failure
+       for whichever viewport happened to launch first — clean when run alone, clean in
+       second position, "no diagnostic output" as the cold first launch — which is a
+       browser-startup race (a previous headless instance still shutting down, a cold
+       profile), not a layout bug. A gate that cries wolf gets ignored, and this one was
+       starting to be. Only the empty result is retried: a diagnostic that comes back
+       and REPORTS a problem is a real finding and is never re-rolled. */
+    let r = await runSpec(spec);
+    if (!r) { console.error(`   (${spec.w}×${spec.h}: no output — retrying once, the browser may have lost the launch race)`); r = await runSpec(spec); }
     if (!r) { console.error(`\n✗ ${spec.w}×${spec.h}: no diagnostic output (timed out / page error)`); anyFail = true; continue; }
     anyFail = anyFail || r.fail;
     console.log(`\n── ${spec.w}×${spec.h}  ${r.fail ? '✗ ISSUES' : '✓ clean'} ───────────────────────────`);

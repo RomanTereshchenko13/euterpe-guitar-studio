@@ -29,11 +29,14 @@ const probe = `
   var out=[]; function ok(n,c){ out.push((c?'PASS':'FAIL')+' '+n); }
   function key(k){ document.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true})); }
   function activeRoot(){ var b=document.querySelector('#g-roots .btn.active'); return b?b.textContent.trim():''; }
-  function activeTab(){ var b=document.querySelector('.tab.active'); return b?b.dataset.panel:''; }
+  // A2: one nav strip — .navbtn, four destinations (the three subjects + Practice)
+  function activeTab(){ var b=document.querySelector('.navbtn.active'); return b?b.dataset.panel:''; }
   try {
     key('2'); ok('tab "2" -> scales', activeTab()==='scales');
     key('1'); ok('tab "1" -> harmony', activeTab()==='harmony');
     key('3'); ok('tab "3" -> circle', activeTab()==='circle');
+    key('4'); ok('nav "4" -> practice', activeTab()==='practice' && document.body.classList.contains('mode-practice'));
+    key('1');
     key('1');
     key('g'); ok('key "g" -> root G', activeRoot()==='G');
     key(']'); ok('"]" transpose up -> Ab', activeRoot()==='Ab');

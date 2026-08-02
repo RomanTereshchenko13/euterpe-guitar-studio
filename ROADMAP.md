@@ -96,6 +96,16 @@ Three cross-cutting pieces that every phase hangs off. Build them once; reuse th
    practice next* and powers streaks, progress, and (later) the guided path. Starts simple,
    grows as phases land.
 
+> **Honest status (audited at v2.14.0 — the reason Phase 10 exists).** #1's *model* is done and holds
+> everywhere, but its *control* does not: the key picker has four forms — the context bar on
+> Harmony/Scales, **nothing at all on Circle** (`applyContextBar` hides the bar), `#drill-ctx` for
+> drills declaring `onKey`, and nothing for those that don't. #2 is **one button** (`nt-drill`, in 1
+> of 7 reference views), not the bidirectional navigability claimed above. #3 covered **4 of the 10
+> practice tracks** — the other six recorded a session that nothing read, so "what to practise next"
+> could not name them and no trend was ever shown. Phases 4–8 stacked ten tracks onto that.
+> **B1 has since fixed #3** (see Phase 10); #1 and #2 are still open.
+> **Phase 10 finishes the spine before F2 stacks more on it.**
+
 ---
 
 ## Guiding principles
@@ -773,6 +783,316 @@ pickup, but that audience is tiny and the mic path already covers everyone — n
 
 ---
 
+## Phase 10 — Unify the shell  (the whole-UI rework · two tracks)
+
+**Size:** XL — two tracks, A1–A4 and B1–B4 below, each shippable · **Risk:** med (A2 and B2 are
+refactors of shipped, working surfaces; B1 needs a schema migration) · **Status:** in progress —
+**Track A's layout work (A1 + A2 + A3) and B1 done** (unreleased); A4 and B2–B4 planned.
+
+_(Sequenced between F1 and F2, not after Phase 9 — Phase 9 "runs throughout" and is not a gate.
+B3 delivers the first real slice of Phase 9's guided path, A4 the first slice of its onboarding.)_
+
+> **Supersedes two earlier plans in this slot** — the "Shell rework" (R1–R4) and the Practice-only
+> "Unify Practice". The first treated cluttered drill screens as the problem; the second found the
+> cause one level down but scoped it to Practice. A whole-app audit says the same fault runs through
+> both halves, so the phase is now two tracks: **the shell** (A) and **practice** (B).
+
+### The diagnosis
+
+**The shell is cumulative, not contextual.** Everything that was ever global stayed global. The header
+now carries brand · version · language · install · mode · tabs · transport · tempo · Settings ▾ ·
+Backing ▾, and each tool below it re-implements locally whatever the header doesn't scope for it. Two
+competing homes for the same function, nothing arbitrating between them — which is why, measured on
+the shipped v2.14.0 build:
+
+- **Tempo exists twice on one screen.** The subdivision drill shows `ТЕМП 90 BPM` in the header *and*
+  `ТЕМП − 90 BPM +` in the drill. Same value, two controls, two visual languages. `14-drill-timing.js`
+  grew its own because the header's isn't scoped to it.
+- **Play exists twice on every drill screen**, and the header's one strums the reference chord *over*
+  the running drill. Metronome likewise (Backing panel vs the drill's own click).
+- **The key picker — spine #1's own control — has three forms and one absence.** 12 buttons in the
+  context bar on Harmony/Scales; **gone entirely on Circle** (`applyContextBar` hides the whole bar,
+  `15-wiring-init.js:80`, so you set the key by clicking the wheel instead); 12 buttons again in
+  `#drill-ctx` for drills that declare `onKey`, and nothing for those that don't. The app's single
+  most important piece of state is controlled four different ways.
+
+**Navigation is three strips deep for one question.** *Mode* (Reference · Practice — pills on desktop,
+fixed bottom bar on phone), *tab* (Harmony · Scales · Circle — underline strip), and *view*
+(Chord tones · Triads · Arpeggio · Identify, or Scale · Notes — pill buttons in the context bar).
+Three visual languages, three locations, all answering "what am I looking at" — and the third vanishes
+on Circle along with the root picker. Phase 1b already unified these *structurally* (one board, four
+renderers); the UI never followed.
+
+**Chrome outweighs content, everywhere.** On a 1440-wide desktop the Harmony neck — the app's actual
+subject — starts **41% of the way down the viewport**, behind eight stacked horizontal bands (brand,
+mode, tabs, transport, context bar, heading, quality picker, info box). And the width is unused where
+it is most available: **Practice on desktop is a phone layout stretched** — one column of full-width
+cards, each ~200 px tall to hold two lines of text, five of nine visible; **Circle leaves ~63% of the
+viewport empty**, its wheel pinned to a 360-unit viewBox beside a half-empty text panel.
+
+**Six disclosure mechanisms**, each with its own affordance: `Settings ▾`, `Backing ▾`, `?` help,
+`more ▾` (chord qualities), and two `−` card collapses (aside, shapes) — plus the condensing header.
+
+**And the copy contradicts the product.** Three drills tell the player mic scoring "comes later" while
+the mic button sits on the same screen: `sd_hint` ("A coach: mic-scored timing arrives later" — it
+arrived in v2.13.0), `tg_hint` ("not your guitar — mic scoring comes later" — comping has been scored
+since v2.14.0), and the four `*_meta` card subtitles still reading "coach". The most expensive feature
+the app has ever built is being actively denied by its own interface.
+
+### Where the spine actually stands
+
+| Spine | The claim | Actual |
+|---|---|---|
+| **#1** One musical context | every view reflects one key/mode | ⚠️ **the model holds, the control is closer** — A1 gave Circle the picker it never had; the drill strip is still a second one (B2) |
+| **#2** Reference ↔ practice seam | *"from any reference view → drill this"* | ❌ **one button** — `nt-drill`, in 1 of 7 views |
+| **#3** The learner model | *"the app knows what you know"* | ✅ **fixed by B1** — was 4 of 10 tracks |
+
+**The evidence for #3** _(as audited at v2.14.0 — B1 has since fixed all of it)_. `13-learner.js`
+hardcoded `REVIEW_NS = ['note','interval','chordq','rhythm']`, and only `14-drill-notes.js` +
+`14-drill-ear.js` called `recordAttempt`. The other six tracks — the whole Rhythm pillar, the whole
+Lead pillar, Timing — called `recordSession` only. So **"what should I practise next?" could never
+name six of the ten tracks**; they were not in the queue's vocabulary. And `learnerStats()` returned
+five aggregates with no trend, though the ring buffer held `{t, drill, score}` × 50 — a time series
+nothing read as one. Two kinds of result were forced into one shape: recall items want SRS,
+performance measures (CPM, bars, accuracy %, timing error in ms) want trend and a personal best. The
+model had the first and merely *stored* the second.
+
+**The unmet acceptance check.** From `Guiding principles`, written before any drill shipped: *"make
+'does this feel good unscored?' an explicit acceptance check per drill — it's the real product risk
+for Phases 3, 5 and 7 before the mic lands, not an afterthought."* It was never run. Six coach drills
+shipped recording a number the player never sees again. **B4 is that check, finally paid.**
+
+### Why the two halves are weighted differently
+
+**Reference has had five dedicated UX passes** — 1d feel (v1.18.0), 1e clarity (v1.19.0), the mobile
+shell pass (v1.24.0), the desktop/reachability follow-up (v1.25.0), the pre-Phase-3 polish (v1.25.1).
+**Practice has had none.** All five landed *before* Phase 3 shipped Practice at v2.0.0; the two passes
+since were in-drill *functionality* (v2.6.0) and *packaging* (v2.11.0), not shell work. Reference is
+the mature half **because** of those passes — which is why Track B is the larger one. But Track A is
+whole-app: every finding above spans both halves, and three of them (transport, navigation, the key
+picker) are Reference-side surfaces that Practice merely inherits.
+
+---
+
+### Track A — the shell
+
+**A1 — One function, one home.** ✅ **done** (unreleased — Track A ships as one release). Every
+global verb gets exactly one control, which the shell *scopes* to whatever is active. A drill does not
+build its own tempo, play or metronome; it declares that it is tempo-driven and the shell's transport
+drives it. As shipped:
+- **Tempo: one setter, one control per context.** `setTempo()` (12) clamps and repaints every
+  readout, so no control has to know another exists. The timing drill's private −/BPM/+ is gone; the
+  shell's stepper lives in `#drill-ctx` and is **derived from the registry** (`tempo:true`) exactly
+  as the key picker is derived from `onKey`. Net: one control instead of two, and the *other three*
+  scheduler-driven drills (strum, over-the-changes, changes) gained a reachable tempo they never had.
+- **The reference transport is scoped out of Practice** — Listen, Loop, Tempo and the whole Backing
+  panel act on the reference board, which isn't on screen there. `stopReferenceTransport()` (06) ends
+  the loop / progression / metronome on entry, instead of leaving the reference chord strumming over
+  the drill on a clock the drill doesn't control. Space / L / M follow their controls.
+- **Master volume moved out of the Backing panel** into Settings. It scales everything the app makes;
+  filing it under the backing band both mis-described it and put it out of reach in Practice.
+- **The key picker exists wherever a key is meaningful, Circle included** — `applyContextBar` used to
+  hide the whole bar there, taking spine #1's own control with it (you set the key by knowing to
+  click the wheel). Down from four forms to three; A2 takes the rest.
+- **A latent bug, found on the way:** `.tb-bar > .btn { display:inline-flex }` silently defeated the
+  transport buttons' own `[hidden]`, because an author `display` rule beats the UA `[hidden]` rule
+  whatever the specificity — so `updateGlobalPlay()` hiding Listen in the Notes / Identify views (no
+  chord to listen to) had never actually worked in a browser. jsdom's `.hidden` reported success.
+
+  _26 assertions in the smoke suite; lint / scroll-check / kbd-check clean._
+
+**A2 — Navigation: three strips to two (the risky one · isolate it).** ✅ **done** (unreleased).
+Mode × subject in one navigation surface; **the view switch became a lens on the board**, adjacent to
+it, not a third strip in the header — which is what Phase 1b already made true underneath (one board,
+four renderers). As shipped:
+- **One nav, four destinations.** The mode pill strip (Reference · Practice) and the tab underline
+  strip (Harmony · Scales · Circle) were one question asked twice, so they are one control:
+  `#mainnav`, with Practice as the fourth peer. The **mode axis survives in code** — `setMode` still
+  drives `body.mode-practice` and is still orthogonal to `currentTab` — it just stopped being a
+  second thing on screen. "Reference" as a word disappeared with it: it was a container label for
+  three destinations that are now listed by name.
+- **Painted from state, not from clicks.** `applyNav()` is called by *both* `setMode` and
+  `selectTab`, so the shortcut keys, the reference→practice seam and a restored share link move the
+  nav too — the seam in particular used to be able to leave it pointing at the wrong place.
+- **All four are honest tabs.** `#panel-practice` is a real sibling section, so the `tablist` /
+  `tabpanel` roles, arrow-key traversal and the roving tabindex now cover Practice as well, instead
+  of a mode switch being dressed as something it wasn't.
+- **A phone bottom bar that earns the name.** It was a 2-item mode bar with a *separately* scrolling
+  tab strip up in the header (with an edge-fade "more →" hint and the JS to toggle it); it is now a
+  conventional 4-item bottom nav, which is what the labels were shortened for. The scroll-fade
+  machinery is gone rather than retargeted.
+- **The lens lives on the board.** Moving the view groups into `#board-region` means they hide, move
+  and stick *with* the neck — Circle needs no special case, because a tab with no board has no lens.
+- `4` reaches Practice. It had no shortcut at all while it was a separate axis.
+
+  _20 assertions in the smoke suite; lint / scroll-check / kbd-check clean, and `kbd-check`
+  + `shoot.js` were updated to the merged nav._
+
+**A3 — Board-first, and use the desktop.** ✅ **done** (unreleased). The neck leads in every
+board-bearing view instead of sitting behind six bands of chrome; the two board-less surfaces get
+layouts that acknowledge a wide viewport instead of stretching a phone column across it. Riding A2,
+while the layout was already open — 1e's move, in 1e's position. As shipped:
+- **The neck leads.** Measured before: on a 1280×800 laptop the top of the fretboard sat **645px down
+  a 708px viewport** — header, context bar, panel heading, control rows, info readout and the lens, and
+  then 63px of the app's centrepiece. `#context-bar` was promoted out of `.main` into a grid area of
+  its own, so the three bands could be ordered independently; the reading order is now *in what key*
+  (context) → **the neck** + its legend → *how it is built* (the view's own controls and info) → the
+  reference rows. The board now starts at **355px and ends at 631** — the whole neck, and its legend,
+  above the fold. At 1920×1080 the entire Scales view fits in one screen.
+- **Source order is focus order.** The area maps alone would have put the neck above controls that
+  still came *first* in the DOM, so a keyboard or screen-reader user would meet the chord picker before
+  the neck it changes and the lens after it. The markup moved too — this is a reorder, not a repaint.
+- **The neck keeps the full width.** Controls compact into a horizontal rail under it, never a vertical
+  one beside it: the reclaimed ~264px belongs to the fretboard (the 1.26.0 full-width-neck decision
+  stands). The suggester rides beside the *controls*, where it reads as commentary on them.
+- **Circle uses the desktop.** The circle is that tab's content — its equivalent of the neck — and it
+  was a fixed **360px island in a 1193px panel** with the right two-thirds empty. It now grows with its
+  column to a **520px** cap (~2.1× the area), and the reading pane is capped too so no dead strip
+  trails the key readout. Below the shell breakpoint the two panes wrap exactly as before.
+- **Practice's home is two columns.** Ten drill cards, each holding two short strings, were stacked one
+  per row down a 1200px column — a phone layout that was never told the viewport got wider. Cards now
+  wrap into a grid (a pillar's cards read as a set) and the progress card rides a sticky rail. The
+  readout that answers *"what should I practise next?"* moved from **1727px down the page to 354** —
+  visible on the first screen, which is the one question the home exists to answer. The whole surface
+  went from 1952px of scroll to 1152.
+- **Two latent bugs fixed on the way.** `.practice-list li` still carried the background + border of
+  the Phase-3a "coming soon" text stub it began as, so every real drill card had been rendering as a
+  bordered box **inside** a bordered box. And the new two-column rule walked straight into this
+  codebase's documented `[hidden]` trap — an author `display` rule outranks the UA
+  `[hidden]{display:none}`, so a running drill was leaving the practice home on screen behind it, with
+  jsdom's `.hidden` reporting success throughout. Both are pinned by assertion.
+
+  _24 assertions in the smoke suite; lint / scroll-check / kbd-check clean. Two dev tools were
+  repaired: `shoot.js`'s **tab** selector was still `.tab[data-panel]`, dead since A2, so `shoot.js
+  tabs` had been silently capturing Harmony for every tab (this is what the "broken" circle screenshot
+  during A2's review actually was); and `scroll-check.js` now retries once on an EMPTY result, because
+  it kept reporting a phantom failure for whichever viewport lost the cold browser-launch race — a
+  gate that cries wolf gets ignored. A result that comes back and reports a problem is never re-rolled._
+
+**A4 — Tools, preferences, and the cold start.** Split Settings' ~35 controls and six disclosure
+mechanisms into **Instrument** (in-session) · **Preferences** (set-once: lefty, palette, shapes, share)
+· **Tools** (reference tuner, mic tuner, latency calibration) — with Tools reachable from both modes,
+since two of them are *prerequisites for Practice* and a player calibrating for a scored drill
+currently has to leave Practice and guess. Plus **the mic funnel** (permission → calibration →
+headphones → the `onsetSelfHeard` refusal is four failure modes with no guidance, and it is where the
+whole Phase 8 investment is realised or lost) and **the cold start**: a brand-new visitor gets a
+welcome card offering two abstract nouns, then lands on chord tones in A minor behind ~35 controls,
+with nothing asked about what they came to do. The five Reference passes made that screen tidier; none
+made it *answer anything*. Scope here to one opening question that routes somewhere real — the depth
+stays Phase 9's, which B3/B4 finally give it somewhere to route **to**.
+
+### Track B — practice
+
+**B1 — One practice model (foundational · low risk · pure logic).** ✅ **done** (unreleased). The
+direct analogue of 1a's "one diatonic source": two half-models collapsed into one that every drill
+reports into. As shipped:
+- **Every drill declares its TRACKS** through the existing registry (`13-drill-registry.js`) —
+  `{id, kind:'recall'|'perf', items, sess, better, unit, label, start}`. A track, not a drill, is the
+  unit the model cares about: over-the-changes is one drill with **two** (comping and targeting have
+  different metrics and different cards), ear training is one drill with **three**, and the note drill
+  is **both kinds at once** (per-item SRS plus a per-round accuracy). Ten tracks over seven registry
+  entries — one per practice card, and the smoke suite counts the cards from the markup rather than
+  pinning a number, so a card without a track fails the build.
+- **The review queue covers the app.** `REVIEW_NS`'s four hardcoded strings are derived from the
+  registry, and a performance track falls due on **staleness** (cold for `PERF_STALE_DAYS`, or never
+  run) or **slippage** (recent runs trending down against the earlier ones) rather than SM-2. The
+  progress card, which used to go blank for anyone practising rhythm or lead no matter how much
+  history the app held on them, now names a track and opens it.
+- **One less hand-maintained list, twice over.** `startReview`'s four-branch `ns → starter` router
+  became the registry's own `start`, and `cmPairBest`'s hand-rolled scan of the ring buffer became
+  the shared `learnerBest`. Three lists encoded the same knowledge; all three were incomplete.
+- **The trend is readable** — `learnerTrend(id|namespace)` gives runs, latest, personal best,
+  direction of travel and staleness, with a `TREND_EPS` dead band so noise doesn't read as
+  improvement. B4 has something to render.
+- **The scored tiers' timing error is finally kept.** It was computed, shown once and discarded (the
+  drill even said so in a comment); it now rides alongside the session as `err`, so "your timing went
+  from 45 ms to 28 ms" is a sentence the app can form. `scoredErr()` refuses runs the self-hearing
+  guard refused — letting the app's own click into the trend would poison the number.
+- **Retention is per-track, not global.** One cap of 50 across ten tracks meant a drill practised
+  daily evicted the entire history of one practised weekly — about five points to trend on. Now
+  `SESS_PER_ID` newest per session id, with the global figure demoted to a safety ceiling.
+- **Schema migration, done the sanctioned way:** `LEARNER_V` 1 → 2, per Phase 3's own rule (*"a `v`
+  bump + migration is the only sanctioned way it changes"*), and **purely additive** — `items` and
+  `sessions` carry over untouched, and `best` (the one thing that must outlive its history) is
+  reconstructed from the sessions still held. Asserted against a captured v1 store, as 1a asserted
+  parity before deleting the duplicate diatonic helper.
+
+  _43 assertions in the smoke suite; lint / kbd-check clean._
+
+**B2 — One drill shell (the risky refactor · isolated).** The analogue of 1b's "one board, not four":
+nine hand-rolled layouts collapse into one shell each drill fills in — **header** (drill name · key ·
+🎤), **setup** (the drill's controls, in a disclosure open before the first Play and folded during the
+run), **stage**, **action bar**, **summary**. Three problems, one cause — `#drill-ctx` is a key picker
+with an Exit button where a drill header should be:
+- **A drill never says which drill it is.** All nine render under the same `<h2>Практика</h2>`;
+  `.drill-head` shows the chord, the hit count or the round — never the name.
+- **Controls before content.** *Over the changes* stacks Key · What-you-play · Progression · Position ·
+  Target above NOW/NEXT and the neck: roughly **55% of a 390×844 viewport is chrome**, and it stays
+  there during the run, when it is least useful.
+- **Play sits below the longest paragraph on screen** — every drill's primary verb is in
+  `.cm-active-foot`, after a 3–6 line hint.
+
+  The pattern is in the tree twice, unshared: `14-drill-rhythm-1-changes.js` has the right shape
+  (`#cm-setup` → `#cm-active` → `#cm-summary`), and the reference panels already tuck their description
+  behind `.ph-help`'s `?`. **Caveat, a real regression risk:** collapsing the hint helps someone who
+  knows the drill and hurts a first-timer, for whom that paragraph is the only instruction — so it
+  needs a first-run-per-drill reveal, not a blanket collapse.
+
+**B3 — The session, and the seam (net-new value).** 1c's "the questions players actually arrive with",
+for practice. The question is **"I have 15 minutes — what do I do?"**, and the app has no answer: every
+drill is an infinite loop exited by hand, with no notion of *today*.
+- **A practice session** — pick a length, the app chains drills from the B1 queue, tracks the clock,
+  **ends**, and reports. The ritual is what practice apps live on; this is the first thing here that
+  is one.
+- **The seam, honoured** — "drill this" from **all seven** reference views, not only Notes. Cheap, and
+  a claim the app currently makes and does not keep.
+
+**B4 — Progress, and copy that tells the truth.** Replace the five-number stats dump with the narrative
+B1 makes possible: per-drill history, direction of travel, personal bests, and — for the three scored
+tiers — the timing trend in milliseconds. Invert the Practice home: progress + next-up on top, the nine
+cards as compact rows below. Badge them **🎤 Scored** vs **Coach**. And run a **copy-truth pass** over
+every string that promises a shipped feature is "coming later": `sd_hint`, `tg_hint` and the four
+`*_meta` subtitles, EN and UK both.
+
+**Two bugs, fixed on the way:** the `.divider` before `#tg-mic` is never hidden when
+`14-drill-overchanges.js:256` hides the button, leaving a stray vertical rule under PROGRESSION; and
+the stale strings above.
+
+---
+
+**Open question, carried past A2: is Jam a destination?** The backing band is a genuinely strong
+feature with no destination — it lives as a `Backing ▾` disclosure inside Reference's toolbar, so "play
+along to something" isn't offered, it's assembled. This was to be decided *during* A2, while the
+navigation vocabulary was being set; **A2 shipped four destinations without resolving it**, so record
+what that costs. The phone bottom bar is now a 4-item strip at its practical width (the labels were
+shortened to single words to fit), so a fifth destination is no longer free — it means either dropping
+to icons or demoting something. That is an argument for answering it deliberately rather than
+discovering it, but not for answering it inside a layout step. It belongs with **A4**, which is already
+re-sorting what the toolbar's disclosures are *for*, and where "play along to something" is the same
+kind of question as "tune this" and "calibrate that".
+
+**Sequencing and the F2 gate.** **A1, B1 and B2 gate F2** — F2 stacks the Lead pillar's scored tier
+onto these drill screens, into this model, through this transport, so all three get unified before
+they are inherited. A2/A3 are the risky pair and want their own release — **both are now done and
+unreleased, so Track A's layout work is one release waiting on A4**; B3 and B4 can trickle.
+Per the convention Phases 5 and 7 used, each track ships as one release rather than eight.
+
+**Why this is less risk than the smaller plans it replaces.** A1 and B1 are mostly deletion and pure
+logic, both fully assertable, like 1a. A2 and B2 are isolated behind a green harness, like 1b. The
+smaller plans' risk was worse for being hidden: they would have shipped a Review queue promoted to the
+top of the Practice home that structurally ignores two-thirds of the app, and found out in use.
+
+**Validation:** the v1 → v2 learner migration round-trips a captured real store with no progress lost
+(asserted before the v1 read path is deleted); the registry seam stays enforced (every `*-area` claimed
+by a registered drill); one-board and responsive/a11y assertions stay green across A2/A3, as they did
+across 1b; `npm test` + `npm run lint` green throughout; symmetric EN/UK for every new string;
+`scroll-check` + `kbd-check` clean (A1–A3 move the header, the sticky board and the shortcut targets);
+and — because most of Track A is layout with no new logic — the **`visual-review` orientation matrix is
+the real gate**, across all three reference tabs *and* every drill surface at phone portrait, landscape
+phone, tablet and desktop.
+
+---
+
 ## Phase 9 — Product layer  (good tool → competitive product · runs throughout)
 
 **Size:** M · **Risk:** low — no DSP; all high-leverage product work.
@@ -799,7 +1119,10 @@ product people find, adopt, and recommend — none of them DSP, all high-leverag
   and remembered) and the **colour-blind / alternate palette** option — an Okabe–Ito CVD-safe
   palette plus distinct per-function dot **shapes** (toggles in Settings ▸ Accessibility), so
   the function colours (root / third / fifth / seventh) no longer carry meaning by hue alone.
-  _Still open:_ deeper onboarding, empty/error states, and the broader feel pass.
+  _Still open:_ deeper onboarding, empty/error states, and the broader feel pass. _(Onboarding is
+  partly claimed by **Phase 10**: A4 adds the opening question the first-run card never asks, and
+  B3/B4 build the session + progress narrative it needs somewhere to route **to**. What stays here
+  is the depth — a real curriculum on top of that routing.)_
 
 **Honest scope.** Even complete, this wins its *niche* — the best free, private, no-login,
 install-free, bilingual tool unifying reference + jamming + practice — not a head-to-head win
@@ -825,6 +1148,15 @@ Phase 1  Unify (spine + reference)           ← foundational; everything reuses
                │
                └─ Phase 8  Mic input            F0 (tuner) ✅ shipped v2.12.0 — no scoring, low risk
                                                 F1 (onset) ✅ shipped v2.13.0 — scores 7 + 5 (v2.14.0)
+                                                     │
+                                                     ├─ Phase 10  Unify the shell  ← ships next
+                                                     │   A  shell    A1 one function one home ─┐
+                                                     │               A2 nav · A3 board-first   │ A1+B1+B2
+                                                     │               A4 tools + cold start     │  gate F2
+                                                     │   B  practice B1 one model ─────────────┘
+                                                     │               B2 drill shell · B3 session + seam
+                                                     │               B4 progress + copy truth
+                                                     │
                                                 F2 (pitch) → scores 6 + real note-naming
 
 Phase 9  Product layer                          (curriculum / distribution / polish — throughout)
@@ -843,6 +1175,15 @@ Phase 9  Product layer                          (curriculum / distribution / pol
 - **Open Phase 8 with F0, the tuner.** It's the one mic feature that is genuinely useful with no
   scoring attached, so it lands the permission/plumbing layer and validates `pitchy` while the
   cost of being wrong is still a tuner needle rather than a corrupted score.
+- **Phase 10 comes between F1 and F2, and it is Phase 1 for everything Phase 1 didn't reach.**
+  Phase 1 was non-negotiable because the spine is what later phases reuse — but it unified the
+  *reference content* and left the *shell* cumulative: every global control stayed global, and each
+  tool since re-implemented locally whatever the shell wouldn't scope, which is why tempo and Play
+  now exist twice on one screen. Nine drills then shipped as islands on top of that, with a learner
+  model reading two of them. F1 made it acute (scored tiers shipped while the UI still calls them
+  coaches), and F2 would stack the Lead pillar onto the same shell, the same screens and the same
+  model. So all three get unified once, before they are inherited — the same argument that put
+  Phase 1 first, applied to what it left behind.
 - **Know what's backloaded.** By design, Phases 1–7 produce an excellent *coach + reference
   toolbox*; the stated true differentiator — "play your real guitar and get scored" — lives
   entirely in Phase 8. That's the correct risk order (prove the coach tiers cheaply on screen

@@ -192,12 +192,26 @@ function renderProgressInto(hostId){
     stat(act.days, t('prog_active'))+
     stat(s.sessions, t('prog_sessions'))+
   '</div>';
-  // close the loop (spine #3): when the SRS says items are due, surface the count
-  // and a one-tap Review that drops into the namespace with the most overdue items.
+  /* Close the loop (spine #3): when the SRS says items are due, surface the count and
+     a one-tap Review that drops into the namespace with the most overdue items.
+
+     Phase 10/B1 — when nothing is due, fall through to the derived queue instead of
+     showing nothing. Six of the nine tracks mint no SRS items at all, so on the old
+     four-namespace list this row was blank for anyone whose practice was rhythm or
+     lead: the app had a full session history for them and still couldn't name one.
+     A performance track earns the row by being cold or by slipping (learnerReview),
+     and the registry's own `label` names it. */
   const rev=learnerReview();
   if(rev.total>0 && rev.top){
     html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_due')+' · '+rev.total+'</span>'+
       '<button type="button" class="btn play pp-review-btn" data-review="'+rev.top+'">'+t('prog_review')+'</button></div>';
+  } else {
+    const nxt=(rev.due||[]).find(d=>d.kind==='perf');
+    const tr=nxt && typeof trackById==='function' ? trackById(nxt.track) : null;
+    if(tr && tr.label){
+      html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_next')+' · '+t(tr.label)+'</span>'+
+        '<button type="button" class="btn play pp-review-btn" data-review="'+tr.id+'">'+t('prog_start')+'</button></div>';
+    }
   }
   host.innerHTML=html;
 }
@@ -253,7 +267,15 @@ function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPr
    missing panel never throws, mirroring initDrill in 14-drill-notes.js). */
 /* one entry for all three ear drills — they share the `ear` state and one area */
 registerDrill({ id:'ear', area:'ear-area',
-                isActive:()=>!!ear, exit:exitEar, refreshLang:refreshEarLang });
+                isActive:()=>!!ear, exit:exitEar, refreshLang:refreshEarLang,
+                /* Three tracks behind one entry (B1) — one drill shell, three skills
+                   with three independent SRS queues. Items are "interval:P5"; the
+                   session ids keep their historic `ear-` prefix. */
+                tracks:[
+                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', start:()=>startEar('interval') },
+                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    start:()=>startEar('chordq') },
+                  { id:'rhythm',   kind:'recall', items:'rhythm',   sess:'ear-rhythm',   label:'ear_rhythm',    start:()=>startEar('rhythm') }
+                ] });
 
 (function initEar(){
   const area=document.getElementById('ear-area'); if(!area) return;

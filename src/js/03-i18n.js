@@ -2,8 +2,10 @@
 const I18N = {
   uk: {
     brand:'Euterpe', brand_desc:'гітарна студія',
-    tab_scales:'Гами / моди', tab_circle:'Коло квінт',
-    mode_reference:'Довідник', mode_practice:'Практика',
+    // A2: one 4-item nav, so these are single words that fit a phone bottom bar.
+    // `mode_reference` went with the merge — "Reference" was a container label for
+    // three destinations that are now listed by name.
+    tab_scales:'Гами', tab_circle:'Коло квінт', mode_practice:'Практика',
     practice_h:'Практика', practice_intro:'Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.',
     ear_intervals:'Інтервали на слух', ear_intervals_meta:'Почуй дві ноти · назви інтервал',
     ear_chords:'Якість акорду на слух', ear_chords_meta:'Почуй акорд · визнач його тип',
@@ -22,7 +24,7 @@ const I18N = {
     drill_strum:'Бій і відчуття', drill_strum_meta:'Малюнки · свінг · акценти · глушіння · коуч',
     dr_key:'Тональність',
     practice_grp_timing:'Тайминг', drill_timing:'Поділ і тайминг', drill_timing_meta:'Вісімки · тріолі · шістнадцятки · коуч',
-    sd_subdiv:'Поділ', sd_tempo:'Темп', sd_notes:'Ноти',
+    sd_subdiv:'Поділ', sd_notes:'Ноти',
     sd_hint:'Тримайся клацання — акцентований удар це «раз», тихі — поділи долі. Грай підсвічені ноти гами рівно по сітці. Це коуч: оцінку тайминга з мікрофоном додамо згодом.',
     sp_pattern:'Малюнок', sp_chord:'Акорд', sp_play:'Грати', sp_stop:'Стоп',
     sp_swing:'Свінг', sp_accent:'Бекбіт', sp_mute:'Глушіння', sp_band:'Гурт',
@@ -39,7 +41,7 @@ const I18N = {
     cr_hint:'Застосунок грає фразу з гами — повтори її на грифі в тому ж порядку. Слухай, поки грає, і відповідай у паузі: саме так будується фразування.',
     prog_title:'Прогрес', prog_empty:'Ще немає практики — статистика з’явиться, щойно почнеш вправи.',
     prog_tracked:'Вивчається', prog_accuracy:'Точність', prog_streak:'Найкраща серія', prog_sessions:'Сесій',
-    tab_harmony:'Акорди / тріади', lbl_view:'Вид', view_chords:'Тони акорду', view_triads:'Форми тріад',
+    tab_harmony:'Акорди', lbl_view:'Вид', view_chords:'Тони акорду', view_triads:'Форми тріад',
     view_scale:'Гама', view_notes:'Ноти', view_identify:'Розпізнати',
     id_h:'Розпізнавання акорду', id_p:'Натисни на грифі ноти, які береш, — і дізнайся, що це за акорд.',
     lbl_identify:'Ноти', id_prompt:'Познач щонайменше 3 ноти на грифі.', id_none:'Невідомий акорд — спробуй іншу комбінацію.', id_also:'або',
@@ -120,6 +122,8 @@ const I18N = {
     a11y_palette:'Палітра для дальтоніків', a11y_shapes:'Форми на нотах',
     tun_custom:'Власний стрій',
       prog_active:'Активних днів', prog_due:'До повтору', prog_review:'Повторити',
+      // B1: when nothing is due for review, the queue names a cold or slipping drill
+      prog_next:'Наступне', prog_start:'Почати',
     share_btn:'Поділитися', share_copied:'Скопійовано!',
     wc_title:'Вітаємо в Euterpe',
     wc_lead:'Гітарна студія для теорії та практики. Два способи почати:',
@@ -145,13 +149,12 @@ const I18N = {
     pwa_install:'Встановити', pwa_install_tip:'Встановити Euterpe як застосунок',
     pwa_update:'Доступна нова версія Euterpe.', pwa_update_btn:'Оновити', pwa_dismiss:'Сховати',
     kbd_title:'Гарячі клавіші', kbd_play:'Прослухати / Стоп', kbd_loop:'Луп — увімк/вимк', kbd_metro:'Метроном — увімк/вимк',
-    kbd_tabs:'Перемкнути вкладки', kbd_root:'Задати тоніку', kbd_transpose:'Транспонувати на півтон', kbd_hint:'Гарячі клавіші',
+    kbd_tabs:'Перемкнути розділи', kbd_root:'Задати тоніку', kbd_transpose:'Транспонувати на півтон', kbd_hint:'Гарячі клавіші',
     ph_help:'Опис'
   },
   en: {
     brand:'Euterpe', brand_desc:'guitar studio',
-    tab_scales:'Scales / modes', tab_circle:'Circle of fifths',
-    mode_reference:'Reference', mode_practice:'Practice',
+    tab_scales:'Scales', tab_circle:'Circle', mode_practice:'Practice',
     practice_h:'Practice', practice_intro:'Scored drills that track your progress and resurface what you miss.',
     ear_intervals:'Intervals by ear', ear_intervals_meta:'Hear two notes · name the interval',
     ear_chords:'Chord quality by ear', ear_chords_meta:'Hear a chord · name its quality',
@@ -170,7 +173,7 @@ const I18N = {
     drill_strum:'Strumming & feel', drill_strum_meta:'Patterns · swing · accents · muting · coach',
     dr_key:'Key',
     practice_grp_timing:'Timing', drill_timing:'Subdivision & timing', drill_timing_meta:'Eighths · triplets · sixteenths · coach',
-    sd_subdiv:'Subdivision', sd_tempo:'Tempo', sd_notes:'Notes',
+    sd_subdiv:'Subdivision', sd_notes:'Notes',
     sd_hint:'Lock to the click — the accented tick is beat 1, the soft ticks are the subdivisions. Play the lit scale notes evenly across the grid. A coach: mic-scored timing arrives later.',
     sp_pattern:'Pattern', sp_chord:'Chord', sp_play:'Play', sp_stop:'Stop',
     sp_swing:'Swing', sp_accent:'Backbeat', sp_mute:'Palm mute', sp_band:'Band',
@@ -187,7 +190,7 @@ const I18N = {
     cr_hint:'The app plays a phrase from the scale — echo it back on the neck in the same order. Listen while it plays, answer in the space it leaves: that is how phrasing is built.',
     prog_title:'Progress', prog_empty:'No practice yet — your stats will appear once you start a drill.',
     prog_tracked:'Tracked', prog_accuracy:'Accuracy', prog_streak:'Best streak', prog_sessions:'Sessions',
-    tab_harmony:'Chords / triads', lbl_view:'View', view_chords:'Chord tones', view_triads:'Triad shapes',
+    tab_harmony:'Chords', lbl_view:'View', view_chords:'Chord tones', view_triads:'Triad shapes',
     view_scale:'Scale', view_notes:'Notes', view_identify:'Identify',
     id_h:'Chord identifier', id_p:'Tap the notes you are playing on the neck to name the chord.',
     lbl_identify:'Notes', id_prompt:'Mark at least 3 notes on the neck.', id_none:'Unknown chord — try another combination.', id_also:'or',
@@ -268,6 +271,7 @@ const I18N = {
     a11y_palette:'Colour-blind palette', a11y_shapes:'Shapes on dots',
     tun_custom:'Custom tuning',
       prog_active:'Active days', prog_due:'Due to review', prog_review:'Review',
+      prog_next:'Practise next', prog_start:'Start',
     share_btn:'Share', share_copied:'Copied!',
     wc_title:'Welcome to Euterpe',
     wc_lead:'A guitar studio for theory and practice. Two ways in:',
@@ -293,7 +297,7 @@ const I18N = {
     pwa_install:'Install', pwa_install_tip:'Install Euterpe as an app',
     pwa_update:'A new version of Euterpe is available.', pwa_update_btn:'Reload', pwa_dismiss:'Dismiss',
     kbd_title:'Keyboard shortcuts', kbd_play:'Listen / Stop', kbd_loop:'Loop on/off', kbd_metro:'Metronome on/off',
-    kbd_tabs:'Switch tabs', kbd_root:'Set the key (root)', kbd_transpose:'Transpose by a semitone', kbd_hint:'Keyboard shortcuts',
+    kbd_tabs:'Switch section', kbd_root:'Set the key (root)', kbd_transpose:'Transpose by a semitone', kbd_hint:'Keyboard shortcuts',
     ph_help:'Description'
   }
 };

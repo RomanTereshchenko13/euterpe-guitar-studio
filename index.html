@@ -48,12 +48,12 @@
   html { overflow-anchor: none; }
 
 
-  .btn:focus-visible, .tab:focus-visible, .langbtn:focus-visible, .ver:focus-visible,
+  .btn:focus-visible, .navbtn:focus-visible, .langbtn:focus-visible, .ver:focus-visible,
   .aside-toggle:focus-visible, .tb-toggle:focus-visible, .cl-close:focus-visible,
   input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .dot:focus-visible { outline: 2px solid #fff; outline-offset: 2px; z-index: 7; }
 
-  .btn, .tab, .langbtn, .ver, .tb-toggle, .aside-toggle, .cl-close,
+  .btn, .navbtn, .langbtn, .ver, .tb-toggle, .aside-toggle, .cl-close,
   .chordbox, .cd-dot, .cof-node, .seq-chip .nm, .seq-chip .bars, .seq-chip .x,
   .install-btn, .toast-act, .toast-x,
   select { touch-action: manipulation; }
@@ -93,19 +93,21 @@
   .langbtn { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; padding: 5px 11px; border: none; background: transparent; color: var(--text-dim); border-radius: 6px; cursor: pointer; transition: all 0.12s; }
   .langbtn:hover:not(.active) { color: var(--text); }
   .langbtn.active { background: var(--accent); color: #07203a; }
-  .tabs { display: flex; gap: 4px; margin-top: 22px; flex-wrap: wrap; }
-  .tab { font-family: inherit; font-size: 14px; font-weight: 500; background: transparent; color: var(--text-dim); border: none; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0; padding: 10px 16px 12px; cursor: pointer; transition: color 0.15s, border-color 0.15s, background 0.15s; }
-  .tab:hover:not(.active) { color: var(--text); background: var(--bg-panel); }
-  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  .mainnav { display: flex; gap: 4px; margin-top: 22px; flex-wrap: wrap; }
+  .navbtn { font-family: inherit; font-size: 14px; font-weight: 500; background: transparent; color: var(--text-dim); border: none; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0; padding: 10px 16px 12px; cursor: pointer; transition: color 0.15s, border-color 0.15s, background 0.15s; }
+  .navbtn:hover:not(.active) { color: var(--text); background: var(--bg-panel); }
+  .navbtn.active { color: var(--text); border-bottom-color: var(--accent); }
 
 
   .layout {
     display: grid;
     grid-template-columns: minmax(0,1fr) 234px;
     grid-template-areas:
-      "main      aside"
+      "ctx       ctx"
       "board     board"
       "boardmeta boardmeta"
+      "main      aside"
       "shapes    shapes"
       "extras    extras";
     column-gap: 30px;
@@ -113,8 +115,12 @@
     padding-top: 30px;
   }
 
-  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "main" "board" "boardmeta" "shapes" "extras"; }
-  .main { grid-area: main; min-width: 0; }
+  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "ctx" "board" "boardmeta" "main" "shapes" "extras"; }
+  #context-bar { grid-area: ctx; }
+
+  .main { grid-area: main; min-width: 0; margin-top: 22px; }
+
+  body.mode-practice .main { margin-top: 0; }
   #board-region { grid-area: board; }
   .board-meta { grid-area: boardmeta; }
   #harmony-extras { grid-area: extras; }
@@ -126,7 +132,7 @@
   @media (max-width: 940px) {
     .layout, .layout.no-aside {
       grid-template-columns: minmax(0,1fr);
-      grid-template-areas: "main" "board" "boardmeta" "shapes" "aside" "extras";
+      grid-template-areas: "ctx" "board" "boardmeta" "main" "shapes" "aside" "extras";
     }
 
     .aside { position: static; margin-top: 22px; }
@@ -148,12 +154,6 @@
 
 
 
-  .modenav { display: flex; gap: 6px; margin-top: 20px; }
-  .modebtn { font-family: inherit; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-dim); border: 1px solid var(--border); border-radius: 999px; padding: 7px 18px; cursor: pointer; transition: color 0.15s, background 0.15s, border-color 0.15s; }
-  .modebtn:hover:not(.active) { color: var(--text); }
-  .modebtn.active { background: var(--accent); color: #07203a; border-color: var(--accent); }
-  .modebtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
 
   .practice-panel { display: none; animation: fade 0.25s ease; }
   body.mode-practice .practice-panel { display: block; }
@@ -162,23 +162,40 @@
 
   #drill-ctx-div[hidden], #drill-ctx-keylbl[hidden], #drill-ctx-key[hidden] { display: none; }
 
+  #drill-ctx-tdiv[hidden], #drill-ctx-tlbl[hidden], #drill-ctx-tempo[hidden] { display: none; }
+
   body.mode-practice .panel.active,
   body.mode-practice #context-bar,
   body.mode-practice #board-region,
   body.mode-practice .board-meta,
   body.mode-practice #harmony-extras,
   body.mode-practice .aside,
-  body.mode-practice #shapes-card,
-  body.mode-practice #tabs { display: none; }
+  body.mode-practice #shapes-card { display: none; }
+
+
+  body.mode-practice #g-play,
+  body.mode-practice #g-loop,
+  body.mode-practice .tb-bar .tb-tempo,
+  body.mode-practice #backing-toggle,
+  body.mode-practice #backing-panel { display: none; }
 
   body.mode-practice .layout, body.mode-practice .layout.no-aside {
     grid-template-columns: minmax(0,1fr); grid-template-areas: "main";
   }
   .practice-soon { color: var(--text-dim); font-size: 15px; max-width: 620px; }
-  .practice-list { list-style: none; margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
-  .practice-list li { padding: 13px 16px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-weight: 500; }
+
+  .practice-list { list-style: none; margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  .practice-list li { display: flex; }
 
   .practice-progress-card { margin-top: 28px; padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); max-width: 620px; }
+
+  @media (min-width: 941px) {
+    #practice-home { display: grid; grid-template-columns: minmax(0,1fr) 320px; column-gap: 30px; align-items: start; }
+
+    #practice-home[hidden] { display: none; }
+    .ph-drills { min-width: 0; }
+    #practice-home > .practice-progress-card { margin-top: 0; max-width: none; position: sticky; top: 14px; }
+  }
   .pp-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; margin-bottom: 14px; }
   .pp-empty { color: var(--text-dim); font-size: 14px; }
   .pp-stats { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -298,8 +315,9 @@
   .sd-cell.on { border-color: var(--root); box-shadow: 0 0 0 2px rgba(107,165,58,0.4); }
   .sd-lab { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); line-height: 1; }
   .sd-cell.on .sd-lab { color: var(--root); }
-  .sd-tempo { display: inline-flex; align-items: center; gap: 8px; }
-  .sd-bpm { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); min-width: 62px; text-align: center; }
+
+  .tempo-group { display: inline-flex; align-items: center; gap: 8px; }
+  .tempo-bpm { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); min-width: 62px; text-align: center; }
   .sd-dot { opacity: 0.22; transition: opacity 0.1s, transform 0.1s; }
   .sd-dot.pal { opacity: 1; background: var(--sc-other); }
   .sd-dot.pal.on { background: var(--root); transform: scale(1.12); box-shadow: 0 0 0 3px rgba(107,165,58,0.3); }
@@ -322,15 +340,21 @@
 
 
   @media (max-width: 940px) {
-    .modenav {
+    .mainnav {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-      margin-top: 0; gap: 0;
+      margin-top: 0; gap: 0; flex-wrap: nowrap;
       background: var(--bg-panel-2); border-top: 1px solid var(--border-strong);
       padding-bottom: env(safe-area-inset-bottom);
       box-shadow: 0 -6px 18px -10px rgba(0,0,0,0.7);
     }
-    .modebtn { flex: 1; border: none; border-radius: 0; background: transparent; padding: 13px 0; text-align: center; color: var(--text-dim); }
-    .modebtn.active { background: transparent; color: var(--accent); box-shadow: inset 0 2px 0 var(--accent); }
+    .navbtn {
+      flex: 1 1 0; min-width: 0; border: none; border-radius: 0; background: transparent;
+      padding: 13px 4px; text-align: center; color: var(--text-dim);
+      font-size: 12.5px; font-weight: 600; line-height: 1.2;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .navbtn:hover:not(.active) { background: transparent; }
+    .navbtn.active { background: transparent; color: var(--accent); border-bottom-color: transparent; box-shadow: inset 0 2px 0 var(--accent); }
 
     body { padding-bottom: calc(58px + env(safe-area-inset-bottom)); }
   }
@@ -439,10 +463,12 @@
   .sug-row .ctrl-label { display: block; margin-bottom: 4px; }
   .sug-scales { gap: 6px; }
   .sug-scales .btn { font-size: 12px; padding: 4px 9px; }
+
   .cof-layout { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
-  .cof-wrap { flex: 0 0 auto; }
-  .cof-side { flex: 1; min-width: 250px; }
-  #cof-svg { width: 360px; max-width: 100%; height: auto; display: block; }
+  .cof-wrap { flex: 1 1 340px; max-width: 520px; min-width: 0; }
+
+  .cof-side { flex: 1 1 340px; min-width: 250px; max-width: 620px; }
+  #cof-svg { width: 100%; max-width: 100%; height: auto; display: block; }
   .cof-node { cursor: pointer; }
   .cof-node circle { transition: fill 0.15s, stroke 0.15s; }
   .cof-node:hover circle { stroke: var(--text); }
@@ -458,6 +484,8 @@
 
   .tb-bar > .btn, .tb-bar .tb-toggle, .tb-bar > .tb-group, .tb-bar > .tb-transport { min-height: 34px; }
   .tb-bar > .btn, .tb-bar .tb-toggle { display: inline-flex; align-items: center; justify-content: center; }
+
+  .tb-bar > .btn[hidden] { display: none; }
 
   .tb-toggles { display: inline-flex; align-items: center; gap: 8px; }
 
@@ -513,7 +541,11 @@
   .context-bar .ctx-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .context-bar .ctx-group[hidden] { display: none; }
 
-  .context-bar .ctx-group:not(.ctx-view) { padding-left: 13px; border-left: 1px solid var(--border-strong); }
+  .context-bar .ctx-group + .ctx-group { padding-left: 13px; border-left: 1px solid var(--border-strong); }
+
+  .board-lens { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
+  .board-lens .lens-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .board-lens .lens-group[hidden] { display: none; }
 
   .board-region { margin-top: 4px; }
   .board-region[hidden] { display: none; }
@@ -525,7 +557,7 @@
   @media (max-width: 940px) {
     header { position: sticky; top: 0; z-index: 20; }
 
-    header, header .brand h1, header .brand-desc, header .tabs, header .tb-bar, header .tb-bar .tb-group {
+    header, header .brand h1, header .brand-desc, header .mainnav, header .tb-bar, header .tb-bar .tb-group {
       transition: padding 0.22s ease, font-size 0.22s ease, margin 0.22s ease, max-height 0.22s ease, grid-template-rows 0.22s ease, opacity 0.16s ease, border-width 0.22s ease;
     }
 
@@ -539,7 +571,7 @@
     header.scrolled .brand-desc { max-height: 0; opacity: 0; }
     header.scrolled .brand .ver { display: none; }
     header.scrolled .brand h1 { font-size: 19px; }
-    header.scrolled .tabs { margin-top: 10px; }
+    header.scrolled .mainnav { margin-top: 10px; }
     header.scrolled .tb-bar { margin-top: 8px; }
     header.scrolled .tb-bar .tb-group { grid-template-rows: 0fr; min-height: 0; margin: 0; padding-top: 0; padding-bottom: 0; border-width: 0; opacity: 0; }
   }
@@ -551,13 +583,14 @@
     header { position: static; padding-top: max(10px, env(safe-area-inset-top)); }
     .brand-desc { display: none; }
     .brand h1 { font-size: 22px; }
-    header .tabs { margin-top: 8px; }
+    header .mainnav { margin-top: 8px; }
     .tb-bar { margin-top: 8px; }
     .toolbar { margin-top: 8px; padding: 8px 12px; }
     .layout:has(#board-region:not([hidden])) {
       grid-template-columns: minmax(0,1fr) minmax(300px, 46%);
 
       grid-template-areas:
+        "ctx       board"
         "main      board"
         "shapes    board"
         "aside     board"
@@ -663,7 +696,7 @@
 
     .context-bar { flex-direction: column; align-items: stretch; gap: 13px; padding: 0; margin-bottom: 16px; border: none; background: transparent; border-radius: 0; }
     .context-bar .ctx-group { width: 100%; gap: 7px 8px; }
-    .context-bar .ctx-group:not(.ctx-view) { padding-left: 0; border-left: none; }
+    .context-bar .ctx-group + .ctx-group { padding-left: 0; border-left: none; }
     .context-bar .ctrl-label { width: 100%; margin: 0; }
 
 
@@ -695,11 +728,7 @@
     .btn { padding: 8px 12px; }
     .langbtn { padding: 7px 12px; }
     .seq-chip .x { padding: 4px 6px; opacity: 0.85; }
-    .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -14px; margin-right: -14px; padding: 0 14px; }
-    .tabs::-webkit-scrollbar { display: none; }
-    .tab { white-space: nowrap; flex-shrink: 0; }
 
-    .tabs.scrollable { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent); }
   }
   footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-faint); }
 
@@ -838,18 +867,23 @@
            Share → Add to Home Screen instead). -->
       <button class="install-btn" id="pwa-install" data-i18n="pwa_install" hidden>Встановити</button>
     </div>
-    <!-- Mode axis (Phase 3a): the primary Reference · Practice switch — a second
-         navigation axis ABOVE the reference sub-tabs (Harmony/Scales/Circle nest
-         inside Reference). Desktop renders it as an inline strip here in the header;
-         on a phone CSS pins it as a fixed bottom bar in the thumb zone. -->
-    <nav class="modenav" id="modenav" aria-label="Mode">
-      <button class="modebtn active" data-mode="reference" aria-pressed="true" data-i18n="mode_reference">Довідник</button>
-      <button class="modebtn" data-mode="practice" aria-pressed="false" data-i18n="mode_practice">Практика</button>
-    </nav>
-    <nav class="tabs" id="tabs">
-      <button class="tab active" data-panel="harmony" data-i18n="tab_harmony">Акорди / тріади</button>
-      <button class="tab" data-panel="scales" data-i18n="tab_scales">Гами / моди</button>
-      <button class="tab" data-panel="circle" data-i18n="tab_circle">Коло квінт</button>
+    <!-- ONE navigation surface (Phase 10/A2). This was two strips stacked on top of
+         each other — a mode pill row (Reference · Practice) above a tab underline row
+         (Harmony · Scales · Circle) — plus a third, the view switch, down in the
+         context bar. Three visual languages in three places, all answering "what am I
+         looking at". They are one question with four answers, so they are now one
+         control with four buttons: the three reference subjects and Practice.
+         The MODE AXIS SURVIVES IN CODE — setMode still drives body.mode-practice and
+         the reference/practice split is still orthogonal to the tab — it just stops
+         being a second thing to look at. Each button carries `data-panel`, and
+         Practice additionally `data-mode`, so the nav needs no special case.
+         On a phone CSS pins this as a fixed bottom bar in the thumb zone (which the
+         2-item mode nav already was); it is now a conventional 4-item bottom nav. -->
+    <nav class="mainnav" id="mainnav" aria-label="Sections">
+      <button class="navbtn active" data-panel="harmony" data-i18n="tab_harmony">Акорди</button>
+      <button class="navbtn" data-panel="scales" data-i18n="tab_scales">Гами</button>
+      <button class="navbtn" data-panel="circle" data-i18n="tab_circle">Коло квінт</button>
+      <button class="navbtn" data-panel="practice" data-mode="practice" data-i18n="mode_practice">Практика</button>
     </nav>
     <!-- Lean transport bar: the primary verbs (Listen / Loop) + Tempo stay visible;
          the studio extras (tuning/frets/capo and the metronome+backing band) tuck
@@ -947,6 +981,16 @@
       <div class="tb-cluster">
         <span class="tbc-label" data-i18n="tbc_app">Застосунок</span>
         <div class="tbc-items">
+          <!-- Master volume (Phase 10/A1). It used to live inside the Backing panel,
+               which made an app-level output control read as a property of the backing
+               band — and put it out of reach in Practice, where the whole Backing panel
+               is a Reference tool. It scales everything the app makes, so it belongs
+               here with the other set-and-forget app settings. -->
+          <div class="tb-group">
+            <span class="tb-label" data-i18n="tb_volume">Гучність</span>
+            <input type="range" id="tb-vol" min="0" max="100" step="1" value="100" aria-label="Volume">
+            <span class="bpm-val" id="tb-vol-val">100%</span>
+          </div>
           <!-- Accessibility (Phase 9 feel pass): the function colours carry meaning by
                hue alone, so offer a colour-blind-safe palette + distinct per-function
                dot shapes. Both are body-class toggles (applyA11y) and persisted — set
@@ -964,11 +1008,6 @@
          see backing is running without expanding the panel. -->
     <div class="toolbar collapsed" id="backing-panel">
       <div class="tb-group">
-        <span class="tb-label" data-i18n="tb_volume">Гучність</span>
-        <input type="range" id="tb-vol" min="0" max="100" step="1" value="100" aria-label="Volume">
-        <span class="bpm-val" id="tb-vol-val">100%</span>
-      </div>
-      <div class="tb-group">
         <span class="tb-label" data-i18n="tb_backing">Супровід</span>
         <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
         <button class="btn band" id="tb-bass" aria-pressed="false"></button>
@@ -980,29 +1019,17 @@
 
 <main class="wrap">
 <div class="layout">
-<div class="main">
 
-  <!-- shared control header (1e): View · Root · Display on one bar. The per-tab
-       view switch was folded up out of each panel so Harmony / Scales no longer
-       carry a separate ВИД row — fewer control layers before the board. Only the
-       active tab's view group is shown (toggled in applyContextBar). -->
+  <!-- shared control header (1e): Root · Display on one bar. The per-tab view switch
+       was folded up out of each panel (and in Phase 10/A2 down onto the board itself,
+       as a lens) so Harmony / Scales carry no separate ВИД row — fewer control layers
+       before the board.
+       A direct child of .layout, NOT of .main, since Phase 10/A3: it is the one band
+       that has to stay ABOVE the neck (it answers "in what key", which the neck is an
+       answer to), while everything else in .main — the view's own controls and its
+       info readout — moved BELOW it. Being its own grid item is what lets the area
+       maps order those three independently on each shape. -->
   <div class="context-bar" id="context-bar">
-    <div class="ctx-group ctx-view" id="ctx-view-harmony">
-      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
-      <div class="group">
-        <button class="btn active" id="hv-chords" data-i18n="view_chords">Тони акорду</button>
-        <button class="btn" id="hv-triads" data-i18n="view_triads">Форми тріад</button>
-        <button class="btn" id="hv-arp" data-i18n="view_arp">Арпеджіо</button>
-        <button class="btn" id="hv-identify" data-i18n="view_identify">Розпізнати</button>
-      </div>
-    </div>
-    <div class="ctx-group ctx-view" id="ctx-view-scales" hidden>
-      <span class="ctrl-label" data-i18n="lbl_view">Вид</span>
-      <div class="group">
-        <button class="btn active" id="sv-scale" data-i18n="view_scale">Гама</button>
-        <button class="btn" id="sv-notes" data-i18n="view_notes">Ноти</button>
-      </div>
-    </div>
     <div class="ctx-group"><span class="ctrl-label" data-i18n="lbl_root">Тоніка</span><div class="group" id="g-roots"></div></div>
     <div class="ctx-group ctx-display">
       <span class="ctrl-label" data-i18n="lbl_display">Показ</span>
@@ -1010,6 +1037,47 @@
       <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
     </div>
   </div>
+
+<!-- One shared fretboard (1b): every board-bearing mode (chord tones, triads,
+     scale, notes) renders into this single board; the legend + hint switch with
+     the active mode. Hidden on the Circle tab. A direct child of .layout (not
+     .main) so the grid can slot the suggester between it and the chord reference
+     on a phone (1e).
+     BOARD-FIRST (Phase 10/A3): it sits here, BEFORE .main, in the source too — not
+     only in the area maps. The grid alone would have put the neck above controls that
+     still came first in the DOM, so a keyboard or screen-reader user would meet the
+     chord picker before the neck it changes and the lens after it. Source order is the
+     focus order; moving the markup is what keeps the two telling the same story. -->
+<!-- The view switch, as a LENS ON THE BOARD (Phase 10/A2). It used to be a third
+     navigation strip up in the header's context bar, which is where you look to
+     answer "where am I", not "how am I reading this neck". Phase 1b already made it
+     a lens underneath — one board with four renderers — and the UI never followed.
+     It now sits on the board it changes, inside #board-region so it moves, hides and
+     sticks with the neck instead of being managed separately (applyBoardRegion). -->
+<div class="board-region" id="board-region">
+  <div class="board-lens" id="board-lens">
+    <div class="lens-group" id="ctx-view-harmony">
+      <button class="btn active" id="hv-chords" data-i18n="view_chords">Тони акорду</button>
+      <button class="btn" id="hv-triads" data-i18n="view_triads">Форми тріад</button>
+      <button class="btn" id="hv-arp" data-i18n="view_arp">Арпеджіо</button>
+      <button class="btn" id="hv-identify" data-i18n="view_identify">Розпізнати</button>
+    </div>
+    <div class="lens-group" id="ctx-view-scales" hidden>
+      <button class="btn active" id="sv-scale" data-i18n="view_scale">Гама</button>
+      <button class="btn" id="sv-notes" data-i18n="view_notes">Ноти</button>
+    </div>
+  </div>
+  <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
+</div>
+<!-- Board legend + hint sit in their own row below the neck, OUTSIDE #board-region,
+     so the sticky-on-mobile board pins the neck only (these scroll away). Toggled
+     with the board by applyBoardRegion(). -->
+<div class="board-meta" id="board-meta">
+  <div class="legend" id="legend"></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<div class="main">
 
   <section class="panel active" id="panel-harmony">
     <div class="panel-head">
@@ -1126,6 +1194,13 @@
     <!-- Practice home: the drill picker + the progress readout. Swapped out for the
          active drill (#drill-area) while a session runs. -->
     <div id="practice-home">
+      <!-- The drill picker (left) and the progress card (right) are two columns on a
+           desktop viewport (Phase 10/A3) — hence the wrapper: it is what the progress
+           card sits BESIDE. Ten cards in one stretched column pushed "what should I
+           practise next?" ~1700px down the page, which is the one question the home
+           screen exists to answer. Below 940px the wrapper is inert and the card falls
+           back under the lists, in source order. -->
+      <div class="ph-drills">
       <p class="practice-soon" data-i18n="practice_intro">Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.</p>
       <!-- Drills grouped by pillar (Phase 5 adds the Rhythm group): Fretboard
            knowledge vs playing THE changes. -->
@@ -1202,6 +1277,7 @@
           </button></li>
         </ul>
       </div>
+      </div>
       <!-- Progress readout (3b): the learner model's aggregate stats; renderPractice()
            fills #practice-progress, empty until the drill writes the first attempt. -->
       <div class="practice-progress-card">
@@ -1224,6 +1300,20 @@
       <div class="divider" id="drill-ctx-div" hidden></div>
       <span class="ctrl-label" id="drill-ctx-keylbl" data-i18n="dr_key" hidden>Тональність</span>
       <div class="group root-row" id="drill-ctx-key" hidden></div>
+      <!-- Tempo, scoped (Phase 10/A1). FOUR drills run on the shared scheduler, and all
+           four used to reach for the header slider — which the condensing header folds
+           away exactly when a run starts. So the timing drill grew a private −/BPM/+ (two
+           tempo controls on one screen, two visual languages) and the other three got
+           nothing. One control, in the shell, shown for the drills that declare
+           `tempo:true`; applyDrillCtx() derives it from the registry the same way it
+           derives the key half. -->
+      <div class="divider" id="drill-ctx-tdiv" hidden></div>
+      <span class="ctrl-label" id="drill-ctx-tlbl" data-i18n="tb_tempo" hidden>Темп</span>
+      <div class="group tempo-group" id="drill-ctx-tempo" hidden>
+        <button type="button" class="btn" id="drill-ctx-slower" aria-label="−5 BPM">&#8722;</button>
+        <span class="tempo-bpm" id="drill-ctx-bpm"></span>
+        <button type="button" class="btn" id="drill-ctx-faster" aria-label="+5 BPM">&#43;</button>
+      </div>
     </div>
 
     <!-- Chord-change fluency / "one-minute changes" (Phase 5a): a coach drill with a
@@ -1387,14 +1477,10 @@
       </div>
       <div class="row"><span class="ctrl-label" data-i18n="sd_subdiv">Поділ</span><div class="group" id="sd-subs"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="sd-pos"></div></div>
+      <!-- Tempo used to sit here as a private −/BPM/+ copy. It moved to the shared
+           #drill-ctx strip in Phase 10/A1 — one home, and now the three other
+           tempo-driven drills reach it too. -->
       <div class="row">
-        <span class="ctrl-label" data-i18n="sd_tempo">Темп</span>
-        <div class="group sd-tempo">
-          <button type="button" class="btn" id="sd-slower" aria-label="−5 BPM">&#8722;</button>
-          <span class="sd-bpm" id="sd-bpm"></span>
-          <button type="button" class="btn" id="sd-faster" aria-label="+5 BPM">&#43;</button>
-        </div>
-        <div class="divider"></div>
         <button type="button" class="btn" id="sd-notes" aria-pressed="true"></button>
         <!-- Phase 8/F1: flips this drill from the screen-only coach tier to a scored
              one. 13-scored.js hides it wherever onset detection can't run, so
@@ -1448,21 +1534,6 @@
 
 </div>
 
-<!-- One shared fretboard (1b): every board-bearing mode (chord tones, triads,
-     scale, notes) renders into this single board; the legend + hint switch with
-     the active mode. Hidden on the Circle tab. A direct child of .layout (not
-     .main) so the grid can slot the suggester between it and the chord reference
-     on a phone (1e). -->
-<div class="board-region" id="board-region">
-  <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
-</div>
-<!-- Board legend + hint sit in their own row below the neck, OUTSIDE #board-region,
-     so the sticky-on-mobile board pins the neck only (these scroll away). Toggled
-     with the board by applyBoardRegion(). -->
-<div class="board-meta" id="board-meta">
-  <div class="legend" id="legend"></div>
-  <div class="hint" id="hint"></div>
-</div>
 
 <!-- Progression sequencer (1e): a full-width row below the board. Shown only in
      Harmony → Chord-tones; toggled by applyHarmonyExtras(). The chord-shape cards
@@ -1562,7 +1633,7 @@
       <div class="kbd-row"><span class="kbd-keys"><kbd>Space</kbd></span><span data-i18n="kbd_play">Прослухати / Стоп</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>L</kbd></span><span data-i18n="kbd_loop">Луп — увімк/вимк</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>M</kbd></span><span data-i18n="kbd_metro">Метроном — увімк/вимк</span></div>
-      <div class="kbd-row"><span class="kbd-keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><span data-i18n="kbd_tabs">Перемкнути вкладки</span></div>
+      <div class="kbd-row"><span class="kbd-keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd></span><span data-i18n="kbd_tabs">Перемкнути розділи</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>A</kbd>–<kbd>G</kbd></span><span data-i18n="kbd_root">Задати тоніку</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>[</kbd><kbd>]</kbd></span><span data-i18n="kbd_transpose">Транспонувати на півтон</span></div>
     </div>
@@ -2200,8 +2271,7 @@ const CHANGELOG = [{"v":"2.14.0","date":"2026-08-02","en":["Mic scoring reaches 
 const I18N = {
   uk: {
     brand:'Euterpe', brand_desc:'гітарна студія',
-    tab_scales:'Гами / моди', tab_circle:'Коло квінт',
-    mode_reference:'Довідник', mode_practice:'Практика',
+    tab_scales:'Гами', tab_circle:'Коло квінт', mode_practice:'Практика',
     practice_h:'Практика', practice_intro:'Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.',
     ear_intervals:'Інтервали на слух', ear_intervals_meta:'Почуй дві ноти · назви інтервал',
     ear_chords:'Якість акорду на слух', ear_chords_meta:'Почуй акорд · визнач його тип',
@@ -2220,7 +2290,7 @@ const I18N = {
     drill_strum:'Бій і відчуття', drill_strum_meta:'Малюнки · свінг · акценти · глушіння · коуч',
     dr_key:'Тональність',
     practice_grp_timing:'Тайминг', drill_timing:'Поділ і тайминг', drill_timing_meta:'Вісімки · тріолі · шістнадцятки · коуч',
-    sd_subdiv:'Поділ', sd_tempo:'Темп', sd_notes:'Ноти',
+    sd_subdiv:'Поділ', sd_notes:'Ноти',
     sd_hint:'Тримайся клацання — акцентований удар це «раз», тихі — поділи долі. Грай підсвічені ноти гами рівно по сітці. Це коуч: оцінку тайминга з мікрофоном додамо згодом.',
     sp_pattern:'Малюнок', sp_chord:'Акорд', sp_play:'Грати', sp_stop:'Стоп',
     sp_swing:'Свінг', sp_accent:'Бекбіт', sp_mute:'Глушіння', sp_band:'Гурт',
@@ -2237,7 +2307,7 @@ const I18N = {
     cr_hint:'Застосунок грає фразу з гами — повтори її на грифі в тому ж порядку. Слухай, поки грає, і відповідай у паузі: саме так будується фразування.',
     prog_title:'Прогрес', prog_empty:'Ще немає практики — статистика з’явиться, щойно почнеш вправи.',
     prog_tracked:'Вивчається', prog_accuracy:'Точність', prog_streak:'Найкраща серія', prog_sessions:'Сесій',
-    tab_harmony:'Акорди / тріади', lbl_view:'Вид', view_chords:'Тони акорду', view_triads:'Форми тріад',
+    tab_harmony:'Акорди', lbl_view:'Вид', view_chords:'Тони акорду', view_triads:'Форми тріад',
     view_scale:'Гама', view_notes:'Ноти', view_identify:'Розпізнати',
     id_h:'Розпізнавання акорду', id_p:'Натисни на грифі ноти, які береш, — і дізнайся, що це за акорд.',
     lbl_identify:'Ноти', id_prompt:'Познач щонайменше 3 ноти на грифі.', id_none:'Невідомий акорд — спробуй іншу комбінацію.', id_also:'або',
@@ -2318,6 +2388,7 @@ const I18N = {
     a11y_palette:'Палітра для дальтоніків', a11y_shapes:'Форми на нотах',
     tun_custom:'Власний стрій',
       prog_active:'Активних днів', prog_due:'До повтору', prog_review:'Повторити',
+      prog_next:'Наступне', prog_start:'Почати',
     share_btn:'Поділитися', share_copied:'Скопійовано!',
     wc_title:'Вітаємо в Euterpe',
     wc_lead:'Гітарна студія для теорії та практики. Два способи почати:',
@@ -2343,13 +2414,12 @@ const I18N = {
     pwa_install:'Встановити', pwa_install_tip:'Встановити Euterpe як застосунок',
     pwa_update:'Доступна нова версія Euterpe.', pwa_update_btn:'Оновити', pwa_dismiss:'Сховати',
     kbd_title:'Гарячі клавіші', kbd_play:'Прослухати / Стоп', kbd_loop:'Луп — увімк/вимк', kbd_metro:'Метроном — увімк/вимк',
-    kbd_tabs:'Перемкнути вкладки', kbd_root:'Задати тоніку', kbd_transpose:'Транспонувати на півтон', kbd_hint:'Гарячі клавіші',
+    kbd_tabs:'Перемкнути розділи', kbd_root:'Задати тоніку', kbd_transpose:'Транспонувати на півтон', kbd_hint:'Гарячі клавіші',
     ph_help:'Опис'
   },
   en: {
     brand:'Euterpe', brand_desc:'guitar studio',
-    tab_scales:'Scales / modes', tab_circle:'Circle of fifths',
-    mode_reference:'Reference', mode_practice:'Practice',
+    tab_scales:'Scales', tab_circle:'Circle', mode_practice:'Practice',
     practice_h:'Practice', practice_intro:'Scored drills that track your progress and resurface what you miss.',
     ear_intervals:'Intervals by ear', ear_intervals_meta:'Hear two notes · name the interval',
     ear_chords:'Chord quality by ear', ear_chords_meta:'Hear a chord · name its quality',
@@ -2368,7 +2438,7 @@ const I18N = {
     drill_strum:'Strumming & feel', drill_strum_meta:'Patterns · swing · accents · muting · coach',
     dr_key:'Key',
     practice_grp_timing:'Timing', drill_timing:'Subdivision & timing', drill_timing_meta:'Eighths · triplets · sixteenths · coach',
-    sd_subdiv:'Subdivision', sd_tempo:'Tempo', sd_notes:'Notes',
+    sd_subdiv:'Subdivision', sd_notes:'Notes',
     sd_hint:'Lock to the click — the accented tick is beat 1, the soft ticks are the subdivisions. Play the lit scale notes evenly across the grid. A coach: mic-scored timing arrives later.',
     sp_pattern:'Pattern', sp_chord:'Chord', sp_play:'Play', sp_stop:'Stop',
     sp_swing:'Swing', sp_accent:'Backbeat', sp_mute:'Palm mute', sp_band:'Band',
@@ -2385,7 +2455,7 @@ const I18N = {
     cr_hint:'The app plays a phrase from the scale — echo it back on the neck in the same order. Listen while it plays, answer in the space it leaves: that is how phrasing is built.',
     prog_title:'Progress', prog_empty:'No practice yet — your stats will appear once you start a drill.',
     prog_tracked:'Tracked', prog_accuracy:'Accuracy', prog_streak:'Best streak', prog_sessions:'Sessions',
-    tab_harmony:'Chords / triads', lbl_view:'View', view_chords:'Chord tones', view_triads:'Triad shapes',
+    tab_harmony:'Chords', lbl_view:'View', view_chords:'Chord tones', view_triads:'Triad shapes',
     view_scale:'Scale', view_notes:'Notes', view_identify:'Identify',
     id_h:'Chord identifier', id_p:'Tap the notes you are playing on the neck to name the chord.',
     lbl_identify:'Notes', id_prompt:'Mark at least 3 notes on the neck.', id_none:'Unknown chord — try another combination.', id_also:'or',
@@ -2466,6 +2536,7 @@ const I18N = {
     a11y_palette:'Colour-blind palette', a11y_shapes:'Shapes on dots',
     tun_custom:'Custom tuning',
       prog_active:'Active days', prog_due:'Due to review', prog_review:'Review',
+      prog_next:'Practise next', prog_start:'Start',
     share_btn:'Share', share_copied:'Copied!',
     wc_title:'Welcome to Euterpe',
     wc_lead:'A guitar studio for theory and practice. Two ways in:',
@@ -2491,7 +2562,7 @@ const I18N = {
     pwa_install:'Install', pwa_install_tip:'Install Euterpe as an app',
     pwa_update:'A new version of Euterpe is available.', pwa_update_btn:'Reload', pwa_dismiss:'Dismiss',
     kbd_title:'Keyboard shortcuts', kbd_play:'Listen / Stop', kbd_loop:'Loop on/off', kbd_metro:'Metronome on/off',
-    kbd_tabs:'Switch tabs', kbd_root:'Set the key (root)', kbd_transpose:'Transpose by a semitone', kbd_hint:'Keyboard shortcuts',
+    kbd_tabs:'Switch section', kbd_root:'Set the key (root)', kbd_transpose:'Transpose by a semitone', kbd_hint:'Keyboard shortcuts',
     ph_help:'Description'
   }
 };
@@ -2976,6 +3047,13 @@ function loopToggle(){
 function stopLoop(){ if(!loopClock) return; removeClock(loopClock); loopClock=null; clearVisualQ(); stopLoopVisual();
   const b=document.getElementById('g-loop'); if(b){ b.classList.remove('active'); b.setAttribute('aria-pressed','false'); } setLoopLabel(); }
 function setLoopLabel(){ const b=document.getElementById('g-loop'); if(!b) return; b.innerHTML=(loopClock?'&#9632; ':'&#8635; ')+t('b_loop'); b.setAttribute('aria-label', t(loopClock?'b_loop_stop_tip':'b_loop_tip')); b.title=t(loopClock?'b_loop_stop_tip':'b_loop_tip'); updateGlobalTransport(); }
+
+
+function stopReferenceTransport(){
+  if(seqClock) seqStop();
+  stopLoop();
+  if(metroClock) metroToggle();
+}
 
 
 
@@ -3946,7 +4024,8 @@ function applyLang(){
   activateRoot(document.getElementById('g-roots'), gRoot);
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));
-  if(typeof syncTabsScroll==='function') syncTabsScroll();
+  
+  { const bl=document.getElementById('board-lens'); if(bl) bl.setAttribute('aria-label', t('lbl_view')); }
 }
 
 
@@ -3969,6 +4048,14 @@ function buildToolbar(){
   if(typeof applyA11y==='function') applyA11y();   
   applyToolbarState();
 }
+
+function setTempo(bpm){
+  tempo = Math.max(40, Math.min(200, Math.round(bpm)));
+  const r=document.getElementById('tb-tempo');  if(r) r.value=tempo;
+  const b=document.getElementById('tb-bpm');    if(b) b.textContent=tempo+' BPM';
+  const d=document.getElementById('drill-ctx-bpm'); if(d) d.textContent=tempo+' BPM';
+}
+
 
 function buildTuner(){
   const ts=document.getElementById('tb-tuner-strings'); if(!ts) return;
@@ -4012,16 +4099,10 @@ function applyAsideState(){
 
 function renderAllBoards(){ renderContextViews(); }
 
-function syncTabsScroll(){
-  const el=document.getElementById('tabs'); if(!el) return;
-  const max=el.scrollWidth - el.clientWidth;
-  el.classList.toggle('scrollable', max>1 && el.scrollLeft < max-1);
-}
 
 if(typeof window!=='undefined'){
   let _rzT=null, _rzW=window.innerWidth;
   window.addEventListener('resize', ()=>{
-    syncTabsScroll();
     if(window.innerWidth===_rzW) return;          
     _rzW=window.innerWidth;
     clearTimeout(_rzT); _rzT=setTimeout(()=>{ renderAllBoards(); renderCircle&&renderCircle(); }, 150);
@@ -4212,10 +4293,30 @@ function drillKeyChanged(){
 
 
 function applyDrillCtx(){
-  const d=activeDrill(), on=!!(d && typeof d.onKey==='function');
+  const d=activeDrill();
+  const key=!!(d && typeof d.onKey==='function'), tmp=!!(d && d.tempo);
   ['drill-ctx-div','drill-ctx-keylbl','drill-ctx-key'].forEach(id=>{
-    const el=document.getElementById(id); if(el) el.hidden=!on;
+    const el=document.getElementById(id); if(el) el.hidden=!key;
   });
+  ['drill-ctx-tdiv','drill-ctx-tlbl','drill-ctx-tempo'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.hidden=!tmp;
+  });
+  if(tmp && typeof setTempo==='function') setTempo(tempo);
+}
+
+
+function drillTracks(){
+  const out=[];
+  DRILLS.forEach(d=>{ (d.tracks||[]).forEach(tr=>{ out.push(Object.assign({ drill:d }, tr)); }); });
+  return out;
+}
+function trackByItems(ns){ return drillTracks().find(tr => tr.items===ns) || null; }
+function trackBySess(ns){ return drillTracks().find(tr => tr.sess===ns) || null; }
+function trackById(id){ return drillTracks().find(tr => tr.id===id) || null; }
+
+function sessNs(drillId){
+  const s=String(drillId||''), i=s.indexOf(':');
+  return i<0 ? s : s.slice(0,i);
 }
 
 function showDrillHome(){
@@ -4232,13 +4333,17 @@ function showDrillHome(){
 function refreshDrillsLang(){
   DRILLS.forEach(d=>{ if(typeof d.refreshLang==='function' && drillIsActive(d)) d.refreshLang(); });
 }
-const LEARNER_V = 1;
+const LEARNER_V = 2;
 const SRS_EASE_MIN = 1.3, SRS_EASE_MAX = 3.0, SRS_EASE_START = 2.5;
 const DAY_MS = 86400000;
-const SESS_MAX = 50;        
+const SESS_MAX = 300;       
+const SESS_PER_ID = 20;     
+const PERF_STALE_DAYS = 5;  
+const PERF_TREND_N = 3;     
 const ITEMS_MAX = 5000;     
+const IDS_MAX = 400;        
 const ID_MAX = 64;          
-function newLearner(){ return { v: LEARNER_V, items: {}, sessions: [] }; }
+function newLearner(){ return { v: LEARNER_V, items: {}, sessions: [], best: {} }; }
 let learner = newLearner();
 function learnerItem(id){
   let it = learner.items[id];
@@ -4271,10 +4376,73 @@ function dueItems(now, prefix){
     .filter(id => (!prefix || id.indexOf(prefix)===0) && learner.items[id].due <= now)
     .sort((a,b) => learner.items[a].due - learner.items[b].due);
 }
-function recordSession(drill, score, now){
+function recordSession(drill, score, now, extra){
   now = (typeof now==='number') ? now : Date.now();
-  learner.sessions.push({ t: now, drill: String(drill), score: (typeof score==='number' && isFinite(score)) ? score : 0 });
-  if(learner.sessions.length > SESS_MAX) learner.sessions.splice(0, learner.sessions.length - SESS_MAX);
+  const id = String(drill);
+  const s = { t: now, drill: id, score: lNum(score, 0) };
+  if(extra && typeof extra==='object' && typeof extra.err==='number' && isFinite(extra.err))
+    s.err = Math.max(0, extra.err);
+  learner.sessions.push(s);
+  learnerNoteBest(id, s);
+  pruneSessions();
+}
+function pruneSessions(){
+  const seen = {};
+  const keep = [];
+  for(let i=learner.sessions.length-1; i>=0; i--){        
+    const s = learner.sessions[i], n = (seen[s.drill]||0);
+    if(n >= SESS_PER_ID) continue;
+    seen[s.drill] = n+1; keep.push(s);
+  }
+  keep.reverse();                                          
+  learner.sessions = keep.length > SESS_MAX ? keep.slice(-SESS_MAX) : keep;
+}
+function learnerNoteBest(id, s){
+  const tr = (typeof trackBySess==='function') ? trackBySess(sessNs(id)) : null;
+  const low = !!(tr && tr.better==='low');
+  const cur = learner.best[id];
+  if(!cur){
+    if(Object.keys(learner.best).length >= IDS_MAX) return;
+    learner.best[id] = { score: s.score, t: s.t };
+  } else if(low ? s.score < cur.score : s.score > cur.score){
+    cur.score = s.score; cur.t = s.t;
+  }
+  const b = learner.best[id];
+  if(typeof s.err==='number' && (typeof b.err!=='number' || s.err < b.err)) b.err = s.err;
+}
+function learnerBest(id){ return learner.best[String(id)] || null; }
+const TREND_EPS = 0.03;
+function learnerTrend(idOrNs, now){
+  now = (typeof now==='number') ? now : Date.now();
+  const key = String(idOrNs);
+  let runs = learner.sessions.filter(s => s.drill===key);
+  const exact = runs.length>0;
+  if(!exact) runs = learner.sessions.filter(s => sessNs(s.drill)===key);
+  const tr = (typeof trackBySess==='function') ? trackBySess(exact ? sessNs(key) : key) : null;
+  const low = !!(tr && tr.better==='low');
+  const out = { id:key, n:runs.length, unit:(tr&&tr.unit)||'', better:low?'low':'high',
+                last:null, lastT:0, best:null, bestErr:null, lastErr:null,
+                dir:'flat', staleDays:null };
+  if(!runs.length) return out;
+  const last = runs[runs.length-1];
+  out.last = last.score; out.lastT = last.t;
+  out.lastErr = (typeof last.err==='number') ? last.err : null;
+  out.staleDays = Math.max(0, (now - last.t) / DAY_MS);
+  const stored = exact ? learnerBest(key) : null;
+  out.best = stored ? stored.score
+    : runs.reduce((b,s)=> b===null ? s.score : (low ? Math.min(b,s.score) : Math.max(b,s.score)), null);
+  const errs = runs.filter(s=>typeof s.err==='number').map(s=>s.err);
+  if(stored && typeof stored.err==='number') errs.push(stored.err);
+  if(errs.length) out.bestErr = Math.min.apply(null, errs);
+  if(runs.length >= 2){
+    const cut = Math.max(1, runs.length - PERF_TREND_N);
+    const mean = a => a.reduce((x,s)=>x+s.score, 0) / a.length;
+    const recent = mean(runs.slice(cut)), earlier = mean(runs.slice(0, cut));
+    const delta = (recent - earlier) * (low ? -1 : 1);
+    const scale = Math.abs(earlier) || 1;
+    out.dir = Math.abs(delta)/scale < TREND_EPS ? 'flat' : (delta > 0 ? 'up' : 'down');
+  }
+  return out;
 }
 function learnerStats(){
   const ids = Object.keys(learner.items);
@@ -4282,18 +4450,38 @@ function learnerStats(){
   ids.forEach(id => { const it=learner.items[id]; seen+=it.seen; correct+=it.correct; if(it.streak>bestStreak) bestStreak=it.streak; });
   return { items: ids.length, seen, correct, accuracy: seen ? correct/seen : 0, bestStreak, sessions: learner.sessions.length };
 }
-const REVIEW_NS = ['note','interval','chordq','rhythm'];
+function reviewNamespaces(){
+  return (typeof drillTracks==='function' ? drillTracks() : [])
+    .filter(tr => tr.kind==='recall' && tr.items).map(tr => tr.items);
+}
 function learnerReview(now){
   now=(typeof now==='number')?now:Date.now();
-  const by={}; REVIEW_NS.forEach(ns=>by[ns]=0); let total=0;
+  const nss=reviewNamespaces();
+  const by={}; nss.forEach(ns=>by[ns]=0); let total=0;
   Object.keys(learner.items).forEach(id=>{
     if(learner.items[id].due>now) return;
     const ns=id.slice(0, id.indexOf(':'));
     if(by[ns]===undefined) return;
     by[ns]++; total++;
   });
-  let top=null, max=0; REVIEW_NS.forEach(ns=>{ if(by[ns]>max){ max=by[ns]; top=ns; } });
-  return { total, by, top };
+  let top=null, max=0; nss.forEach(ns=>{ if(by[ns]>max){ max=by[ns]; top=ns; } });
+  const due=[];
+  nss.slice().sort((a,b)=>by[b]-by[a]).forEach(ns=>{
+    if(by[ns]>0){ const tr=trackByItems(ns); due.push({ track:tr?tr.id:ns, ns, kind:'recall', n:by[ns], reason:'due' }); }
+  });
+  (typeof drillTracks==='function' ? drillTracks() : []).forEach(tr=>{
+    if(tr.kind!=='perf' || !tr.sess) return;
+    const tn=learnerTrend(tr.sess, now);
+    if(!tn.n){ due.push({ track:tr.id, ns:tr.sess, kind:'perf', n:0, reason:'new' }); return; }
+    if(tn.staleDays >= PERF_STALE_DAYS) due.push({ track:tr.id, ns:tr.sess, kind:'perf', n:0, reason:'stale' });
+    else if(tn.dir==='down') due.push({ track:tr.id, ns:tr.sess, kind:'perf', n:0, reason:'slipping' });
+  });
+  return { total, by, top, due };
+}
+function startTrack(id){
+  const tr = (typeof trackById==='function') ? trackById(id) : null;
+  if(tr && typeof tr.start==='function'){ tr.start(); return true; }
+  return false;
 }
 function learnerActivity(now, win){
   now=(typeof now==='number')?now:Date.now(); win=win||7;
@@ -4302,11 +4490,12 @@ function learnerActivity(now, win){
   return { days: Object.keys(days).length, window: win };
 }
 function lInt(v, def){ return (Number.isFinite(v) && Math.floor(v)===v) ? v : (def||0); }
+function lNum(v, def){ return (typeof v==='number' && isFinite(v)) ? v : (def||0); }
 function lClampNum(v, lo, hi, def){ return (typeof v==='number' && isFinite(v)) ? Math.min(hi, Math.max(lo, v)) : def; }
 function normalizeLearner(raw){
   const out = newLearner();
   if(!raw || typeof raw!=='object') return out;
-  if(raw.v !== LEARNER_V) return out;          
+  if(raw.v !== LEARNER_V && raw.v !== 1) return out;
   if(raw.items && typeof raw.items==='object'){
     let n=0;
     for(const id of Object.keys(raw.items)){
@@ -4328,8 +4517,30 @@ function normalizeLearner(raw){
     out.sessions = raw.sessions
       .filter(s => s && typeof s==='object' && Number.isFinite(s.t))
       .slice(-SESS_MAX)
-      .map(s => ({ t: s.t, drill: typeof s.drill==='string' ? s.drill.slice(0,32) : '', score: (typeof s.score==='number' && isFinite(s.score)) ? s.score : 0 }));
+      .map(s => {
+        const o = { t: s.t, drill: typeof s.drill==='string' ? s.drill.slice(0,32) : '', score: lNum(s.score, 0) };
+        if(typeof s.err==='number' && isFinite(s.err)) o.err = Math.max(0, s.err);
+        return o;
+      });
   }
+  if(raw.best && typeof raw.best==='object'){
+    let n=0;
+    for(const id of Object.keys(raw.best)){
+      if(typeof id!=='string' || !id.length || id.length>ID_MAX) continue;
+      if(++n > IDS_MAX) break;
+      const b=raw.best[id];
+      if(!b || typeof b!=='object' || !Number.isFinite(b.score)) continue;
+      const o = { score: b.score, t: Math.max(0, lInt(b.t, 0)) };
+      if(typeof b.err==='number' && isFinite(b.err)) o.err = Math.max(0, b.err);
+      out.best[id] = o;
+    }
+  }
+  const keep = learner;
+  learner = out;
+  try{
+    out.sessions.forEach(s => learnerNoteBest(s.drill, s));
+    pruneSessions();
+  } finally { learner = keep; }
   return out;
 }
 function micSupported(){
@@ -4381,6 +4592,11 @@ function micReleaseAll(){ micUsers = 0; micRelease(); }
 function micLive(){ return !!micSrc; }
 const SC_TOL_MAX = 0.12;    
 const SC_MAX_MARKS = 512;   
+function scoredErr(score){
+  if(!score || !score.n || !isFinite(score.meanAbsMs)) return undefined;
+  if(typeof onsetSelfHeard==='function' && onsetSelfHeard(score)) return undefined;
+  return { err: score.meanAbsMs };
+}
 function scoredRun(cfg){
   const st = { on:false, live:false, grid:[], heard:[], off:null, score:null };
   function available(){ return typeof onsetSupported === 'function' && onsetSupported(); }
@@ -4718,10 +4934,18 @@ function renderProgressInto(hostId){
     stat(act.days, t('prog_active'))+
     stat(s.sessions, t('prog_sessions'))+
   '</div>';
+  
   const rev=learnerReview();
   if(rev.total>0 && rev.top){
     html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_due')+' · '+rev.total+'</span>'+
       '<button type="button" class="btn play pp-review-btn" data-review="'+rev.top+'">'+t('prog_review')+'</button></div>';
+  } else {
+    const nxt=(rev.due||[]).find(d=>d.kind==='perf');
+    const tr=nxt && typeof trackById==='function' ? trackById(nxt.track) : null;
+    if(tr && tr.label){
+      html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_next')+' · '+t(tr.label)+'</span>'+
+        '<button type="button" class="btn play pp-review-btn" data-review="'+tr.id+'">'+t('prog_start')+'</button></div>';
+    }
   }
   host.innerHTML=html;
 }
@@ -4775,7 +4999,13 @@ function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPr
 
 
 registerDrill({ id:'ear', area:'ear-area',
-                isActive:()=>!!ear, exit:exitEar, refreshLang:refreshEarLang });
+                isActive:()=>!!ear, exit:exitEar, refreshLang:refreshEarLang,
+                
+                tracks:[
+                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', start:()=>startEar('interval') },
+                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    start:()=>startEar('chordq') },
+                  { id:'rhythm',   kind:'recall', items:'rhythm',   sess:'ear-rhythm',   label:'ear_rhythm',    start:()=>startEar('rhythm') }
+                ] });
 
 (function initEar(){
   const area=document.getElementById('ear-area'); if(!area) return;
@@ -4945,7 +5175,9 @@ function refreshCallRespLang(){ if(cr) renderCr(); }
 
 registerDrill({ id:'callresp', area:'cr-area',
                 isActive:()=>!!cr, exit:exitCallResp, refreshLang:refreshCallRespLang,
-                onKey:()=>{ if(cr) crNewRound(); } });
+                onKey:()=>{ if(cr) crNewRound(); },
+                tracks:[{ id:'callresp', kind:'perf', sess:'callresp', label:'drill_callresp',
+                          better:'high', unit:'pct', start:startCallResp }] });
 
 (function initCallResp(){
   const card=document.getElementById('start-callresp'); if(!card) return;
@@ -5080,7 +5312,9 @@ function renderDrillSummary(elapsed, acc){
 
 
 registerDrill({ id:'notes', area:'drill-area',
-                isActive:()=>!!drill, exit:exitDrill });
+                isActive:()=>!!drill, exit:exitDrill,
+                tracks:[{ id:'note', kind:'recall', items:'note', sess:'notes', label:'drill_notes',
+                          better:'high', unit:'pct', start:startDrill }] });
 
 (function initDrill(){
   const b=document.getElementById('drill-board'); if(!b) return;
@@ -5162,12 +5396,12 @@ function targetStop(){
   if(tgDrill.clock){ if(typeof removeClock==='function') removeClock(tgDrill.clock); tgDrill.clock=null; }
   if(typeof clearVisualQ==='function') clearVisualQ();
   tgDrill.playing=false;
-  tgScore.end();
+  const sc=tgScore.end();
   const barsPlayed = tgDrill.cycles*tgDrill.bars.length + tgDrill.bar;
   if(barsPlayed>=1){
     const name=SEQ_PRESETS[tgDrill.presetIdx].name;
     if(tgTones()) recordSession('target:'+name, tgAccuracy());
-    else recordSession('comp:'+name, barsPlayed);
+    else recordSession('comp:'+name, barsPlayed, undefined, scoredErr(sc));
     saveState();
     if(typeof renderPractice==='function') renderPractice();
   }
@@ -5303,7 +5537,12 @@ function markTargetDot(si,f,kind){
 function refreshTargetLang(){ if(tgDrill){ renderTarget(); tgScore.refreshLang(); } }
 
 
-registerDrill({ id:'overchanges', area:'tg-area',
+registerDrill({ id:'overchanges', area:'tg-area', tempo:true,   
+                
+                tracks:[
+                  { id:'comp',   kind:'perf', sess:'comp',   better:'high', unit:'bars', label:'drill_comp',   start:startComp },
+                  { id:'target', kind:'perf', sess:'target', better:'high', unit:'pct',  label:'drill_target', start:startTarget }
+                ],
                 isActive:()=>!!tgDrill, exit:exitTarget, refreshLang:refreshTargetLang,
                 onKey:()=>{ if(!tgDrill) return;
                             tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
@@ -5355,9 +5594,8 @@ function cmPairId(i){ const p=CM_PAIRS[i]; return 'changes:'+cmChord(p[0]).lbl+'
 
 
 function cmPairBest(i){
-  const id=cmPairId(i); let best=0;
-  learner.sessions.forEach(s=>{ if(s.drill===id && s.score>best) best=s.score; });
-  return best;
+  const b=learnerBest(cmPairId(i));
+  return b ? b.score : 0;
 }
 
 
@@ -5491,7 +5729,9 @@ function renderCmSummary(){
 function refreshChangesLang(){ if(cmDrill) renderCm(); }
 
 
-registerDrill({ id:'changes', area:'cm-area',
+registerDrill({ id:'changes', area:'cm-area', tempo:true,   
+                tracks:[{ id:'changes', kind:'perf', sess:'changes', label:'drill_changes',
+                          better:'high', unit:'cpm', start:startChanges }],
                 isActive:()=>!!cmDrill, exit:exitChanges, refreshLang:refreshChangesLang });
 
 (function initChanges(){
@@ -5574,8 +5814,8 @@ function spStop(){
   if(spDrill.clock){ if(typeof removeClock==='function') removeClock(spDrill.clock); spDrill.clock=null; }
   if(typeof clearVisualQ==='function') clearVisualQ();
   spDrill.playing=false; spDrill.slot=-1;
-  spScore.end();
-  if(spDrill.bars>=1){ recordSession('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars); saveState(); if(typeof renderPractice==='function') renderPractice(); }
+  const sc=spScore.end();
+  if(spDrill.bars>=1){ recordSession('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars, undefined, scoredErr(sc)); saveState(); if(typeof renderPractice==='function') renderPractice(); }
   renderStrum();
 }
 
@@ -5649,7 +5889,9 @@ function spHighlightSlot(slot){
 }
 function refreshStrumLang(){ if(spDrill){ renderStrum(); spScore.refreshLang(); } }
 
-registerDrill({ id:'strum', area:'sp-area',
+registerDrill({ id:'strum', area:'sp-area', tempo:true,   
+                tracks:[{ id:'strum', kind:'perf', sess:'strum', label:'drill_strum',
+                          better:'high', unit:'bars', start:startStrum }],
                 isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang,
                 onKey:()=>{ if(spDrill) renderStrum(); } });
 
@@ -5756,9 +5998,9 @@ function sdStop(){
   sd.playing=false;
   if(sdLit){ sdLit.classList.remove('on'); sdLit=null; }
   document.querySelectorAll('#sd-grid .sd-cell.on').forEach(c=>c.classList.remove('on'));
-  sdScore.end();
+  const sc=sdScore.end();
   if(sd.bars>=1){
-    recordSession('timing:'+SUBDIVS[sdSub].id, sd.bars);
+    recordSession('timing:'+SUBDIVS[sdSub].id, sd.bars, undefined, scoredErr(sc));
     saveState();
     if(typeof renderPractice==='function') renderPractice();
   }
@@ -5794,7 +6036,6 @@ function renderTiming(){
   segButtons('sd-subs', SUBDIVS.map(s=>({label:sdSubName(s)})), sdSub, i=>{ sdSub=i; renderSdGrid(); sdRestart(); renderTiming(); });
   segButtons('sd-pos', ['1','2','3','4','5'].map(label=>({label})), sdPos-1, i=>{ sdPos=i+1; sdPaintScale(); sdRestart(); });
   const tt=document.getElementById('sd-title'); if(tt) tt.textContent=gRootLbl+' · '+sName(SCALES[scIdx]);
-  const bpm=document.getElementById('sd-bpm'); if(bpm) bpm.textContent=tempo+' BPM';
   const nb=document.getElementById('sd-notes'); if(nb){ nb.textContent=t('sd_notes'); nb.classList.toggle('active', sdNotes); nb.setAttribute('aria-pressed', sdNotes?'true':'false'); }
   renderSdGrid();
   const pb=document.getElementById('sd-play'); if(pb){ pb.innerHTML=(sd.playing?'&#9632; ':'&#9654; ')+t(sd.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', sd.playing); pb.setAttribute('aria-pressed', sd.playing?'true':'false'); }
@@ -5839,19 +6080,15 @@ function sdLightNote(si, f){
   sdLit=d||null;
 }
 
-function sdSetTempo(bpm){
-  tempo=Math.max(40, Math.min(200, bpm));
-  const r=document.getElementById('tb-tempo'); if(r) r.value=tempo;
-  const b=document.getElementById('tb-bpm'); if(b) b.textContent=tempo+' BPM';
-  renderTiming();
-}
 function refreshTimingLang(){
   if(!sd) return;
   renderTiming();
   sdScore.refreshLang();
 }
 
-registerDrill({ id:'timing', area:'sd-area',
+registerDrill({ id:'timing', area:'sd-area', tempo:true,
+                tracks:[{ id:'timing', kind:'perf', sess:'timing', label:'drill_timing',
+                          better:'high', unit:'bars', start:startTiming }],
                 isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang,
                 onKey:()=>{ if(!sd) return; sdRenderBoard(); sdRestart(); renderTiming(); } });
 
@@ -5862,8 +6099,6 @@ registerDrill({ id:'timing', area:'sd-area',
   wire('sd-play',   sdToggle);
   wire('sd-mic',    ()=>{ if(sd&&sd.playing) sdStop(); sdScore.toggle(); renderTiming(); });
   wire('sd-notes',  ()=>{ sdNotes=!sdNotes; if(!sdNotes && sdLit){ sdLit.classList.remove('on'); sdLit=null; } renderTiming(); });
-  wire('sd-slower', ()=>sdSetTempo(tempo-5));
-  wire('sd-faster', ()=>sdSetTempo(tempo+5));
 })();
 const MT_FFT = 2048;
 const MT_CLARITY = 0.9, MT_RMS = 0.008;
@@ -6272,15 +6507,17 @@ document.getElementById('sv-scale').onclick=()=>setScView('scale');
 document.getElementById('sv-notes').onclick=()=>setScView('notes');
 
 function applyContextBar(){
-  document.getElementById('context-bar').hidden = !(currentTab==='harmony' || currentTab==='scales');
-  const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
-  const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
-  const cd=document.querySelector('.ctx-display'); if(cd) cd.hidden = (currentTab==='scales' && scView==='notes');
+  const key = currentTab==='harmony' || currentTab==='scales' || currentTab==='circle';
+  document.getElementById('context-bar').hidden = !key;
+  const cd=document.querySelector('.ctx-display');
+  if(cd) cd.hidden = currentTab==='circle' || (currentTab==='scales' && scView==='notes');
 }
 function applyBoardRegion(){
   const show = (currentTab==='harmony' || currentTab==='scales');
   document.getElementById('board-region').hidden = !show;
   const bm=document.getElementById('board-meta'); if(bm) bm.hidden = !show;   
+  const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
+  const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
 }
 
 function applyHarmonyExtras(){
@@ -6425,8 +6662,8 @@ applyHelpState();
 
 function selectTab(name){
   currentTab=name;
-  document.querySelectorAll('.tab').forEach(x=>{ const on=x.dataset.panel===name; x.classList.toggle('active',on); x.setAttribute('aria-selected',on); x.tabIndex=on?0:-1; });
   document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active', x.id==='panel-'+name));
+  if(typeof applyNav==='function') applyNav();   
   applyAsideState();
   applyContextBar();
   applyBoardRegion();
@@ -6439,41 +6676,57 @@ function setMode(mode){
   currentMode = mode==='practice' ? 'practice' : 'reference';
   document.body.classList.toggle('mode-reference', currentMode==='reference');
   document.body.classList.toggle('mode-practice', currentMode==='practice');
-  document.querySelectorAll('.modebtn').forEach(b=>{
-    const on=b.dataset.mode===currentMode; b.classList.toggle('active',on); b.setAttribute('aria-pressed',on?'true':'false');
-  });
+  if(typeof applyNav==='function') applyNav();   
   if(currentMode==='reference'){
     exitAllDrills();
     applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
   } else {
+    stopReferenceTransport();
     if(!activeDrill()) showDrillHome();
     renderPractice();
   }
   updateGlobalPlay();
   saveState();
 }
-(function initTabs(){
-  const tablist=document.getElementById('tabs'); tablist.setAttribute('role','tablist');
-  document.querySelectorAll('.tab').forEach(tb=>{ tb.setAttribute('role','tab'); tb.id='tab-'+tb.dataset.panel; tb.setAttribute('aria-controls','panel-'+tb.dataset.panel); const on=tb.classList.contains('active'); tb.setAttribute('aria-selected',on); tb.tabIndex=on?0:-1; });
-  document.querySelectorAll('.panel').forEach(p=>{ p.setAttribute('role','tabpanel'); p.setAttribute('aria-labelledby','tab-'+p.id.replace('panel-','')); });
-  tablist.addEventListener('keydown',e=>{
-    if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft') return;
-    const tabs=[...document.querySelectorAll('.tab')], cur=tabs.findIndex(x=>x.classList.contains('active'));
-    const nxt=tabs[(cur+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];
-    selectTab(nxt.dataset.panel); nxt.focus(); e.preventDefault();
+
+function navTo(panel){
+  if(panel==='practice'){ setMode('practice'); }
+  else { if(currentMode!=='reference') setMode('reference'); selectTab(panel); }
+  applyNav();
+}
+function applyNav(){
+  const cur = currentMode==='practice' ? 'practice' : currentTab;
+  document.querySelectorAll('.navbtn').forEach(b=>{
+    const on = b.dataset.panel===cur;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on?'true':'false');
+    b.tabIndex = on?0:-1;
   });
+}
+(function initNav(){
+  const nav=document.getElementById('mainnav'); if(!nav) return;
+  nav.setAttribute('role','tablist');
+  document.querySelectorAll('.navbtn').forEach(b=>{
+    b.setAttribute('role','tab'); b.id='tab-'+b.dataset.panel;
+    b.setAttribute('aria-controls','panel-'+b.dataset.panel);
+  });
+  document.querySelectorAll('.panel, .practice-panel').forEach(p=>{
+    p.setAttribute('role','tabpanel'); p.setAttribute('aria-labelledby','tab-'+p.id.replace('panel-',''));
+  });
+  nav.addEventListener('keydown',e=>{
+    if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft') return;
+    const btns=[...document.querySelectorAll('.navbtn')], cur=btns.findIndex(x=>x.classList.contains('active'));
+    const nxt=btns[(cur+(e.key==='ArrowRight'?1:btns.length-1))%btns.length];
+    navTo(nxt.dataset.panel); nxt.focus(); e.preventDefault();
+  });
+  nav.addEventListener('click',e=>{
+    const b=e.target.closest('.navbtn'); if(!b) return;
+    navTo(b.dataset.panel);
+  });
+  applyNav();
 })();
-document.getElementById('tabs').addEventListener('click',e=>{
-  const tb=e.target.closest('.tab'); if(!tb) return;
-  selectTab(tb.dataset.panel);
-});
-document.getElementById('modenav').addEventListener('click',e=>{
-  const b=e.target.closest('.modebtn'); if(!b) return;
-  setMode(b.dataset.mode);
-});
 { const s=document.getElementById('start-notes'); if(s) s.onclick=startDrill; }
 { const d=document.getElementById('nt-drill'); if(d) d.onclick=function(){ setMode('practice'); startDrill(); }; }
-document.getElementById('tabs').addEventListener('scroll', syncTabsScroll, {passive:true});
 document.getElementById('lang-switch').addEventListener('click',e=>{
   const b=e.target.closest('.langbtn'); if(!b||b.dataset.lang===lang) return;
   lang=b.dataset.lang; applyLang(); saveState();
@@ -6529,17 +6782,20 @@ function shareFallback(){ try{ location.hash=encodeShareState(); }catch(e){  } }
   }; }
 
 
-function startReview(ns){
+function startReview(track){
   setMode('practice');
-  if(ns==='note') startDrill();
-  else if(ns==='interval'||ns==='chordq'||ns==='rhythm') startEar(ns);
+  startTrack(track);
 }
 { const h=document.getElementById('practice-progress');
   if(h) h.addEventListener('click', e=>{ const b=e.target.closest('[data-review]'); if(b) startReview(b.dataset.review); }); }
 document.getElementById('tb-lefty').onclick=function(){ lefty=!lefty; this.classList.toggle('active',lefty); this.setAttribute('aria-pressed',lefty); renderAllBoards(); renderCircle(); saveState(); };
 
-document.getElementById('tb-tempo').oninput=function(){ tempo=+this.value; document.getElementById('tb-bpm').textContent=tempo+' BPM'; };
+document.getElementById('tb-tempo').oninput=function(){ setTempo(+this.value); };
 document.getElementById('tb-tempo').onchange=function(){ saveState(); };
+
+{ const step=d=>{ setTempo(tempo+d); saveState(); };
+  const sl=document.getElementById('drill-ctx-slower'); if(sl) sl.onclick=()=>step(-5);
+  const fa=document.getElementById('drill-ctx-faster'); if(fa) fa.onclick=()=>step(5); }
 document.getElementById('tb-metro').onclick=metroToggle;
 document.getElementById('tb-bass').onclick=bassToggle;
 document.getElementById('tb-drums').onclick=drumsToggle;
@@ -6595,8 +6851,10 @@ document.addEventListener('keydown',e=>{
   if(!document.getElementById('cl-overlay').hidden || !document.getElementById('kbd-overlay').hidden) return;
   { const mo=document.getElementById('mic-overlay'); if(mo && !mo.hidden) return; }
   const k=e.key;
+  const refTransport = currentMode!=='practice';
   if(k===' '||k==='Spacebar'){
     if(tg && tg.closest && tg.closest('button,a,[role="button"],[tabindex]')) return;   
+    if(!refTransport) return;
     e.preventDefault();
     if(typeof seqClock!=='undefined' && seqClock) seqStop();
     else if(typeof loopClock!=='undefined' && loopClock) stopLoop();
@@ -6604,14 +6862,15 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(k==='?'){ e.preventDefault(); openKbd(); return; }
-  if(k==='1'){ setMode('reference'); selectTab('harmony'); return; }   
-  if(k==='2'){ setMode('reference'); selectTab('scales'); return; }
-  if(k==='3'){ setMode('reference'); selectTab('circle'); return; }
+  if(k==='1'){ navTo('harmony'); return; }
+  if(k==='2'){ navTo('scales'); return; }
+  if(k==='3'){ navTo('circle'); return; }
+  if(k==='4'){ navTo('practice'); return; }
   if(k==='['){ transposeKey(-1); return; }
   if(k===']'){ transposeKey(1); return; }
   const lk = k.length===1 ? k.toLowerCase() : '';
-  if(lk==='l'){ const lp=document.getElementById('g-loop'); if(lp && !lp.hidden && !lp.disabled) loopToggle(); return; }
-  if(lk==='m'){ const mb=document.getElementById('tb-metro'); if(mb && !mb.disabled) metroToggle(); return; }
+  if(lk==='l'){ const lp=document.getElementById('g-loop'); if(refTransport && lp && !lp.hidden && !lp.disabled) loopToggle(); return; }
+  if(lk==='m'){ const mb=document.getElementById('tb-metro'); if(refTransport && mb && !mb.disabled) metroToggle(); return; }
   if(lk && NOTE_KEY[lk]!==undefined){ const pc=NOTE_KEY[lk]; setKey(pc, ROOTS[pc]); return; }
 });
 
@@ -6642,7 +6901,6 @@ applyTuning();
 applyLang();
 selectTab(currentTab);
 setMode(currentMode);   
-syncTabsScroll();
 markScrollables();
 window.addEventListener('resize', markScrollables);
 try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(markScrollables); }catch(_){}
@@ -6677,10 +6935,13 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     learnerReview, learnerActivity, startReview,
     encodeShareState, applyShareHash, shareURL,
     DRILLS, activeDrill, showDrillHome, exitAllDrills, refreshDrillsLang, drillKeyChanged, applyDrillCtx,
+    drillTracks, trackById, trackBySess, trackByItems, sessNs, startTrack, learnerTrend, learnerBest, scoredErr,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
+    setTempo, getTempo:()=>tempo, stopReferenceTransport, transportActive, applyContextBar, updateGlobalPlay,
     renderAllBoards,
     recordAttempt, dueItems, recordSession, learnerStats, srsInterval, normalizeLearner,
     getLearner:()=>learner, resetLearner:()=>{ learner=newLearner(); }, LEARNER_V,
+    setLearner:(l)=>{ learner=l; }, SESS_PER_ID, SESS_MAX, PERF_STALE_DAYS,
     startDrill, drillAnswer, drillTargetsFor, exitDrill, DRILL_LEN, getDrill:()=>drill,
     startEar, earAnswer, earNext, earReplay, exitEar, getEar:()=>ear,
     earChoices:()=>(ear?ear.cfg.choices(ear.cur):[]), INTERVALS, EAR_QUAL_IDX, RHYTHMS,

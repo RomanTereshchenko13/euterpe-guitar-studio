@@ -94,10 +94,10 @@ function appFor(panel) {
   // click the tab first (sets the reference sub-view), then — if requested — the
   // bottom-nav Practice button, so the shot lands on the Practice surface.
   const clicks = [];
-  if (panel) clicks.push(`var b=document.querySelector('.tab[data-panel="${panel}"]');if(b)b.click();`);
+  if (panel) clicks.push(`var b=document.querySelector('.navbtn[data-panel="${panel}"]');if(b)b.click();`);   // A2: one nav strip
   // every drill lives under Practice now (the Ear mode folded in), so any non-reference
   // token starts by entering Practice — the ear tokens included.
-  if (mode) clicks.push(`var m=document.querySelector('.modebtn[data-mode="practice"]');if(m)m.click();`);
+  if (mode) clicks.push(`var m=document.querySelector('.navbtn[data-panel="practice"]');if(m)m.click();`);   // A2: one nav strip
   if (mode === 'drill') clicks.push(`var s=document.getElementById('start-notes');if(s)s.click();`);
   if (mode === 'changes' || mode === 'changes-run') clicks.push(`var s=document.getElementById('start-changes');if(s)s.click();`);
   if (mode === 'changes-run') clicks.push(`var g=document.getElementById('cm-start-btn');if(g)g.click();`);

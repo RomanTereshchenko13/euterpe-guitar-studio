@@ -23,13 +23,13 @@
   html { overflow-anchor: none; }
 
   /* keyboard accessibility: visible focus on every interactive control */
-  .btn:focus-visible, .tab:focus-visible, .langbtn:focus-visible, .ver:focus-visible,
+  .btn:focus-visible, .navbtn:focus-visible, .langbtn:focus-visible, .ver:focus-visible,
   .aside-toggle:focus-visible, .tb-toggle:focus-visible, .cl-close:focus-visible,
   input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .dot:focus-visible { outline: 2px solid #fff; outline-offset: 2px; z-index: 7; }
   /* touch: kill the 300ms tap delay and double-tap-zoom on tappable controls so
      rapid note tapping feels instant on phones */
-  .btn, .tab, .langbtn, .ver, .tb-toggle, .aside-toggle, .cl-close,
+  .btn, .navbtn, .langbtn, .ver, .tb-toggle, .aside-toggle, .cl-close,
   .chordbox, .cd-dot, .cof-node, .seq-chip .nm, .seq-chip .bars, .seq-chip .x,
   .install-btn, .toast-act, .toast-x,
   select { touch-action: manipulation; }
@@ -75,27 +75,42 @@
   .langbtn { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; padding: 5px 11px; border: none; background: transparent; color: var(--text-dim); border-radius: 6px; cursor: pointer; transition: all 0.12s; }
   .langbtn:hover:not(.active) { color: var(--text); }
   .langbtn.active { background: var(--accent); color: #07203a; }
-  .tabs { display: flex; gap: 4px; margin-top: 22px; flex-wrap: wrap; }
-  .tab { font-family: inherit; font-size: 14px; font-weight: 500; background: transparent; color: var(--text-dim); border: none; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0; padding: 10px 16px 12px; cursor: pointer; transition: color 0.15s, border-color 0.15s, background 0.15s; }
-  .tab:hover:not(.active) { color: var(--text); background: var(--bg-panel); }
-  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  /* ONE navigation surface (Phase 10/A2): four destinations in one strip, replacing
+     the mode pills stacked above the tab underline. Keeps the tab strip's visual
+     language (it was the quieter of the two) — the destinations are peers, so they
+     read as peers. */
+  .mainnav { display: flex; gap: 4px; margin-top: 22px; flex-wrap: wrap; }
+  .navbtn { font-family: inherit; font-size: 14px; font-weight: 500; background: transparent; color: var(--text-dim); border: none; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0; padding: 10px 16px 12px; cursor: pointer; transition: color 0.15s, border-color 0.15s, background 0.15s; }
+  .navbtn:hover:not(.active) { color: var(--text); background: var(--bg-panel); }
+  .navbtn.active { color: var(--text); border-bottom-color: var(--accent); }
 
-  /* Desktop grid (#5): the "Play over this" suggester sits in the top row BESIDE the
-     (now short) controls, and the fretboard — the centrepiece — spans the FULL width
-     below it, with the board-meta and chord reference following full-width too. This
-     reclaims the tall empty right rail the old sticky-suggester layout left, and hands
-     the reclaimed ~264px to the neck (availW() measures the board's own column, so the
-     cells grow to fill it). Named areas (not source order) place the pieces, so on a
-     phone the same DOM reflows to put the suggester under the board (mobile override).
+  /* Desktop grid (#5): the fretboard — the centrepiece — spans the FULL width, with
+     the board-meta and chord reference following full-width too. This reclaims the
+     tall empty right rail the old sticky-suggester layout left, and hands the reclaimed
+     ~264px to the neck (availW() measures the board's own column, so the cells grow to
+     fill it). Named areas (not source order) place the pieces, so on a phone the same
+     DOM reflows to put the suggester under the board (mobile override).
      minmax(0,1fr) keeps the wide neck from blowing the row out — it scrolls inside its
-     own .scroll instead. */
+     own .scroll instead.
+
+     BOARD-FIRST (Phase 10/A3): the neck now leads. It used to sit in the SECOND row,
+     under the context bar AND the whole active panel — heading, control rows and the
+     info readout — which on a 1280x800 laptop put the top of the fretboard 645px down a
+     708px viewport: six bands of chrome, and 63px of the app's centrepiece visible
+     without scrolling. The order is now "in what key" (context) -> the answer (neck +
+     its legend) -> "how it's built" (the view's own controls + info) -> the reference
+     rows. Same DOM, three area maps. The suggester rides beside the controls, where it
+     reads as commentary on them; the neck keeps the full width above (see
+     prioritize-fretboard-width — controls compact into a horizontal rail, never a
+     vertical one stealing the neck's columns). */
   .layout {
     display: grid;
     grid-template-columns: minmax(0,1fr) 234px;
     grid-template-areas:
-      "main      aside"
+      "ctx       ctx"
       "board     board"
       "boardmeta boardmeta"
+      "main      aside"
       "shapes    shapes"
       "extras    extras";
     column-gap: 30px;
@@ -104,8 +119,15 @@
   }
   /* the suggester only shows on Harmony; on Scales / Circle drop the empty column
      so the board + controls use the full width (toggled in applyAsideState) */
-  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "main" "board" "boardmeta" "shapes" "extras"; }
-  .main { grid-area: main; min-width: 0; }
+  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "ctx" "board" "boardmeta" "main" "shapes" "extras"; }
+  #context-bar { grid-area: ctx; }
+  /* .main follows the neck now, so it needs the air the board used to get from the
+     context bar's own margin-bottom. Not a row-gap on .layout: the areas are optional
+     (no board on Circle, no aside off Harmony) and a gap would show as a hole. */
+  .main { grid-area: main; min-width: 0; margin-top: 22px; }
+  /* Practice hides the board, the meta and the context bar, so .main is the first
+     thing under the header again and the clearance above would read as a dead band. */
+  body.mode-practice .main { margin-top: 0; }
   #board-region { grid-area: board; }
   .board-meta { grid-area: boardmeta; }
   #harmony-extras { grid-area: extras; }
@@ -119,7 +141,7 @@
   @media (max-width: 940px) {
     .layout, .layout.no-aside {
       grid-template-columns: minmax(0,1fr);
-      grid-template-areas: "main" "board" "boardmeta" "shapes" "aside" "extras";
+      grid-template-areas: "ctx" "board" "boardmeta" "main" "shapes" "aside" "extras";
     }
     /* shapes + suggester follow the legend in flow on a phone; give each air so it
        doesn't crowd the row directly above it. Shapes sit FIRST ("how to fret this"
@@ -145,13 +167,10 @@
   .ph-help.on { background: var(--accent); color: #07203a; border-color: var(--accent); }
   body.help-open .panel.active .panel-head p { display: block; margin-top: 6px; }
 
-  /* ===== Mode axis (Phase 3a): Reference · Practice ===== */
-  /* Desktop: an inline pill strip in the header, above the reference sub-tabs. */
-  .modenav { display: flex; gap: 6px; margin-top: 20px; }
-  .modebtn { font-family: inherit; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-dim); border: 1px solid var(--border); border-radius: 999px; padding: 7px 18px; cursor: pointer; transition: color 0.15s, background 0.15s, border-color 0.15s; }
-  .modebtn:hover:not(.active) { color: var(--text); }
-  .modebtn.active { background: var(--accent); color: #07203a; border-color: var(--accent); }
-  .modebtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* ===== Mode axis (Phase 3a): Reference · Practice =====
+     Still the mode axis in CODE — body.mode-practice drives everything below — but
+     as of Phase 10/A2 it is no longer a second navigation strip: Practice is the
+     fourth button in .mainnav, beside the three reference subjects. */
 
   /* The Practice panel is a sibling of the reference panels inside .main, hidden
      until its mode is active — kept OFF the .panel/.panel.active machinery so the
@@ -168,6 +187,8 @@
      [hidden]{display:none} — the same trap the toolbar groups hit below — so the
      three parts need an explicit rule or the picker stays on screen. */
   #drill-ctx-div[hidden], #drill-ctx-keylbl[hidden], #drill-ctx-key[hidden] { display: none; }
+  /* same trap, same fix, for the scoped tempo half (Phase 10/A1) */
+  #drill-ctx-tdiv[hidden], #drill-ctx-tlbl[hidden], #drill-ctx-tempo[hidden] { display: none; }
   /* In Practice, collapse the reference shell: hide the active reference panel, the
      context bar, the shared board (+ meta), harmony extras, suggester, shapes card
      and the reference sub-tab strip. This used to key off a `mode-activity` class
@@ -180,17 +201,57 @@
   body.mode-practice .board-meta,
   body.mode-practice #harmony-extras,
   body.mode-practice .aside,
-  body.mode-practice #shapes-card,
-  body.mode-practice #tabs { display: none; }
+  body.mode-practice #shapes-card { display: none; }
+  /* `#tabs` was in this list — the reference sub-tab strip had to be hidden because it
+     was a SECOND navigation axis that made no sense inside Practice. A2 merged it into
+     the one nav, where Practice is simply the fourth destination, so there is nothing
+     left to hide: the nav stays put and is how you leave. */
+  /* ...and the reference TRANSPORT with it (Phase 10/A1). This list used to stop at the
+     content, so a drill screen carried Listen · Loop · Tempo · Backing at the top while
+     the drill's own Play, click and tempo sat at the bottom: two Play buttons, two
+     metronome concepts and two tempo controls on one screen, and the top Listen strummed
+     the reference chord over the running drill. Each of these is a REFERENCE verb — it
+     acts on the reference board, which isn't on screen here — so in Practice they have no
+     subject. The one genuinely shared control, tempo, moves to #drill-ctx where the drill
+     that uses it is. #g-play/#g-loop need the id (a `.tb-bar > .btn` display rule outranks
+     even their own [hidden]); the panels need it to beat `.toolbar`. */
+  body.mode-practice #g-play,
+  body.mode-practice #g-loop,
+  body.mode-practice .tb-bar .tb-tempo,
+  body.mode-practice #backing-toggle,
+  body.mode-practice #backing-panel { display: none; }
   /* with the board + suggester gone, let .main use the full width */
   body.mode-practice .layout, body.mode-practice .layout.no-aside {
     grid-template-columns: minmax(0,1fr); grid-template-areas: "main";
   }
   .practice-soon { color: var(--text-dim); font-size: 15px; max-width: 620px; }
-  .practice-list { list-style: none; margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
-  .practice-list li { padding: 13px 16px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-weight: 500; }
+  /* Drill cards wrap into a grid (Phase 10/A3) instead of stacking one per row. Ten
+     1200px-wide cards holding two short strings each is a phone layout that was never
+     told the viewport got wider; a pillar's cards now read as a set, side by side.
+     The li lost its box: this list began as the Phase-3a "coming soon" text stub, and
+     when real .drill-card buttons moved in nobody removed the li's own background +
+     border, so every card rendered as a bordered box INSIDE a bordered box. The li is
+     now a bare cell (flex, so the card fills the row's height and cards in a row line
+     up); the card is the only box. */
+  .practice-list { list-style: none; margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  .practice-list li { display: flex; }
   /* Progress readout (3b): the learner model's aggregate stats as stat chips. */
   .practice-progress-card { margin-top: 28px; padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); max-width: 620px; }
+  /* Practice home as two columns on a desktop viewport: drills scroll on the left, the
+     progress card rides a sticky rail on the right where "practise this next" is visible
+     from the top of the screen instead of below every card. Gated to the same 940px
+     breakpoint as the rest of the shell, so the phone keeps the single stack. */
+  @media (min-width: 941px) {
+    #practice-home { display: grid; grid-template-columns: minmax(0,1fr) 320px; column-gap: 30px; align-items: start; }
+    /* THE [hidden] TRAP (see #drill-ctx-key above): an author display rule outranks the
+       UA [hidden]{display:none}, so without this the home stays on screen behind every
+       running drill — and jsdom's .hidden reports success the whole time, because it
+       reads the attribute, not the cascade. Every author display rule on an element
+       something toggles with .hidden needs its own [hidden] escape hatch. */
+    #practice-home[hidden] { display: none; }
+    .ph-drills { min-width: 0; }
+    #practice-home > .practice-progress-card { margin-top: 0; max-width: none; position: sticky; top: 14px; }
+  }
   .pp-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; margin-bottom: 14px; }
   .pp-empty { color: var(--text-dim); font-size: 14px; }
   .pp-stats { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -310,8 +371,10 @@
   .sd-cell.on { border-color: var(--root); box-shadow: 0 0 0 2px rgba(107,165,58,0.4); }
   .sd-lab { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); line-height: 1; }
   .sd-cell.on .sd-lab { color: var(--root); }
-  .sd-tempo { display: inline-flex; align-items: center; gap: 8px; }
-  .sd-bpm { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); min-width: 62px; text-align: center; }
+  /* the scoped tempo stepper. Named for what it is, not for the one drill that used to
+     own it — it lives in #drill-ctx now and serves every tempo-driven drill (A1). */
+  .tempo-group { display: inline-flex; align-items: center; gap: 8px; }
+  .tempo-bpm { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); min-width: 62px; text-align: center; }
   .sd-dot { opacity: 0.22; transition: opacity 0.1s, transform 0.1s; }
   .sd-dot.pal { opacity: 1; background: var(--sc-other); }
   .sd-dot.pal.on { background: var(--root); transform: scale(1.12); box-shadow: 0 0 0 3px rgba(107,165,58,0.3); }
@@ -332,20 +395,29 @@
   /* groove (5d): a backbeat-accented beat reads bigger so 2 & 4 stand out */
   .co-beat.accent { width: 17px; height: 17px; border-color: var(--text-faint); }
 
-  /* Mobile: the mode nav becomes a fixed bottom bar in the thumb zone (the roadmap's
+  /* Mobile: the nav becomes a fixed bottom bar in the thumb zone (the roadmap's
      thumb-zone home). It escapes the sticky/condensing header — which is top-anchored
      — by being position:fixed (sticky ancestors don't form a containing block for it),
-     so its DOM location inside the header is irrelevant here. */
+     so its DOM location inside the header is irrelevant here.
+     A2: this was a 2-item mode bar with a separate scrolling tab strip up in the
+     header; it is now the conventional 4-item bottom nav, which is what the labels
+     were shortened for. */
   @media (max-width: 940px) {
-    .modenav {
+    .mainnav {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-      margin-top: 0; gap: 0;
+      margin-top: 0; gap: 0; flex-wrap: nowrap;
       background: var(--bg-panel-2); border-top: 1px solid var(--border-strong);
       padding-bottom: env(safe-area-inset-bottom);
       box-shadow: 0 -6px 18px -10px rgba(0,0,0,0.7);
     }
-    .modebtn { flex: 1; border: none; border-radius: 0; background: transparent; padding: 13px 0; text-align: center; color: var(--text-dim); }
-    .modebtn.active { background: transparent; color: var(--accent); box-shadow: inset 0 2px 0 var(--accent); }
+    .navbtn {
+      flex: 1 1 0; min-width: 0; border: none; border-radius: 0; background: transparent;
+      padding: 13px 4px; text-align: center; color: var(--text-dim);
+      font-size: 12.5px; font-weight: 600; line-height: 1.2;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .navbtn:hover:not(.active) { background: transparent; }
+    .navbtn.active { background: transparent; color: var(--accent); border-bottom-color: transparent; box-shadow: inset 0 2px 0 var(--accent); }
     /* clear the fixed bar so the footer / last controls aren't hidden behind it */
     body { padding-bottom: calc(58px + env(safe-area-inset-bottom)); }
   }
@@ -464,10 +536,20 @@
   .sug-row .ctrl-label { display: block; margin-bottom: 4px; }
   .sug-scales { gap: 6px; }
   .sug-scales .btn { font-size: 12px; padding: 4px 9px; }
+  /* Circle of fifths (Phase 10/A3): the circle IS this tab's content — the equivalent
+     of the neck on the other two — so it grows with the viewport instead of sitting as a
+     fixed 360px island in a 1193px panel with the right two-thirds empty. It's the only
+     board-less tab, so nothing else here can use that width. Capped at 520px because the
+     circle also has to clear the fold vertically, and it stops being easier to read past
+     roughly that size; the reading pane takes whatever is left. flex-basis (not a fixed
+     width) keeps the phone behaviour untouched — below ~940px the two panes wrap and the
+     circle falls back to full width, which is what it already did. */
   .cof-layout { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
-  .cof-wrap { flex: 0 0 auto; }
-  .cof-side { flex: 1; min-width: 250px; }
-  #cof-svg { width: 360px; max-width: 100%; height: auto; display: block; }
+  .cof-wrap { flex: 1 1 340px; max-width: 520px; min-width: 0; }
+  /* capped too, or the reading pane stretches to the viewport edge and the key readout
+     — monospace, ~70 characters — trails a dead strip of panel behind it */
+  .cof-side { flex: 1 1 340px; min-width: 250px; max-width: 620px; }
+  #cof-svg { width: 100%; max-width: 100%; height: auto; display: block; }
   .cof-node { cursor: pointer; }
   .cof-node circle { transition: fill 0.15s, stroke 0.15s; }
   .cof-node:hover circle { stroke: var(--text); }
@@ -487,6 +569,11 @@
      browser-zoom level; everything centres to the same 34px line. */
   .tb-bar > .btn, .tb-bar .tb-toggle, .tb-bar > .tb-group, .tb-bar > .tb-transport { min-height: 34px; }
   .tb-bar > .btn, .tb-bar .tb-toggle { display: inline-flex; align-items: center; justify-content: center; }
+  /* ...and re-assert [hidden] straight after it, same trap as the .tb-group rule below:
+     an author `display` beats the UA [hidden] rule whatever the specificity, so
+     updateGlobalPlay hiding Listen in the Notes / Identify views (nothing to listen to)
+     silently did nothing. Must sit AFTER the rule it corrects — equal specificity. */
+  .tb-bar > .btn[hidden] { display: none; }
   /* paired disclosure toggles (Settings + Backing) wrap as one unit so Backing can't
      orphan onto its own line */
   .tb-toggles { display: inline-flex; align-items: center; gap: 8px; }
@@ -557,7 +644,13 @@
      when a group wraps to a new line the rule stays attached to it instead of
      orphaning a free-standing divider. The view group is always the first visible
      group, so it never needs one; root/display always follow one, so they always do. */
-  .context-bar .ctx-group:not(.ctx-view) { padding-left: 13px; border-left: 1px solid var(--border-strong); }
+  .context-bar .ctx-group + .ctx-group { padding-left: 13px; border-left: 1px solid var(--border-strong); }
+  /* The view switch, as a lens on the board (Phase 10/A2). It sits inside
+     #board-region so it hides, moves and sticks with the neck it changes, instead of
+     being a third navigation strip in the header that something else had to manage. */
+  .board-lens { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
+  .board-lens .lens-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .board-lens .lens-group[hidden] { display: none; }
   /* one shared fretboard (1b): a single board region below the active panel's
      controls, shown for Harmony + Scales, hidden on the Circle tab. */
   .board-region { margin-top: 4px; }
@@ -580,7 +673,7 @@
        sizes rather than snapping. The sticky board is pinned to --hdr-h, which the ResizeObserver
        re-measures every frame, so it tracks the moving header height smoothly. (Neutralized under
        prefers-reduced-motion by the global reset.) */
-    header, header .brand h1, header .brand-desc, header .tabs, header .tb-bar, header .tb-bar .tb-group {
+    header, header .brand h1, header .brand-desc, header .mainnav, header .tb-bar, header .tb-bar .tb-group {
       transition: padding 0.22s ease, font-size 0.22s ease, margin 0.22s ease, max-height 0.22s ease, grid-template-rows 0.22s ease, opacity 0.16s ease, border-width 0.22s ease;
     }
     /* While the header height animates, every block below it is repositioned each frame. On a
@@ -602,7 +695,7 @@
     header.scrolled .brand-desc { max-height: 0; opacity: 0; }
     header.scrolled .brand .ver { display: none; }   /* height-neutral on the baseline row (h1 is taller) — fine to drop outright */
     header.scrolled .brand h1 { font-size: 19px; }
-    header.scrolled .tabs { margin-top: 10px; }
+    header.scrolled .mainnav { margin-top: 10px; }
     header.scrolled .tb-bar { margin-top: 8px; }
     header.scrolled .tb-bar .tb-group { grid-template-rows: 0fr; min-height: 0; margin: 0; padding-top: 0; padding-bottom: 0; border-width: 0; opacity: 0; }
   }
@@ -623,7 +716,7 @@
     header { position: static; padding-top: max(10px, env(safe-area-inset-top)); }
     .brand-desc { display: none; }
     .brand h1 { font-size: 22px; }
-    header .tabs { margin-top: 8px; }
+    header .mainnav { margin-top: 8px; }
     .tb-bar { margin-top: 8px; }
     .toolbar { margin-top: 8px; padding: 8px 12px; }
     .layout:has(#board-region:not([hidden])) {
@@ -632,6 +725,7 @@
          the portrait stacking order; the board pins in the right column. #shapes-card
          needs an explicit slot here or it auto-places to the very bottom out of order. */
       grid-template-areas:
+        "ctx       board"
         "main      board"
         "shapes    board"
         "aside     board"
@@ -759,7 +853,7 @@
        below) — consistent with the panel rows underneath, not a competing card. */
     .context-bar { flex-direction: column; align-items: stretch; gap: 13px; padding: 0; margin-bottom: 16px; border: none; background: transparent; border-radius: 0; }
     .context-bar .ctx-group { width: 100%; gap: 7px 8px; }
-    .context-bar .ctx-group:not(.ctx-view) { padding-left: 0; border-left: none; }
+    .context-bar .ctx-group + .ctx-group { padding-left: 0; border-left: none; }
     .context-bar .ctrl-label { width: 100%; margin: 0; }
     /* (the description + board-hint help toggle is now global — see .ph-help above) */
     /* control strips swipe instead of wrapping into tall blocks (2nd mobile-shell
@@ -799,12 +893,9 @@
     .btn { padding: 8px 12px; }
     .langbtn { padding: 7px 12px; }
     .seq-chip .x { padding: 4px 6px; opacity: 0.85; }
-    .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -14px; margin-right: -14px; padding: 0 14px; }
-    .tabs::-webkit-scrollbar { display: none; }
-    .tab { white-space: nowrap; flex-shrink: 0; }
-    /* fade the right edge while more tabs sit off-screen (toggled in JS) so the
-       clipped tab reads as scrollable; the fade clears at the end of the strip */
-    .tabs.scrollable { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent); }
+    /* A2: the horizontally-scrolling tab strip (with its edge-fade "more →" hint and
+       the JS that toggled it) lived here. At this width the nav is now a fixed 4-item
+       bottom bar, so there is nothing to scroll and nothing to fade. */
   }
   footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-faint); }
 

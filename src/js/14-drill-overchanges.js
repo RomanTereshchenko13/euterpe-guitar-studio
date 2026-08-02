@@ -123,14 +123,15 @@ function targetStop(){
   if(tgDrill.clock){ if(typeof removeClock==='function') removeClock(tgDrill.clock); tgDrill.clock=null; }
   if(typeof clearVisualQ==='function') clearVisualQ();
   tgDrill.playing=false;
-  tgScore.end();
+  const sc=tgScore.end();
   const barsPlayed = tgDrill.cycles*tgDrill.bars.length + tgDrill.bar;
   // each mode keeps its own session namespace + score, so pre-merge history still reads:
-  // comping is scored by bars played, targeting by tap accuracy.
+  // comping is scored by bars played, targeting by tap accuracy. Only comping has a
+  // scored tier, so only it carries a timing error (B1); `tones` stays tap-scored.
   if(barsPlayed>=1){
     const name=SEQ_PRESETS[tgDrill.presetIdx].name;
     if(tgTones()) recordSession('target:'+name, tgAccuracy());
-    else recordSession('comp:'+name, barsPlayed);
+    else recordSession('comp:'+name, barsPlayed, undefined, scoredErr(sc));
     saveState();
     if(typeof renderPractice==='function') renderPractice();
   }
@@ -293,7 +294,15 @@ function refreshTargetLang(){ if(tgDrill){ renderTarget(); tgScore.refreshLang()
 
 /* card starters + in-drill controls — wired once at load (guarded so a missing panel
    never throws, mirroring initDrill). */
-registerDrill({ id:'overchanges', area:'tg-area',
+registerDrill({ id:'overchanges', area:'tg-area', tempo:true,   // bars ride barSec() — A1 gives it the shell's stepper
+                /* Two tracks behind one entry (B1): the merge put comping and
+                   chord-tone targeting in one machine, but they are separate skills
+                   with different metrics, opened from different practice cards, and
+                   the model has to keep them apart. */
+                tracks:[
+                  { id:'comp',   kind:'perf', sess:'comp',   better:'high', unit:'bars', label:'drill_comp',   start:startComp },
+                  { id:'target', kind:'perf', sess:'target', better:'high', unit:'pct',  label:'drill_target', start:startTarget }
+                ],
                 isActive:()=>!!tgDrill, exit:exitTarget, refreshLang:refreshTargetLang,
                 // the progression is stored resolved to the key, so a key change rebuilds the bars
                 onKey:()=>{ if(!tgDrill) return;

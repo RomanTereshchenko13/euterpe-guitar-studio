@@ -212,6 +212,21 @@ function stopLoop(){ if(!loopClock) return; removeClock(loopClock); loopClock=nu
   const b=document.getElementById('g-loop'); if(b){ b.classList.remove('active'); b.setAttribute('aria-pressed','false'); } setLoopLabel(); }
 function setLoopLabel(){ const b=document.getElementById('g-loop'); if(!b) return; b.innerHTML=(loopClock?'&#9632; ':'&#8635; ')+t('b_loop'); b.setAttribute('aria-label', t(loopClock?'b_loop_stop_tip':'b_loop_tip')); b.title=t(loopClock?'b_loop_stop_tip':'b_loop_tip'); updateGlobalTransport(); }
 
+/* Stop everything the reference transport owns (Phase 10/A1).
+   Entering Practice used to leave the loop / progression / metronome running, on the
+   theory that the transport bar "acts as a backing track, like it does across tabs".
+   Across tabs that holds — the subject is the same. Across MODES it doesn't: a drill
+   brings its own click and its own bed on its own scheduler, so what you actually got
+   was the reference chord strumming over the drill, and a second metronome beating
+   against the drill's. One home for what is sounding — the transport in Reference,
+   the drill in Practice. metroToggle() is the metronome's only stop, so it's called
+   as one (it flips off when a clock is running). */
+function stopReferenceTransport(){
+  if(seqClock) seqStop();
+  stopLoop();
+  if(metroClock) metroToggle();
+}
+
 /* ---- global transport chip (timing bar) ----
    Mirrors whatever is currently sounding (single-chord/triad loop or progression)
    so it can be read and stopped from any tab. The Listen/Loop controls now

@@ -30,6 +30,17 @@
 const SC_TOL_MAX = 0.12;    // s — past this a "hit" stops meaning the slot you aimed at
 const SC_MAX_MARKS = 512;   // ring cap per run, so a long session can't grow without bound
 
+/* The `extra` a scored drill hands recordSession (Phase 10/B1): the run's mean
+   absolute error in ms, or undefined when there is nothing honest to record — no
+   mic tier, no hits, or a run the self-hearing guard refused. Recording a refused
+   run's error would poison the trend with the app's own click, which is exactly the
+   number onsetSelfHeard exists to keep off the screen. */
+function scoredErr(score){
+  if(!score || !score.n || !isFinite(score.meanAbsMs)) return undefined;
+  if(typeof onsetSelfHeard==='function' && onsetSelfHeard(score)) return undefined;
+  return { err: score.meanAbsMs };
+}
+
 /* Build a scored-run controller for one drill.
      micId/statusId/scoreId — the drill's three DOM ids
      tol()                  — half a slot, in seconds, from the drill's own clock

@@ -106,12 +106,14 @@ function sdStop(){
   sd.playing=false;
   if(sdLit){ sdLit.classList.remove('on'); sdLit=null; }
   document.querySelectorAll('#sd-grid .sd-cell.on').forEach(c=>c.classList.remove('on'));
-  sdScore.end();
+  const sc=sdScore.end();
   if(sd.bars>=1){
     // The session value stays "bars played" so pre-F1 history keeps the same shape
     // and the progress card doesn't have to know two kinds of timing session. The
-    // score is a richer read-out of the run, not a different record.
-    recordSession('timing:'+SUBDIVS[sdSub].id, sd.bars);
+    // score is a richer read-out of the run, not a different record — so as of
+    // Phase 10/B1 it rides ALONGSIDE as `err` instead of being shown once and
+    // discarded, which is what "the timing trend in milliseconds" needs to exist.
+    recordSession('timing:'+SUBDIVS[sdSub].id, sd.bars, undefined, scoredErr(sc));
     saveState();
     if(typeof renderPractice==='function') renderPractice();
   }
@@ -150,7 +152,6 @@ function renderTiming(){
   segButtons('sd-subs', SUBDIVS.map(s=>({label:sdSubName(s)})), sdSub, i=>{ sdSub=i; renderSdGrid(); sdRestart(); renderTiming(); });
   segButtons('sd-pos', ['1','2','3','4','5'].map(label=>({label})), sdPos-1, i=>{ sdPos=i+1; sdPaintScale(); sdRestart(); });
   const tt=document.getElementById('sd-title'); if(tt) tt.textContent=gRootLbl+' · '+sName(SCALES[scIdx]);
-  const bpm=document.getElementById('sd-bpm'); if(bpm) bpm.textContent=tempo+' BPM';
   const nb=document.getElementById('sd-notes'); if(nb){ nb.textContent=t('sd_notes'); nb.classList.toggle('active', sdNotes); nb.setAttribute('aria-pressed', sdNotes?'true':'false'); }
   renderSdGrid();
   const pb=document.getElementById('sd-play'); if(pb){ pb.innerHTML=(sd.playing?'&#9632; ':'&#9654; ')+t(sd.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', sd.playing); pb.setAttribute('aria-pressed', sd.playing?'true':'false'); }
@@ -198,14 +199,10 @@ function sdLightNote(si, f){
   if(d){ d.classList.add('on'); if(typeof rippleDot==='function') rippleDot(d); }
   sdLit=d||null;
 }
-/* set the shared tempo from inside the drill (roadmap: tempo reachability for timed
-   coaches) and keep the header transport control in sync. */
-function sdSetTempo(bpm){
-  tempo=Math.max(40, Math.min(200, bpm));
-  const r=document.getElementById('tb-tempo'); if(r) r.value=tempo;
-  const b=document.getElementById('tb-bpm'); if(b) b.textContent=tempo+' BPM';
-  renderTiming();
-}
+/* The private tempo stepper this drill used to carry lived here (sdSetTempo), together
+   with the code that kept the header slider in sync with it. Phase 10/A1 collapsed the
+   two controls into one: the drill declares `tempo:true` below and the shell's
+   #drill-ctx stepper drives the shared setTempo(). */
 // re-localize an in-flight timing drill on a language switch (called from applyLang)
 function refreshTimingLang(){
   if(!sd) return;
@@ -213,7 +210,9 @@ function refreshTimingLang(){
   sdScore.refreshLang();
 }
 
-registerDrill({ id:'timing', area:'sd-area',
+registerDrill({ id:'timing', area:'sd-area', tempo:true,
+                tracks:[{ id:'timing', kind:'perf', sess:'timing', label:'drill_timing',
+                          better:'high', unit:'bars', start:startTiming }],
                 isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang,
                 // the grid walks the key's scale, so a key change repaints the board and restarts
                 onKey:()=>{ if(!sd) return; sdRenderBoard(); sdRestart(); renderTiming(); } });
@@ -227,6 +226,4 @@ registerDrill({ id:'timing', area:'sd-area',
   // stops first and the next run is measured cleanly from its first tick.
   wire('sd-mic',    ()=>{ if(sd&&sd.playing) sdStop(); sdScore.toggle(); renderTiming(); });
   wire('sd-notes',  ()=>{ sdNotes=!sdNotes; if(!sdNotes && sdLit){ sdLit.classList.remove('on'); sdLit=null; } renderTiming(); });
-  wire('sd-slower', ()=>sdSetTempo(tempo-5));
-  wire('sd-faster', ()=>sdSetTempo(tempo+5));
 })();

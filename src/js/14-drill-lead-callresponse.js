@@ -185,7 +185,9 @@ function refreshCallRespLang(){ if(cr) renderCr(); }
 registerDrill({ id:'callresp', area:'cr-area',
                 isActive:()=>!!cr, exit:exitCallResp, refreshLang:refreshCallRespLang,
                 // the motif is drawn from the key's scale, so a key change deals a new round
-                onKey:()=>{ if(cr) crNewRound(); } });
+                onKey:()=>{ if(cr) crNewRound(); },
+                tracks:[{ id:'callresp', kind:'perf', sess:'callresp', label:'drill_callresp',
+                          better:'high', unit:'pct', start:startCallResp }] });
 
 (function initCallResp(){
   const card=document.getElementById('start-callresp'); if(!card) return;

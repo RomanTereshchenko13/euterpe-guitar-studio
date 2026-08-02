@@ -145,7 +145,11 @@ function renderDrillSummary(elapsed, acc){
 /* board tap/keys + quit — wired once at load (the markup is parsed before this
    script runs; guarded so a missing panel never throws). */
 registerDrill({ id:'notes', area:'drill-area',
-                isActive:()=>!!drill, exit:exitDrill });
+                isActive:()=>!!drill, exit:exitDrill,
+                // one track with BOTH result kinds (B1): per-note SRS items, and a
+                // per-round accuracy that trends
+                tracks:[{ id:'note', kind:'recall', items:'note', sess:'notes', label:'drill_notes',
+                          better:'high', unit:'pct', start:startDrill }] });
 
 (function initDrill(){
   const b=document.getElementById('drill-board'); if(!b) return;

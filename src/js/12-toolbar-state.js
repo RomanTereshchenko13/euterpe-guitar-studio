@@ -18,6 +18,20 @@ function buildToolbar(){
   if(typeof applyA11y==='function') applyA11y();   // keep the accessibility toggles in sync after a rebuild (e.g. language switch)
   applyToolbarState();
 }
+/* ---- tempo: one setter, every readout (Phase 10/A1) ----
+   `tempo` is one global that two controls display — the header slider and the drill
+   strip's stepper — so it needs one place that clamps it and repaints both. Before
+   this the timing drill kept a private copy of exactly this function, which is how the
+   app ended up with two tempo controls that each knew how to sync the other. Callers
+   pass BPM; the clamp mirrors the slider's own min/max so the stepper can't walk past
+   what the slider allows. Returns nothing — read `tempo`. */
+function setTempo(bpm){
+  tempo = Math.max(40, Math.min(200, Math.round(bpm)));
+  const r=document.getElementById('tb-tempo');  if(r) r.value=tempo;
+  const b=document.getElementById('tb-bpm');    if(b) b.textContent=tempo+' BPM';
+  const d=document.getElementById('drill-ctx-bpm'); if(d) d.textContent=tempo+' BPM';
+}
+
 /* reference-tone tuner: one button per open string of the current tuning, low → high
    (E A D G B e in standard), each holding a sustained pitch (tunerTone). Rebuilt from
    the live OPEN_MIDI/SNAMES whenever the tuning changes (so a Drop-D switch re-labels). */
@@ -75,20 +89,13 @@ function applyAsideState(){
    Arpeggio and Identify boards on a tuning/fret/capo/lefty change (they weren't
    re-rendered, so isBoardMode never re-painted the shared #board for them). */
 function renderAllBoards(){ renderContextViews(); }
-/* the mobile tab strip scrolls horizontally when its labels overflow (esp. in
-   English); fade the right edge while more tabs sit off-screen — and drop the
-   fade once scrolled to the end — so the cut-off tab reads as "more →", not
-   clipped. Mirrors the fretboard's .scrollable hint. */
-function syncTabsScroll(){
-  const el=document.getElementById('tabs'); if(!el) return;
-  const max=el.scrollWidth - el.clientWidth;
-  el.classList.toggle('scrollable', max>1 && el.scrollLeft < max-1);
-}
+/* A2: syncTabsScroll() lived here — it faded the right edge of the mobile tab
+   strip while more tabs sat off-screen. The strip is gone: at that width the nav is
+   a fixed 4-item bottom bar with nothing to scroll. */
 /* re-fit responsive fret cells when the viewport width changes (rotation/resize) */
 if(typeof window!=='undefined'){
   let _rzT=null, _rzW=window.innerWidth;
   window.addEventListener('resize', ()=>{
-    syncTabsScroll();
     if(window.innerWidth===_rzW) return;          // ignore height-only changes (mobile URL bar)
     _rzW=window.innerWidth;
     clearTimeout(_rzT); _rzT=setTimeout(()=>{ renderAllBoards(); renderCircle&&renderCircle(); }, 150);

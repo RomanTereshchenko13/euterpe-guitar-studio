@@ -19,7 +19,29 @@
        isActive:()=>boolean,       // is this drill running right now?
        exit:fn,                    // tear it down + restore the home view
        refreshLang:fn|undefined,   // optional: re-paint an in-flight drill
-       onKey:fn|undefined }        // optional: re-derive from a new context key
+       onKey:fn|undefined,         // optional: re-derive from a new context key
+       tempo:true|undefined,       // optional: this drill runs on the shared tempo
+       tracks:[...] }              // what this drill teaches + how its result is measured
+
+   TRACKS (Phase 10/B1). A drill is not the unit the learner model cares about — a
+   *track* is. Over-the-changes is one drill with two tracks (comping and chord-tone
+   targeting, different metrics, opened from different cards); ear training is one
+   drill with three. And the note drill has both kinds at once: per-item recall AND a
+   per-round accuracy. So the registry declares tracks, and the model reads them:
+
+     { id:'note',                 // stable track id
+       kind:'recall'|'perf',      // recall → SRS-scheduled · perf → trended, with a best
+       items:'note',              // recall only: the item-id namespace ("note:E")
+       sess:'notes',              // the session drill-id namespace ("timing:8ths")
+       better:'high'|'low',       // perf only: which direction is improvement
+       unit:'pct'|'bars'|'cpm',   // perf only: what the number is, for the readout
+       start:fn }                 // open this track — the review router's one map
+
+   Before this, three separate hand-maintained lists encoded the same knowledge and
+   all three were incomplete: REVIEW_NS hardcoded four namespaces, startReview()
+   hardcoded the ns→starter mapping, and nothing at all knew which sessions were
+   comparable to which. Six of the nine tracks were invisible to "what should I
+   practise next?" — not ranked low, absent from its vocabulary.
 
    There used to be a `mode` field too ('practice' | 'ear'), because ear training was
    its own top-level mode with its own duplicate home view. It's a pillar like Rhythm
@@ -61,12 +83,47 @@ function drillKeyChanged(){
 /* The strip's Quit is universal, but its key picker only means something to a drill
    that declares onKey() — the ear, note-naming and one-minute-changes drills don't
    re-derive from the key, so showing them a key picker would be a control that
-   adjusts nothing. Derived from the registry, so a drill opts in by having onKey. */
+   adjusts nothing. Derived from the registry, so a drill opts in by having onKey.
+
+   Tempo (Phase 10/A1) works the same way and for the same reason: four of the nine
+   drills ride the shared scheduler and five don't, so `tempo:true` opts a drill into
+   the stepper rather than the shell hard-coding which drills are timed. Both halves
+   are *derived*, which is the whole point of the strip — a drill declares what it
+   needs and never touches this markup. */
 function applyDrillCtx(){
-  const d=activeDrill(), on=!!(d && typeof d.onKey==='function');
+  const d=activeDrill();
+  const key=!!(d && typeof d.onKey==='function'), tmp=!!(d && d.tempo);
   ['drill-ctx-div','drill-ctx-keylbl','drill-ctx-key'].forEach(id=>{
-    const el=document.getElementById(id); if(el) el.hidden=!on;
+    const el=document.getElementById(id); if(el) el.hidden=!key;
   });
+  ['drill-ctx-tdiv','drill-ctx-tlbl','drill-ctx-tempo'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.hidden=!tmp;
+  });
+  // the stepper's readout is only painted here, so it can't go stale behind a
+  // tempo change made from the header slider while a drill is open
+  if(tmp && typeof setTempo==='function') setTempo(tempo);
+}
+
+/* ---- tracks (Phase 10/B1): the learner model's view of the registry ----
+   Flat list of every declared track, each carrying a back-ref to its drill. Read
+   lazily (never cached) because drills register at load slot 14, after this file. */
+function drillTracks(){
+  const out=[];
+  DRILLS.forEach(d=>{ (d.tracks||[]).forEach(tr=>{ out.push(Object.assign({ drill:d }, tr)); }); });
+  return out;
+}
+// the track whose recall items live under this id namespace ("note", "interval")
+function trackByItems(ns){ return drillTracks().find(tr => tr.items===ns) || null; }
+// the track whose sessions are recorded under this drill-id namespace ("timing", "comp")
+function trackBySess(ns){ return drillTracks().find(tr => tr.sess===ns) || null; }
+// a track by its own id — what the review router is handed
+function trackById(id){ return drillTracks().find(tr => tr.id===id) || null; }
+/* The session ids drills write are "<namespace>:<variant>" ("timing:8ths",
+   "changes:C-G"), except the three ear tracks, which have no variant. One splitter,
+   so every reader agrees on where the namespace ends. */
+function sessNs(drillId){
+  const s=String(drillId||''), i=s.indexOf(':');
+  return i<0 ? s : s.slice(0,i);
 }
 
 // show the practice home and hide every drill area

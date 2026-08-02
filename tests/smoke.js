@@ -169,8 +169,10 @@ if (T) {
   ok('3c: drill has its own board, five fretboards total',
      win.document.querySelectorAll('.fretboard').length === 5 && !!win.document.getElementById('drill-board'),
      win.document.querySelectorAll('.fretboard').length + ' found');
-  ok('1b: Notes tab folded away (3 tabs)', win.document.querySelectorAll('.tab').length === 3,
-     win.document.querySelectorAll('.tab').length + ' tabs');
+  // A2: the tab strip became the one nav — three reference subjects + Practice
+  ok('1b: Notes folded away (3 reference subjects, not 4)',
+     win.document.querySelectorAll('.navbtn:not([data-panel="practice"])').length === 3,
+     win.document.querySelectorAll('.navbtn').length + ' nav buttons');
   ok('1b: notes controls live under Scales (sub-notes)', !!win.document.getElementById('sub-notes'));
 
   /* ---- i18n symmetry + new keys ---- */
@@ -185,7 +187,7 @@ if (T) {
    'view_scale','view_notes','view_identify','suggest_title','suggest_scales',
    'id_near','id_missing','id_extra',
    'view_arp','arp_h','arp_p','arp_hint','arp_word','tb_capo','capo_off','caged_desc',
-   'mode_reference','mode_practice','practice_h','practice_intro','drill_notes','drill_notes_meta',
+   'mode_practice','practice_h','practice_intro','drill_notes','drill_notes_meta',
    'drill_quit','drill_find_pre','drill_find_sub','drill_complete','drill_score','drill_clean',
    'drill_misses','drill_time','drill_again','drill_done','seam_drill_notes',
    'prog_title','prog_empty','prog_tracked','prog_accuracy','prog_streak','prog_sessions',
@@ -232,25 +234,25 @@ if (T) {
      button state, the untouched reference shell, and persistence. */
   (function modeAxis() {
     const doc = win.document;
-    const nav = doc.getElementById('modenav');
-    ok('3a: modenav present', !!nav);
-    const modes = nav ? [...nav.querySelectorAll('.modebtn')].map(b => b.dataset.mode) : [];
-    ok('3a: modenav has reference + practice buttons',
-       modes.indexOf('reference') >= 0 && modes.indexOf('practice') >= 0, modes.join(','));
+    /* A2 merged the mode strip into the one nav, so Practice is now the fourth
+       destination beside the three reference subjects — but the mode AXIS is
+       unchanged underneath, which is what these checks are about. */
+    const nav = doc.getElementById('mainnav');
+    ok('3a: the nav is present', !!nav);
     const pp = doc.getElementById('panel-practice');
     ok('3a: practice panel present and NOT a .panel (off the .panel.active machinery)',
        !!pp && !pp.classList.contains('panel'));
-    ok('3a: reference shell untouched (3 tabs, 3 reference panels)',
-       doc.querySelectorAll('.tab').length === 3 && doc.querySelectorAll('.main > .panel').length === 3);
+    ok('3a: reference shell untouched (3 reference panels)',
+       doc.querySelectorAll('.main > .panel').length === 3);
 
     // enter Practice
     T.selectTab('harmony');
     T.setMode('practice');
     ok('3a: body marks practice mode',
        doc.body.classList.contains('mode-practice') && !doc.body.classList.contains('mode-reference'));
-    const pBtn = nav.querySelector('.modebtn[data-mode="practice"]');
-    ok('3a: practice button active + aria-pressed',
-       pBtn.classList.contains('active') && pBtn.getAttribute('aria-pressed') === 'true');
+    const pBtn = nav.querySelector('.navbtn[data-panel="practice"]');
+    ok('3a: the Practice destination reads as current',
+       pBtn.classList.contains('active') && pBtn.getAttribute('aria-selected') === 'true');
     ok('3a: reference sub-tab stays selected underneath', T.state().currentTab === 'harmony');
     ok('3a: state() exposes mode', T.state().currentMode === 'practice');
     ok('3a: mode persists to localStorage',
@@ -260,9 +262,11 @@ if (T) {
     T.setMode('reference');
     ok('3a: body marks reference mode',
        doc.body.classList.contains('mode-reference') && !doc.body.classList.contains('mode-practice'));
-    const rBtn = nav.querySelector('.modebtn[data-mode="reference"]');
-    ok('3a: reference button active + aria-pressed',
-       rBtn.classList.contains('active') && rBtn.getAttribute('aria-pressed') === 'true');
+    // ...and the nav follows back to whichever reference subject was underneath
+    const rBtn = nav.querySelector('.navbtn[data-panel="harmony"]');
+    ok('3a: leaving Practice makes the reference subject current again',
+       rBtn.classList.contains('active') && rBtn.getAttribute('aria-selected') === 'true'
+       && !nav.querySelector('.navbtn[data-panel="practice"]').classList.contains('active'));
     ok('3a: reference active panel still .active underneath',
        doc.getElementById('panel-harmony').classList.contains('active'));
     ok('3a: mode reference persists',
@@ -299,12 +303,26 @@ if (T) {
     ok('3b: dueItems surfaces only past-due', dueSoon.indexOf('note:A:str5') >= 0 && dueSoon.indexOf('note:C:str5') < 0, dueSoon.join(','));
     ok('3b: dueItems prefix filter', T.dueItems(NOW + 2 * 86400000, 'interval:').length === 0);
 
-    // sessions ring buffer is bounded (cap 50, newest last)
+    /* Sessions retention. This used to be one global cap of 50 across nine tracks —
+       so a drill practised daily evicted the entire history of one practised weekly,
+       and a trend had roughly five points to work with. Phase 10/B1 made the cap
+       PER SESSION ID (newest kept), with the global figure demoted to a safety
+       ceiling. The eviction rule is the thing to pin, not the number. */
     T.resetLearner();
-    for (let i = 0; i < 60; i++) T.recordSession('notes', i, NOW + i);
+    const PER_ID = T.SESS_PER_ID;
+    for (let i = 0; i < PER_ID + 40; i++) T.recordSession('notes', i, NOW + i);
     const L = T.getLearner();
-    ok('3b: sessions ring buffer capped at 50', L.sessions.length === 50);
-    ok('3b: ring buffer keeps the newest', L.sessions[L.sessions.length - 1].score === 59 && L.sessions[0].score === 10);
+    ok('3b: sessions are capped per id', L.sessions.length === PER_ID, String(L.sessions.length));
+    ok('3b: the newest are the ones kept',
+       L.sessions[L.sessions.length - 1].score === PER_ID + 39
+       && L.sessions[0].score === 40);
+    // the point of per-id retention: a flood of one drill can't erase another's history
+    T.resetLearner();
+    T.recordSession('changes:C-G', 44, NOW);
+    for (let i = 0; i < 200; i++) T.recordSession('notes', i, NOW + 1 + i);
+    ok('3b: a busy drill no longer evicts a quiet one',
+       T.getLearner().sessions.some(s => s.drill === 'changes:C-G'));
+    ok('3b: ...and the global ceiling still holds', T.getLearner().sessions.length <= T.SESS_MAX);
 
     // aggregate stats
     T.resetLearner();
@@ -347,6 +365,165 @@ if (T) {
     ok('3b: persisted learner carries version', saved.learner.v === T.LEARNER_V);
     T.setMode('reference');   // restore mode
     T.resetLearner();         // leave a clean model for later tests
+  })();
+
+  /* ---- Phase 10/B1: one practice model ----
+     Two half-models became one that every drill reports into. Before this, three
+     separate hand-maintained lists encoded the same knowledge and all three were
+     incomplete — REVIEW_NS's four namespaces, startReview's four-branch router, and
+     nothing at all knowing which sessions were comparable. Six of the nine tracks
+     were absent from "what should I practise next?"'s vocabulary. */
+  (function onePracticeModel() {
+    const NOW = 1700000000000;
+    const DAY = 86400000;
+
+    /* --- every drill declares its tracks; nothing is hand-wired --- */
+    const tracks = T.drillTracks();
+    ok('B1: every registered drill declares at least one track',
+       T.DRILLS.every(d => Array.isArray(d.tracks) && d.tracks.length > 0),
+       T.DRILLS.filter(d => !(d.tracks || []).length).map(d => d.id).join(','));
+    /* The seam: one track per practice card, ten over seven registry entries (ear is
+       three, over-the-changes is two). Counted from the markup rather than pinned to
+       a number, so adding a card without declaring its track fails the build — the
+       same discipline that makes an unregistered `*-area` fail. */
+    const cardCount = (html.match(/class="drill-card"/g) || []).length;
+    ok('B1: every practice card has a track', tracks.length === cardCount,
+       tracks.length + ' tracks vs ' + cardCount + ' cards');
+    ok('B1: every track has an id, a kind and a starter',
+       tracks.every(tr => tr.id && (tr.kind === 'recall' || tr.kind === 'perf') && typeof tr.start === 'function'));
+    ok('B1: every track is nameable (a label key, for the queue to say what it means)',
+       tracks.every(tr => tr.label && T.I18N.en[tr.label] && T.I18N.uk[tr.label]),
+       tracks.filter(tr => !tr.label).map(tr => tr.id).join(','));
+    ok('B1: every performance track declares its direction and unit',
+       tracks.filter(tr => tr.kind === 'perf').every(tr => (tr.better === 'high' || tr.better === 'low') && tr.unit));
+    ok('B1: track ids are unique', new Set(tracks.map(tr => tr.id)).size === tracks.length);
+    // the two entries that carry more than one skill
+    ok('B1: over-the-changes declares comp AND target separately',
+       !!T.trackById('comp') && !!T.trackById('target')
+       && T.trackById('comp').drill === T.trackById('target').drill);
+    ok('B1: ear declares its three skills separately',
+       ['interval', 'chordq', 'rhythm'].every(id => T.trackById(id) && T.trackById(id).kind === 'recall'));
+    // and the lookups the model actually uses
+    ok('B1: sessNs splits "ns:variant" and leaves a bare id alone',
+       T.sessNs('timing:8ths') === 'timing' && T.sessNs('ear-interval') === 'ear-interval');
+    ok('B1: trackBySess resolves a written session id', T.trackBySess(T.sessNs('changes:C-G')).id === 'changes');
+
+    /* --- the review queue covers the app, instead of four hardcoded strings --- */
+    T.resetLearner();
+    const rev = T.learnerReview(NOW);
+    ok('B1: a never-practised performance track is in the queue',
+       rev.due.some(d => d.track === 'timing' && d.reason === 'new'));
+    ok('B1: ...and so is every other one — six tracks that had no vocabulary before',
+       ['timing', 'strum', 'changes', 'comp', 'target', 'callresp']
+         .every(id => rev.due.some(d => d.track === id)));
+    // a fresh run takes it out of the queue; going cold puts it back
+    T.recordSession('timing:8ths', 12, NOW);
+    ok('B1: a fresh performance run leaves the queue',
+       !T.learnerReview(NOW).due.some(d => d.track === 'timing'));
+    ok('B1: ...and re-enters it once it goes stale',
+       T.learnerReview(NOW + (T.PERF_STALE_DAYS + 1) * DAY).due.some(d => d.track === 'timing' && d.reason === 'stale'));
+    // slipping: recent runs trending down against the earlier ones
+    T.resetLearner();
+    [40, 42, 41, 30, 28, 27].forEach((v, i) => T.recordSession('strum:common', v, NOW + i * 1000));
+    ok('B1: a slipping track is flagged even while it is fresh',
+       T.learnerReview(NOW + 6000).due.some(d => d.track === 'strum' && d.reason === 'slipping'));
+    // recall still outranks performance — an overdue SRS item is a fact, a cold drill a hint
+    T.resetLearner();
+    T.recordAttempt('note:A', false, NOW - 120000);
+    const mixed = T.learnerReview(NOW);
+    ok('B1: overdue recall items lead the queue', mixed.due[0] && mixed.due[0].kind === 'recall');
+    ok('B1: the old total/by/top contract still holds', mixed.total === 1 && mixed.top === 'note');
+    // routing goes through the registry, so a track is openable the moment it is declared
+    ok('B1: every track in the queue can actually be opened',
+       T.learnerReview(NOW).due.every(d => !!T.trackById(d.track)));
+    /* And the queue reaches the screen. With nothing due for review this row used to
+       be blank — which is what anyone practising rhythm or lead saw, forever, no
+       matter how much history the app held on them. */
+    T.resetLearner();
+    T.recordSession('strum:common', 8, Date.now());
+    T.setMode('practice');
+    const card = win.document.getElementById('practice-progress').innerHTML;
+    ok('B1: with nothing due, the card names a performance track instead of going blank',
+       card.indexOf('data-review=') >= 0
+       && [T.I18N.uk.prog_next, T.I18N.en.prog_next].some(s => card.indexOf(s) >= 0), card.slice(-220));
+    const btn = win.document.querySelector('#practice-progress [data-review]');
+    ok('B1: ...and its button routes to a real track', !!btn && !!T.trackById(btn.dataset.review));
+    T.setMode('reference');
+
+    /* --- the trend: the ring buffer read as the time series it always was --- */
+    T.resetLearner();
+    [20, 22, 26, 30].forEach((v, i) => T.recordSession('changes:C-G', v, NOW + i * DAY));
+    const up = T.learnerTrend('changes:C-G', NOW + 3 * DAY);
+    ok('B1: trend counts the runs', up.n === 4);
+    ok('B1: trend reads the latest', up.last === 30);
+    ok('B1: trend reads the direction of travel', up.dir === 'up', up.dir);
+    ok('B1: trend knows the unit from the registry', up.unit === 'cpm');
+    ok('B1: trend knows how cold the track is', Math.round(up.staleDays) === 0);
+    T.resetLearner();
+    [30, 28, 21, 20].forEach((v, i) => T.recordSession('changes:C-G', v, NOW + i * DAY));
+    ok('B1: a declining track reads as down', T.learnerTrend('changes:C-G', NOW).dir === 'down');
+    T.resetLearner();
+    [30, 30, 31, 30].forEach((v, i) => T.recordSession('changes:C-G', v, NOW + i * DAY));
+    ok('B1: noise is not a trend', T.learnerTrend('changes:C-G', NOW).dir === 'flat');
+    // a whole namespace, not just one exact id — "how is my comping going", all progressions
+    T.resetLearner();
+    T.recordSession('comp:I-V-vi-IV', 8, NOW);
+    T.recordSession('comp:ii-V-I', 12, NOW + 1000);
+    ok('B1: a trend can span a namespace', T.learnerTrend('comp', NOW + 1000).n === 2);
+
+    /* --- the personal best is STORED, because it must outlive its history --- */
+    T.resetLearner();
+    T.recordSession('changes:C-G', 55, NOW);
+    T.recordSession('changes:C-G', 41, NOW + 1000);
+    ok('B1: the best is kept, not the latest', T.learnerBest('changes:C-G').score === 55);
+    // ...which is the bug the old derive-by-scanning had: flood it out and it survives
+    for (let i = 0; i < T.SESS_PER_ID + 5; i++) T.recordSession('changes:C-G', 10, NOW + 2000 + i);
+    ok('B1: the best survives its own runs rolling off the buffer',
+       T.learnerBest('changes:C-G').score === 55
+       && !T.getLearner().sessions.some(s => s.drill === 'changes:C-G' && s.score === 55));
+    ok('B1: ...and the drill reads the same number', T.cmPairBest(3) === 55);   // pair 3 = C–G
+
+    /* --- the scored tiers' timing error is kept, not shown once and discarded --- */
+    T.resetLearner();
+    T.recordSession('timing:8ths', 9, NOW, { err: 42 });
+    T.recordSession('timing:8ths', 9, NOW + 1000, { err: 28 });
+    const tn = T.learnerTrend('timing:8ths', NOW + 1000);
+    ok('B1: the timing error rides along with the session', tn.lastErr === 28);
+    ok('B1: ...and its best is the LOWEST, whatever the track\'s own direction is', tn.bestErr === 28);
+    // scoredErr refuses anything that isn't an honest measurement
+    ok('B1: no score, no error recorded', T.scoredErr(null) === undefined);
+    ok('B1: an empty run records no error', T.scoredErr({ n: 0, meanAbsMs: 0 }) === undefined);
+    ok('B1: a real run records one', T.scoredErr({ n: 20, meanAbsMs: 31, spreadMs: 22, hitRate: 0.9 }).err === 31);
+    /* A run the self-hearing guard refused is the app scoring its own click. It is kept
+       off the screen for that reason; letting it into the TREND would poison the one
+       number B4 is meant to render. */
+    ok('B1: a self-heard run records no error — it would poison the trend',
+       T.scoredErr({ n: 32, meanAbsMs: 1, spreadMs: 1, hitRate: 1 }) === undefined);
+
+    /* --- v1 → v2: existing progress must survive, asserted before anything relies on it --- */
+    const v1 = {
+      v: 1,
+      items: { 'note:A': { seen: 4, correct: 3, streak: 2, ease: 2.5, due: NOW + DAY } },
+      sessions: [
+        { t: NOW, drill: 'changes:C-G', score: 51 },
+        { t: NOW + 1000, drill: 'changes:C-G', score: 44 },
+        { t: NOW + 2000, drill: 'timing:8ths', score: 7 }
+      ]
+    };
+    const v2 = T.normalizeLearner(v1);
+    ok('B1: a v1 store migrates instead of being discarded', v2.v === T.LEARNER_V);
+    ok('B1: migration keeps every SRS item intact',
+       v2.items['note:A'] && v2.items['note:A'].seen === 4 && v2.items['note:A'].correct === 3
+       && v2.items['note:A'].streak === 2 && v2.items['note:A'].due === NOW + DAY);
+    ok('B1: migration keeps every session intact', v2.sessions.length === 3
+       && v2.sessions[0].score === 51 && v2.sessions[2].drill === 'timing:8ths');
+    ok('B1: migration reconstructs the personal best a v1 store never stored',
+       v2.best['changes:C-G'] && v2.best['changes:C-G'].score === 51);
+    ok('B1: ...for each id independently', v2.best['timing:8ths'].score === 7);
+    // and the guard rails hold: anything we don't know is still a fresh model
+    ok('B1: an unknown future version is still refused',
+       T.normalizeLearner({ v: 999, sessions: [{ t: NOW, drill: 'x', score: 1 }] }).sessions.length === 0);
+    T.resetLearner();
   })();
 
   /* ---- 3c: note-naming drill — target positions, scoring, learner writes ---- */
@@ -399,17 +576,19 @@ if (T) {
   /* ---- Phase 4: the three recognition drills, now an Ear group under Practice ---- */
   (function earMode() {
     const doc = win.document;
-    const nav = doc.getElementById('modenav');
-    const modes = nav ? [...nav.querySelectorAll('.modebtn')].map(b => b.dataset.mode) : [];
-    ok('P4: ear folded into Practice — 2 modes, no ear mode',
-       modes.length === 2 && modes.indexOf('ear') < 0, modes.join(','));
+    const nav = doc.getElementById('mainnav');
+    const dests = [...nav.querySelectorAll('.navbtn')].map(b => b.dataset.panel);
+    // Ear was a top-level mode once; it is a Practice pillar, and after A2 the nav
+    // holds four destinations — three reference subjects and Practice — not five.
+    ok('P4: ear folded into Practice — no ear destination in the nav',
+       dests.length === 4 && dests.indexOf('ear') < 0, dests.join(','));
     ok('P4: the separate ear panel + home are gone',
        !doc.getElementById('panel-ear') && !doc.getElementById('ear-home')
        && !doc.getElementById('ear-progress') && !doc.querySelector('.ear-panel'));
     ok('P4: ear drill area now lives inside the practice panel',
        !!doc.querySelector('#panel-practice #ear-area'));
-    ok('P4: reference shell still 3 tabs / 3 reference panels',
-       doc.querySelectorAll('.tab').length === 3 && doc.querySelectorAll('.main > .panel').length === 3);
+    ok('P4: reference shell still 3 subjects / 3 reference panels',
+       dests.filter(d => d !== 'practice').length === 3 && doc.querySelectorAll('.main > .panel').length === 3);
     // three ear drill starters, now cards in the practice home
     ['start-interval', 'start-chordq', 'start-rhythm'].forEach(id =>
       ok('P4: ear drill starter present in practice home: ' + id,
@@ -421,9 +600,9 @@ if (T) {
        doc.body.classList.contains('mode-practice')
        && !doc.body.classList.contains('mode-ear') && !doc.body.classList.contains('mode-activity')
        && !doc.body.classList.contains('mode-reference'));
-    const eBtn = nav.querySelector('.modebtn[data-mode="practice"]');
-    ok('P4: practice button active + aria-pressed',
-       eBtn.classList.contains('active') && eBtn.getAttribute('aria-pressed') === 'true');
+    const eBtn = nav.querySelector('.navbtn[data-panel="practice"]');
+    ok('P4: the Practice destination reads as current',
+       eBtn.classList.contains('active') && eBtn.getAttribute('aria-selected') === 'true');
     ok('P4: state() / persistence carry mode practice',
        T.state().currentMode === 'practice' &&
        JSON.parse(win.localStorage.getItem('guitarStudio.v1') || '{}').mode === 'practice');
@@ -1150,6 +1329,299 @@ if (T) {
     T.setMode('reference');
     T.setKey(0, 'C');
     T.resetLearner();
+  })();
+
+  /* ---- Phase 10/A1: one function, one home ----
+     Every global verb gets exactly one control that the shell scopes to whatever is
+     active. Before this the shell was cumulative: everything that was ever global
+     stayed global, and each drill re-implemented locally whatever the header wouldn't
+     scope for it — so a drill screen carried two Play buttons, two metronome concepts
+     and (in the timing drill) two tempo controls. These checks pin the dedup. */
+  (function oneFunctionOneHome() {
+    const doc = win.document;
+
+    /* --- tempo: one setter, one control per context --- */
+    ok('A1: the timing drill no longer carries a private tempo stepper',
+       !doc.getElementById('sd-slower') && !doc.getElementById('sd-faster') && !doc.getElementById('sd-bpm'));
+    ok('A1: the shell owns the scoped tempo stepper instead',
+       !!doc.getElementById('drill-ctx-slower') && !!doc.getElementById('drill-ctx-faster')
+       && !!doc.getElementById('drill-ctx-bpm'));
+    // both readouts are painted by the ONE setter, so neither can drift from `tempo`
+    T.setTempo(132);
+    ok('A1: setTempo drives the header readout', doc.getElementById('tb-bpm').textContent === '132 BPM');
+    ok('A1: setTempo drives the header slider', +doc.getElementById('tb-tempo').value === 132);
+    ok('A1: setTempo drives the drill-strip readout',
+       doc.getElementById('drill-ctx-bpm').textContent === '132 BPM');
+    // clamped to the slider's own range, so the stepper can't walk past what the slider allows
+    T.setTempo(9999); ok('A1: setTempo clamps high', T.getTempo() === 200);
+    T.setTempo(-5);   ok('A1: setTempo clamps low',  T.getTempo() === 40);
+    T.setTempo(90);
+
+    /* --- the tempo half of the strip is DERIVED from the registry, like the key half --- */
+    const tempoShown = () => !doc.getElementById('drill-ctx-tempo').hidden;
+    T.setMode('practice');
+    T.startTiming();
+    T.applyDrillCtx();
+    ok('A1: a tempo-driven drill (timing) shows the tempo stepper', tempoShown());
+    ok('A1: its divider + label show with it',
+       !doc.getElementById('drill-ctx-tdiv').hidden && !doc.getElementById('drill-ctx-tlbl').hidden);
+    T.exitTiming();
+    T.startEar('interval');
+    T.applyDrillCtx();
+    ok('A1: an untimed drill (ear) hides the tempo stepper', !tempoShown());
+    T.exitEar();
+    ok('A1: returning to the practice home hides it too', !tempoShown());
+    // same [hidden] trap as the key half: .group is display:flex, which outranks the UA rule
+    ok('A1: CSS actually hides the tempo parts (display:flex outranks [hidden])',
+       /#drill-ctx-tempo\[hidden\][^{]*\{[^}]*display:\s*none/.test(html)
+       && /#drill-ctx-tdiv\[hidden\]/.test(html) && /#drill-ctx-tlbl\[hidden\]/.test(html));
+    // every drill that rides the shared scheduler must declare it, or it silently loses
+    // the only tempo control it has left
+    const timed = ['timing', 'strum', 'overchanges', 'changes'];
+    ok('A1: all four scheduler-driven drills declare tempo:true',
+       timed.every(id => { const d = T.DRILLS.find(x => x.id === id); return d && d.tempo === true; }),
+       T.DRILLS.filter(d => d.tempo).map(d => d.id).join(','));
+    ok('A1: and no untimed drill declares it',
+       T.DRILLS.filter(d => d.tempo).length === timed.length);
+
+    /* --- the reference transport is a REFERENCE verb: it has no subject in Practice --- */
+    ok('A1: CSS scopes the reference transport out of Practice',
+       /body\.mode-practice\s+#g-play/.test(html) && /body\.mode-practice\s+#g-loop/.test(html)
+       && /body\.mode-practice\s+\.tb-bar\s+\.tb-tempo/.test(html)
+       && /body\.mode-practice\s+#backing-panel/.test(html)
+       && /body\.mode-practice\s+#backing-toggle/.test(html));
+    /* updateGlobalPlay() hides Listen where there is nothing to listen to, but an author
+       `display` rule beats the UA [hidden] whatever the specificity — so `.tb-bar > .btn`
+       silently defeated the button's own .hidden until this rule was added after it. */
+    ok('A1: [hidden] is re-asserted for the transport buttons',
+       /\.tb-bar\s*>\s*\.btn\[hidden\][^{]*\{[^}]*display:\s*none/.test(html));
+
+    /* --- entering Practice stops what the reference transport owns --- */
+    T.setMode('reference');
+    T.initAudio();
+    T.selectTab('harmony');
+    T.loopToggle();
+    ok('A1: (precondition) the reference loop is running', T.transportActive());
+    T.setMode('practice');
+    ok('A1: entering Practice stops the reference loop instead of strumming over the drill',
+       !T.transportActive());
+    /* the shortcut has to follow the control it stands for, or M starts an invisible
+       metronome beating against the drill's own click with nothing on screen to stop it */
+    const press = k => doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: k, bubbles: true }));
+    press('m');
+    ok('A1: M does not start the reference metronome from a Practice screen', !T.transportActive());
+    press('l');
+    ok('A1: L does not start the reference loop from a Practice screen', !T.transportActive());
+    T.setMode('reference');
+    press('m');
+    ok('A1: ...but M still works in Reference, where the control is on screen', T.transportActive());
+    press('m');
+    ok('A1: ...and toggles back off', !T.transportActive());
+
+    /* --- master volume is app-level, not a property of the backing band --- */
+    ok('A1: master volume moved out of the Backing panel',
+       !doc.getElementById('backing-panel').contains(doc.getElementById('tb-vol')));
+    ok('A1: ...and into Settings, so it stays reachable in Practice',
+       doc.getElementById('toolbar').contains(doc.getElementById('tb-vol')));
+
+    /* --- spine #1's control exists wherever a key is meaningful, Circle included --- */
+    T.selectTab('circle');
+    T.applyContextBar();
+    ok('A1: the root picker is present on Circle (it used to vanish with the whole bar)',
+       doc.getElementById('context-bar').hidden === false
+       && doc.getElementById('g-roots').children.length >= 12);
+    ok('A1: ...without the fretboard-only Display toggle riding along',
+       doc.querySelector('.ctx-display').hidden === true);
+    ok('A1: ...and with neither tab\'s view switch',
+       doc.getElementById('ctx-view-harmony').hidden && doc.getElementById('ctx-view-scales').hidden);
+    /* No separator hanging off the front of the bar. A1 needed an explicit rule for
+       this (the view groups were still in the bar, just hidden); A2 moved them to the
+       board, so an adjacent-sibling rule covers it — the leading group, whichever it
+       is, has nothing before it to be divided from. */
+    ok('A1: ...and no separator hanging off the front of the bar',
+       /\.context-bar\s+\.ctx-group\s*\+\s*\.ctx-group[^{]*\{[^}]*border-left:\s*1px/.test(html)
+       && !/\.context-bar\s+\.ctx-group:not\(\.ctx-view\)/.test(html));
+    T.selectTab('harmony');
+    ok('A1: Harmony still gets its own view switch back',
+       !doc.getElementById('ctx-view-harmony').hidden && doc.querySelector('.ctx-display').hidden === false);
+    T.setKey(0, 'C');
+    T.resetLearner();
+  })();
+
+  /* ---- Phase 10/A2: three navigation strips became two ----
+     Mode (Reference · Practice), subject (Harmony · Scales · Circle) and view
+     (Chord tones · Triads · … ) were three strips in three visual languages in three
+     places, all answering "what am I looking at". Now: one nav with four
+     destinations, and the view switch demoted to a lens sitting on the board it
+     changes — which is what Phase 1b already made true underneath (one board, four
+     renderers) without the UI ever following. */
+  (function oneNavSurface() {
+    const doc = win.document;
+
+    /* --- one strip, four destinations --- */
+    ok('A2: the two old nav strips are gone',
+       !doc.getElementById('modenav') && !doc.getElementById('tabs')
+       && !doc.querySelector('.modebtn') && !doc.querySelector('.tab'));
+    const btns = [...doc.querySelectorAll('#mainnav .navbtn')];
+    ok('A2: one nav holds all four destinations',
+       btns.map(b => b.dataset.panel).join(',') === 'harmony,scales,circle,practice');
+    ok('A2: every destination has a panel to control',
+       btns.every(b => !!doc.getElementById('panel-' + b.dataset.panel)));
+    ok('A2: all four are real tabs over real tabpanels',
+       btns.every(b => b.getAttribute('role') === 'tab' && b.getAttribute('aria-controls') === 'panel-' + b.dataset.panel)
+       && btns.every(b => doc.getElementById(b.dataset.panel === 'practice' ? 'panel-practice' : 'panel-' + b.dataset.panel)
+                            .getAttribute('role') === 'tabpanel'));
+    // exactly one destination is current at a time, mode and tab alike
+    const current = () => btns.filter(b => b.classList.contains('active')).map(b => b.dataset.panel);
+    T.selectTab('scales');
+    ok('A2: a reference subject is the current destination', current().join() === 'scales');
+    T.setMode('practice');
+    ok('A2: Practice takes its place — never both', current().join() === 'practice');
+    T.setMode('reference');
+    ok('A2: leaving Practice restores the subject underneath', current().join() === 'scales');
+    /* The nav is painted from the live state, not by whatever was clicked — so a
+       keyboard shortcut, a seam jump or a restored share link move it too. The seam
+       is the one that used to be able to desync it: it calls setMode + a drill
+       starter directly. */
+    const seam = doc.getElementById('nt-drill');
+    if (seam) { seam.click(); ok('A2: the reference→practice seam moves the nav with it', current().join() === 'practice');
+                T.exitDrill(); T.setMode('reference'); }
+    ok('A2: only one destination is ever current', current().length === 1);
+    // roving tabindex, so the strip is one tab stop
+    ok('A2: the nav is a single tab stop',
+       btns.filter(b => b.tabIndex === 0).length === 1);
+
+    /* --- the view switch is a lens on the board, not a third strip --- */
+    ok('A2: the view groups moved out of the context bar',
+       !doc.querySelector('#context-bar #ctx-view-harmony') && !doc.querySelector('#context-bar #ctx-view-scales'));
+    ok('A2: ...and onto the board they change',
+       !!doc.querySelector('#board-region #board-lens #ctx-view-harmony')
+       && !!doc.querySelector('#board-region #board-lens #ctx-view-scales'));
+    ok('A2: the view buttons still work from there', !!doc.getElementById('hv-triads'));
+    T.selectTab('harmony');
+    ok('A2: Harmony shows its lens, Scales\' is stood down',
+       !doc.getElementById('ctx-view-harmony').hidden && doc.getElementById('ctx-view-scales').hidden);
+    T.selectTab('scales');
+    ok('A2: ...and the other way round',
+       doc.getElementById('ctx-view-harmony').hidden && !doc.getElementById('ctx-view-scales').hidden);
+    // living inside #board-region means it hides with the board for free
+    T.selectTab('circle');
+    ok('A2: on a tab with no neck, the lens goes with the board',
+       doc.getElementById('board-region').hidden === true
+       && doc.getElementById('board-lens').closest('#board-region') !== null);
+    T.selectTab('harmony');
+
+    /* --- Practice is a destination, so the nav must survive there --- */
+    ok('A2: the nav is no longer hidden in Practice (it is how you leave)',
+       !/body\.mode-practice\s+#tabs/.test(html) && !/body\.mode-practice\s+#mainnav/.test(html));
+
+    /* --- the number keys are the nav, in nav order --- */
+    const press = k => doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: k, bubbles: true }));
+    press('4');
+    ok('A2: 4 reaches Practice — which had no shortcut while it was a separate axis',
+       T.state().currentMode === 'practice');
+    press('2');
+    ok('A2: 2 comes back out to Scales',
+       T.state().currentMode === 'reference' && T.state().currentTab === 'scales');
+    press('1');
+    ok('A2: 1 is Harmony', T.state().currentTab === 'harmony');
+    T.setKey(0, 'C');
+  })();
+
+  /* ---- Phase 10 / A3: board-first, and use the desktop ----
+     The neck used to start 645px down a 708px laptop viewport, behind six bands of
+     chrome — 63px of the app's centrepiece visible without scrolling. A3 reorders the
+     shell so the board leads, and gives the two board-less surfaces (Circle, Practice)
+     layouts that acknowledge a wide viewport instead of stretching a phone column
+     across it. jsdom has no layout, so what is asserted here is the STRUCTURE the
+     layout falls out of: which grid area map orders which band, that the DOM agrees
+     with the visual order, and that the two rails exist. The pixel result is the
+     visual review's job. */
+  (function boardFirst() {
+    const doc = win.document;
+
+    /* --- the bands above the neck --- */
+    ok('A3: the context bar is its own grid item, not part of .main',
+       !!doc.querySelector('.layout > #context-bar') && !doc.querySelector('.main #context-bar'));
+    ok('A3: ...with an area of its own to be placed into',
+       /#context-bar\s*\{[^}]*grid-area:\s*ctx/.test(html));
+    /* Exactly one band stands between the header and the neck now. Counting the
+       .layout children that precede #board-region is the durable form of "the neck
+       leads": adding another band above it fails here, whatever it is called. */
+    const layoutKids = [...doc.querySelector('.layout').children];
+    const beforeBoard = layoutKids.slice(0, layoutKids.findIndex(el => el.id === 'board-region'));
+    ok('A3: exactly one band separates the header from the neck',
+       beforeBoard.length === 1 && beforeBoard[0].id === 'context-bar',
+       beforeBoard.map(el => el.id || el.className).join(','));
+    /* Source order IS focus order. The area maps alone would have shown the neck above
+       controls that still came first in the DOM — so a keyboard user would meet the
+       chord picker before the neck it changes, and the lens after it. */
+    ok('A3: the neck leads in the DOM too, not only in the grid',
+       layoutKids.findIndex(el => el.id === 'board-region') < layoutKids.findIndex(el => el.classList.contains('main')));
+    ok('A3: the legend follows the neck it annotates',
+       layoutKids.findIndex(el => el.id === 'board-region') < layoutKids.findIndex(el => el.classList.contains('board-meta')));
+
+    /* --- every area map tells the same story --- */
+    const maps = [...html.matchAll(/grid-template-areas:\s*([^;]+);/g)].map(m =>
+      (m[1].match(/"[^"]*"/g) || []).map(r => r.replace(/"/g, '').trim().split(/\s+/)));
+    const rowOf = (map, area) => map.findIndex(r => r.includes(area));
+    const boardMaps = maps.filter(m => rowOf(m, 'board') >= 0);
+    ok('A3: every shape that shows a board has a map for it', boardMaps.length >= 3, String(boardMaps.length));
+    ok('A3: the neck outranks the controls on every shape',
+       boardMaps.every(m => rowOf(m, 'board') < rowOf(m, 'main')));
+    ok('A3: ...and the key you are in outranks the neck',
+       boardMaps.every(m => rowOf(m, 'ctx') >= 0 && rowOf(m, 'ctx') <= rowOf(m, 'board')));
+    /* prioritize-fretboard-width: the neck keeps the whole page width on desktop. The
+       controls compact into a horizontal rail under it, never a vertical one beside it. */
+    const desktop = maps.find(m => m.length && m[0].join() === 'ctx,ctx');
+    ok('A3: the desktop neck still spans every column',
+       !!desktop && desktop[rowOf(desktop, 'board')].every(c => c === 'board'));
+    ok('A3: the suggester rides beside the controls, not beside the neck',
+       !!desktop && rowOf(desktop, 'aside') === rowOf(desktop, 'main'));
+    ok('A3: .main clears the neck above it, and Practice takes that clearance back',
+       /\.main\s*\{[^}]*margin-top:\s*22px/.test(html)
+       && /body\.mode-practice\s+\.main\s*\{[^}]*margin-top:\s*0/.test(html));
+    ok('A3: Practice still collapses to the single-area shell',
+       maps.some(m => m.length === 1 && m[0].join() === 'main'));
+
+    /* --- Practice home: two columns on a desktop viewport --- */
+    const home = doc.getElementById('practice-home');
+    const drills = home.querySelector('.ph-drills');
+    ok('A3: the drill picker has a wrapper to be a column of', !!drills);
+    ok('A3: every pillar sits in it',
+       [...home.querySelectorAll('.practice-section')].every(s => s.closest('.ph-drills') === drills)
+       && home.querySelectorAll('.practice-section').length === 5);
+    ok('A3: the progress card sits BESIDE the picker, not inside it',
+       !!home.querySelector(':scope > .practice-progress-card')
+       && !drills.querySelector('.practice-progress-card'));
+    ok('A3: ...on a rail that stays put while the drills scroll',
+       /#practice-home\s*>\s*\.practice-progress-card\s*\{[^}]*position:\s*sticky/.test(html));
+    ok('A3: the home is two columns above the shell breakpoint',
+       /@media \(min-width: 941px\) \{\s*#practice-home \{[^}]*grid-template-columns: minmax\(0,1fr\) 320px/.test(html));
+    /* ...and that display rule outranks the UA [hidden] rule, so the home needs an
+       explicit escape hatch or it stays on screen behind every running drill. jsdom
+       cannot see this — .hidden reads the attribute, not the cascade — so the rule is
+       pinned in the built CSS instead. The same trap the drill-ctx groups hit. */
+    ok('A3: ...and still disappears when a drill takes over',
+       /#practice-home\[hidden\] \{ display: none; \}/.test(html));
+    ok('A3: drill cards wrap into a grid instead of one card per row',
+       /\.practice-list \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(auto-fill, minmax\(250px, 1fr\)\)/.test(html));
+    /* The list began as the Phase-3a "coming soon" text stub; when real .drill-card
+       buttons moved in, the li kept its own background + border, so every card
+       rendered as a bordered box inside a bordered box. */
+    ok('A3: the li is a bare cell — the card is the only box',
+       /\.practice-list li \{ display: flex; \}/.test(html)
+       && !/\.practice-list li \{[^}]*background/.test(html));
+    ok('A3: all ten cards survived the reflow',
+       home.querySelectorAll('.drill-card').length === T.drillTracks().length);
+
+    /* --- Circle: the circle IS the content, so it grows with the viewport --- */
+    ok('A3: the circle is no longer pinned to 360px in a 1193px panel',
+       /#cof-svg \{ width: 100%/.test(html) && !/#cof-svg \{[^}]*width: 360px/.test(html));
+    ok('A3: it grows with its column, up to a readable cap',
+       /\.cof-wrap \{[^}]*flex: 1 1 340px;[^}]*max-width: 520px/.test(html));
+    ok('A3: the reading pane is capped too, so no dead strip trails it',
+       /\.cof-side \{[^}]*max-width: 620px/.test(html));
   })();
 
   /* ---- Phase 7b: time signatures / meter ---- */

@@ -125,6 +125,9 @@ function applyLang(){
   activateRoot(document.getElementById('g-roots'), gRoot);
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));
-  if(typeof syncTabsScroll==='function') syncTabsScroll();
+  /* A2: the view switch became a lens on the board and lost its visible "Вид" label —
+     the buttons name themselves next to the neck they change. The group still needs
+     naming for a screen reader, which is what that string is now for. */
+  { const bl=document.getElementById('board-lens'); if(bl) bl.setAttribute('aria-label', t('lbl_view')); }
 }
 

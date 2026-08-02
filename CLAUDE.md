@@ -64,13 +64,18 @@ Edit the sources, then run the build.
     `calOffsetSec()`, so it was removed — bring it back with Phase 8/F1)
   - `06-backing.js` — the backing band + metronome + sequencer, all **meter-aware** (they read
     `barSec()`/`pulseSec()`/`barBeats()` instead of hard-wired 4/4); the merged over-the-changes
-    drill (5c/6a) follows the same meter · `07-render-shared.js` · `08-chords.js` · `09-triads.js`
+    drill (5c/6a) follows the same meter. Also `stopReferenceTransport()` (Phase 10/A1): the
+    loop / progression / metronome are **Reference's**, so entering Practice ends them rather
+    than strumming the reference chord over a drill on a clock the drill doesn't control —
+    playback still persists across *tabs*, where the subject is the same
+    · `07-render-shared.js` · `08-chords.js` · `09-triads.js`
   - `10-scales.js` · `11-notes-circle-lang.js` · `12-toolbar-state.js` (state save/load +
-    the custom-tuning editor + the share-link codec `encodeShareState`/`applyShareHash`)
+    the custom-tuning editor + the share-link codec `encodeShareState`/`applyShareHash` +
+    `setTempo()`, the one clamped setter both tempo controls go through, Phase 10/A1)
   - `13-drill-registry.js` — the **drill registry**: `DRILLS` + `registerDrill()`, plus the
     generic shell helpers `activeDrill`/`exitAllDrills`/`showDrillHome`/`refreshDrillsLang`/
     `drillKeyChanged`/`applyDrillCtx`. Every drill file self-registers at load
-    (`{id, area, isActive, exit, refreshLang?, onKey?}`), and `setMode` (15) / `applyLang`
+    (`{id, area, isActive, exit, refreshLang?, onKey?, tempo?, tracks}`), and `setMode` (15) / `applyLang`
     (11) iterate `DRILLS` instead of naming drills — so **adding a drill is one new `14-*.js`
     file + its markup, with nothing to register by hand**.
     There used to be a `mode:'practice'|'ear'` field; **Ear was folded into Practice** (it was
@@ -79,20 +84,29 @@ Edit the sources, then run the build.
     Loads at slot 13 (before the slot-14 drills) because `const DRILLS` isn't hoisted. The
     smoke suite guards the seam: every `*-area` in the markup must be claimed by a registered
     drill, so an unregistered drill fails the build rather than silently half-working.
-    **Shared drill chrome** (`#drill-ctx` in the template, built in 15): one Key picker + one
-    Exit button for *all* drills, instead of the identical copy each drill used to
-    carry. Exit calls `activeDrill().exit()`; the key picker calls `setKey` then
+    **Shared drill chrome** (`#drill-ctx` in the template, built in 15): one Key picker, one
+    Tempo stepper and one Exit button for *all* drills, instead of the identical copy each
+    drill used to carry. Exit calls `activeDrill().exit()`; the key picker calls `setKey` then
     `drillKeyChanged()`, which invokes the running drill's optional `onKey()` — "re-derive
     yourself from the new key" (rebuild bars, deal a new round, repaint the board). A drill
     with nothing key-dependent just omits `onKey`. CSS derives the strip's visibility from
-    `#practice-home:not([hidden]) ~ #drill-ctx`, so no drill manages it. The *key half* of the
-    strip is derived too: `applyDrillCtx()` shows it only for a drill that declares `onKey`,
-    so the ear / note-naming / one-minute-changes drills don't get a picker that adjusts
-    nothing. It's called from one delegated listener on `#practice-home` (every drill starts
+    `#practice-home:not([hidden]) ~ #drill-ctx`, so no drill manages it. Both *halves* of the
+    strip are derived too: `applyDrillCtx()` shows the key picker only for a drill declaring
+    `onKey` (so the ear / note-naming / one-minute-changes drills don't get a picker that
+    adjusts nothing) and the tempo stepper only for one declaring **`tempo:true`** (Phase
+    10/A1 — the four scheduler-driven drills: timing, strum, over-the-changes, changes).
+    It's called from one delegated listener on `#practice-home` (every drill starts
     from a card or the Review button in there), so drills still register nothing by hand.
-    **Watch the `[hidden]` trap**: `#drill-ctx-key` is a `.group` (`display:flex`), which
-    outranks the UA `[hidden]{display:none}` — hiding it needs the explicit CSS rule, and
-    jsdom's `.hidden` property will happily report success without it.
+    **Tracks** (Phase 10/B1): a drill also declares what it *teaches* —
+    `tracks:[{id, kind:'recall'|'perf', items, sess, better, unit, label, start}]`. A track, not
+    a drill, is the unit the learner model reads: over-the-changes is one drill with **two**
+    (comping and targeting), ear training is one with **three**, and the note drill is **both
+    kinds at once**. Ten tracks over seven entries — one per practice card, and the smoke suite
+    counts the cards from the markup, so a card without a track fails the build. Helpers:
+    `drillTracks`/`trackById`/`trackBySess`/`trackByItems`/`sessNs`/`startTrack`.
+    **Watch the `[hidden]` trap**: `#drill-ctx-key` / `#drill-ctx-tempo` are `.group`s
+    (`display:flex`), which outrank the UA `[hidden]{display:none}` — hiding them needs the
+    explicit CSS rule, and jsdom's `.hidden` property will happily report success without it.
   - `13-mic.js` — the **shared mic layer** (Phase 8). One microphone, three consumers
     (F0's tuner, F1's onset detector, F1's calibration), so acquisition, the permission
     prompt and the error vocabulary (`micErrKey` → i18n key) live here instead of being
@@ -114,9 +128,23 @@ Edit the sources, then run the build.
     usual reason (its `const`s would be in the TDZ for a slot-14 drill loading earlier).
     Consumers: `sdScore` (every grid tick), `spScore` (the pattern's sounding slots, swing
     included), `tgScore` (the bar downbeats — see the comp drill below).
-  - `13-learner.js` — learner model (spine #3): per-item SRS history + sessions ring
-    buffer; persists via `12-toolbar-state.js`'s `saveState`/`loadState`. Exposes the
-    progress-card readouts `learnerReview` (due-for-review queue) + `learnerActivity` (active days)
+  - `13-learner.js` — learner model (spine #3), **schema v2** since Phase 10/B1: per-item SRS
+    history + a sessions ring buffer + a stored per-id **personal best**; persists via
+    `12-toolbar-state.js`'s `saveState`/`loadState`. Exposes the progress-card readouts
+    `learnerReview` (the queue) + `learnerActivity` (active days) + **`learnerTrend`** (runs,
+    latest, best, direction of travel, staleness — the ring buffer read as the time series it
+    always was) + `learnerBest`.
+    **What B1 changed and why**: `REVIEW_NS` was four hardcoded strings and `startReview` a
+    four-branch router, so six of the ten practice tracks were not ranked low by "what should I
+    practise next?" — they were absent from its vocabulary. Both are now derived from the
+    registry's `tracks` (below), and a **performance** track falls due on *staleness* or
+    *slippage* instead of SM-2. Sessions may carry an optional **`err`** (the scored tiers' mean
+    absolute timing error, which used to be shown once and thrown away); `scoredErr()` in
+    `13-scored.js` refuses runs the self-hearing guard refused, so the app's own click can't
+    poison the trend. Retention is **per session id** (`SESS_PER_ID`), not one global cap — a
+    daily drill used to evict a weekly drill's entire history. The `v1 → v2` migration is
+    **purely additive**: items and sessions carry over untouched and `best` is reconstructed
+    from them, asserted against a captured v1 store.
   - `14-drill-ear.js` + `14-drill-notes.js` + `14-drill-overchanges.js` +
     `14-drill-lead-callresponse.js` + `14-drill-rhythm-{1-changes,2-strum}.js` +
     `14-drill-timing.js`
@@ -168,7 +196,8 @@ Edit the sources, then run the build.
     a smart visual metronome — a subdivision picker (`SUBDIVS`, `div` per beat) + tempo drive a
     3-level accented click + a `SD_BEATS·div` grid on its own scheduler clock, while the context
     scale is walked note-by-note across the grid inside one Phase-2 `boxWindow` on its own display
-    board; in-drill position/tempo (the key comes from the shared `#drill-ctx` strip), records a
+    board; in-drill position only (key **and tempo** come from the shared `#drill-ctx` strip —
+    its private tempo stepper was the duplicate Phase 10/A1 collapsed), records a
     `timing:<subdiv>` session (no SRS). Coach tier
     (serves both pillars) — mic scoring is Phase 8/F1.
     They reuse the cue bus and the
@@ -233,9 +262,38 @@ Edit the sources, then run the build.
     dragging by the buffer size. Headphones are the honest failure case (no acoustic path,
     so nothing to measure) — it says so and leaves the manual slider. Rides
     `saveState`/`loadState`, bounds-checked against `CAL_MAX_MS`.
-  - `15-wiring-init.js` · `16-pwa.js`
-- `src/styles.css` — all CSS
-- `src/index.template.html` — markup shell with `@@STYLES@@` / `@@SCRIPT@@` / `@@FAVICON@@` markers
+  - `15-wiring-init.js` — wiring + init. Holds the **one navigation surface** (Phase 10/A2):
+    `#mainnav` with four destinations (Harmony · Scales · Circle · Practice), replacing the
+    mode pill strip stacked above the reference tab strip. `navTo(panel)` is the only entry
+    point; `applyNav()` paints the strip from the live state and is called by **both**
+    `setMode` and `selectTab`, so a keyboard shortcut (`1`–`4`), a seam jump or a restored
+    share link move the nav too. The **mode axis is unchanged in code** — `setMode` still
+    drives `body.mode-practice`, still orthogonal to `currentTab` — it just stopped being a
+    second thing on screen. All four are genuine `tab`/`tabpanel` pairs, since
+    `#panel-practice` is a real sibling section. On a phone CSS pins the strip as a fixed
+    4-item bottom bar (which is why the labels are single words). The **view switch** left
+    the header for `#board-lens` inside `#board-region` — a lens on the board it changes,
+    hidden and moved with the neck by `applyBoardRegion`, which is what Phase 1b already
+    made true underneath (one board, four renderers).
+  - `16-pwa.js`
+- `src/styles.css` — all CSS. The shell's layout lives in **`.layout`'s named grid areas**, and
+  since Phase 10/A3 the neck **leads**: the maps run `ctx` → `board` → `boardmeta` → `main` →
+  `shapes`/`aside`/`extras`, so the fretboard sits above the active view's own controls instead of
+  behind them (it used to start 645px down a 708px laptop viewport). There are **four** area maps —
+  desktop, `.no-aside`, portrait phone, landscape phone — plus Practice's single-`"main"` collapse,
+  and a new band has to be placed in all of them. `#context-bar` is a grid item in its own right
+  (not part of `.main`) precisely so those three can be ordered independently. **The neck keeps the
+  full page width on desktop** — controls compact into a horizontal rail under it, never a vertical
+  one beside it; the suggester rides beside the *controls*. **Watch the `[hidden]` trap** (same one
+  the `#drill-ctx` groups hit): any author `display` rule on an element something toggles with
+  `.hidden` needs its own `[hidden]{display:none}` escape hatch — `#practice-home` got a
+  `display:grid` in A3 and instantly started showing through behind every running drill, with jsdom
+  reporting success the whole time.
+- `src/index.template.html` — markup shell with `@@STYLES@@` / `@@SCRIPT@@` / `@@FAVICON@@` markers.
+  `#board-region` + `.board-meta` sit **before** `.main` in the source, not only in the area maps
+  (Phase 10/A3): source order is focus order, so a grid-only reorder would have handed a keyboard
+  user the chord picker before the neck it changes. Practice's home wraps its pillars in
+  `.ph-drills` so the progress card has something to sit *beside* on a desktop viewport.
 - `src/sw.template.js` — service worker (`@@VERSION@@` → cache name)
 - `src/icons/icon.svg` — the app icon, authored once
 
@@ -278,7 +336,11 @@ devDependencies in the **root** `package.json` (same status as jsdom in
   scrolls the page in real time and reports condensing-header bugs: flip-flop,
   scroll drift, slow-scroll thrash, layout jump. Default `390x740 390x1100`;
   ~15s real time per viewport (uses real timers, not virtual-time, because the
-  condense trigger is an IntersectionObserver).
+  condense trigger is an IntersectionObserver). An **empty** result (no diagnostic
+  output) is retried **once**: whichever viewport lost the cold browser-launch race
+  used to report a phantom failure — clean alone, clean in second position — and a
+  gate that cries wolf gets ignored. A diagnostic that comes back and *reports* a
+  problem is a real finding and is never re-rolled.
 - `node tools/kbd-check.js` — headless **keyboard-shortcut functional check**
   (exits 1 on failure). Dispatches real keydown events and asserts the DOM
   responds: tab switch (`1/2/3`), root set (`g/a/c`), transpose (`[`/`]`), help

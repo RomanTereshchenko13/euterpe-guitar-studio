@@ -12,14 +12,23 @@
    (rendered by renderPractice() in wiring-init); the note-naming drill (3c) is the
    first writer. */
 
-const LEARNER_V = 1;
+const LEARNER_V = 2;
 const SRS_EASE_MIN = 1.3, SRS_EASE_MAX = 3.0, SRS_EASE_START = 2.5;
 const DAY_MS = 86400000;
-const SESS_MAX = 50;        // sessions ring buffer cap (newest last)
+/* Retention (Phase 10/B1). SESS_MAX was one global cap of 50 across nine tracks — so
+   roughly five entries each, and a drill practised daily evicted the history of one
+   practised weekly. A trend needs its own runway, so the cap is now PER SESSION ID
+   (newest kept), with the global figure demoted to a safety ceiling against a
+   tampered store. */
+const SESS_MAX = 300;       // global safety ceiling (newest last)
+const SESS_PER_ID = 20;     // per-session-id history depth — what a trend reads
+const PERF_STALE_DAYS = 5;  // a performance track goes "due" when it's this cold
+const PERF_TREND_N = 3;     // how many recent runs make up "recently"
 const ITEMS_MAX = 5000;     // hard cap so a tampered store can't grow unbounded
+const IDS_MAX = 400;        // ditto for the per-id best table
 const ID_MAX = 64;          // max stable-id length
 
-function newLearner(){ return { v: LEARNER_V, items: {}, sessions: [] }; }
+function newLearner(){ return { v: LEARNER_V, items: {}, sessions: [], best: {} }; }
 // The single mutable learner instance. loadState() reassigns it from storage
 // (normalized) at boot; until then it's an empty, valid model.
 let learner = newLearner();
@@ -68,11 +77,102 @@ function dueItems(now, prefix){
     .sort((a,b) => learner.items[a].due - learner.items[b].due);
 }
 
-// append a finished session to the bounded ring buffer (newest last)
-function recordSession(drill, score, now){
+/* Append a finished session (newest last), update the personal best, then prune.
+   `extra` carries anything the session number itself can't: today that is `err`, the
+   scored tiers' mean absolute timing error in ms. The count and the error are two
+   different measurements of one run — `score` stays "bars played" so pre-F1 history
+   keeps meaning what it meant, and the mic result rides alongside instead of being
+   computed, displayed once and thrown away (which is what happened until B1). */
+function recordSession(drill, score, now, extra){
   now = (typeof now==='number') ? now : Date.now();
-  learner.sessions.push({ t: now, drill: String(drill), score: (typeof score==='number' && isFinite(score)) ? score : 0 });
-  if(learner.sessions.length > SESS_MAX) learner.sessions.splice(0, learner.sessions.length - SESS_MAX);
+  const id = String(drill);
+  const s = { t: now, drill: id, score: lNum(score, 0) };
+  if(extra && typeof extra==='object' && typeof extra.err==='number' && isFinite(extra.err))
+    s.err = Math.max(0, extra.err);
+  learner.sessions.push(s);
+  learnerNoteBest(id, s);
+  pruneSessions();
+}
+/* Keep the newest SESS_PER_ID of each session id, then trim oldest-first to the
+   global ceiling. Per-id, so a weekly drill's history isn't evicted by a daily one. */
+function pruneSessions(){
+  const seen = {};
+  const keep = [];
+  for(let i=learner.sessions.length-1; i>=0; i--){        // newest → oldest
+    const s = learner.sessions[i], n = (seen[s.drill]||0);
+    if(n >= SESS_PER_ID) continue;
+    seen[s.drill] = n+1; keep.push(s);
+  }
+  keep.reverse();                                          // back to oldest → newest
+  learner.sessions = keep.length > SESS_MAX ? keep.slice(-SESS_MAX) : keep;
+}
+/* The personal best has to be STORED, not derived: it is the one number that must
+   outlive the history it came from. Direction comes from the registry track (a
+   changes-per-minute best is the highest, a timing error the lowest), defaulting to
+   "higher is better" so an undeclared track still records something sane. */
+function learnerNoteBest(id, s){
+  const tr = (typeof trackBySess==='function') ? trackBySess(sessNs(id)) : null;
+  const low = !!(tr && tr.better==='low');
+  const cur = learner.best[id];
+  if(!cur){
+    if(Object.keys(learner.best).length >= IDS_MAX) return;
+    learner.best[id] = { score: s.score, t: s.t };
+  } else if(low ? s.score < cur.score : s.score > cur.score){
+    cur.score = s.score; cur.t = s.t;
+  }
+  // the timing error is always "lower is better", whatever the track's own metric is
+  const b = learner.best[id];
+  if(typeof s.err==='number' && (typeof b.err!=='number' || s.err < b.err)) b.err = s.err;
+}
+// the stored personal best for one session id, or null
+function learnerBest(id){ return learner.best[String(id)] || null; }
+
+/* ---- the trend (Phase 10/B1) ----
+   The ring buffer has always been a time series and nothing ever read it as one:
+   learnerStats() returned five all-time aggregates, so the app could not say "your
+   timing error went from 45 ms to 28 ms over six sessions" — which is the sentence
+   the six unscored coach tiers were supposed to earn their keep on. This is the one
+   helper that turns a session id (or a whole namespace) into a story.
+
+   `dir` is the direction of travel: the mean of the last PERF_TREND_N runs against
+   the mean of the ones before them, oriented by the track's `better`. Below
+   TREND_EPS of the earlier mean it reads 'flat' rather than inventing a trend out of
+   noise — a 1% wobble is not improvement. */
+const TREND_EPS = 0.03;
+function learnerTrend(idOrNs, now){
+  now = (typeof now==='number') ? now : Date.now();
+  const key = String(idOrNs);
+  // exact session id first; fall back to every session in that namespace
+  let runs = learner.sessions.filter(s => s.drill===key);
+  const exact = runs.length>0;
+  if(!exact) runs = learner.sessions.filter(s => sessNs(s.drill)===key);
+  const tr = (typeof trackBySess==='function') ? trackBySess(exact ? sessNs(key) : key) : null;
+  const low = !!(tr && tr.better==='low');
+  const out = { id:key, n:runs.length, unit:(tr&&tr.unit)||'', better:low?'low':'high',
+                last:null, lastT:0, best:null, bestErr:null, lastErr:null,
+                dir:'flat', staleDays:null };
+  if(!runs.length) return out;
+  const last = runs[runs.length-1];
+  out.last = last.score; out.lastT = last.t;
+  out.lastErr = (typeof last.err==='number') ? last.err : null;
+  out.staleDays = Math.max(0, (now - last.t) / DAY_MS);
+  // the stored best when there is one (it outlives the buffer), else the buffer's own
+  const stored = exact ? learnerBest(key) : null;
+  out.best = stored ? stored.score
+    : runs.reduce((b,s)=> b===null ? s.score : (low ? Math.min(b,s.score) : Math.max(b,s.score)), null);
+  const errs = runs.filter(s=>typeof s.err==='number').map(s=>s.err);
+  if(stored && typeof stored.err==='number') errs.push(stored.err);
+  if(errs.length) out.bestErr = Math.min.apply(null, errs);
+  // direction: recent mean vs the mean of what came before it
+  if(runs.length >= 2){
+    const cut = Math.max(1, runs.length - PERF_TREND_N);
+    const mean = a => a.reduce((x,s)=>x+s.score, 0) / a.length;
+    const recent = mean(runs.slice(cut)), earlier = mean(runs.slice(0, cut));
+    const delta = (recent - earlier) * (low ? -1 : 1);
+    const scale = Math.abs(earlier) || 1;
+    out.dir = Math.abs(delta)/scale < TREND_EPS ? 'flat' : (delta > 0 ? 'up' : 'down');
+  }
+  return out;
 }
 
 // aggregate readout for the Practice progress card (and tests)
@@ -83,23 +183,56 @@ function learnerStats(){
   return { items: ids.length, seen, correct, accuracy: seen ? correct/seen : 0, bestStreak, sessions: learner.sessions.length };
 }
 
-// review queue summary for the progress card: how many items are due now, split by
-// id namespace (the prefix before ':'), plus the namespace with the most due. The
-// drills already bias toward due items internally; this surfaces the count so the
-// loop closes back to the user ("N due — review now"). Only the SRS-bearing
-// namespaces count (the rhythm coaches write sessions, not items).
-const REVIEW_NS = ['note','interval','chordq','rhythm'];
+/* Review queue summary for the progress card: how many items are due now, split by
+   id namespace (the prefix before ':'), plus the namespace with the most due. The
+   drills already bias toward due items internally; this surfaces the count so the
+   loop closes back to the user ("N due — review now").
+
+   Phase 10/B1 — this used to open with `const REVIEW_NS = ['note','interval',
+   'chordq','rhythm']`, four strings that were the app's entire answer to "what
+   should I practise next?". Six of the nine tracks were not ranked low by it; they
+   were absent from its vocabulary, because a performance track has no SM-2 date to
+   be overdue against. So the recall half is now derived from the registry, and the
+   performance half falls due on its own terms:
+     • STALENESS — it has been PERF_STALE_DAYS since you last ran it, or you never have.
+     • SLIPPAGE  — the recent runs trend down against the ones before them.
+   `due` is the ordered queue (recall first — an overdue SRS item is a fact, a cold
+   drill is a suggestion). `total`/`by`/`top` keep their old meaning for the card. */
+function reviewNamespaces(){
+  return (typeof drillTracks==='function' ? drillTracks() : [])
+    .filter(tr => tr.kind==='recall' && tr.items).map(tr => tr.items);
+}
 function learnerReview(now){
   now=(typeof now==='number')?now:Date.now();
-  const by={}; REVIEW_NS.forEach(ns=>by[ns]=0); let total=0;
+  const nss=reviewNamespaces();
+  const by={}; nss.forEach(ns=>by[ns]=0); let total=0;
   Object.keys(learner.items).forEach(id=>{
     if(learner.items[id].due>now) return;
     const ns=id.slice(0, id.indexOf(':'));
     if(by[ns]===undefined) return;
     by[ns]++; total++;
   });
-  let top=null, max=0; REVIEW_NS.forEach(ns=>{ if(by[ns]>max){ max=by[ns]; top=ns; } });
-  return { total, by, top };
+  let top=null, max=0; nss.forEach(ns=>{ if(by[ns]>max){ max=by[ns]; top=ns; } });
+  // the ordered queue: overdue recall namespaces, then cold or slipping performance tracks
+  const due=[];
+  nss.slice().sort((a,b)=>by[b]-by[a]).forEach(ns=>{
+    if(by[ns]>0){ const tr=trackByItems(ns); due.push({ track:tr?tr.id:ns, ns, kind:'recall', n:by[ns], reason:'due' }); }
+  });
+  (typeof drillTracks==='function' ? drillTracks() : []).forEach(tr=>{
+    if(tr.kind!=='perf' || !tr.sess) return;
+    const tn=learnerTrend(tr.sess, now);
+    if(!tn.n){ due.push({ track:tr.id, ns:tr.sess, kind:'perf', n:0, reason:'new' }); return; }
+    if(tn.staleDays >= PERF_STALE_DAYS) due.push({ track:tr.id, ns:tr.sess, kind:'perf', n:0, reason:'stale' });
+    else if(tn.dir==='down') due.push({ track:tr.id, ns:tr.sess, kind:'perf', n:0, reason:'slipping' });
+  });
+  return { total, by, top, due };
+}
+/* Open a track by id — the registry's own `start`, so the shell no longer carries a
+   hand-written ns → starter map that quietly covered four of nine tracks. */
+function startTrack(id){
+  const tr = (typeof trackById==='function') ? trackById(id) : null;
+  if(tr && typeof tr.start==='function'){ tr.start(); return true; }
+  return false;
 }
 // recent-activity readout: distinct calendar days practised within the last `win`
 // days (default 7), from the sessions ring buffer — powers the "active days" stat
@@ -113,11 +246,18 @@ function learnerActivity(now, win){
 
 // ---- bounds-checked restore (mirrors loadState's defensive idiom) ----
 function lInt(v, def){ return (Number.isFinite(v) && Math.floor(v)===v) ? v : (def||0); }
+function lNum(v, def){ return (typeof v==='number' && isFinite(v)) ? v : (def||0); }
 function lClampNum(v, lo, hi, def){ return (typeof v==='number' && isFinite(v)) ? Math.min(hi, Math.max(lo, v)) : def; }
 function normalizeLearner(raw){
   const out = newLearner();
   if(!raw || typeof raw!=='object') return out;
-  if(raw.v !== LEARNER_V) return out;          // unknown version → fresh (future: migrate by raw.v)
+  /* Version gate. v1 → v2 (Phase 10/B1) is the model's first migration, and it is
+     PURELY ADDITIVE: `items` and `sessions` carry over untouched, and `best` — the
+     one field that can't be derived once its history rolls off — is rebuilt from the
+     sessions we still hold. Nothing a player did is lost, which is the whole bar
+     Phase 3 set for a `v` bump. Anything older or newer than we know still degrades
+     to a fresh model rather than guessing. */
+  if(raw.v !== LEARNER_V && raw.v !== 1) return out;
   if(raw.items && typeof raw.items==='object'){
     let n=0;
     for(const id of Object.keys(raw.items)){
@@ -139,7 +279,37 @@ function normalizeLearner(raw){
     out.sessions = raw.sessions
       .filter(s => s && typeof s==='object' && Number.isFinite(s.t))
       .slice(-SESS_MAX)
-      .map(s => ({ t: s.t, drill: typeof s.drill==='string' ? s.drill.slice(0,32) : '', score: (typeof s.score==='number' && isFinite(s.score)) ? s.score : 0 }));
+      .map(s => {
+        const o = { t: s.t, drill: typeof s.drill==='string' ? s.drill.slice(0,32) : '', score: lNum(s.score, 0) };
+        // optional since v2; a v1 entry simply doesn't have one
+        if(typeof s.err==='number' && isFinite(s.err)) o.err = Math.max(0, s.err);
+        return o;
+      });
   }
+  if(raw.best && typeof raw.best==='object'){
+    let n=0;
+    for(const id of Object.keys(raw.best)){
+      if(typeof id!=='string' || !id.length || id.length>ID_MAX) continue;
+      if(++n > IDS_MAX) break;
+      const b=raw.best[id];
+      if(!b || typeof b!=='object' || !Number.isFinite(b.score)) continue;
+      const o = { score: b.score, t: Math.max(0, lInt(b.t, 0)) };
+      if(typeof b.err==='number' && isFinite(b.err)) o.err = Math.max(0, b.err);
+      out.best[id] = o;
+    }
+  }
+  /* The v1 → v2 migration proper. A v1 store has no `best` table, so rebuild it from
+     the sessions that survived — learnerNoteBest only ever replaces a strictly better
+     number, so replaying every session is safe on a v2 store too (it heals a table
+     that predates a track's first run rather than clobbering it). The per-id
+     retention policy is applied on read for the same reason: a v1 store's flat
+     50-entry buffer lands in the shape every reader now expects.
+     Both write through the module-level `learner`, so swap it for the duration. */
+  const keep = learner;
+  learner = out;
+  try{
+    out.sessions.forEach(s => learnerNoteBest(s.drill, s));
+    pruneSessions();
+  } finally { learner = keep; }
   return out;
 }
