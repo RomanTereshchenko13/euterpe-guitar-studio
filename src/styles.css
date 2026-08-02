@@ -919,3 +919,23 @@
   /* align-self stops the button stretching to the full height of the wrapped
      two-row string grid beside it on a phone; nowrap keeps "🎤 Mic" on one line. */
   .btn.tuner-mic { padding: 5px 9px; white-space: nowrap; align-self: center; }
+
+  /* ---- latency calibration row (Phase 8 / F1) ---- */
+  .tb-cal { flex-wrap: wrap; }
+  .tb-cal input[type="range"] { width: 96px; }
+  .cal-status { font-size: 11px; line-height: 1.45; color: var(--text-dim); max-width: 260px; }
+  .cal-status[hidden] { display: none; }
+
+  /* ---- scored timing readout (Phase 8 / F1) ----
+     Deliberately quiet until there is something real to say: the panel only renders
+     after a scored run, so the coach tier never shows an empty scoreboard. */
+  .sd-status { font-size: 12px; line-height: 1.5; color: var(--seventh); margin-top: 10px; }
+  .sd-status[hidden] { display: none; }
+  .sd-score { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: 11px; background: var(--bg-panel); display: flex; flex-direction: column; gap: 5px; }
+  .sd-score[hidden] { display: none; }
+  .sd-sc-main { font-family: 'JetBrains Mono', monospace; }
+  .sd-sc-main b { font-size: 30px; color: var(--text); }
+  .sd-sc-main span { font-size: 12px; color: var(--text-dim); margin-left: 5px; }
+  .sd-sc-verdict { font-size: 13px; font-weight: 600; color: var(--root); }
+  .sd-sc-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); }
+  .sd-sc-row b { font-family: 'JetBrains Mono', monospace; color: var(--text); }

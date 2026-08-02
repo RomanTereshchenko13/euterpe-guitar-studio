@@ -121,6 +121,7 @@ function applyLang(){
   setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
   if(typeof micRefreshLang==='function') micRefreshLang();   // F0: re-localize a live tuner readout
+  if(typeof calRefreshLang==='function') calRefreshLang();   // F1: ...and the calibration row
   activateRoot(document.getElementById('g-roots'), gRoot);
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));

@@ -2,6 +2,14 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.13.0 — 2026-08-02
+
+- Euterpe can now hear you play. Turn the microphone on in Subdivision & timing and the drill stops being a metronome you follow and becomes one that grades you: every note you pick is timed against the grid, and at the end you get your average error in milliseconds, how tight your spread is, and how many grid slots you actually hit.
+- It also tells you *which way* you are off — rushing or dragging — but only when the lean is real. If your notes are scattered rather than consistently early or late, it says so instead of inventing a tendency out of noise. A drill that flatters you is not a coach.
+- New in Settings ▸ Instrument: Audio latency. Your device takes time to get sound out of the speaker and back in through the mic, and without measuring it every player on earth would be told they drag. Press Measure, keep the guitar quiet for a few seconds and let it click — it plays a click, listens for it, and takes the middle of several readings so one stray noise can not skew it. On headphones there is nothing for the mic to hear, so it says so plainly and leaves you the manual slider.
+- The timing you are scored on is measured on the audio thread, not the animation frame, so the number is the note you played rather than how busy the browser was. Without the mic the drill works exactly as before — the coach tier is unchanged, the scored tier is opt-in.
+- As with the tuner, your audio never leaves the browser: the microphone runs only while you are in a scored run or measuring latency, and nothing is recorded or sent anywhere.
+
 ## v2.12.0 — 2026-08-01
 
 - New: a microphone tuner. Play any note on the guitar and see which note it is and how far off you are, on a needle that reads up to 50 cents sharp or flat — plus the nearest open string of whatever tuning you are in, so Drop D and the rest re-label themselves. It is chromatic, so you can also check your intonation at the 12th fret, not just tune the open strings. Open it with the Mic button next to the Tuner in Settings.

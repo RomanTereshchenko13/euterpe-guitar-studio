@@ -624,6 +624,20 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     micSupported, micMidiFromHz, micCentsOff, micNearestString,
     micOpen, micClose, micStatus, micPaint, micPaintIdle, getMic:()=>mt,
     MT_FFT, MT_CLARITY, MT_IN_TUNE, MT_HZ_LO, MT_HZ_HI,
+    // shared mic layer (13-mic.js) + onset detection & scoring (Phase 8 / F1).
+    // The matching/scoring maths is pure, so it is asserted directly — the capture
+    // half needs a real browser (tools/onset-check.js).
+    micAcquire, micRelease, micReleaseAll, micLive, micErrKey,
+    onsetSupported, onsetMatch, onsetScore, onsetVerdict, onsetFeel,
+    onOnset, onsetActive, onsetRecent, onsetClear, onsetProcessorSrc,
+    ON_REFRACTORY, ON_RATIO, ON_FLOOR,
+    // latency calibration (14-calibration.js) — restored for F1, which is its first
+    // real consumer; the v2.5.0 version was cut for having none.
+    calOffsetSec, calSetMs, calCancel, calMedian, getCalMs:()=>calMs, CAL_MAX_MS, CAL_MIN_HITS,
+    // scored timing tier (7a + F1)
+    getSdScored:()=>sdScored, setSdScored:(v)=>{ sdScored=!!v; }, sdComputeScore,
+    sdSetGrid:(g)=>{ if(sd){ sd.grid=g.slice(); } }, sdSetHeard:(h)=>{ if(sd){ sd.heard=h.slice(); } },
+    renderSdScore,
     // accessibility + onboarding (Phase 9 feel pass)
     applyA11y, showWelcome, dismissWelcome,
     setCbPalette:(v)=>{ cbPalette=!!v; }, setFnShapes:(v)=>{ fnShapes=!!v; }, setWelcomeSeen:(v)=>{ welcomeSeen=!!v; },

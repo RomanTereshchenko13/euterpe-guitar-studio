@@ -93,6 +93,15 @@ Edit the sources, then run the build.
     **Watch the `[hidden]` trap**: `#drill-ctx-key` is a `.group` (`display:flex`), which
     outranks the UA `[hidden]{display:none}` — hiding it needs the explicit CSS rule, and
     jsdom's `.hidden` property will happily report success without it.
+  - `13-mic.js` — the **shared mic layer** (Phase 8). One microphone, three consumers
+    (F0's tuner, F1's onset detector, F1's calibration), so acquisition, the permission
+    prompt and the error vocabulary (`micErrKey` → i18n key) live here instead of being
+    copy-pasted. **Refcounted** (`micAcquire`/`micRelease`), because the tuner and a
+    scored drill can be open at once and whoever stops *second* must be the one that
+    actually releases the device; `micReleaseAll()` is the hard override for tab-hide /
+    pagehide. Asks for the raw signal — `echoCancellation`/`noiseSuppression`/
+    `autoGainControl` all off, since AGC destroys onset dynamics and noise suppression
+    destroys sustained pitch. Self-disables off a secure context like `16-pwa.js`.
   - `13-learner.js` — learner model (spine #3): per-item SRS history + sessions ring
     buffer; persists via `12-toolbar-state.js`'s `saveState`/`loadState`. Exposes the
     progress-card readouts `learnerReview` (due-for-review queue) + `learnerActivity` (active days)
@@ -159,6 +168,34 @@ Edit the sources, then run the build.
     (a `file://` dist copy, jsdom) the entry button is *removed*, not disabled — a control that
     can only ever report an error shouldn't be on screen. It is **not** a drill: no registry
     entry, no `-area`, no learner-model writes.
+  - `14-onset.js` — **onset detection** (Phase 8/F1, `onset*`/`ON_*`) — the app's first
+    *scoring* feature. Hand-rolled per the dependency policy: unlike pitch, energy-based
+    attack detection is genuinely the light lift. Runs in an **AudioWorklet**, not on rAF,
+    because a timing score *is* the timestamp — rAF samples at ~16.7 ms and stalls under
+    layout, which would inject an eighth of a sixteenth-note's worth of pure harness noise
+    at 120 BPM. The processor source is a **string** (it compiles in a different global
+    scope and can see nothing in this file) turned into a **Blob URL** at runtime — an
+    in-memory object URL, *not* a network fetch, so the single-file / offline guarantee
+    holds. Detector: pre-emphasis (`x − 0.97·x[n−1]`, the cheap half of spectral flux —
+    tilts toward the broadband attack and away from low-frequency body ring) → fast/slow
+    envelope pair → trigger when fast beats the adaptive baseline by `ON_RATIO`, with a
+    refractory period and a re-arm hysteresis so one attack's decay can't double-trigger.
+    Falls back to `ScriptProcessor` (deprecated but audio-thread-driven) rather than rAF,
+    so onset *times* stay honest on the fallback path. Also holds the **pure** scoring
+    maths — `onsetMatch` (greedy nearest, each expected slot claimed once, so a flam is
+    one hit plus one extra), `onsetScore` (mean absolute error, signed bias, spread,
+    hit rate), `onsetVerdict`/`onsetFeel` — kept free of DOM and audio so the harness can
+    assert the numbers without a microphone.
+  - `14-calibration.js` — **latency calibration** (`cal*`), restored for F1, which is its
+    first real consumer (the v2.5.0 version was cut in v2.11.0 for having none). **Not the
+    old tap test**: that measured output latency *plus human reaction*, and tap-scored
+    tiers are the thing the roadmap forbids shipping. This measures the audio **round
+    trip** with no human in the loop — play a click, hear it back through `14-onset.js`,
+    take the delta, **median** over `CAL_CLICKS` so one door slam can't move the number.
+    `calOffsetSec()` is what every scorer subtracts; without it *every* player reads as
+    dragging by the buffer size. Headphones are the honest failure case (no acoustic path,
+    so nothing to measure) — it says so and leaves the manual slider. Rides
+    `saveState`/`loadState`, bounds-checked against `CAL_MAX_MS`.
   - `15-wiring-init.js` · `16-pwa.js`
 - `src/styles.css` — all CSS
 - `src/index.template.html` — markup shell with `@@STYLES@@` / `@@SCRIPT@@` / `@@FAVICON@@` markers
@@ -219,6 +256,15 @@ devDependencies in the **root** `package.json` (same status as jsdom in
   `127.0.0.1` port because **`getUserMedia` needs a secure context and `file://` isn't
   one**. Real time, not `--virtual-time-budget` (which starves the audio pipeline —
   same reason `scroll-check.js` avoids it). ~1 browser launch per pitch, ~30 s total.
+- `node tools/onset-check.js` — **end-to-end check for F1 onset detection** (exits 1 on
+  failure). Proves the AudioWorklet loads, detects real attacks in a real capture stream,
+  and — the property scoring rests on — reports their *times* accurately. Feeds Chromium a
+  synthetic pluck WAV as a fake mic and asserts **inter-onset intervals**, not absolute
+  times: the fake device starts at an arbitrary phase against the audio clock, and absolute
+  offset is precisely what calibration removes anyway. Every number F1 shows a player is
+  built from differences, so intervals are the honest thing to check. Currently measures
+  **0.1 ms** mean interval error. _(The acoustic round-trip calibration can NOT be checked
+  headlessly — it needs a real speaker and mic in one room.)_
 - `node tools/make-icons.js` — **rasterize** `src/icons/icon.svg` into the PWA
   PNGs (`icon-192`, `icon-512`, `icon-maskable`, `apple-touch-icon`) in `icons/`.
   Run after editing the SVG; the PNGs are committed (Pages serves them). The

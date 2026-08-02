@@ -126,6 +126,18 @@
             <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
             <select id="tb-capo"></select>
           </div>
+          <!-- Latency calibration (Phase 8/F1). Measures the audio round trip by
+               playing a click and hearing it back through the mic, so timing scores
+               measure the player and not the buffer size. 14-calibration.js removes
+               the whole row where there is no mic path — nothing else consumes the
+               offset, so an unverifiable number would be worse than none. -->
+          <div class="tb-group tb-cal" id="cal-row">
+            <span class="tb-label" data-i18n="cal_label">Затримка</span>
+            <button type="button" class="btn" id="cal-run" data-i18n="cal_run">Виміряти</button>
+            <input type="range" id="cal-slider" min="0" max="400" step="1" value="0" aria-label="Latency offset (ms)">
+            <span class="bpm-val" id="cal-val">0 ms</span>
+            <span class="cal-status" id="cal-status" role="status" hidden></span>
+          </div>
         </div>
       </div>
       <div class="tb-cluster">
@@ -578,9 +590,17 @@
         </div>
         <div class="divider"></div>
         <button type="button" class="btn" id="sd-notes" aria-pressed="true"></button>
+        <!-- Phase 8/F1: flips this drill from the screen-only coach tier to a scored
+             one. 14-drill-timing.js hides it wherever onset detection can't run, so
+             the coach tier stays whole rather than showing a dead promise. -->
+        <button type="button" class="btn" id="sd-mic" aria-pressed="false" hidden></button>
       </div>
       <div class="sd-grid" id="sd-grid"></div>
       <div class="scroll"><div class="board"><div class="fretboard" id="sd-board"></div></div><div class="fretnums" id="sd-nums"></div></div>
+      <p class="sd-status" id="sd-status" role="status" hidden></p>
+      <!-- Filled after a scored run only (renderSdScore); an empty scoreboard would
+           imply the app had been listening when it hadn't. -->
+      <div class="sd-score" id="sd-score" hidden></div>
       <div class="cm-active-foot">
         <span class="drill-sub" id="sd-hint"></span>
         <button type="button" class="btn play" id="sd-play"></button>

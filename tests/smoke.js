@@ -209,7 +209,10 @@ if (T) {
    'prog_active','prog_due','prog_review','share_btn','share_copied',
    'mic_open','mic_title','mic_start','mic_stop','mic_cents','mic_string','mic_play_hint',
    'mic_intune','mic_hint','mic_asking','mic_denied','mic_nodev','mic_busy','mic_err',
-   'mic_unsupported'].forEach(k => {
+   'mic_unsupported',
+   'cal_label','cal_run','cal_running','cal_done','cal_unheard','cal_cancelled','cal_busy',
+   'sd_listen','sd_hint_scored','on_ms_off','on_tight','on_close','on_loose','on_none',
+   'on_rushing','on_dragging','on_evenness','on_played','on_ms'].forEach(k => {
     ok('i18n new key present (uk+en): ' + k,
        T.I18N.uk[k] !== undefined && T.I18N.en[k] !== undefined);
   });
@@ -1841,6 +1844,167 @@ if (T) {
     catch (e) { threw = true; }
     ok('F0: switching language with the tuner open does not throw', !threw);
     T.micClose();
+  })();
+
+  /* ---- Phase 8 / F1: onset detection, latency calibration, scored timing ----
+     The capture path needs a real browser (tools/onset-check.js). What lives here is
+     the part that decides what a player is TOLD — matching, scoring and the latency
+     correction. Those numbers are the whole product claim of F1, so they are asserted
+     directly rather than inferred from a green end-to-end run. */
+  (function onsetF1() {
+    const doc = win.document;
+    const near = (a, b, eps) => Math.abs(a - b) < eps;
+
+    /* -- self-disable, same rule as F0: no worklet / no mic in jsdom -- */
+    ok('F1: onsetSupported() is false without a mic path', T.onsetSupported() === false);
+    ok('F1: the calibration row is removed where there is no mic', !doc.getElementById('cal-row'));
+
+    /* -- the worklet processor is compiled in a DIFFERENT realm, so the build's own
+          syntax check never parses it. A typo in that string would only surface as a
+          runtime failure on a real device, which is exactly the wrong place. -- */
+    let procOk = true, procErr = '';
+    try { new win.Function(T.onsetProcessorSrc().replace('registerProcessor', 'void')); }
+    catch (e) { procOk = false; procErr = String(e && e.message); }
+    ok('F1: the worklet processor source parses as JavaScript', procOk, procErr);
+    ok('F1: the processor registers under a namespaced name',
+       T.onsetProcessorSrc().indexOf("registerProcessor('euterpe-onset'") > 0);
+    ok('F1: the processor timestamps per-sample, not per-block',
+       T.onsetProcessorSrc().indexOf('currentTime + i / sampleRate') > 0);
+
+    /* -- matching: nearest wins, each expected slot claimed at most once -- */
+    const m1 = T.onsetMatch([1.0, 2.0, 3.0], [1.01, 1.98, 3.02], 0.1);
+    ok('F1: three clean hits match three slots', m1.hits.length === 3);
+    ok('F1: nothing missed when everything matched', m1.missed.length === 0);
+    ok('F1: nothing left over when everything matched', m1.extra.length === 0);
+    ok('F1: a late hit reports positive error', m1.hits[0].err > 0);
+    ok('F1: an early hit reports negative error', m1.hits[1].err < 0);
+
+    // Outside tolerance is a miss, not a stretched match.
+    const m2 = T.onsetMatch([1.0, 2.0], [1.005, 2.5], 0.05);
+    ok('F1: an onset beyond tolerance does not match', m2.hits.length === 1);
+    ok('F1: the unmatched slot is reported missed', m2.missed.length === 1 && m2.missed[0] === 2.0);
+    ok('F1: the stray onset is reported extra', m2.extra.length === 1 && m2.extra[0] === 2.5);
+
+    // A flam — two picks around one beat — must be one hit plus one extra, never
+    // two hits, or double-picking would inflate the hit rate.
+    const m3 = T.onsetMatch([1.0], [0.99, 1.01], 0.1);
+    ok('F1: a double pick on one slot scores one hit', m3.hits.length === 1);
+    ok('F1: ...and the second pick counts as extra', m3.extra.length === 1);
+
+    // Missing notes entirely
+    const m4 = T.onsetMatch([1, 2, 3, 4], [1.0, 3.0], 0.05);
+    ok('F1: silence on a slot is a miss', m4.missed.length === 2);
+
+    /* -- scoring -- */
+    const s1 = T.onsetScore(T.onsetMatch([1, 2, 3, 4], [1.02, 2.02, 3.02, 4.02], 0.1));
+    ok('F1: consistent lateness reports positive bias', near(s1.biasMs, 20, 0.01));
+    ok('F1: consistent lateness reports 20ms mean error', near(s1.meanAbsMs, 20, 0.01));
+    ok('F1: a consistent offset has near-zero spread', s1.spreadMs < 0.01);
+    ok('F1: all slots played reports a full hit rate', near(s1.hitRate, 1, 1e-9));
+
+    // Same mean error, but scattered instead of consistent: the spread must separate
+    // them, because "always 20 ms late" and "randomly +/-20 ms" need opposite advice.
+    const s2 = T.onsetScore(T.onsetMatch([1, 2, 3, 4], [0.98, 2.02, 2.98, 4.02], 0.1));
+    ok('F1: scattered error still reports ~20ms mean', near(s2.meanAbsMs, 20, 0.01));
+    ok('F1: scattered error reports ~zero bias', Math.abs(s2.biasMs) < 0.01);
+    ok('F1: scattered error reports a real spread', s2.spreadMs > 15, String(s2.spreadMs));
+    ok('F1: even-but-late is distinguishable from uneven',
+       s1.spreadMs < 1 && s2.spreadMs > 15);
+
+    ok('F1: an empty match scores nothing rather than dividing by zero',
+       T.onsetScore(T.onsetMatch([1, 2], [], 0.1)).n === 0);
+
+    /* -- verdict + feel -- */
+    ok('F1: <=20ms reads tight', T.onsetVerdict({ n: 4, meanAbsMs: 12 }) === 'on_tight');
+    ok('F1: ~30ms reads close', T.onsetVerdict({ n: 4, meanAbsMs: 30 }) === 'on_close');
+    ok('F1: >45ms reads loose', T.onsetVerdict({ n: 4, meanAbsMs: 80 }) === 'on_loose');
+    ok('F1: nothing heard is its own verdict', T.onsetVerdict({ n: 0 }) === 'on_none');
+
+    ok('F1: consistent earliness reads as rushing',
+       T.onsetFeel({ n: 8, biasMs: -30, spreadMs: 5 }) === 'on_rushing');
+    ok('F1: consistent lateness reads as dragging',
+       T.onsetFeel({ n: 8, biasMs: 30, spreadMs: 5 }) === 'on_dragging');
+    ok('F1: a small bias is not called a tendency',
+       T.onsetFeel({ n: 8, biasMs: 6, spreadMs: 3 }) === null);
+    // Bias buried in noise is not a tendency either — this is the guard against
+    // telling someone they rush when they are simply inconsistent.
+    ok('F1: bias smaller than the spread is not called a tendency',
+       T.onsetFeel({ n: 8, biasMs: 20, spreadMs: 60 }) === null);
+
+    /* -- latency calibration -- */
+    ok('F1: median of an odd sample', T.calMedian([10, 30, 20]) === 20);
+    ok('F1: median of an even sample', T.calMedian([10, 20, 30, 40]) === 25);
+    ok('F1: the median ignores a single wild outlier',
+       T.calMedian([48, 50, 52, 5000]) === 51);
+
+    T.calSetMs(120);
+    ok('F1: a measured offset is stored', T.getCalMs() === 120);
+    ok('F1: calOffsetSec reports seconds', near(T.calOffsetSec(), 0.12, 1e-9));
+    T.calSetMs(-50);
+    ok('F1: a negative offset is clamped to zero', T.getCalMs() === 0);
+    T.calSetMs(99999);
+    ok('F1: an absurd offset is clamped to the ceiling', T.getCalMs() === T.CAL_MAX_MS);
+    T.calSetMs('nonsense');
+    ok('F1: a non-numeric offset falls back to zero', T.getCalMs() === 0);
+
+    /* -- THE headline behaviour: latency correction. A player who is dead on the grid,
+          heard through a 100 ms round trip, must score as dead on. Without the
+          correction every single player in the world reads as "dragging 100 ms",
+          which is why this offset exists at all. -- */
+    T.setMode('practice');
+    T.startTiming();
+    T.setSdScored(true);
+    const grid = [1, 1.5, 2, 2.5, 3, 3.5, 4];
+    T.sdSetGrid(grid);
+    T.calSetMs(100);
+    T.sdSetHeard(grid.map(g => g + 0.100));    // perfect playing, heard 100ms late
+    const corrected = T.sdComputeScore();
+    ok('F1: a perfect run through 100ms of latency scores as perfect',
+       corrected && corrected.n === grid.length && corrected.meanAbsMs < 0.01,
+       corrected ? JSON.stringify(corrected) : 'null');
+    ok('F1: ...and is not labelled as dragging', T.onsetFeel(corrected) === null);
+
+    // The same data with calibration NOT applied is the bug this prevents.
+    T.calSetMs(0);
+    const uncorrected = T.sdComputeScore();
+    ok('F1: without calibration the same run reads ~100ms late',
+       uncorrected && near(uncorrected.biasMs, 100, 1),
+       uncorrected ? String(uncorrected.biasMs) : 'null');
+    ok('F1: ...which would have been reported as dragging',
+       T.onsetFeel(uncorrected) === 'on_dragging');
+
+    // A genuinely rushing player, correctly calibrated, is still caught.
+    T.calSetMs(100);
+    T.sdSetHeard(grid.map(g => g + 0.100 - 0.035));   // 35ms early, through the same latency
+    const rushed = T.sdComputeScore();
+    ok('F1: a rushing player is still detected through the correction',
+       rushed && near(rushed.biasMs, -35, 1), rushed ? String(rushed.biasMs) : 'null');
+    ok('F1: ...and is labelled rushing', T.onsetFeel(rushed) === 'on_rushing');
+
+    /* -- the coach tier must stay honest: mic off means no score at all -- */
+    T.setSdScored(false);
+    ok('F1: with the mic off there is no score object', T.sdComputeScore() === null);
+    const box = doc.getElementById('sd-score');
+    ok('F1: the score panel exists in the markup', !!box);
+    T.renderSdScore();
+    ok('F1: the score panel is hidden on a coach run', box.hidden === true);
+    ok('F1: the scored-tier toggle is hidden where onset cannot run',
+       doc.getElementById('sd-mic').hidden === true);
+    ok('F1: the coach hint does not claim to be listening',
+       doc.getElementById('sd-hint').textContent === T.I18N[T.state().lang].sd_hint);
+
+    T.calSetMs(0);
+    T.exitTiming();
+    T.setMode('reference');
+  })();
+
+  /* ---- F1 persistence: the offset has to survive a reload, bounds-checked like
+     every other entry in the state catalogue. ---- */
+  (function calPersistence() {
+    T.calSetMs(87);
+    ok('F1: calMs is written into saved state',
+       (win.localStorage.getItem('guitarStudio.v1') || '').indexOf('"calMs":87') > 0);
+    T.calSetMs(0);
   })();
 }
 

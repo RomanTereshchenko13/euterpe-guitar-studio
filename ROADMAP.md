@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-08-01 · shipping: v2.12.0_
+_Last updated: 2026-08-02 · shipping: v2.13.0_
 
 > **Consolidation note (v2.11.0).** Two debloat passes reshaped the *packaging* of what shipped
 > below, not its substance — worth knowing when reading the ✅ entries: **Ear folded from a
@@ -419,7 +419,8 @@ The **Practice** surface and the machinery every drill shares. **Settle the navi
   The SRS fields (`ease`/`due`) are an SM-2-lite the queue reads to decide what to resurface. The
   shape grows by adding item namespaces, never by reshaping; a `v` bump + migration is the only
   sanctioned way it changes.
-- **Latency calibration.** ⚠️ **Shipped v2.5.0, removed in v2.11.0 — rebuild with Phase 8/F1.**
+- **Latency calibration.** ✅ **Shipped v2.5.0 · removed v2.11.0 · rebuilt v2.13.0 as an acoustic
+  round trip** (see Phase 8/F1 — the tap-test design below was replaced, not restored).
   A one-time round-trip offset (`calMs`) read via `calOffsetSec()`: a Settings tap-test (steady
   click → tap along → `calcLatencyOffset` trims + means the nearest-beat deltas) plus a manual
   slider, bounds-checked. It was built ahead of its first consumer and nothing ever called it —
@@ -649,8 +650,10 @@ own scale/triad content. A core improviser *and* rhythm-guitar skill; serves bot
   harness), so the shipped backing band is untouched; other meters shrink/regroup the bar. Bounds-
   checked persistence via `saveState`/`loadState`. _(The single-bar pattern coaches — Strumming &
   feel (5b/5d), subdivision 7a — keep their own 4/4 grids; they don't ride the shared band.)_
-- **Scored tier (needs Phase 8 / F1):** score timing accuracy and evenness, flag rushing/
-  dragging, and ladder the tempo (auto-bump BPM when consistently in the pocket).
+- **Scored tier** ✅ **Shipped v2.13.0** (with Phase 8/F1): a 🎤 toggle on the subdivision coach
+  turns it into real scored training — mean timing error, evenness and rushing/dragging, measured
+  from the mic against the scheduled grid and latency-corrected. With the mic off it stays a coach
+  and says so. _Still open:_ tempo laddering (auto-bump BPM when consistently in the pocket).
 
 ---
 
@@ -702,13 +705,30 @@ Mic via `AnalyserNode`, split by difficulty. This is what turns every "coach" ti
     **`tools/mic-check.js`**, which feeds Chromium a synthetic guitar WAV as a fake mic over a
     localhost secure context: low E, open A, high e, and deliberately ±30/−22-cent detuned cases
     all read the right note and direction. jsdom covers the maths and the DOM contract (+71 checks).
-- **F1 — Onset (when).** Energy / spectral-flux attack detection — **hand-rolled** (the light
-  lift). The enabler for the **Rhythm pillar** and **Timing** scored tiers; the first *scoring*
-  feature, and onset is *easier* on a strum's big transient than on a single note.
-  **Carries the latency-calibration debt:** the round-trip offset shipped in v2.5.0 and was cut
-  again in v2.11.0 for having no caller (see Phase 3), so F1 has to rebuild it — a scoring window
-  without it measures the audio stack, not the player. The v2.5.0 design is the spec.
-  F0 already landed everything else F1 needs: permission, device errors, lifecycle.
+- **F1 — Onset (when). ✅ Shipped v2.13.0.** Energy attack detection — **hand-rolled** (the light
+  lift; unlike pitch there is nothing subtle to get wrong). **The app's first scoring feature:**
+  every tier before it was a coach that couldn't hear you.
+  - **Runs in an AudioWorklet, not on rAF.** A tuner needle only has to be approximately live,
+    but a timing score *is* the timestamp: rAF samples at ~16.7 ms and stalls under layout, which
+    at 120 BPM is an eighth of a sixteenth-note of pure harness noise in a measurement whose whole
+    job is telling "tight" from "rushing". The single-file guarantee survives because the processor
+    source is turned into a **Blob URL** — an in-memory object URL, not a network fetch.
+    Measured **0.1 ms** mean interval error end to end (`tools/onset-check.js`).
+  - **Latency calibration rebuilt, and redesigned.** The v2.5.0 version was a *tap* test, which
+    measured output latency **plus human reaction** — and tap-scored tiers are the one thing this
+    roadmap forbids shipping. It now measures the audio **round trip** with no human in the loop:
+    play a click, hear it back through the new onset detector, median the deltas. Without it every
+    player on earth reads as "dragging" by the buffer size; the harness asserts exactly that, by
+    scoring one perfect run with and without the correction. Headphones remain the honest failure
+    case (no acoustic path to measure) — it says so and keeps a manual slider.
+  - **First scored tier: the subdivision & timing coach (7a).** A 🎤 toggle flips it from coach to
+    scored; with the mic off it stays a coach and *says so*. Reports mean absolute error, evenness
+    (spread) and rushing/dragging (bias) as **separate** numbers, because "always 30 ms late" and
+    "randomly ±30 ms" are different problems needing opposite advice. Rushing/dragging is only
+    claimed when the bias actually exceeds the spread — otherwise it's noise with a sign.
+  - _Still open:_ the Rhythm pillar tiers (5b strum, 5c comp) reuse this machinery but aren't wired
+    yet; a strum's transient is an *easier* target than a single note, so they should be cheap.
+    Tempo laddering (auto-bump BPM when consistently in the pocket) also waits.
 - **F2 — Pitch (which).** Monophonic McLeod (MPM) via **the `pitchy` + `fft.js` pair already
   vendored by F0** — no new dependency to take, and proven there on sustained notes, so what F2
   adds is doing it *under time pressure*. Unlocks the **Lead pillar** scored
@@ -778,7 +798,7 @@ Phase 1  Unify (spine + reference)           ← foundational; everything reuses
          └─ Phase 7  Timing & subdivision       (small; feeds 5 & 6) ───────────── needs F1 to score
                │
                └─ Phase 8  Mic input            F0 (tuner) ✅ shipped v2.12.0 — no scoring, low risk
-                                                F1 (onset) → scores 5 & 7  (+ rebuild latency calibration)
+                                                F1 (onset) ✅ shipped v2.13.0 — scores 7; 5 still to wire
                                                 F2 (pitch) → scores 6 + real note-naming
 
 Phase 9  Product layer                          (curriculum / distribution / polish — throughout)

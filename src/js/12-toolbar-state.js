@@ -198,6 +198,7 @@ function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
   ntRoot, ntFilter,
   seq, seqLoopOn,
   bassOn, grooveOn,
+  calMs,    // Phase 8/F1: measured round-trip latency (14-calibration.js)
   learner   // spine #3: learner model (13-learner.js); saved verbatim, restored via normalizeLearner
 })); }catch(e){ devWarn('state could not be saved (localStorage unavailable?)', e); } }
 function loadState(){ try{
@@ -215,6 +216,9 @@ function loadState(){ try{
   if(typeof s.tempo==='number'&&s.tempo>=40&&s.tempo<=200) tempo=s.tempo;
   if(Number.isInteger(s.meterIdx)&&METERS[s.meterIdx]) meterIdx=s.meterIdx;   // 7b time signature
   if(typeof s.masterVol==='number'&&s.masterVol>=0&&s.masterVol<=1) masterVol=s.masterVol;
+  // F1 round-trip latency. Bounded by the same ceiling the measurement itself
+  // rejects above, so a hand-edited or corrupted save can't skew every timing score.
+  if(typeof s.calMs==='number'&&s.calMs>=0&&s.calMs<=CAL_MAX_MS) calMs=s.calMs;
   if(typeof s.lefty==='boolean') lefty=s.lefty;
   if(typeof s.toolbarOpen==='boolean') toolbarOpen=s.toolbarOpen;
   if(typeof s.backingOpen==='boolean') backingOpen=s.backingOpen;

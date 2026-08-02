@@ -52,15 +52,14 @@ let mt = null;          // live session: { stream, src, analyser, detector, buf,
    pure function of "a MIDI number arrived" plus this one easing value, so it can
    be driven (and asserted) with no mic attached. null == no reading yet. */
 let mtCents = null;
+/* Set when Stop/close happens while an acquire is still awaiting the permission
+   prompt, so micStart() knows to give the reference back instead of starting. */
+let mtClosing = false;
 
-/* Can this build even ask for a mic? Secure context + the API + Web Audio.
-   Checked before the entry point is shown, so the button never lies. */
-function micSupported(){
-  if(typeof window==='undefined' || typeof navigator==='undefined') return false;
-  if(!window.isSecureContext) return false;
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
-  return !!(window.AudioContext || window.webkitAudioContext);
-}
+/* Acquisition, permission and the error vocabulary live in 13-mic.js — F1 added a
+   second consumer (onset detection) and a third (the calibration round-trip), and
+   one microphone should mean one prompt and one recording indicator. This file is
+   now just "what the tuner does with a mic it was handed". */
 
 /* ---- pitch → musical readout ---------------------------------------------- */
 function micMidiFromHz(hz){ return 69 + 12*Math.log2(hz/440); }
@@ -159,33 +158,20 @@ async function micStart(){
   // this app can be doing while you tune. Silence it before we listen.
   tunerStop();
   micStatus('mic_asking');
-  let stream;
-  try{
-    // The browser's voice-call DSP is actively harmful here: AGC pumps the level,
-    // noise suppression carves out sustained tones and echo cancellation can gate
-    // the string entirely. Ask for the raw signal.
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false }
-    });
-  }catch(err){
-    const name = err && err.name;
-    if(name==='NotAllowedError' || name==='SecurityError') micStatus('mic_denied');
-    else if(name==='NotFoundError' || name==='OverconstrainedError') micStatus('mic_nodev');
-    else if(name==='NotReadableError' || name==='AbortError') micStatus('mic_busy');
-    else micStatus('mic_err');
-    devWarn('mic tuner: getUserMedia failed', err);
-    micSyncButtons(false);
-    return;
-  }
-  const src=ctx.createMediaStreamSource(stream);
+  const got = await micAcquire();
+  if(!got.ok){ micStatus(got.key); micSyncButtons(false); return; }
+  // Re-entrancy: micAcquire awaits a permission prompt, and the user can hit Stop
+  // (or close the panel) while it's up. If we're no longer wanted, hand the
+  // reference straight back instead of starting a loop nobody asked for.
+  if(mtClosing){ mtClosing=false; micRelease(); micSyncButtons(false); return; }
   const analyser=ctx.createAnalyser();
   analyser.fftSize=MT_FFT;
   // Deliberately NOT connected to ctx.destination: routing the mic to the
   // speakers is a feedback loop, not a monitor.
-  src.connect(analyser);
+  got.src.connect(analyser);
   const detector=PitchDetector.forFloat32Array(analyser.fftSize);
   detector.minVolumeDecibels = 20*Math.log10(MT_RMS);
-  mt={ stream, src, analyser, detector,
+  mt={ src:got.src, analyser, detector,
        buf:new Float32Array(analyser.fftSize), rate:ctx.sampleRate,
        raf:null, hist:[], quiet:0 };
   micStatus(null);
@@ -195,14 +181,22 @@ async function micStart(){
 }
 
 function micStop(){
-  if(!mt) return;
+  if(!mt){
+    // Nothing running — but an acquire may be mid-prompt, so record the intent and
+    // let micStart() unwind when it resolves.
+    mtClosing = true;
+    micSyncButtons(false);
+    return;
+  }
   const s=mt;
   mt=null;
   if(s.raf) cancelAnimationFrame(s.raf);
-  try{ s.src.disconnect(); }catch(_){}
-  // Releasing the tracks is what actually drops the browser's recording
-  // indicator — without it the tab looks like it's still listening.
-  try{ s.stream.getTracks().forEach(tr=>tr.stop()); }catch(_){}
+  // Disconnect OUR analyser only. The source node is shared (13-mic.js), so
+  // tearing it down here would cut the mic out from under a scored drill;
+  // micRelease() stops the device once the last consumer lets go.
+  try{ s.analyser.disconnect(); }catch(_){}
+  try{ s.src.disconnect(s.analyser); }catch(_){}
+  micRelease();
   micSyncButtons(false);
   micPaintIdle();
 }
@@ -259,6 +253,9 @@ function micRefreshLang(){
   });
   // Never keep the mic open in a backgrounded tab — it's a privacy smell and the
   // rAF loop is throttled to uselessness there anyway.
-  document.addEventListener('visibilitychange', ()=>{ if(document.hidden) micStop(); });
-  addEventListener('pagehide', micStop);
+  // Never keep the mic open in a backgrounded tab. micReleaseAll (13-mic.js) is the
+  // hard release: "another feature still holds a reference" is not a good enough
+  // reason to keep a hidden tab listening, so the refcount is overridden here.
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ micStop(); micReleaseAll(); } });
+  addEventListener('pagehide', ()=>{ micStop(); micReleaseAll(); });
 })();
