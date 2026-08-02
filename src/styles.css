@@ -929,13 +929,15 @@
   /* ---- scored timing readout (Phase 8 / F1) ----
      Deliberately quiet until there is something real to say: the panel only renders
      after a scored run, so the coach tier never shows an empty scoreboard. */
-  .sd-status { font-size: 12px; line-height: 1.5; color: var(--seventh); margin-top: 10px; }
-  .sd-status[hidden] { display: none; }
-  .sd-score { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: 11px; background: var(--bg-panel); display: flex; flex-direction: column; gap: 5px; }
-  .sd-score[hidden] { display: none; }
-  .sd-sc-main { font-family: 'JetBrains Mono', monospace; }
-  .sd-sc-main b { font-size: 30px; color: var(--text); }
-  .sd-sc-main span { font-size: 12px; color: var(--text-dim); margin-left: 5px; }
-  .sd-sc-verdict { font-size: 13px; font-weight: 600; color: var(--root); }
-  .sd-sc-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); }
-  .sd-sc-row b { font-family: 'JetBrains Mono', monospace; color: var(--text); }
+  .scored-status { font-size: 12px; line-height: 1.5; color: var(--seventh); margin-top: 10px; }
+  .scored-status[hidden] { display: none; }
+  .scored-panel { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: 11px; background: var(--bg-panel); display: flex; flex-direction: column; gap: 5px; }
+  .scored-panel[hidden] { display: none; }
+  .sc-main { font-family: 'JetBrains Mono', monospace; }
+  .sc-main b { font-size: 30px; color: var(--text); }
+  .sc-main span { font-size: 12px; color: var(--text-dim); margin-left: 5px; }
+  .sc-verdict { font-size: 13px; font-weight: 600; color: var(--root); }
+  /* the self-hearing refusal is a caution, not a result — it must not read like a grade */
+  .sc-verdict.sc-warn { color: var(--seventh); font-weight: 500; line-height: 1.5; }
+  .sc-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); }
+  .sc-row b { font-family: 'JetBrains Mono', monospace; color: var(--text); }

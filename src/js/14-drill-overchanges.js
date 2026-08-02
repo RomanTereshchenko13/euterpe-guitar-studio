@@ -32,6 +32,25 @@
 let tgIdx = 1;          // selected progression (default I–V–vi–IV)
 let tgMode = 'tones';   // 'chords' (comp it) | 'tones' (play its chord tones)
 let tgDrill = null;
+
+/* Phase 8/F1 scored tier — `chords` mode only (13-scored.js).
+   WHAT IT SCORES, and why it isn't every strum: comping is your own rhythm. The
+   drill has no business telling you how many times to hit the chord inside a bar,
+   so it scores the thing the exercise is actually about — LANDING THE CHANGE. The
+   expected times are the bar downbeats; strums you play in between are your feel,
+   and land in `extra`, which is not penalised. Hence the count row says "changes",
+   not "played": it is the number of changes you arrived on in time.
+   Tolerance is half a beat — a chord change is a coarser target than a 16th, and
+   a stricter window would just measure strum-spread noise.
+   `tones` mode stays tap-scored on accuracy: touch latency corrupts timing, which
+   is the coach-tier rule, and real lead scoring waits on F2. */
+const tgScore = scoredRun({
+  micId:'tg-mic', statusId:'tg-status', scoreId:'tg-score', countKey:'on_changes',
+  tol:()=>pulseSec()/2,
+  onChange:()=>{ if(tgDrill) renderTarget(); },
+});
+// only comping is mic-scorable today, so the toggle exists only there
+function tgScorable(){ return !tgTones(); }
 // tgDrill = { presetIdx, bars:[{pc,qi}…], bar, cycles, clock, playing, hits, misses,
 //             targetPcs:Set(pc), chordPcs:Set(pc), degMap:{pc:lab}, found:Set("si:f"), win:[lo,hi]|null }
 
@@ -69,6 +88,8 @@ function startOverChanges(mode){
   tgDrill={ presetIdx:tgIdx, bars:tgBuildBars(SEQ_PRESETS[tgIdx]), bar:0, cycles:0, clock:null, playing:false,
             hits:0, misses:0, targetPcs:new Set(), chordPcs:new Set(), degMap:{}, found:new Set(), win:null };
   tgSetTargets(tgDrill.bars[0]);          // light the first chord on the idle board
+  tgScore.clearScore();
+  if(tgTones()) tgScore.setOn(false);     // the lead mode has no mic tier to be in
   const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
   if(home) home.hidden=true; if(area) area.hidden=false;
   renderTargetBoard();
@@ -78,6 +99,7 @@ function startComp(){ startOverChanges('chords'); }
 function startTarget(){ startOverChanges('tones'); }
 function exitTarget(){
   targetStop();
+  tgScore.release();     // never leave the mic open behind a closed drill
   tgDrill=null;
   const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
   if(area) area.hidden=true; if(home) home.hidden=false;
@@ -91,8 +113,9 @@ function targetPlay(){
   if(typeof seqStop==='function') seqStop();
   tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
   tgDrill.bar=0; tgDrill.cycles=0; tgDrill.hits=0; tgDrill.misses=0; tgDrill.found=new Set(); tgDrill.playing=true;
+  tgScore.begin();                               // before the clock: a tick must not
   tgDrill.clock={ interval:()=>barSec(), tick:(time,count)=>targetTick(time,count) };
-  if(typeof addClock==='function') addClock(tgDrill.clock);
+  if(typeof addClock==='function') addClock(tgDrill.clock);   // ...land in a run we then reset
   renderTarget();
 }
 function targetStop(){
@@ -100,6 +123,7 @@ function targetStop(){
   if(tgDrill.clock){ if(typeof removeClock==='function') removeClock(tgDrill.clock); tgDrill.clock=null; }
   if(typeof clearVisualQ==='function') clearVisualQ();
   tgDrill.playing=false;
+  tgScore.end();
   const barsPlayed = tgDrill.cycles*tgDrill.bars.length + tgDrill.bar;
   // each mode keeps its own session namespace + score, so pre-merge history still reads:
   // comping is scored by bars played, targeting by tap accuracy.
@@ -128,6 +152,12 @@ function targetTick(when, count){
   tgSetTargets(cur); tgDrill.found=new Set();
   if(tgTones()){
     compStrum(base, ivs, when, 0.62, 0.03);                  // light guide comp under your targeting
+  } else if(tgScore.on()){
+    // F1: the change itself is the scored slot. The guide comp is muted for the same
+    // reason as the strum drill's — it lands exactly on the downbeat being measured,
+    // so the app would be scoring its own speakers (onsetSelfHeard). The band keeps
+    // the bar, which is what you comp against anyway.
+    if(tgDrill.playing) tgScore.mark(when);
   } else {
     compStrum(base, ivs, when, 0.9, 0.028);                  // guide comp on the downbeat
     compStrum(base, ivs, when+midPulseSec(), 0.55, 0.022);   // softer push mid-bar (beat 3 in 4/4)
@@ -190,7 +220,10 @@ function renderTarget(){
   const tones=tgTones();
   // the mode switch is the first control: it's what the two old cards used to be
   segButtons('tg-mode', [{label:t('oc_chords')},{label:t('oc_tones')}], tones?1:0,
-    i=>{ tgMode = i ? 'tones' : 'chords'; const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); renderTarget(); });
+    i=>{ tgMode = i ? 'tones' : 'chords';
+         // switching to the lead mode leaves the mic tier behind — it only scores comping
+         if(tgTones()){ tgScore.release(); tgScore.setOn(false); tgScore.clearScore(); }
+         const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); renderTarget(); });
   const chips=document.getElementById('tg-progs');
   if(chips) chips.innerHTML=SEQ_PRESETS.map((p,i)=>`<button type="button" class="btn tg-prog${i===tgIdx?' active':''}" data-i="${i}" aria-pressed="${i===tgIdx}">${p.name}</button>`).join('');
   // the lead-only controls + the neck only exist in `tones` mode; comping needs neither
@@ -215,7 +248,14 @@ function renderTarget(){
   if(tones) markTargets();                           // reflect current chord + shape on the board
   renderTargetStats();
   const pb=document.getElementById('tg-play'); if(pb){ pb.innerHTML=(tgDrill.playing?'&#9632; ':'&#9654; ')+t(tgDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', tgDrill.playing); pb.setAttribute('aria-pressed', tgDrill.playing?'true':'false'); }
-  const hint=document.getElementById('tg-hint'); if(hint) hint.textContent=t(tones?'tg_hint':'co_hint');
+  const hint=document.getElementById('tg-hint');
+  if(hint) hint.textContent = tones ? t('tg_hint') : t(tgScore.on()?'co_hint_scored':'co_hint');
+  // the mic tier belongs to comping only; render() then hides the button where onset
+  // detection can't run at all, so the lead mode simply never shows it
+  tgScore.render();
+  const mb=document.getElementById('tg-mic'); if(mb && !tgScorable()) mb.hidden=true;
+  if(tones){ const sc=document.getElementById('tg-score'); if(sc) sc.hidden=true;
+             const stt=document.getElementById('tg-status'); if(stt) stt.hidden=true; }
 }
 function tgChordName(st){ return st ? ROOTS[st.pc]+QUALITIES[st.qi].short : ''; }
 /* comping shows the SHAPE (you have to fret it); targeting shows the NAME (you're finding
@@ -249,7 +289,7 @@ function markTargetDot(si,f,kind){
   else { d.classList.add('miss'); setTimeout(()=>{ if(d) d.classList.remove('miss'); }, 420); }
 }
 // re-localize an in-flight drill on a language switch (called from applyLang)
-function refreshTargetLang(){ if(tgDrill) renderTarget(); }
+function refreshTargetLang(){ if(tgDrill){ renderTarget(); tgScore.refreshLang(); } }
 
 /* card starters + in-drill controls — wired once at load (guarded so a missing panel
    never throws, mirroring initDrill). */
@@ -270,6 +310,8 @@ registerDrill({ id:'overchanges', area:'tg-area',
   const tgt=document.getElementById('start-target');  if(tgt)  tgt.onclick=startTarget;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('tg-play', targetToggle);
+  // stops first: flipping the tier mid-run would change what's being measured
+  wire('tg-mic',  ()=>{ if(tgDrill&&tgDrill.playing) targetStop(); tgScore.toggle(); renderTarget(); });
   const pg=document.getElementById('tg-progs');
   if(pg) pg.addEventListener('click', e=>{ const btn=e.target.closest('.tg-prog'); if(btn){ tgIdx=+btn.dataset.i; if(tgDrill){ tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]); if(tgDrill.bar>=tgDrill.bars.length) tgDrill.bar=0; } renderTarget(); } });
   const b=document.getElementById('tg-board');

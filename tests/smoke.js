@@ -211,8 +211,10 @@ if (T) {
    'mic_intune','mic_hint','mic_asking','mic_denied','mic_nodev','mic_busy','mic_err',
    'mic_unsupported',
    'cal_label','cal_run','cal_running','cal_done','cal_unheard','cal_cancelled','cal_busy',
-   'sd_listen','sd_hint_scored','on_ms_off','on_tight','on_close','on_loose','on_none',
-   'on_rushing','on_dragging','on_evenness','on_played','on_ms'].forEach(k => {
+   'on_listen','sd_hint_scored','sp_hint_scored','co_hint_scored',
+   'on_ms_off','on_tight','on_close','on_loose','on_none',
+   'on_rushing','on_dragging','on_evenness','on_played','on_changes','on_ms',
+   'on_selfheard'].forEach(k => {
     ok('i18n new key present (uk+en): ' + k,
        T.I18N.uk[k] !== undefined && T.I18N.en[k] !== undefined);
   });
@@ -1953,12 +1955,11 @@ if (T) {
           which is why this offset exists at all. -- */
     T.setMode('practice');
     T.startTiming();
-    T.setSdScored(true);
+    T.sdScore.setOn(true);
     const grid = [1, 1.5, 2, 2.5, 3, 3.5, 4];
-    T.sdSetGrid(grid);
     T.calSetMs(100);
-    T.sdSetHeard(grid.map(g => g + 0.100));    // perfect playing, heard 100ms late
-    const corrected = T.sdComputeScore();
+    T.sdScore._set(grid, grid.map(g => g + 0.100));   // perfect playing, heard 100ms late
+    const corrected = T.sdScore._compute();
     ok('F1: a perfect run through 100ms of latency scores as perfect',
        corrected && corrected.n === grid.length && corrected.meanAbsMs < 0.01,
        corrected ? JSON.stringify(corrected) : 'null');
@@ -1966,7 +1967,7 @@ if (T) {
 
     // The same data with calibration NOT applied is the bug this prevents.
     T.calSetMs(0);
-    const uncorrected = T.sdComputeScore();
+    const uncorrected = T.sdScore._compute();
     ok('F1: without calibration the same run reads ~100ms late',
        uncorrected && near(uncorrected.biasMs, 100, 1),
        uncorrected ? String(uncorrected.biasMs) : 'null');
@@ -1975,18 +1976,18 @@ if (T) {
 
     // A genuinely rushing player, correctly calibrated, is still caught.
     T.calSetMs(100);
-    T.sdSetHeard(grid.map(g => g + 0.100 - 0.035));   // 35ms early, through the same latency
-    const rushed = T.sdComputeScore();
+    T.sdScore._set(grid, grid.map(g => g + 0.100 - 0.035));   // 35ms early, same latency
+    const rushed = T.sdScore._compute();
     ok('F1: a rushing player is still detected through the correction',
        rushed && near(rushed.biasMs, -35, 1), rushed ? String(rushed.biasMs) : 'null');
     ok('F1: ...and is labelled rushing', T.onsetFeel(rushed) === 'on_rushing');
 
     /* -- the coach tier must stay honest: mic off means no score at all -- */
-    T.setSdScored(false);
-    ok('F1: with the mic off there is no score object', T.sdComputeScore() === null);
+    T.sdScore.setOn(false);
+    ok('F1: with the mic off there is no score object', T.sdScore._compute() === null);
     const box = doc.getElementById('sd-score');
     ok('F1: the score panel exists in the markup', !!box);
-    T.renderSdScore();
+    T.sdScore.render();
     ok('F1: the score panel is hidden on a coach run', box.hidden === true);
     ok('F1: the scored-tier toggle is hidden where onset cannot run',
        doc.getElementById('sd-mic').hidden === true);
@@ -1995,6 +1996,114 @@ if (T) {
 
     T.calSetMs(0);
     T.exitTiming();
+    T.setMode('reference');
+  })();
+
+  /* ---- THE SELF-HEARING GUARD (v2.14.0) -----------------------------------
+     On speakers the mic hears the app's own click/comp, and — because those were
+     scheduled on the grid and calibration measures exactly that path — they land
+     on it perfectly. A run the app scored against itself must never be printed as
+     a result, or the drill congratulates a player who put the guitar down. -- */
+  (function selfHeard(){
+    const doc = win.document;
+    const perfect = { n: 32, meanAbsMs: 0.4, biasMs: 0, spreadMs: 0.5, hitRate: 1, extra: 0 };
+    ok('guard: a machine-perfect run is flagged as the app hearing itself',
+       T.onsetSelfHeard(perfect) === true);
+
+    // The false-positive case that matters most: a genuinely excellent player.
+    // Tight, but nowhere near machine-tight, so they must still get their score.
+    const excellent = { n: 32, meanAbsMs: 9, biasMs: 1, spreadMs: 11, hitRate: 1, extra: 0 };
+    ok('guard: a very good human player is NOT accused',
+       T.onsetSelfHeard(excellent) === false);
+    ok('guard: ...and still reads as tight', T.onsetVerdict(excellent) === 'on_tight');
+
+    // Both conditions are required — either alone is ordinary.
+    ok('guard: machine-tight but half the slots missed is not self-hearing',
+       T.onsetSelfHeard({ n: 16, meanAbsMs: 0.4, biasMs: 0, spreadMs: 0.5, hitRate: 0.5, extra: 0 }) === false);
+    ok('guard: every slot hit with human spread is not self-hearing',
+       T.onsetSelfHeard({ n: 32, meanAbsMs: 18, biasMs: 2, spreadMs: 22, hitRate: 1, extra: 0 }) === false);
+    // A short run can be tight by luck, so the guard needs a run long enough to mean something.
+    ok('guard: too short a run is never flagged',
+       T.onsetSelfHeard({ n: 4, meanAbsMs: 0.2, biasMs: 0, spreadMs: 0.3, hitRate: 1, extra: 0 }) === false);
+    ok('guard: nothing at all is not flagged', T.onsetSelfHeard(null) === false);
+
+    // ...and the panel must actually refuse, not just know.
+    T.setMode('practice');
+    T.startTiming();
+    T.calSetMs(0);
+    T.sdScore.setOn(true);
+    const g = []; for (let i = 0; i < 32; i++) g.push(i * 0.25);
+    T.sdScore._set(g, g.slice());              // the app hearing its own click, exactly on time
+    T.sdScore.end();
+    T.sdScore.render();
+    const panel = doc.getElementById('sd-score');
+    ok('guard: the panel refuses to print a self-heard run as a score',
+       panel.hidden === false && panel.textContent === T.I18N[T.state().lang].on_selfheard,
+       panel.textContent.slice(0, 60));
+    ok('guard: ...and shows no headline number', !panel.querySelector('.sc-main'));
+    T.sdScore.setOn(false);
+    T.exitTiming();
+    T.setMode('reference');
+  })();
+
+  /* ---- the Rhythm pillar scored tiers (v2.14.0) ---------------------------
+     Same layer, different notion of "a slot you are expected to play". -- */
+  (function rhythmScored(){
+    const doc = win.document;
+    const near = (a, b, eps) => Math.abs(a - b) < eps;
+    ok('rhythm: the strum drill has a scored-run controller', !!T.spScore);
+    ok('rhythm: the comp drill has a scored-run controller', !!T.tgScore);
+
+    ['sp-mic', 'sp-status', 'sp-score', 'tg-mic', 'tg-status', 'tg-score'].forEach(id => {
+      ok('rhythm: markup carries #' + id, !!doc.getElementById(id));
+    });
+
+    // Strumming: only the pattern's own slots are expected — the empty ones are
+    // where the hand deliberately misses, and scoring them would be nonsense.
+    T.setMode('practice');
+    T.startStrum();
+    T.spScore.setOn(true);
+    T.calSetMs(0);
+    // "the common one" = D · D-U · _-U-D-U over 8 slots: 6 strums, not 8
+    const slots = [0, 0.25, 0.375, 0.625, 0.75, 0.875];
+    T.spScore._set(slots, slots.map(s => s + 0.020));   // 20 ms consistently late
+    const sp = T.spScore._compute();
+    ok('rhythm: a strum run scores only the pattern\'s own slots',
+       sp && sp.n === slots.length, sp ? String(sp.n) : 'null');
+    ok('rhythm: ...and reads as dragging by the amount played late',
+       sp && near(sp.biasMs, 20, 1), sp ? String(sp.biasMs) : 'null');
+    // extra strums between the pattern's slots are your own feel, not errors
+    T.spScore._set(slots, slots.concat([0.5, 0.1]).map(s => s + 0.020));
+    const busy = T.spScore._compute();
+    ok('rhythm: strums outside the pattern do not lower the timing score',
+       busy && near(busy.meanAbsMs, sp.meanAbsMs, 0.01) && busy.extra === 2,
+       busy ? JSON.stringify(busy) : 'null');
+    T.spScore.setOn(false);
+    T.exitStrum();
+
+    // Comping: the scored slot is the CHANGE. What you play between changes is
+    // your rhythm, so it lands in `extra` rather than being marked wrong.
+    T.startComp();
+    T.tgScore.setOn(true);
+    const bars = [0, 2, 4, 6];                        // four bar downbeats
+    const inBetween = [0.5, 1, 1.5, 2.5, 3, 3.5];     // your own comping in between
+    T.tgScore._set(bars, bars.map(b => b + 0.030).concat(inBetween));
+    const comp = T.tgScore._compute();
+    ok('comp: the changes are what get scored', comp && comp.n === bars.length,
+       comp ? String(comp.n) : 'null');
+    ok('comp: ...at the accuracy the changes were landed with',
+       comp && near(comp.biasMs, 30, 1), comp ? String(comp.biasMs) : 'null');
+    ok('comp: ...and your in-between comping is not penalised',
+       comp && comp.hitRate === 1 && comp.extra === inBetween.length,
+       comp ? JSON.stringify(comp) : 'null');
+    // a change you never played is a miss, which is the whole point of the drill
+    T.tgScore._set(bars, [bars[0], bars[1], bars[3]].map(b => b + 0.030));
+    const dropped = T.tgScore._compute();
+    ok('comp: a change you never played counts as missed',
+       dropped && dropped.n === 3 && near(dropped.hitRate, 0.75, 1e-9),
+       dropped ? JSON.stringify(dropped) : 'null');
+    T.tgScore.setOn(false);
+    T.exitTarget();
     T.setMode('reference');
   })();
 

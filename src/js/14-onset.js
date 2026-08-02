@@ -264,3 +264,32 @@ function onsetFeel(scoreObj){
   if(Math.abs(scoreObj.biasMs) < 12 || Math.abs(scoreObj.biasMs) < scoreObj.spreadMs*0.6) return null;
   return scoreObj.biasMs < 0 ? 'on_rushing' : 'on_dragging';
 }
+
+/* THE SELF-HEARING GUARD — the honesty hole at the centre of mic scoring.
+
+   On speakers the microphone hears the app: the click, the guide comp, the band.
+   And those land on the grid EXACTLY, because they were scheduled there and the
+   round-trip calibration measures precisely that path — so after the correction
+   the app's own click reads as a flawless hit on every slot. A player who puts
+   the guitar down would score "Tight · 32/32". Timing cannot separate the two
+   signals, because a perfectly played note is *supposed* to arrive at the same
+   instant as the guide it follows; there is no offset left to discriminate on.
+
+   What the app's own sound is NOT is human. Nobody plays thirty notes within a
+   few milliseconds of the grid every time — trained musicians sit around ±10–20 ms
+   of spread, and the machine sits at ~0. So the guard is a plausibility floor
+   rather than a detector: essentially every slot hit, AND a spread tighter than
+   any hand achieves, means the mic is listening to the speakers. We refuse to
+   dress that up as a score and say what to do about it (headphones).
+
+   Deliberately conservative — a false accusation here is worse than a missed one,
+   because it calls a good player a liar. Both conditions must hold, over a run
+   long enough that a short lucky streak can't trip it. */
+const ON_HUMAN_MS = 6;         // tightest spread a human hand plausibly sustains
+const ON_SELF_HITRATE = 0.95;  // ...while also hitting essentially every slot
+const ON_SELF_MIN_N = 8;       // ...over a run long enough to mean something
+function onsetSelfHeard(scoreObj){
+  return !!scoreObj && scoreObj.n >= ON_SELF_MIN_N
+    && scoreObj.hitRate >= ON_SELF_HITRATE
+    && scoreObj.spreadMs < ON_HUMAN_MS;
+}

@@ -4,9 +4,10 @@
    ticks it out (bar downbeat > beat > subdivision), a visual grid pulses each slot,
    and the current key's scale (SCALES[scIdx] rooted at gRoot, spine #1) is WALKED
    note-by-note across the grid in one Phase-2 box so there's something to play. A
-   smart visual metronome — useful, NOT scored (coach tier): mic-scored timing +
-   evenness wait on Phase 8/F1. A practiced run (≥1 full bar) lands a session in the
-   learner's ring buffer (13) so Practice progress reflects it, minting no per-item SRS.
+   smart visual metronome. Two tiers: a screen-only coach, and — with the mic on —
+   a scored run via the shared 13-scored.js layer (Phase 8/F1). A practiced run
+   (≥1 full bar) lands a session in the learner's ring buffer (13) so Practice
+   progress reflects it, minting no per-item SRS.
 
    Reuses the two-clocks scheduler (05: addClock/beat/enqueueVisual), the cue bus for
    the click, pluckAt (05) for the walked notes, the shared board paint (renderBoard,
@@ -28,10 +29,18 @@ const SD_BEATS = 4;   // 4/4 for now — meters (3/4, 6/8…) land with Phase 7b
 let sdSub = 1;        // index into SUBDIVS (default eighths — the workhorse subdivision)
 let sdPos = 1;        // neck box (1–5, Phase 2 boxWindow) the scale is walked inside
 let sdNotes = true;   // walk a scale note per tick (off = pure metronome grid)
-let sdScored = false; // Phase 8/F1: listen and score, vs. the screen-only coach tier
 let sd = null;
 let sdLit = null;     // the currently-lit board dot (so we can clear it next tick)
-// sd = { playing, clock, count, bars, div, path, pathIdx, grid, heard, offOnset }
+// sd = { playing, clock, count, bars, div, path, pathIdx }
+
+/* Phase 8/F1 scored tier (13-scored.js). Every grid tick is a slot you're expected
+   to play, so the tolerance is half a subdivision — matching wider than that would
+   start stealing the neighbouring slot's note. */
+const sdScore = scoredRun({
+  micId:'sd-mic', statusId:'sd-status', scoreId:'sd-score', countKey:'on_played',
+  tol:()=>beat()/(sd?sd.div:2)/2,
+  onChange:()=>{ if(sd) renderTiming(); },
+});
 
 /* the scale-note positions of the current key inside the chosen box, walked ascending
    then descending (turnaround endpoints dropped) so consecutive notes are neighbours —
@@ -62,8 +71,8 @@ function sdClick(when, level){
 
 /* ---- lifecycle ---- */
 function startTiming(){
-  sd={ playing:false, clock:null, count:0, bars:0, div:SUBDIVS[sdSub].div, path:[], pathIdx:0,
-       grid:[], heard:[], offOnset:null, score:null };
+  sd={ playing:false, clock:null, count:0, bars:0, div:SUBDIVS[sdSub].div, path:[], pathIdx:0 };
+  sdScore.clearScore();
   const home=document.getElementById('practice-home'), area=document.getElementById('sd-area');
   if(home) home.hidden=true; if(area) area.hidden=false;
   sdRenderBoard();
@@ -71,7 +80,7 @@ function startTiming(){
 }
 function exitTiming(){
   sdStop();
-  sdUnlisten();          // belt and braces: never leave the mic open behind a closed drill
+  sdScore.release();     // belt and braces: never leave the mic open behind a closed drill
   sd=null; sdLit=null;
   const home=document.getElementById('practice-home'), area=document.getElementById('sd-area');
   if(area) area.hidden=true; if(home) home.hidden=false;
@@ -85,45 +94,19 @@ function sdPlay(){
   if(typeof seqStop==='function') seqStop();
   sd.playing=true; sd.count=0; sd.bars=0; sd.pathIdx=0;
   sd.div=SUBDIVS[sdSub].div; sd.path=sdPath();
-  sd.grid=[]; sd.heard=[]; sd.score=null;
+  sdScore.begin();                               // before the clock: a tick must not
   sd.clock={ interval:()=>beat()/sd.div, tick:(time,count)=>sdTick(time,count) };
-  if(typeof addClock==='function') addClock(sd.clock);
-  if(sdScored) sdListen();
+  if(typeof addClock==='function') addClock(sd.clock);       // ...land in a run we then reset
   renderTiming();
-}
-/* F1: start listening and collect onset times for this run. Failure is not fatal —
-   the drill drops back to the coach tier and says why, because a metronome that
-   still works beats an error page. */
-function sdListen(){
-  if(!sd || sd.offOnset) return;
-  sd.offOnset = onOnset(t=>{ if(sd && sd.playing) sd.heard.push(t); });
-  onsetStart().then(r=>{
-    if(!r.ok){
-      sdScored=false;
-      if(sd){ if(sd.offOnset){ sd.offOnset(); sd.offOnset=null; } sdStatus(r.key); renderTiming(); }
-    }
-  });
-}
-function sdUnlisten(){
-  if(!sd) return;
-  if(sd.offOnset){ sd.offOnset(); sd.offOnset=null; }
-  onsetStop();
-}
-function sdStatus(key){
-  const el=document.getElementById('sd-status'); if(!el) return;
-  if(key) el.dataset.key=key; else delete el.dataset.key;
-  el.textContent = key ? t(key) : '';
-  el.hidden = !key;
 }
 function sdStop(){
   if(!sd || !sd.playing) return;
   if(sd.clock){ if(typeof removeClock==='function') removeClock(sd.clock); sd.clock=null; }
   if(typeof clearVisualQ==='function') clearVisualQ();
   sd.playing=false;
-  sdUnlisten();
   if(sdLit){ sdLit.classList.remove('on'); sdLit=null; }
   document.querySelectorAll('#sd-grid .sd-cell.on').forEach(c=>c.classList.remove('on'));
-  sd.score = sdComputeScore();
+  sdScore.end();
   if(sd.bars>=1){
     // The session value stays "bars played" so pre-F1 history keeps the same shape
     // and the progress card doesn't have to know two kinds of timing session. The
@@ -133,19 +116,6 @@ function sdStop(){
     if(typeof renderPractice==='function') renderPractice();
   }
   renderTiming();
-}
-/* Score the run just finished, or null when there's nothing honest to report.
-   Latency-corrected: a detected onset is late by the round trip, so subtract it
-   before comparing to the scheduled grid — otherwise every player "drags". */
-function sdComputeScore(){
-  if(!sdScored || !sd || !sd.grid.length || !sd.heard.length) return null;
-  const off = (typeof calOffsetSec==='function') ? calOffsetSec() : 0;
-  const actual = sd.heard.map(t=>t-off);
-  // Tolerance is half a subdivision, capped: past ~120 ms a "hit" stops meaning the
-  // slot you aimed at, and matching beyond half a slot would steal the neighbour's.
-  const slot = beat()/sd.div;
-  const tol = Math.min(slot/2, 0.12);
-  return onsetScore(onsetMatch(sd.grid, actual, tol));
 }
 /* apply a subdivision / box / key change live: rebuild the path + clock without dropping
    the accumulated bar count, so tweaking mid-run doesn't reset your session. */
@@ -165,10 +135,7 @@ function sdTick(when, count){
   sdClick(when, level);
   // F1: remember where the grid actually WAS on the audio clock. Scoring compares
   // against these scheduled times, never against wall-clock guesses.
-  if(sdScored && sd.playing){
-    sd.grid.push(when);
-    if(sd.grid.length>512) sd.grid.shift();
-  }
+  if(sd.playing) sdScore.mark(when);
   if(sdNotes && sd.path.length){
     const n=sd.path[sd.pathIdx % sd.path.length]; sd.pathIdx++;
     pluckAt(n.midi, when, Math.min(0.5, beat()/div*0.9), 0.82);
@@ -190,31 +157,8 @@ function renderTiming(){
   // The hint has to tell the truth about which tier you're in: with the mic off this
   // is still a coach that cannot hear you, and saying otherwise would be the exact
   // over-claim the roadmap warns against.
-  const hint=document.getElementById('sd-hint'); if(hint) hint.textContent=t(sdScored?'sd_hint_scored':'sd_hint');
-  const mb=document.getElementById('sd-mic');
-  if(mb){
-    mb.textContent=t('sd_listen');
-    mb.classList.toggle('active', sdScored);
-    mb.setAttribute('aria-pressed', sdScored?'true':'false');
-    mb.hidden = !(typeof onsetSupported==='function' && onsetSupported());
-  }
-  renderSdScore();
-}
-/* The score panel. Shown only when there is a measured result — an empty scoreboard
-   on a coach run would imply the app was listening when it wasn't. */
-function renderSdScore(){
-  const box=document.getElementById('sd-score'); if(!box) return;
-  const s=sd&&sd.score;
-  if(!s || !s.n){ box.hidden=true; return; }
-  box.hidden=false;
-  const feel=onsetFeel(s);
-  const parts=[
-    `<div class="sd-sc-main"><b>${Math.round(s.meanAbsMs)}</b> <span>${t('on_ms_off')}</span></div>`,
-    `<div class="sd-sc-verdict">${t(onsetVerdict(s))}${feel?' · '+t(feel):''}</div>`,
-    `<div class="sd-sc-row"><span>${t('on_evenness')}</span><b>±${Math.round(s.spreadMs)} ${t('on_ms')}</b></div>`,
-    `<div class="sd-sc-row"><span>${t('on_played')}</span><b>${s.n}/${Math.round(s.n/Math.max(s.hitRate,0.0001))}</b></div>`,
-  ];
-  box.innerHTML=parts.join('');
+  const hint=document.getElementById('sd-hint'); if(hint) hint.textContent=t(sdScore.on()?'sd_hint_scored':'sd_hint');
+  sdScore.render();
 }
 /* one grid row of SD_BEATS·div cells: the bar downbeat + beats read stronger than the
    in-between subdivisions, with the beat number under each beat cell. */
@@ -266,10 +210,7 @@ function sdSetTempo(bpm){
 function refreshTimingLang(){
   if(!sd) return;
   renderTiming();
-  // renderTiming redraws the score panel but not the mic-error line, which is
-  // rendered once and then left alone — re-translate it from its stored key.
-  const el=document.getElementById('sd-status');
-  if(el && !el.hidden && el.dataset.key) el.textContent=t(el.dataset.key);
+  sdScore.refreshLang();
 }
 
 registerDrill({ id:'timing', area:'sd-area',
@@ -284,7 +225,7 @@ registerDrill({ id:'timing', area:'sd-area',
   wire('sd-play',   sdToggle);
   // Toggling the mic mid-run would change the tier under a score in progress, so it
   // stops first and the next run is measured cleanly from its first tick.
-  wire('sd-mic',    ()=>{ if(sd&&sd.playing) sdStop(); sdScored=!sdScored; sdStatus(null); if(sd) sd.score=null; renderTiming(); });
+  wire('sd-mic',    ()=>{ if(sd&&sd.playing) sdStop(); sdScore.toggle(); renderTiming(); });
   wire('sd-notes',  ()=>{ sdNotes=!sdNotes; if(!sdNotes && sdLit){ sdLit.classList.remove('on'); sdLit=null; } renderTiming(); });
   wire('sd-slower', ()=>sdSetTempo(tempo-5));
   wire('sd-faster', ()=>sdSetTempo(tempo+5));

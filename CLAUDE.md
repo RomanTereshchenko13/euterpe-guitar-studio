@@ -102,6 +102,18 @@ Edit the sources, then run the build.
     pagehide. Asks for the raw signal — `echoCancellation`/`noiseSuppression`/
     `autoGainControl` all off, since AGC destroys onset dynamics and noise suppression
     destroys sustained pitch. Self-disables off a secure context like `16-pwa.js`.
+  - `13-scored.js` — the **shared scored-run layer** (Phase 8/F1). One scoring tier, three
+    drills: F1 shipped this inside the subdivision coach, and when the Rhythm tiers (5b, 5c)
+    needed the identical five steps it moved here rather than being pasted twice more —
+    same reasoning as `13-mic.js`. `scoredRun(cfg)` returns a controller
+    (`begin`/`mark`/`end`/`render`/`toggle`/`release`); the drill keeps only what is
+    drill-specific: **what counts as a slot you're expected to play**, the tolerance, and
+    the count-row label. **The expected times come from the drill's own tick** via
+    `mark(when)`, never from a formula — the scheduler is the only thing that knows where a
+    sound actually landed after swing, meter and any mid-run tempo change. Slot 13 for the
+    usual reason (its `const`s would be in the TDZ for a slot-14 drill loading earlier).
+    Consumers: `sdScore` (every grid tick), `spScore` (the pattern's sounding slots, swing
+    included), `tgScore` (the bar downbeats — see the comp drill below).
   - `13-learner.js` — learner model (spine #3): per-item SRS history + sessions ring
     buffer; persists via `12-toolbar-state.js`'s `saveState`/`loadState`. Exposes the
     progress-card readouts `learnerReview` (due-for-review queue) + `learnerActivity` (active days)
@@ -122,7 +134,12 @@ Edit the sources, then run the build.
     — the 5b pattern trainer and the 5d groove lab **merged**: one 8th-note clock over the
     context chord with a pattern picker (`STRUM_PATTERNS`) *and* the feel controls
     (`SP_SWINGS` swing, backbeat accent, palm-mute, optional drums+bass band), so the
-    cross-combinations neither drill could reach now work.
+    cross-combinations neither drill could reach now work. **Scored tier (v2.14.0):**
+    `spScore` marks the pattern's *sounding* slots at `time+swDelay` — the empty slots are
+    where the hand deliberately misses, and scoring a correctly swung player against the
+    un-swung slot would mark them late by the swing amount. Turning the mic on **mutes the
+    guide strum** (it lands on exactly the slot being measured) and force-enables the click
+    if nothing else is sounding, since a timing score against silence is meaningless.
     `14-drill-overchanges.js` (`tg*`) is **Over the changes** — comp-the-progression (5c) and
     chord-tone targeting (6a/6b/6c) **merged**, because they were one machine: the same
     `SEQ_PRESETS` bar expansion on the same `barSec()` clock with the same
@@ -135,6 +152,14 @@ Edit the sources, then run the build.
     notes miss). Both practice cards (`start-comp` in Rhythm, `start-target` in Lead) open
     this one drill in their own mode, so each pillar's picker stays honest; both session
     namespaces are kept so pre-merge progress still reads. The DOM ids stay `tg-*`.
+    **Scored tier (v2.14.0), `chords` mode only:** `tgScore` marks the **bar downbeats** —
+    comping is your own rhythm, so the drill has no business scoring how many times you hit
+    the chord inside a bar. It scores what the exercise is about: *landing the change*.
+    In-bar strums fall into `extra` and are not penalised, hence the count row reads
+    "changes landed", not "played", and the tolerance is half a beat (a change is a coarser
+    target than a 16th). The guide comp is **muted** when scoring, for the same reason as
+    the strum drill's. `tones` stays tap-scored on accuracy — touch latency corrupts
+    timing, and real lead scoring waits on F2.
     `14-drill-lead-callresponse.js` (`cr*`) is
     6c call-and-response — the app plays a scale-box motif (LISTEN) and you echo it back on its own
     board (YOUR TURN); self-paced, scored on echo accuracy, its listen/answer turns being the
@@ -185,7 +210,19 @@ Edit the sources, then run the build.
     maths — `onsetMatch` (greedy nearest, each expected slot claimed once, so a flam is
     one hit plus one extra), `onsetScore` (mean absolute error, signed bias, spread,
     hit rate), `onsetVerdict`/`onsetFeel` — kept free of DOM and audio so the harness can
-    assert the numbers without a microphone.
+    assert the numbers without a microphone. Also `onsetSelfHeard` — **the self-hearing
+    guard** (v2.14.0), the honesty hole at the centre of mic scoring: on speakers the mic
+    hears the app's own click/comp, and those land on the grid *exactly*, because they were
+    scheduled there and the round-trip calibration measures precisely that path. So after
+    correction the app's own click reads as a flawless hit on every slot and a player who
+    put the guitar down scores "Tight · 32/32". **Timing cannot separate the two** — a
+    perfectly played note is *supposed* to arrive with the guide it follows. What the app's
+    own sound is not is *human*: the guard is a plausibility floor (`ON_HUMAN_MS` spread
+    AND `ON_SELF_HITRATE` over `ON_SELF_MIN_N` slots), and the panel prints the refusal
+    instead of the score. Deliberately conservative — a false accusation calls a good
+    player a liar, so both conditions must hold. The structural half of the fix is in the
+    drills: the scored Rhythm tiers **mute their guide guitar**, which was landing on
+    exactly the slots being measured.
   - `14-calibration.js` — **latency calibration** (`cal*`), restored for F1, which is its
     first real consumer (the v2.5.0 version was cut in v2.11.0 for having none). **Not the
     old tap test**: that measured output latency *plus human reaction*, and tap-scored

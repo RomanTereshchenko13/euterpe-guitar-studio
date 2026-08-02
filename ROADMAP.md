@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-08-02 · shipping: v2.13.0_
+_Last updated: 2026-08-02 · shipping: v2.14.0_
 
 > **Consolidation note (v2.11.0).** Two debloat passes reshaped the *packaging* of what shipped
 > below, not its substance — worth knowing when reading the ✅ entries: **Ear folded from a
@@ -483,7 +483,7 @@ the new `ear` mode. Low-risk, high value-per-effort; ran independent of Phases 1
 
 ## Phase 5 — Rhythm pillar  (play THE changes · broad audience)
 
-**Size:** L · **Risk:** med — many coach tiers; scoring waits on F1 (Phase 8).
+**Size:** L · **Risk:** med — many coach tiers; scoring landed with F1 (v2.13.0 → v2.14.0).
 
 The half of playing nearly everyone does, built mostly by turning the existing backing band
 into something the user plays *along with*. Coach tiers ship with no mic. Ships incrementally
@@ -503,7 +503,11 @@ mode, to keep the bottom nav at three and leave slot 4 for Progress) under a **R
   highlighted slot-by-slot in time — so you **see and hear** the pattern and strum along. `strumMidi`
   sweeps down (low→high) / up (high→low); optional beat-reference click. A practiced run (≥1 full bar)
   records a session (`strum:<id>`, bars played) so Practice progress reflects it, but mints no per-item SRS.
-  _Honest coach framing: no timing score — mic onset scoring is Phase 8/F1._
+  - **Scored tier** ✅ **Shipped v2.14.0** (Phase 8/F1): a 🎤 toggle grades the pattern you strum.
+    The expected slots are the pattern's *sounding* ones at `time+swDelay` — swing included, or a
+    correctly swung player would be marked late by the swing amount. Scoring **mutes the guide
+    strum** (it lands on exactly the slot being measured) and force-enables the click if nothing
+    else is sounding, because a timing score against silence means nothing.
 - **Comping the progression** ✅ **Shipped v2.4.0** (5c) _· merged with 6a/6b/6c into **Over the
   changes** in v2.11.0 (a `tgMode` switch picks Chords vs Chord tones); both practice cards still
   open it in their own pillar's mode, and both session namespaces are kept_. The rhythm-side
@@ -511,7 +515,12 @@ mode, to keep the bottom nav at three and leave slot 4 for Progress) under a **R
   cycles with a forced backing band (bass + groove + a guide comp via `compStrum`/`scheduleBand(force)`)
   on its own scheduler clock; a big **NOW** chord + a **NEXT** preview (reusing `cmChord`/`cmChordBox`)
   + a 4-beat indicator make the change land in time. Switch the progression live. A practiced run
-  records a session (bars comped), minting no per-item SRS. _Coach tier — no timing score (Phase 8/F1)._
+  records a session (bars comped), minting no per-item SRS.
+  - **Scored tier** ✅ **Shipped v2.14.0** (Phase 8/F1): the 🎤 toggle scores **landing the change**,
+    not every strum. Comping is your own rhythm — the drill has no business dictating how many times
+    you hit the chord inside a bar — so the expected times are the bar downbeats, your in-between
+    strums land in `extra` and are not penalised, and the count row reads "changes landed". The
+    guide comp is muted while scoring, for the same reason as the strum drill's.
 - **Groove / feel** ✅ **Shipped v2.4.0** (5d) _· merged into **Strumming & feel** in v2.11.0, so
   the pattern picker and the feel controls now cross-combine_. A feel *lab*: loop a one-bar
   groove (swung hats + kick/snare backbeat + bass + a down-up comp) over the context chord on one
@@ -726,9 +735,26 @@ Mic via `AnalyserNode`, split by difficulty. This is what turns every "coach" ti
     (spread) and rushing/dragging (bias) as **separate** numbers, because "always 30 ms late" and
     "randomly ±30 ms" are different problems needing opposite advice. Rushing/dragging is only
     claimed when the bias actually exceeds the spread — otherwise it's noise with a sign.
-  - _Still open:_ the Rhythm pillar tiers (5b strum, 5c comp) reuse this machinery but aren't wired
-    yet; a strum's transient is an *easier* target than a single note, so they should be cheap.
-    Tempo laddering (auto-bump BPM when consistently in the pocket) also waits.
+  - **Rhythm pillar tiers wired ✅ v2.14.0**, and the machinery extracted to `13-scored.js` on the
+    way (one scoring engine, three drills — the same move `13-mic.js` made for one mic and three
+    consumers). Each drill keeps only its own answer to "what is a slot you are expected to play":
+    the timing coach marks every grid tick; **5b strum** marks the pattern's *sounding* slots at
+    `time+swDelay` (scoring a correctly swung player against the un-swung slot would mark them late
+    by the swing amount); **5c comp** marks the **bar downbeats** only — comping is your own rhythm,
+    so the drill scores *landing the change* and leaves what you play in between in `extra`.
+  - **The self-hearing hole, found and closed ✅ v2.14.0.** F1 shipped a scored tier that could
+    score *itself*: on speakers the mic hears the app's click, and because the click was scheduled
+    on the grid — and calibration measures exactly that path — it lands on the grid perfectly after
+    correction. A run where the player never touched the guitar came back "Tight · 32/32". Timing
+    alone cannot separate the two signals, since a perfectly played note is *supposed* to arrive
+    with the guide it follows. Two-part fix: **structural** — the scored Rhythm tiers mute their
+    guide guitar, which was landing on precisely the slots being measured (and that is the better
+    lesson anyway: mic off, the pattern is played *to* you; mic on, you play it) — and a
+    **plausibility guard**, `onsetSelfHeard`: near-total hit rate *and* a spread tighter than any
+    human hand means the microphone is listening to the speakers, so the panel prints the refusal
+    instead of a flattering number. Conservative by design; a false accusation calls a good player
+    a liar. Headphones are the clean answer and every scored drill now says so.
+  - _Still open:_ tempo laddering (auto-bump BPM when consistently in the pocket).
 - **F2 — Pitch (which).** Monophonic McLeod (MPM) via **the `pitchy` + `fft.js` pair already
   vendored by F0** — no new dependency to take, and proven there on sustained notes, so what F2
   adds is doing it *under time pressure*. Unlocks the **Lead pillar** scored
@@ -798,7 +824,7 @@ Phase 1  Unify (spine + reference)           ← foundational; everything reuses
          └─ Phase 7  Timing & subdivision       (small; feeds 5 & 6) ───────────── needs F1 to score
                │
                └─ Phase 8  Mic input            F0 (tuner) ✅ shipped v2.12.0 — no scoring, low risk
-                                                F1 (onset) ✅ shipped v2.13.0 — scores 7; 5 still to wire
+                                                F1 (onset) ✅ shipped v2.13.0 — scores 7 + 5 (v2.14.0)
                                                 F2 (pitch) → scores 6 + real note-naming
 
 Phase 9  Product layer                          (curriculum / distribution / polish — throughout)

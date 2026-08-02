@@ -12,8 +12,14 @@
    the combinations that were previously unreachable (a swung folk pattern, a palm-muted
    "common one", any pattern over the band) just work.
 
-   Coach tier — no timing score (Phase 8/F1); a practiced run (>=1 full bar) records a session
-   in the learner's ring buffer (13) so Practice progress reflects it, minting no per-item SRS.
+   Two tiers (Phase 8/F1): a coach that shows and plays the pattern, and — with the mic on —
+   a SCORED run through the shared 13-scored.js layer, where the expected slots are the
+   pattern's own strums (with swing applied, because that's where the drill actually put
+   them). Scoring MUTES the guide strum: the app's guitar lands on exactly the slots being
+   measured, so leaving it in would score the app instead of you. That is also the better
+   lesson — with the mic off you hear the pattern modelled, with it on you play it.
+   A practiced run (>=1 full bar) records a session in the learner's ring buffer (13) so
+   Practice progress reflects it, minting no per-item SRS.
    Reuses the drum/bass primitives (hatHit/kickHit/snareHit/bassNote, 06), pluckAt (05) for a
    mute-able strum, metroClick (06) for the beat reference, and the shared scheduler. */
 
@@ -45,14 +51,24 @@ let spClick = false;    // optional beat-reference click
 let spDrill = null;
 // spDrill = { patIdx, slot, bars, clock, playing }
 
+/* Phase 8/F1 scored tier (13-scored.js). The tolerance is half an 8th — the pattern's
+   own resolution — so a hit means "that strum", not the one next door. */
+const spScore = scoredRun({
+  micId:'sp-mic', statusId:'sp-status', scoreId:'sp-score', countKey:'on_played',
+  tol:()=>beat()/4,
+  onChange:()=>{ if(spDrill) renderStrum(); },
+});
+
 function startStrum(){
   spDrill={ patIdx:spIdx, slot:-1, bars:0, clock:null, playing:false };
+  spScore.clearScore();
   const home=document.getElementById('practice-home'), area=document.getElementById('sp-area');
   if(home) home.hidden=true; if(area) area.hidden=false;
   renderStrum();
 }
 function exitStrum(){
   spStop();
+  spScore.release();     // never leave the mic open behind a closed drill
   spDrill=null;
   const home=document.getElementById('practice-home'), area=document.getElementById('sp-area');
   if(area) area.hidden=true; if(home) home.hidden=false;
@@ -65,8 +81,9 @@ function spPlay(){
   if(typeof stopLoop==='function') stopLoop();   // don't fight the reference loop / progression
   if(typeof seqStop==='function') seqStop();
   spDrill.patIdx=spIdx; spDrill.slot=-1; spDrill.bars=0; spDrill.playing=true;
+  spScore.begin();                               // before the clock: a tick must not
   spDrill.clock={ interval:()=>beat()/2, tick:(time,count)=>spTick(time,count) };
-  if(typeof addClock==='function') addClock(spDrill.clock);
+  if(typeof addClock==='function') addClock(spDrill.clock);   // ...land in a run we then reset
   renderStrum();
 }
 function spStop(){
@@ -74,6 +91,7 @@ function spStop(){
   if(spDrill.clock){ if(typeof removeClock==='function') removeClock(spDrill.clock); spDrill.clock=null; }
   if(typeof clearVisualQ==='function') clearVisualQ();
   spDrill.playing=false; spDrill.slot=-1;
+  spScore.end();
   if(spDrill.bars>=1){ recordSession('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars); saveState(); if(typeof renderPractice==='function') renderPractice(); }
   renderStrum();
 }
@@ -96,9 +114,17 @@ function spTick(time, count){
   // guitar: only the pattern's slots sound — the empty ones are where the hand misses
   const dir=seg[slot];
   if(dir){
-    let vel = dir==='D' ? 0.9 : 0.72;            // upstrokes lighter
-    if(spAccent && backbeat) vel += 0.12;
-    spStrum(currentChordVoicing().midis, time+swDelay, vel, dir==='D'?+1:-1, spMute);
+    // F1: the expected strum is at time+swDelay — where the drill actually puts it,
+    // swing and all. Scoring against the un-swung slot would mark a correctly swung
+    // player late by the swing amount.
+    if(spDrill.playing) spScore.mark(time+swDelay);
+    // Scored runs mute the guide: the app's own strum lands on precisely the slot
+    // being measured, so it would be scoring itself (see onsetSelfHeard).
+    if(!spScore.on()){
+      let vel = dir==='D' ? 0.9 : 0.72;          // upstrokes lighter
+      if(spAccent && backbeat) vel += 0.12;
+      spStrum(currentChordVoicing().midis, time+swDelay, vel, dir==='D'?+1:-1, spMute);
+    }
   }
   // band: hats on every 8th (swung with the guitar), kick 1 & 3, snare on the backbeat
   if(spBand){
@@ -130,7 +156,9 @@ function renderStrum(){
   toggle('sp-band',   spBand,   'sp_band');
   const pb=document.getElementById('sp-play'); if(pb){ pb.innerHTML=(spDrill.playing?'&#9632; ':'&#9654; ')+t(spDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', spDrill.playing); pb.setAttribute('aria-pressed', spDrill.playing?'true':'false'); }
   const ck=document.getElementById('sp-click'); if(ck){ ck.classList.toggle('active', spClick); ck.setAttribute('aria-pressed', spClick?'true':'false'); ck.innerHTML='&#9833; '+t('cm_click'); }
-  const hint=document.getElementById('sp-hint'); if(hint) hint.textContent=t('sp_hint');
+  // the hint has to say which tier you're in — and that the guide guitar goes quiet
+  const hint=document.getElementById('sp-hint'); if(hint) hint.textContent=t(spScore.on()?'sp_hint_scored':'sp_hint');
+  spScore.render();
 }
 function renderStrumGrid(){
   const g=document.getElementById('sp-grid'); if(!g) return;
@@ -146,7 +174,7 @@ function spHighlightSlot(slot){
   document.querySelectorAll('#sp-grid .sp-cell').forEach(c=>c.classList.toggle('on', +c.dataset.i===slot));
 }
 // re-localize an in-flight strum trainer on a language switch (called from applyLang)
-function refreshStrumLang(){ if(spDrill) renderStrum(); }
+function refreshStrumLang(){ if(spDrill){ renderStrum(); spScore.refreshLang(); } }
 
 registerDrill({ id:'strum', area:'sp-area',
                 isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang,
@@ -158,6 +186,16 @@ registerDrill({ id:'strum', area:'sp-area',
   card.onclick=startStrum;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('sp-play',   spToggle);
+  // toggling the tier mid-run would change what's being measured under a score in
+  // progress, so it stops first and the next run is measured cleanly from bar one
+  wire('sp-mic',    ()=>{ if(spDrill&&spDrill.playing) spStop();
+                          spScore.toggle();
+                          // Scoring mutes the guide guitar, so without the click or the
+                          // band there would be nothing left to play against — and a
+                          // timing score against silence is meaningless. Turn the click
+                          // on rather than let the drill become a staring contest.
+                          if(spScore.on() && !spClick && !spBand) spClick=true;
+                          renderStrum(); });
   wire('sp-click',  ()=>{ spClick=!spClick;   renderStrum(); });
   wire('sp-accent', ()=>{ spAccent=!spAccent; renderStrum(); });
   wire('sp-mute',   ()=>{ spMute=!spMute;     renderStrum(); });

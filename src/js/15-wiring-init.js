@@ -628,16 +628,17 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     // The matching/scoring maths is pure, so it is asserted directly — the capture
     // half needs a real browser (tools/onset-check.js).
     micAcquire, micRelease, micReleaseAll, micLive, micErrKey,
-    onsetSupported, onsetMatch, onsetScore, onsetVerdict, onsetFeel,
+    onsetSupported, onsetMatch, onsetScore, onsetVerdict, onsetFeel, onsetSelfHeard,
     onOnset, onsetActive, onsetRecent, onsetClear, onsetProcessorSrc,
-    ON_REFRACTORY, ON_RATIO, ON_FLOOR,
+    ON_REFRACTORY, ON_RATIO, ON_FLOOR, ON_HUMAN_MS, ON_SELF_HITRATE, ON_SELF_MIN_N,
     // latency calibration (14-calibration.js) — restored for F1, which is its first
     // real consumer; the v2.5.0 version was cut for having none.
     calOffsetSec, calSetMs, calCancel, calMedian, getCalMs:()=>calMs, CAL_MAX_MS, CAL_MIN_HITS,
-    // scored timing tier (7a + F1)
-    getSdScored:()=>sdScored, setSdScored:(v)=>{ sdScored=!!v; }, sdComputeScore,
-    sdSetGrid:(g)=>{ if(sd){ sd.grid=g.slice(); } }, sdSetHeard:(h)=>{ if(sd){ sd.heard=h.slice(); } },
-    renderSdScore,
+    // the shared scored-run layer (13-scored.js) and its three consumers. The
+    // controllers are exposed whole: _set() injects a run so the harness can drive
+    // scoring end-to-end with no microphone attached.
+    scoredRun, SC_TOL_MAX,
+    sdScore, spScore, tgScore,
     // accessibility + onboarding (Phase 9 feel pass)
     applyA11y, showWelcome, dismissWelcome,
     setCbPalette:(v)=>{ cbPalette=!!v; }, setFnShapes:(v)=>{ fnShapes=!!v; }, setWelcomeSeen:(v)=>{ welcomeSeen=!!v; },

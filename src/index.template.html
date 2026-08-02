@@ -495,9 +495,16 @@
         <button type="button" class="btn" id="sp-accent" aria-pressed="false"></button>
         <button type="button" class="btn" id="sp-mute" aria-pressed="false"></button>
         <button type="button" class="btn" id="sp-band" aria-pressed="false"></button>
+        <!-- Phase 8/F1: flips the coach into a scored run. It sits with the other
+             tier-shaping toggles rather than in the footer — the footer is the
+             hint + transport, and a third button there squeezes Play off the row. -->
+        <button type="button" class="btn" id="sp-mic" aria-pressed="false" hidden></button>
       </div>
       <div class="sp-name" id="sp-name"></div>
       <div class="sp-grid" id="sp-grid"></div>
+      <!-- Filled after a scored run only (13-scored.js), plus the mic-error line. -->
+      <p class="scored-status" id="sp-status" role="status" hidden></p>
+      <div class="scored-panel" id="sp-score" hidden></div>
       <div class="cm-active-foot">
         <span class="drill-sub" id="sp-hint"></span>
         <span class="sp-controls">
@@ -518,7 +525,12 @@
         <span class="drill-count" id="tg-hits"></span>
       </div>
       <div class="row"><span class="ctrl-label" data-i18n="oc_mode">Що граєш</span><div class="group" id="tg-mode"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="tg_prog">Прогресія</span><div class="group" id="tg-progs"></div></div>
+      <div class="row"><span class="ctrl-label" data-i18n="tg_prog">Прогресія</span><div class="group" id="tg-progs"></div>
+        <!-- Phase 8/F1: comping only. Sits with the controls, not the footer, so it
+             can't crowd Play off the transport row. -->
+        <div class="divider"></div>
+        <button type="button" class="btn" id="tg-mic" aria-pressed="false" hidden></button>
+      </div>
       <!-- lead-only: windowing the targets to one box / one degree means nothing when
            you're comping the chord, so the whole block hides in `chords` mode. -->
       <div id="tg-tone-rows" hidden>
@@ -541,9 +553,15 @@
       <div id="tg-board-wrap" hidden>
         <div class="scroll"><div class="board"><div class="fretboard" id="tg-board"></div></div><div class="fretnums" id="tg-nums"></div></div>
       </div>
+      <!-- Phase 8/F1 scored tier — comping mode only; the lead mode stays tap-scored
+           on accuracy until F2, and renderTarget() hides these there. -->
+      <p class="scored-status" id="tg-status" role="status" hidden></p>
+      <div class="scored-panel" id="tg-score" hidden></div>
       <div class="cm-active-foot">
         <span class="drill-sub" id="tg-hint"></span>
-        <button type="button" class="btn play" id="tg-play"></button>
+        <span class="sp-controls">
+          <button type="button" class="btn play" id="tg-play"></button>
+        </span>
       </div>
     </div>
 
@@ -591,16 +609,16 @@
         <div class="divider"></div>
         <button type="button" class="btn" id="sd-notes" aria-pressed="true"></button>
         <!-- Phase 8/F1: flips this drill from the screen-only coach tier to a scored
-             one. 14-drill-timing.js hides it wherever onset detection can't run, so
+             one. 13-scored.js hides it wherever onset detection can't run, so
              the coach tier stays whole rather than showing a dead promise. -->
         <button type="button" class="btn" id="sd-mic" aria-pressed="false" hidden></button>
       </div>
       <div class="sd-grid" id="sd-grid"></div>
       <div class="scroll"><div class="board"><div class="fretboard" id="sd-board"></div></div><div class="fretnums" id="sd-nums"></div></div>
-      <p class="sd-status" id="sd-status" role="status" hidden></p>
-      <!-- Filled after a scored run only (renderSdScore); an empty scoreboard would
-           imply the app had been listening when it hadn't. -->
-      <div class="sd-score" id="sd-score" hidden></div>
+      <p class="scored-status" id="sd-status" role="status" hidden></p>
+      <!-- Filled after a scored run only; an empty scoreboard would imply the app
+           had been listening when it hadn't. -->
+      <div class="scored-panel" id="sd-score" hidden></div>
       <div class="cm-active-foot">
         <span class="drill-sub" id="sd-hint"></span>
         <button type="button" class="btn play" id="sd-play"></button>
