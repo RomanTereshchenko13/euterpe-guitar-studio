@@ -96,10 +96,23 @@
       </div>
     </div>
     <!-- Settings. These were eleven controls in one flat wrap-flow — the "console" the
-         transport bar's disclosure toggles exist to avoid, just moved one tap down. They
-         are three different KINDS of setting, so they read as three labelled clusters:
-         the instrument you're holding, the neck you're reading, and app-level prefs
-         (set-once accessibility + share). -->
+         transport bar's disclosure toggles exist to avoid, just moved one tap down — so
+         they read as labelled clusters instead.
+         Phase 10/A4 re-sorted those clusters by WHAT YOU DO WITH THEM, which is the
+         question a visitor actually has, rather than by what they happen to act on:
+           Інструмент  — the guitar you're holding and the music you're counting; you
+                         change these mid-session and keep going.
+           Інструменти — TOOLS. You come here to DO something (tune, calibrate), watch a
+                         readout, and leave. They were scattered through the instrument
+                         list beside dropdowns, which reads as configuration; two of them
+                         are prerequisites for a SCORED drill, so they need to be findable
+                         by someone who is in Practice and being told their timing is off.
+           Налаштування застосунку — set once and forget. Lefty, volume, the two
+                         accessibility toggles and Share.
+         The old middle cluster ("Гриф і розмір") split the guitar across two headings:
+         frets sat away from tuning and capo though all three describe the same neck.
+         Meter joins them — it isn't the instrument, but it is in-session musical context
+         like the other two, and that is the axis these clusters sort on. -->
     <div class="toolbar collapsed" id="toolbar">
       <div class="tb-cluster">
         <span class="tbc-label" data-i18n="tbc_instrument">Інструмент</span>
@@ -115,21 +128,39 @@
             <span class="tb-label" data-i18n="tun_custom">Власний стрій</span>
             <span class="custom-strings" id="tb-custom-strings"></span>
           </div>
+          <div class="tb-group">
+            <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
+            <select id="tb-capo"></select>
+          </div>
+          <div class="tb-group">
+            <span class="tb-label" data-i18n="tb_frets">Лади</span>
+            <select id="tb-frets"></select>
+          </div>
+          <!-- Meter / time signature (Phase 7b): the metronome accent, backing groove and
+               progression bar length all follow it; 4/4 is the default. -->
+          <div class="tb-group">
+            <span class="tb-label" data-i18n="tb_meter">Розмір</span>
+            <select id="tb-meter"></select>
+          </div>
+        </div>
+      </div>
+      <!-- TOOLS (Phase 10/A4). Reachable from Practice as well as Reference — nothing
+           in this cluster acts on the reference board, and two of the three are what
+           makes a scored drill honest. -->
+      <div class="tb-cluster" id="tb-tools">
+        <span class="tbc-label" data-i18n="tbc_tools">Інструменти</span>
+        <div class="tbc-items">
           <!-- Reference-tone tuner (no mic): one button per open string of the current
                tuning; tap to hold a sustained pitch and tune a real guitar against it.
                Buttons are built from the live tuning by buildTuner().
                Beside it, the Phase 8/F0 chromatic MIC tuner — a different tool, not a
-               replacement: this one plays a pitch at you, that one listens. 17-mic-tuner.js
+               replacement: this one plays a pitch at you, that one listens. 14-mic-tuner.js
                REMOVES the mic button when there's no secure context (file:// / jsdom),
                so it never sits there as a control that can only report an error. -->
           <div class="tb-group tb-tuner">
             <span class="tb-label" data-i18n="tb_tuner">Тюнер</span>
             <span class="tuner-strings" id="tb-tuner-strings"></span>
             <button class="btn tuner-mic" id="tb-mic" data-i18n="mic_open">🎤 Мікрофон</button>
-          </div>
-          <div class="tb-group">
-            <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
-            <select id="tb-capo"></select>
           </div>
           <!-- Latency calibration (Phase 8/F1). Measures the audio round trip by
                playing a click and hearing it back through the mic, so timing scores
@@ -146,23 +177,7 @@
         </div>
       </div>
       <div class="tb-cluster">
-        <span class="tbc-label" data-i18n="tbc_neck">Гриф і розмір</span>
-        <div class="tbc-items">
-          <div class="tb-group">
-            <span class="tb-label" data-i18n="tb_frets">Лади</span>
-            <select id="tb-frets"></select>
-          </div>
-          <!-- Meter / time signature (Phase 7b): the metronome accent, backing groove and
-               progression bar length all follow it; 4/4 is the default. -->
-          <div class="tb-group">
-            <span class="tb-label" data-i18n="tb_meter">Розмір</span>
-            <select id="tb-meter"></select>
-          </div>
-          <button class="btn" id="tb-lefty" aria-pressed="false" data-i18n="tb_lefty">Ліворукий</button>
-        </div>
-      </div>
-      <div class="tb-cluster">
-        <span class="tbc-label" data-i18n="tbc_app">Застосунок</span>
+        <span class="tbc-label" data-i18n="tbc_prefs">Налаштування застосунку</span>
         <div class="tbc-items">
           <!-- Master volume (Phase 10/A1). It used to live inside the Backing panel,
                which made an app-level output control read as a property of the backing
@@ -174,6 +189,7 @@
             <input type="range" id="tb-vol" min="0" max="100" step="1" value="100" aria-label="Volume">
             <span class="bpm-val" id="tb-vol-val">100%</span>
           </div>
+          <button class="btn" id="tb-lefty" aria-pressed="false" data-i18n="tb_lefty">Ліворукий</button>
           <!-- Accessibility (Phase 9 feel pass): the function colours carry meaning by
                hue alone, so offer a colour-blind-safe palette + distinct per-function
                dot shapes. Both are body-class toggles (applyA11y) and persisted — set
@@ -784,9 +800,20 @@
   </div>
 </div>
 
-<!-- First-run welcome (Phase 9 onboarding): a one-time, dismissible orientation card
-     shown only to brand-new visitors (no saved state). Reuses the changelog overlay/
-     modal styling; dismissing it records welcomeSeen so it never returns. -->
+<!-- First-run welcome (Phase 9 onboarding; rebuilt in Phase 10/A4): a one-time,
+     dismissible card shown only to brand-new visitors (no saved state). Reuses the
+     changelog overlay/modal styling; dismissing it records welcomeSeen.
+     It used to LIST two abstract nouns — "Reference" and "Practice" — and hand you a
+     Got it button that dropped you on chord tones in A minor regardless of which one
+     you'd read. It described the app instead of asking anything, so nothing a visitor
+     knew about themselves could change where they landed. It now asks ONE question and
+     every answer is a real route. (Depth beyond this is Phase 9's, which B3/B4 give
+     somewhere to route to.) The choices reuse the Practice home's .drill-card pattern
+     on purpose: the first card a visitor taps looks like the cards they meet next.
+     The list also outlived its own vocabulary — its first bullet still pointed at
+     `mode_reference`, a key A2 deleted, and since applyLang skips undefined keys
+     rather than blanking them, every ENGLISH visitor's first screen showed the
+     hardcoded Ukrainian "Довідник". `npm run lint` now fails on that class of bug. -->
 <div class="cl-overlay" id="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="wc-title" hidden>
   <div class="cl-modal wc-modal">
     <div class="cl-head">
@@ -794,12 +821,22 @@
       <button class="cl-close" id="wc-close" aria-label="close">✕</button>
     </div>
     <div class="cl-body wc-body">
-      <p class="wc-lead" data-i18n="wc_lead">Гітарна студія для теорії та практики. Три способи почати:</p>
-      <ul class="wc-list">
-        <li><b data-i18n="mode_reference">Довідник</b> — <span data-i18n="wc_ref">обери тональність і досліджуй акорди, гами й гриф.</span></li>
-        <li><b data-i18n="mode_practice">Практика</b> — <span data-i18n="wc_practice">вправи, що ведуть облік прогресу й повертають складне.</span></li>
-      </ul>
-      <div class="wc-actions"><button class="btn play" id="wc-got" data-i18n="wc_got">Зрозуміло</button></div>
+      <p class="wc-lead" data-i18n="wc_lead">Що хочеш зробити зараз?</p>
+      <div class="wc-choices">
+        <button type="button" class="drill-card" id="wc-go-look">
+          <span class="dc-name" data-i18n="wc_look">Подивитись акорд або гаму</span>
+          <span class="dc-meta" data-i18n="wc_look_d">Обери тональність — гриф покаже тони акорду, гами й коло квінт.</span>
+        </button>
+        <button type="button" class="drill-card" id="wc-go-practice">
+          <span class="dc-name" data-i18n="wc_drill">Повправлятися</span>
+          <span class="dc-meta" data-i18n="wc_drill_d">Вправи з рахунком — гриф, тайминг, ритм, соло та слух.</span>
+        </button>
+        <button type="button" class="drill-card" id="wc-go-tune">
+          <span class="dc-name" data-i18n="wc_tune">Налаштувати гітару</span>
+          <span class="dc-meta" data-i18n="wc_tune_d">Тюнер за мікрофоном, або еталонний тон для кожної струни.</span>
+        </button>
+      </div>
+      <div class="wc-actions"><button class="btn" id="wc-got" data-i18n="wc_got">Просто озирнутись</button></div>
     </div>
   </div>
 </div>

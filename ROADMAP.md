@@ -787,7 +787,7 @@ pickup, but that audience is tiny and the mic path already covers everyone — n
 
 **Size:** XL — two tracks, A1–A4 and B1–B4 below, each shippable · **Risk:** med (A2 and B2 are
 refactors of shipped, working surfaces; B1 needs a schema migration) · **Status:** in progress —
-**Track A's layout work (A1 + A2 + A3) and B1 done** (unreleased); A4 and B2–B4 planned.
+**Track A complete (A1–A4) and B1 done** (unreleased); B2–B4 planned.
 
 _(Sequenced between F1 and F2, not after Phase 9 — Phase 9 "runs throughout" and is not a gate.
 B3 delivers the first real slice of Phase 9's guided path, A4 the first slice of its onboarding.)_
@@ -969,17 +969,68 @@ while the layout was already open — 1e's move, in 1e's position. As shipped:
   it kept reporting a phantom failure for whichever viewport lost the cold browser-launch race — a
   gate that cries wolf gets ignored. A result that comes back and reports a problem is never re-rolled._
 
-**A4 — Tools, preferences, and the cold start.** Split Settings' ~35 controls and six disclosure
-mechanisms into **Instrument** (in-session) · **Preferences** (set-once: lefty, palette, shapes, share)
-· **Tools** (reference tuner, mic tuner, latency calibration) — with Tools reachable from both modes,
-since two of them are *prerequisites for Practice* and a player calibrating for a scored drill
-currently has to leave Practice and guess. Plus **the mic funnel** (permission → calibration →
-headphones → the `onsetSelfHeard` refusal is four failure modes with no guidance, and it is where the
-whole Phase 8 investment is realised or lost) and **the cold start**: a brand-new visitor gets a
-welcome card offering two abstract nouns, then lands on chord tones in A minor behind ~35 controls,
-with nothing asked about what they came to do. The five Reference passes made that screen tidier; none
-made it *answer anything*. Scope here to one opening question that routes somewhere real — the depth
-stays Phase 9's, which B3/B4 finally give it somewhere to route **to**.
+**A4 — Tools, preferences, and the cold start.** ✅ **done** (unreleased). As shipped:
+- **Settings sorts by what you DO with a control**, which is the question a visitor actually has,
+  rather than by what the control acts on. **Інструмент / Instrument** — the guitar you're holding and
+  the music you're counting (tuning, custom tuning, capo, frets, meter); you change these mid-session
+  and keep going. **Інструменти / Tools** — you come to *do* something, watch a readout and leave
+  (both tuners, latency). **Налаштування застосунку / Preferences** — set once and forget (volume,
+  lefty, the two accessibility toggles, Share). The old middle cluster, "Neck & meter", had split the
+  guitar across two headings: frets sat away from tuning and capo though all three describe the same
+  neck.
+- **Tools is reachable from Practice**, which the plan called for — though checking rather than
+  assuming showed it already *was*: nothing in A1's transport-scoping list hid the Settings
+  disclosure. The real fault was findability, not reachability. Calibration was the last row of an
+  "Instrument" list, between dropdowns, reading as configuration — when it is the prerequisite that
+  decides whether a scored drill is telling the truth. It now has a heading that says so. Pinned by
+  assertion so no future mode-scoping list quietly hides it.
+- **The mic funnel's real hole was calibration, and it was worse than "no guidance".**
+  `calOffsetSec()` returned 0 whether the round trip had been measured or *never measured* — and 0 is
+  not a latency, it is the absence of one. So a player who had never calibrated was scored against an
+  offset of zero and told, as a fact about their playing, that they were dragging — by exactly the
+  buffer size. That is the same lie `onsetSelfHeard` exists to refuse, arriving by a different road.
+  Latency now carries a **`calKnown`** flag (persisted; a hand-set slider counts, since the player
+  asserted a value; an older save with a non-zero reading is grandfathered in rather than re-prompted).
+  With it unset the scorer **reports the half it can stand behind and names the half it can't**:
+  spread is a *difference* between hits and survives any constant offset untouched, so evenness is
+  honest immediately, while the ms figure and the rushing/dragging verdict are withheld with a line
+  saying what is missing and where to fix it. The warning also fires when the mic is switched **on**,
+  before a note is played — telling someone their result can't be judged is worth much less
+  afterwards. And `scoredErr()` refuses uncalibrated runs exactly as it refuses self-heard ones, so
+  B4's "45 ms → 28 ms" can never turn out to be charting a device change as progress.
+- **The cold start asks one question and every answer routes.** It used to *list* two abstract nouns
+  and hand you a Got it that landed you on chord tones in A minor regardless of which you'd read —
+  it described the app instead of asking anything, so nothing a visitor knew about themselves could
+  change where they went. It now asks "What do you want to do right now?" with three real
+  destinations: look something up → Harmony · practise → the Practice home · **tune the guitar** →
+  whichever tuner is available (the third is a genuine reason to open a guitar app and had no route
+  at all). The answers reuse the Practice home's `.drill-card` pattern, so the first card a visitor
+  taps looks like the cards they meet next.
+- **A bug the cold start had been shipping since A2, and the gate that now catches it.** The welcome
+  card's first bullet still pointed at `mode_reference`, a key A2 deleted. `applyLang` *skips*
+  undefined keys rather than blanking the element, so the template's hardcoded Ukrainian survived —
+  every **English** visitor's first-ever screen showed "Довідник". The linter checked keys present in
+  one language but not the other, and keys referenced by nobody; it had no check for the mirror case,
+  a key referenced but declared in **neither**. It does now, and that was the only instance.
+
+- **A phone overflow the new headings exposed.** `.tbc-label` is `white-space: nowrap` +
+  `flex-shrink: 0` — a deliberate choice, since a wrapped 10px caption reads as noise — which also
+  means it *cannot give way*. A longer heading therefore pushes the first control group past the
+  viewport edge and the whole page scrolls sideways: the label length had been quietly load-bearing,
+  and A4's headings were the first to test it. The heading now takes its own row below 700px, which
+  makes any label in any language safe (and matches how the context bar un-boxes on phones — caption
+  above its controls, not competing with them for one line). The Ukrainian "Preferences" was also
+  shortened to **Уподобання**: the first draft began with the same word as the Settings button that
+  opens it.
+
+  _26 assertions in the smoke suite (including a build-wide check that every `data-i18n` key in the
+  markup exists); lint / kbd-check / scroll-check clean. Three `shoot.js` fixes, each found by using
+  it: a **`settings` token** (how you check Tools from Practice); **frozen animation** in the shot,
+  because panels revealed by a post-load click carry `animation: fade 0.25s`, which does not advance
+  under `--virtual-time-budget` — Practice photographed blank, which looked exactly like a real
+  regression and wasn't (a probe of the live DOM showed the state correct the whole time); and the
+  overflow probe now **names the widest offending element** instead of only reporting that the page
+  is too wide, which is what turned "SW=415" into "`div.tb-group`" without bisecting CSS by hand._
 
 ### Track B — practice
 
@@ -1046,6 +1097,10 @@ drill is an infinite loop exited by hand, with no notion of *today*.
   is one.
 - **The seam, honoured** — "drill this" from **all seven** reference views, not only Notes. Cheap, and
   a claim the app currently makes and does not keep.
+- **"Jam over this"** — the other seam, inherited from A4's answer to the Jam question (see above).
+  Playing along to the harmony on screen currently takes five steps; it should take one, from the
+  suggester that already says "What to play over this" and already knows what to play. Same shape as
+  "drill this", same vocabulary, so it costs almost nothing once that vocabulary exists.
 
 **B4 — Progress, and copy that tells the truth.** Replace the five-number stats dump with the narrative
 B1 makes possible: per-drill history, direction of travel, personal bests, and — for the three scored
@@ -1060,21 +1115,32 @@ the stale strings above.
 
 ---
 
-**Open question, carried past A2: is Jam a destination?** The backing band is a genuinely strong
-feature with no destination — it lives as a `Backing ▾` disclosure inside Reference's toolbar, so "play
-along to something" isn't offered, it's assembled. This was to be decided *during* A2, while the
-navigation vocabulary was being set; **A2 shipped four destinations without resolving it**, so record
-what that costs. The phone bottom bar is now a 4-item strip at its practical width (the labels were
-shortened to single words to fit), so a fifth destination is no longer free — it means either dropping
-to icons or demoting something. That is an argument for answering it deliberately rather than
-discovering it, but not for answering it inside a layout step. It belongs with **A4**, which is already
-re-sorting what the toolbar's disclosures are *for*, and where "play along to something" is the same
-kind of question as "tune this" and "calibrate that".
+**Answered in A4: no, Jam is not a destination — it is a verb on the one you're already in.**
+The backing band is a genuinely strong feature with no front door: it lives as a `Backing ▾`
+disclosure inside the transport bar, so "play along to something" isn't offered, it's *assembled* —
+pick a key, pick a chord or progression, open Backing, enable bass and drums, hit Loop. Five steps to
+reach one of the best things the app does. That complaint is real and stands.
+
+A fifth nav item is the wrong answer to it, for two reasons the earlier steps established rather than
+assumed. **A2** made the nav a list of *subjects* — Harmony, Scales, Circle, Practice are things you
+can be looking at. Jam is not a subject; it is something you do **over** whichever subject is on
+screen, and a destination whose content is "whatever you last had elsewhere" is a mode wearing a
+destination's clothes, which is exactly what A2 deleted. **A4's own taxonomy** says the same from the
+other side: Settings now sorts by what you do with a control — change mid-session, do-and-leave, or
+set-once — and the backing band is none of the three. It is *transport*, which is why it sits beside
+Listen and Loop and not in Settings at all. (The practical cost is real too — the phone bottom bar is
+a 4-item strip at its working width, with labels already shortened to single words, so a fifth means
+icons or a demotion — but that is the weakest of the three arguments and would not decide it alone.)
+
+So the fix is not navigation, it is **one action instead of five**: a "jam over this" affordance on
+the harmony already on screen, next to the suggester that is *already* captioned "What to play over
+this" and already knows the answer. That is a seam, so it belongs with **B3**, which is building the
+seam vocabulary — not with the shell.
 
 **Sequencing and the F2 gate.** **A1, B1 and B2 gate F2** — F2 stacks the Lead pillar's scored tier
 onto these drill screens, into this model, through this transport, so all three get unified before
-they are inherited. A2/A3 are the risky pair and want their own release — **both are now done and
-unreleased, so Track A's layout work is one release waiting on A4**; B3 and B4 can trickle.
+they are inherited. A2/A3 were the risky pair and wanted their own release — **Track A is now complete
+and unreleased, so it is one release ready to cut**; B3 and B4 can trickle.
 Per the convention Phases 5 and 7 used, each track ships as one release rather than eight.
 
 **Why this is less risk than the smaller plans it replaces.** A1 and B1 are mostly deletion and pure

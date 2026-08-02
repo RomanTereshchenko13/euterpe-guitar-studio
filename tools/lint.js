@@ -131,6 +131,23 @@ function deadResourceReport() {
   [...keys].filter(k => !usedKey(k)).sort()
     .forEach(k => problems.push(`i18n key '${k}' is never referenced (dead string in both languages)`));
 
+  // ---- referenced-but-undefined i18n keys (the mirror of the two checks above)
+  // Those catch a key present in only ONE language, and a key present in both but
+  // asked for by nobody. Neither catches the opposite failure: markup or JS asking
+  // for a key that exists in NEITHER. That one is silent by construction —
+  // applyLang skips an undefined key instead of blanking the element, so the
+  // hardcoded Ukrainian fallback in the template quietly becomes the English string
+  // too. Exactly how Phase 10/A2's deleted `mode_reference` left a Ukrainian word on
+  // the first-run welcome card for every English visitor, past both other checks and
+  // past the smoke suite. Only literal `t('key')` calls are collected — `t('qg_'+g)`
+  // has no single key to check and is covered by the dynamic-prefix logic above.
+  const asked = new Set([
+    ...[...tpl.matchAll(/data-i18n=["']([A-Za-z_][\w-]*)["']/g)].map(m => m[1]),
+    ...[...otherJs.matchAll(/\bt\(\s*'([A-Za-z_]\w*)'\s*\)/g)].map(m => m[1]),
+  ]);
+  [...asked].filter(k => !keys.has(k)).sort()
+    .forEach(k => problems.push(`i18n key '${k}' is referenced but declared in neither language`));
+
   // ---- unreferenced CSS classes
   // selector text only: blank out declaration blocks so property values can't
   // masquerade as selectors.

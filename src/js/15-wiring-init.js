@@ -494,10 +494,30 @@ function closeKbd(){ const o=document.getElementById('kbd-overlay'); if(!o) retu
    look; dismissing it (button / ✕ / backdrop / Escape) records welcomeSeen so it
    never returns. dismissWelcome no-ops when the card isn't open, so it's safe to
    call from the shared Escape handler. */
-function showWelcome(){ const o=document.getElementById('welcome-overlay'); if(!o) return; o.hidden=false; o.classList.add('open'); const g=document.getElementById('wc-got'); if(g) try{ g.focus(); }catch(_){} }
+function showWelcome(){ const o=document.getElementById('welcome-overlay'); if(!o) return; o.hidden=false; o.classList.add('open');
+  const f=document.getElementById('wc-go-look'); if(f) try{ f.focus(); }catch(_){} }
 function dismissWelcome(){ const o=document.getElementById('welcome-overlay'); if(!o||o.hidden) return; o.classList.remove('open'); o.hidden=true; welcomeSeen=true; saveState(); }
+/* "Tune the guitar" (Phase 10/A4). Two tuners exist and they are different tools —
+   the mic one listens, the reference one plays a pitch at you — so route to whichever
+   is actually available. 14-mic-tuner.js REMOVES #tb-mic when there's no secure
+   context, which makes the button's presence the honest support test; without it,
+   open Settings on the reference-tone tuner, the tool that still works there. */
+function welcomeTune(){
+  if(document.getElementById('tb-mic') && typeof micOpen==='function'){ micOpen(); return; }
+  const tb=document.getElementById('toolbar'), tg=document.getElementById('tb-toggle');
+  if(tb && tb.classList.contains('collapsed') && tg) tg.click();
+  const row=document.querySelector('.tb-tuner'); if(row) try{ row.scrollIntoView({block:'nearest'}); }catch(_){}
+}
 { const g=document.getElementById('wc-got');   if(g) g.onclick=dismissWelcome;
   const c=document.getElementById('wc-close'); if(c) c.onclick=dismissWelcome;
+  /* Every answer routes. The card used to end in one Got it that landed you on chord
+     tones in A minor no matter which of the two nouns you had just read — so what the
+     visitor knew about themselves changed nothing. Dismiss first, then route, so the
+     destination isn't rendered behind a modal. */
+  const route=(id,go)=>{ const b=document.getElementById(id); if(b) b.onclick=()=>{ dismissWelcome(); go(); }; };
+  route('wc-go-look',     ()=>navTo('harmony'));
+  route('wc-go-practice', ()=>navTo('practice'));
+  route('wc-go-tune',     welcomeTune);
   const o=document.getElementById('welcome-overlay'); if(o) o.addEventListener('click',e=>{ if(e.target.id==='welcome-overlay') dismissWelcome(); }); }
 
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeChangelog(); closeKbd(); dismissWelcome(); } });
@@ -697,6 +717,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     // latency calibration (14-calibration.js) — restored for F1, which is its first
     // real consumer; the v2.5.0 version was cut for having none.
     calOffsetSec, calSetMs, calCancel, calMedian, getCalMs:()=>calMs, CAL_MAX_MS, CAL_MIN_HITS,
+    calMeasured, setCalKnown:(v)=>{ calKnown=!!v; },
     // the shared scored-run layer (13-scored.js) and its three consumers. The
     // controllers are exposed whole: _set() injects a run so the harness can drive
     // scoring end-to-end with no microphone attached.

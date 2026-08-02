@@ -29,6 +29,7 @@ const CAL_MIN_HITS = 3;      // fewer than this and we refuse to store a number
 const CAL_MAX_MS = 400;      // sanity ceiling: beyond this it isn't latency, it's a bug
 
 let calMs = 0;               // the stored round-trip offset, ms. Persisted.
+let calKnown = false;        // has it ever been ESTABLISHED (measured or set by hand)? Persisted.
 let calRun = null;           // in-flight run
 
 /* The one accessor the scorers use. Seconds, because everything on the audio
@@ -96,7 +97,7 @@ async function calRunTest(onProgress){
   if(deltas.length<CAL_MIN_HITS) return { ok:false, key:'cal_unheard' };
   const ms = calMedian(deltas);
   if(!(ms>=0 && ms<=CAL_MAX_MS)) return { ok:false, key:'cal_unheard' };
-  calSetMs(ms);
+  calSetMs(ms, true);
   return { ok:true, ms, hits:deltas.length };
 }
 
@@ -106,12 +107,23 @@ function calMedian(a){ const s=a.slice().sort((x,y)=>x-y); const n=s.length;
   return n%2 ? s[(n-1)/2] : (s[n/2-1]+s[n/2])/2; }
 
 /* Bounds-checked everywhere it can be set (test result, slider, restored state) —
-   same discipline as the rest of the persisted catalogue. */
-function calSetMs(ms){
+   same discipline as the rest of the persisted catalogue.
+   `known` (Phase 10/A4) records whether this number was ever ESTABLISHED, as opposed
+   to being the 0 it starts at. Nothing could tell those two apart before, and they are
+   not the same claim: 0 means "the round trip is instant", which is true of no device
+   ever made. A player who has not measured was being scored against an offset of zero
+   and told, as fact, that they drag — by exactly the buffer size. The flag is what lets
+   the scorer say "I can't judge this yet" instead of judging it wrongly.
+   A hand-set slider counts as known: the player asserted a value, and refusing to
+   believe them would be the same arrogance in the other direction. */
+function calSetMs(ms, known){
   calMs = Math.max(0, Math.min(CAL_MAX_MS, Math.round(Number(ms)||0)));
+  if(known !== undefined) calKnown = !!known;
   if(typeof saveState==='function') saveState();
   calRender();
 }
+/* Has the round trip actually been established? Consumed by 13-scored.js. */
+function calMeasured(){ return calKnown; }
 
 function calRender(){
   const v=document.getElementById('cal-val'); if(v) v.textContent=calMs+' '+t('on_ms');
@@ -147,7 +159,7 @@ function calRefreshLang(){
   if(!micSupported()){ if(row.parentNode) row.parentNode.removeChild(row); return; }
   const run=document.getElementById('cal-run');
   const slider=document.getElementById('cal-slider');
-  if(slider) slider.oninput=()=>calSetMs(slider.value);
+  if(slider) slider.oninput=()=>calSetMs(slider.value, true);
   if(run) run.onclick=async ()=>{
     run.disabled=true;
     calStatus('cal_running');

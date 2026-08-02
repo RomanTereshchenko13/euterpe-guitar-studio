@@ -596,7 +596,17 @@
   .tb-cluster { display: flex; align-items: baseline; gap: 10px; flex: 1 1 auto; min-width: 0; }
   .tbc-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); white-space: nowrap; flex-shrink: 0; }
   .tbc-items { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
-  @media (max-width: 700px) { .tb-cluster { flex: 1 1 100%; } }
+  /* On a phone the cluster label takes its own line. .tbc-label is `nowrap` +
+     `flex-shrink: 0` by design (a wrapped 10px caption reads as noise), which means a
+     long one cannot give way — it just pushes the first control group past the
+     viewport edge, and the page scrolls sideways. A4's longer headings found that:
+     the label length was load-bearing, silently. Giving it its own row makes any
+     label in any language safe, and matches how .context-bar un-boxes on phones —
+     caption above its controls, not competing with them for one line. */
+  @media (max-width: 700px) {
+    .tb-cluster { flex: 1 1 100%; flex-wrap: wrap; }
+    .tb-cluster > .tbc-label { flex-basis: 100%; }
+  }
   .toolbar .tb-group, .tb-bar .tb-group { display: flex; align-items: center; gap: 7px; }
   /* the display:flex above outranks the UA [hidden]{display:none}, so a hidden group
      (e.g. the custom-tuning editor on a non-custom tuning) would still show — re-assert it */
@@ -969,11 +979,12 @@
   .wc-modal { max-width: 440px; }
   .wc-body { padding: 14px 20px 20px; }
   .wc-lead { font-size: 14px; color: var(--text-dim); margin-bottom: 13px; }
-  .wc-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
-  .wc-list li { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
-  .wc-list b { color: var(--text); font-weight: 600; }
+  /* The three answers (Phase 10/A4) reuse the Practice home's .drill-card pattern
+     rather than defining a parallel one — so the very first card a visitor taps looks
+     like the cards they meet the moment they arrive anywhere. */
+  .wc-choices { display: grid; gap: 10px; margin-bottom: 16px; }
   .wc-actions { display: flex; justify-content: flex-end; }
-  .wc-actions .btn.play { font-size: 14px; padding: 9px 24px; }
+  .wc-actions .btn { font-size: 13px; }
 
   /* ---- chromatic mic tuner (Phase 8 / F0) — reuses the .cl-overlay / .cl-modal look ----
      Everything here is sized to be read at arm's length with a guitar in your hands,

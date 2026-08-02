@@ -205,7 +205,7 @@ function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
   ntRoot, ntFilter,
   seq, seqLoopOn,
   bassOn, grooveOn,
-  calMs,    // Phase 8/F1: measured round-trip latency (14-calibration.js)
+  calMs, calKnown,   // Phase 8/F1 latency + whether it was ever established (A4)
   learner   // spine #3: learner model (13-learner.js); saved verbatim, restored via normalizeLearner
 })); }catch(e){ devWarn('state could not be saved (localStorage unavailable?)', e); } }
 function loadState(){ try{
@@ -226,6 +226,9 @@ function loadState(){ try{
   // F1 round-trip latency. Bounded by the same ceiling the measurement itself
   // rejects above, so a hand-edited or corrupted save can't skew every timing score.
   if(typeof s.calMs==='number'&&s.calMs>=0&&s.calMs<=CAL_MAX_MS) calMs=s.calMs;
+  // A save predating the flag but carrying a non-zero latency was measured by the
+  // old build — grandfather it in rather than re-prompt someone already calibrated.
+  calKnown = (typeof s.calKnown==='boolean') ? s.calKnown : (calMs>0);
   if(typeof s.lefty==='boolean') lefty=s.lefty;
   if(typeof s.toolbarOpen==='boolean') toolbarOpen=s.toolbarOpen;
   if(typeof s.backingOpen==='boolean') backingOpen=s.backingOpen;

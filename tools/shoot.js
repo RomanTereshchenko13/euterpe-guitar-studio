@@ -33,6 +33,10 @@
    Phase 7 Timing: `timing` for the subdivision & timing coach, or `timing-run` to also press Play
    and land on the ticking grid with the scale walking the neck.
 
+   Phase 10/A4 Settings: pass `settings` to expand the Settings disclosure (Instrument / Tools /
+   Preferences). Combines with a mode token — `settings practice` is how you check that Tools is
+   reachable from Practice, which is the whole point of splitting it out. Adds a `-settings` suffix.
+
    Run:  node tools/shoot.js                       # default widths 390 768 1280, harmony
          node tools/shoot.js 360 414 820           # custom widths
          node tools/shoot.js 390x3200              # explicit width x height
@@ -64,11 +68,13 @@ const tabArgs = [];
 const sizeArgs = [];
 const a11yArgs = [];                              // accessibility toggles (additive): cbpalette / shapes / a11y (both)
 let mode = null;                                  // null = reference (default), 'practice' = Practice surface
+let openSettings = false;                         // 'settings' token: expand the Settings panel (A4)
 let meterArg = null;                              // optional time signature (e.g. '3/4') set before the drill starts
 for (const a of process.argv.slice(2)) {
   if (a === 'tabs') tabArgs.push(...PANELS);
   else if (PANELS.includes(a)) tabArgs.push(a);
   else if (a === 'cbpalette' || a === 'shapes' || a === 'a11y') a11yArgs.push(a);
+  else if (a === 'settings') openSettings = true;          // A4: expand the Settings disclosure
   else if (/^\d+\/\d+$/.test(a)) meterArg = a;              // time signature, e.g. 3/4 (Phase 7b)
   else if (a === 'practice' || a === 'reference' || a === 'drill' || a === 'changes' || a === 'changes-run'
            || a === 'strum' || a === 'strum-run' || a === 'comp' || a === 'comp-run'
@@ -112,6 +118,10 @@ function appFor(panel) {
   if (mode === 'timing-run') clicks.push(`var g=document.getElementById('sd-play');if(g)g.click();`);
   const earStart = { 'ear-interval': 'start-interval', 'ear-chordq': 'start-chordq', 'ear-rhythm': 'start-rhythm' }[mode];
   if (earStart) clicks.push(`var s=document.getElementById('${earStart}');if(s)s.click();`);
+  // Settings disclosure (A4): expand it LAST, so the shot shows the three clusters
+  // (Instrument / Tools / Preferences) in whichever mode was selected above — which is
+  // how you check that Tools is reachable from Practice, not only from Reference.
+  if (openSettings) clicks.push(`var st=document.getElementById('tb-toggle');if(st)st.click();`);
   // accessibility toggles (additive): flip the colour-blind palette and/or dot shapes
   if (a11yArgs.includes('cbpalette') || a11yArgs.includes('a11y')) clicks.push(`var b=document.getElementById('tb-cbpalette');if(b)b.click();`);
   if (a11yArgs.includes('shapes') || a11yArgs.includes('a11y')) clicks.push(`var b=document.getElementById('tb-shapes');if(b)b.click();`);
@@ -120,23 +130,49 @@ function appFor(panel) {
   if (meterArg) clicks.unshift(`var ms=document.getElementById('tb-meter');if(ms){for(var i=0;i<ms.options.length;i++){if(ms.options[i].textContent==='${meterArg}'||ms.options[i].value==='${meterArg}'){ms.selectedIndex=i;break;}}ms.dispatchEvent(new Event('change'));}`);
   // any non-default capture: dismiss the first-run welcome first so it doesn't block
   // the surface (the no-arg shot keeps it, to capture the onboarding card itself).
-  if (panel || mode || a11yArgs.length) clicks.unshift(`var wc=document.getElementById('wc-got');if(wc)wc.click();`);
+  if (panel || mode || a11yArgs.length || openSettings) clicks.unshift(`var wc=document.getElementById('wc-got');if(wc)wc.click();`);
   const switcher = clicks.length
     ? `<script>addEventListener('load',function(){try{${clicks.join('')}}catch(e){}});</script>`
     : '';
-  return baseHtml.replace('</body>', `${switcher}
+  /* Freeze animation (Phase 10/A4). Everything above is a CLICK after load, and any
+     panel revealed by one carries `animation: fade 0.25s` — which does not advance
+     under --virtual-time-budget, so the shot catches the keyframe's `from` state and
+     the surface photographs blank or half-faded. That produced a "blank Practice page"
+     that looked exactly like a real regression and wasn't (the DOM state was correct
+     the whole time). Killing animations and transitions makes every shot deterministic
+     and shows each element in its settled state, which is what a layout review wants;
+     motion is not what these PNGs are for. */
+  const freeze = '<style>*,*::before,*::after{animation:none!important;transition:none!important}</style>';
+  return baseHtml.replace('</body>', `${freeze}${switcher}
 <div id="__probe" style="position:fixed;left:6px;bottom:6px;z-index:99999;font:bold 12px monospace;padding:4px 7px;border-radius:5px"></div>
 <script>addEventListener('load',function(){setTimeout(function(){
   var sw=document.documentElement.scrollWidth,iw=innerWidth,p=document.getElementById('__probe'),over=sw>iw+1;
-  p.textContent=(over?'HORIZONTAL OVERFLOW ':'fits ')+'IW='+iw+' SW='+sw;
-  p.style.background=over?'#c0392b':'#1f7a3f';p.style.color='#fff';
+  var who='';
+  if(over){
+    // Name the culprit, not just the symptom. "HORIZONTAL OVERFLOW SW=415" tells you
+    // the page is 25px too wide and nothing about which element did it, which used to
+    // mean bisecting CSS by hand. Skip anything inside a deliberate scroller (.scroll
+    // is the board's own; a wide neck overflowing THAT is the design) and report the
+    // widest remaining offender.
+    var worst=null,all=document.querySelectorAll('body *');
+    for(var i=0;i<all.length;i++){
+      var el=all[i]; if(el.id==='__probe'||el.closest('.scroll')) continue;
+      var r=el.getBoundingClientRect();
+      if(r.width>0&&r.right>iw+1&&(!worst||r.right>worst.r)) worst={r:r.right,el:el};
+    }
+    if(worst) who=' <- '+worst.el.tagName.toLowerCase()+(worst.el.id?'#'+worst.el.id:'')+
+      (worst.el.className&&typeof worst.el.className==='string'?'.'+worst.el.className.trim().split(/\s+/).join('.'):'')+
+      ' right='+Math.round(worst.r);
+  }
+  p.textContent=(over?'HORIZONTAL OVERFLOW ':'fits ')+'IW='+iw+' SW='+sw+who;
+  p.style.background=over?'#c0392b':'#1f7a3f';p.style.color='#fff';p.style.maxWidth='96vw';
 },600);});</script>
 </body>`);
 }
 
 for (const { w, h } of specs) {
   for (const panel of tabs) {
-    const tag = (panel ? `${w}-${panel}` : `${w}`) + (mode ? '-' + mode : '') + (a11yArgs.length ? '-' + a11yArgs.join('-') : '');
+    const tag = (panel ? `${w}-${panel}` : `${w}`) + (mode ? '-' + mode : '') + (openSettings ? '-settings' : '') + (a11yArgs.length ? '-' + a11yArgs.join('-') : '');
     const appCopy = path.join(outDir, `_app_${tag}.html`);
     const wrapper = path.join(outDir, `_wrap_${tag}.html`);
     fs.writeFileSync(appCopy, appFor(panel));

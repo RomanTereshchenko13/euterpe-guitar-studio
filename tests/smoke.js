@@ -206,7 +206,7 @@ if (T) {
    'practice_grp_lead','drill_target','drill_target_meta','tg_prog','tg_pos','tg_deg','tg_hits','tg_acc','tg_hint',
    'drill_callresp','drill_callresp_meta','cr_listen','cr_your_turn','cr_replay','cr_echoed','cr_rounds','cr_hint',
    'a11y_palette','a11y_shapes',
-   'wc_title','wc_lead','wc_ref','wc_practice','wc_got',
+   'wc_title','wc_lead','wc_look','wc_look_d','wc_drill','wc_drill_d','wc_tune','wc_tune_d','wc_got',
    'tun_custom','cl_older',
    'prog_active','prog_due','prog_review','share_btn','share_copied',
    'mic_open','mic_title','mic_start','mic_stop','mic_cents','mic_string','mic_play_hint',
@@ -385,8 +385,13 @@ if (T) {
     /* The seam: one track per practice card, ten over seven registry entries (ear is
        three, over-the-changes is two). Counted from the markup rather than pinned to
        a number, so adding a card without declaring its track fails the build — the
-       same discipline that makes an unregistered `*-area` fail. */
-    const cardCount = (html.match(/class="drill-card"/g) || []).length;
+       same discipline that makes an unregistered `*-area` fail.
+       Counted from the practice home's SUBTREE, not from a raw `class="drill-card"`
+       text match over the whole file: A4's welcome card reuses .drill-card for its
+       three routes (deliberately — the first card a visitor taps should look like the
+       cards they meet next), and a text count read those as untracked drills. Scoping
+       the query is what keeps the invariant about practice cards specifically. */
+    const cardCount = win.document.querySelectorAll('#practice-home .drill-card').length;
     ok('B1: every practice card has a track', tracks.length === cardCount,
        tracks.length + ' tracks vs ' + cardCount + ' cards');
     ok('B1: every track has an id, a kind and a starter',
@@ -490,7 +495,10 @@ if (T) {
     const tn = T.learnerTrend('timing:8ths', NOW + 1000);
     ok('B1: the timing error rides along with the session', tn.lastErr === 28);
     ok('B1: ...and its best is the LOWEST, whatever the track\'s own direction is', tn.bestErr === 28);
-    // scoredErr refuses anything that isn't an honest measurement
+    // scoredErr refuses anything that isn't an honest measurement.
+    // A4: an absolute timing error is only meaningful once the round trip is known,
+    // so establish it before asserting the happy path (and check the refusal below).
+    T.setCalKnown(true);
     ok('B1: no score, no error recorded', T.scoredErr(null) === undefined);
     ok('B1: an empty run records no error', T.scoredErr({ n: 0, meanAbsMs: 0 }) === undefined);
     ok('B1: a real run records one', T.scoredErr({ n: 20, meanAbsMs: 31, spreadMs: 22, hitRate: 0.9 }).err === 31);
@@ -499,6 +507,13 @@ if (T) {
        number B4 is meant to render. */
     ok('B1: a self-heard run records no error — it would poison the trend',
        T.scoredErr({ n: 32, meanAbsMs: 1, spreadMs: 1, hitRate: 1 }) === undefined);
+    /* A4: the second road to the same lie. With no measured round trip the offset is
+       0 — not "instant", but "unknown" — so the error is the buffer size wearing the
+       player's name, and charting it would show a device change as progress. */
+    T.setCalKnown(false);
+    ok('A4: an uncalibrated run records no error either — it would chart the buffer size',
+       T.scoredErr({ n: 20, meanAbsMs: 31, spreadMs: 22, hitRate: 0.9 }) === undefined);
+    T.setCalKnown(true);
 
     /* --- v1 → v2: existing progress must survive, asserted before anything relies on it --- */
     const v1 = {
@@ -1622,6 +1637,100 @@ if (T) {
        /\.cof-wrap \{[^}]*flex: 1 1 340px;[^}]*max-width: 520px/.test(html));
     ok('A3: the reading pane is capped too, so no dead strip trails it',
        /\.cof-side \{[^}]*max-width: 620px/.test(html));
+  })();
+
+  /* ---- Phase 10 / A4: tools, preferences, and the cold start ---- */
+  (function toolsAndColdStart() {
+    const doc = win.document;
+
+    /* --- every referenced string exists (the bug class that broke the cold start) ---
+       applyLang SKIPS an undefined key rather than blanking the element, so a deleted
+       key leaves the template's hardcoded Ukrainian on screen for English readers and
+       nothing complains. A2 deleted `mode_reference`; the welcome card kept pointing at
+       it and shipped that way. `npm run lint` now fails on it — this is the same guard
+       from the other side, against the BUILT file. */
+    const declared = new Set(Object.keys(T.I18N.uk));
+    const asked = [...html.matchAll(/data-i18n=["']([A-Za-z_][\w-]*)["']/g)].map(m => m[1]);
+    const missing = [...new Set(asked)].filter(k => !declared.has(k));
+    ok('A4: every data-i18n key in the markup is actually defined', missing.length === 0, missing.join(','));
+
+    /* --- the cold start asks something, and every answer is a route --- */
+    const wc = doc.getElementById('welcome-overlay');
+    ok('A4: the welcome card asks a question rather than listing nouns',
+       !!doc.querySelector('#welcome-overlay .wc-lead[data-i18n="wc_lead"]')
+       && /\?$/.test(T.I18N.en.wc_lead) && /\?$/.test(T.I18N.uk.wc_lead));
+    const routes = ['wc-go-look', 'wc-go-practice', 'wc-go-tune'];
+    ok('A4: it offers three answers', routes.every(id => !!doc.getElementById(id)));
+    ok('A4: ...and every one of them is wired to go somewhere',
+       routes.every(id => typeof doc.getElementById(id).onclick === 'function'));
+    ok('A4: the answers reuse the card the visitor meets next, not a parallel pattern',
+       routes.every(id => doc.getElementById(id).classList.contains('drill-card')));
+    // the route that is easiest to get wrong: it has to leave the modal AND move the nav
+    T.setMode('reference'); T.setWelcomeSeen(false);
+    wc.hidden = false;
+    doc.getElementById('wc-go-practice').click();
+    ok('A4: answering "practise" dismisses the card and lands on Practice',
+       wc.hidden === true && T.state().currentMode === 'practice');
+    T.setMode('reference'); T.setWelcomeSeen(true);
+
+    /* --- Settings sorts by what you DO with a control --- */
+    const clusters = [...doc.querySelectorAll('#toolbar .tb-cluster')];
+    ok('A4: Settings is three clusters', clusters.length === 3);
+    ok('A4: ...named Instrument / Tools / Preferences',
+       clusters.map(c => c.querySelector('.tbc-label').dataset.i18n).join(',')
+         === 'tbc_instrument,tbc_tools,tbc_prefs');
+    const inCluster = (id, sel) => !!doc.querySelector('#' + id + ' ' + sel);
+    /* Tools is the point of the split: you come to DO something and leave, and two of
+       these are prerequisites for a scored drill rather than configuration.
+       The reference tuner is checked LIVE (it works everywhere), the calibration row
+       only in the markup — 14-calibration.js removes #cal-row where there is no mic
+       path, which jsdom is, and that removal is deliberate: a control that can only
+       ever fail should not be on screen. Asserting it live would be asserting that the
+       degradation is broken. */
+    ok('A4: Tools holds the tuner', inCluster('tb-tools', '.tb-tuner'));
+    const atTools = html.indexOf('id="tb-tools"'), atCal = html.indexOf('id="cal-row"'),
+          atPrefs = html.indexOf('tbc_prefs');
+    ok('A4: ...and the latency measurement, between Tools and Preferences in the markup',
+       atTools > 0 && atCal > atTools && atPrefs > atCal);
+    ok('A4: the guitar is described in one place, not split across two headings',
+       ['tb-tuning', 'tb-capo', 'tb-frets', 'tb-meter']
+         .every(id => doc.getElementById(id).closest('.tb-cluster') === clusters[0]));
+    ok('A4: the set-once controls sit together',
+       ['tb-vol', 'tb-lefty', 'tb-cbpalette', 'tb-shapes', 'tb-share']
+         .every(id => doc.getElementById(id).closest('.tb-cluster') === clusters[2]));
+    /* A cluster heading is `nowrap` + `flex-shrink: 0` — it cannot give way — so on a
+       phone a long one pushes the first control group past the viewport edge and the
+       page scrolls sideways. A4's longer headings found that the label length had been
+       load-bearing all along. Its own row makes any label in any language safe. */
+    ok('A4: a cluster heading takes its own row on a phone, so its length cannot overflow',
+       /@media \(max-width: 700px\) \{\s*\.tb-cluster \{[^}]*flex-wrap: wrap;[^}]*\}\s*\.tb-cluster > \.tbc-label \{ flex-basis: 100%; \}/.test(html));
+    /* Reachable from Practice — a player being told their timing is off has to be able
+       to find the calibration that makes that claim mean anything, without leaving. */
+    ok('A4: nothing hides Settings or Tools in Practice',
+       !/body\.mode-practice[^{]*#toolbar\b/.test(html)
+       && !/body\.mode-practice[^{]*#tb-toggle\b/.test(html)
+       && !/body\.mode-practice[^{]*#tb-tools\b/.test(html));
+
+    /* --- the mic funnel: an unmeasured latency is not a latency of zero --- */
+    T.setCalKnown(false);
+    ok('A4: latency starts UNKNOWN, which is not the same as zero',
+       T.calMeasured() === false && T.calOffsetSec() === 0);
+    T.calSetMs(80, true);
+    ok('A4: setting it by hand counts — the player asserted a value',
+       T.calMeasured() === true && Math.abs(T.calOffsetSec() - 0.08) < 1e-9);
+    ok('A4: the drill can say what is missing before a note is played',
+       !!T.I18N.uk.on_needcal && !!T.I18N.en.on_needcal);
+    /* A save written before the flag existed but carrying a real measurement belongs to
+       someone already calibrated; re-prompting them would be a regression for the only
+       users who did the work. Pinned at the source rather than exercised: reaching it
+       means running loadState mid-suite, which would reset key, tuning and mode under
+       every assertion that follows — a test that breaks its neighbours is worse than a
+       structural one. The rule is a single expression, so a regex holds it exactly. */
+    ok('A4: an older save with a real latency is grandfathered in, not re-prompted',
+       /calKnown\s*=\s*\(typeof s\.calKnown==='boolean'\)\s*\?\s*s\.calKnown\s*:\s*\(calMs>0\)/.test(html));
+    ok('A4: ...and the flag is persisted alongside the number it qualifies',
+       /calMs,\s*calKnown,/.test(html));
+    T.setCalKnown(true);
   })();
 
   /* ---- Phase 7b: time signatures / meter ---- */

@@ -262,6 +262,16 @@ Edit the sources, then run the build.
     dragging by the buffer size. Headphones are the honest failure case (no acoustic path,
     so nothing to measure) — it says so and leaves the manual slider. Rides
     `saveState`/`loadState`, bounds-checked against `CAL_MAX_MS`.
+    **`calKnown` / `calMeasured()`** (Phase 10/A4) is the distinction the module was missing:
+    whether the round trip was ever *established*, as against the `0` it starts at. Those are
+    different claims — `0` means "the round trip is instant", true of no device ever made —
+    and without the flag a player who never calibrated was scored against zero and told, as
+    fact, that they drag by exactly the buffer size. `13-scored.js` consumes it twice: the
+    panel withholds the ms figure and the rushing/dragging verdict while it's unset (spread
+    is a *difference* measure, so evenness stays honest and is still shown), and `scoredErr()`
+    refuses the run entirely, exactly as it refuses a self-heard one — an uncalibrated error
+    in the trend would chart a device change as progress. A hand-set slider counts as known
+    (the player asserted a value); a pre-A4 save with a non-zero reading is grandfathered in.
   - `15-wiring-init.js` — wiring + init. Holds the **one navigation surface** (Phase 10/A2):
     `#mainnav` with four destinations (Harmony · Scales · Circle · Practice), replacing the
     mode pill strip stacked above the reference tab strip. `navTo(panel)` is the only entry
@@ -330,7 +340,18 @@ devDependencies in the **root** `package.json` (same status as jsdom in
   layout. Default widths `390 768 1280`; pass custom (`360 414 820`) or
   `WxH` (`390x3200`). Renders inside a fixed-width `<iframe>` so the iframe width
   is the true layout viewport, and flags **HORIZONTAL OVERFLOW** if the page
-  exceeds it. Throwaway PNGs → `tools/shots/wNNN.png`.
+  exceeds it — **naming the widest offending element**, since knowing the page is
+  25px too wide tells you nothing about which rule did it (elements inside a
+  deliberate `.scroll` are skipped: a wide neck overflowing *that* is the design).
+  Throwaway PNGs → `tools/shots/wNNN.png`. Tokens select what to
+  capture (`tabs`, `practice`, a drill name, `a11y`, a time signature, and — since
+  A4 — `settings`, which expands the Settings disclosure; `settings practice` is
+  how you check Tools is reachable from Practice). It **freezes animation** in the
+  shot (`animation:none;transition:none`): every token is a *click after load*, and
+  a panel revealed by one carries `animation: fade 0.25s`, which does not advance
+  under `--virtual-time-budget` — so the surface photographs blank or half-faded and
+  looks exactly like a layout regression that isn't there. Layout review wants the
+  settled state, not motion.
 - `node tools/scroll-check.js [WxH ...]` — headless **scroll/sticky-header
   regression check** (CI-style, exits 1 on issue). Injects a diagnostic that
   scrolls the page in real time and reports condensing-header bugs: flip-flop,
@@ -379,7 +400,12 @@ devDependencies in the **root** `package.json` (same status as jsdom in
   so the lexical check is all false positives here.
   It also runs **dead-resource + source-hygiene checks** ESLint structurally can't:
   an i18n key present in one language but not the other; an i18n key no longer
-  referenced anywhere; a CSS class styled but never applied; and a silent
+  referenced anywhere; an i18n key **referenced but declared in neither** language
+  (Phase 10/A4 — the mirror of the other two, and the one that had no check:
+  `applyLang` *skips* an undefined key instead of blanking the element, so a deleted
+  key leaves the template's hardcoded Ukrainian on screen for English readers and
+  nothing complains. That is how A2's deleted `mode_reference` shipped on the
+  first-run welcome card); a CSS class styled but never applied; and a silent
   `catch(e){}` (`catch(_){}` is the codebase's deliberate-swallow marker and is
   allowed). Dynamic lookups are handled without an allowlist that could go stale:
   the literal fragments flanking a `+` inside `t(...)` are harvested as
