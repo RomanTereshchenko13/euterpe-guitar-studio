@@ -54,7 +54,7 @@ let spDrill = null;
 /* Phase 8/F1 scored tier (13-scored.js). The tolerance is half an 8th — the pattern's
    own resolution — so a hit means "that strum", not the one next door. */
 const spScore = scoredRun({
-  micId:'sp-mic', statusId:'sp-status', scoreId:'sp-score', countKey:'on_played',
+  micId:'drill-ctx-mic', statusId:'sp-status', scoreId:'sp-score', countKey:'on_played',
   tol:()=>beat()/4,
   onChange:()=>{ if(spDrill) renderStrum(); },
 });
@@ -64,6 +64,7 @@ function startStrum(){
   spScore.clearScore();
   const home=document.getElementById('practice-home'), area=document.getElementById('sp-area');
   if(home) home.hidden=true; if(area) area.hidden=false;
+  drillShellEnter();          // B2
   renderStrum();
 }
 function exitStrum(){
@@ -80,6 +81,7 @@ function spPlay(){
   audio();
   if(typeof stopLoop==='function') stopLoop();   // don't fight the reference loop / progression
   if(typeof seqStop==='function') seqStop();
+  drillRunStarted();                             // B2: fold the setup
   spDrill.patIdx=spIdx; spDrill.slot=-1; spDrill.bars=0; spDrill.playing=true;
   spScore.begin();                               // before the clock: a tick must not
   spDrill.clock={ interval:()=>beat()/2, tick:(time,count)=>spTick(time,count) };
@@ -160,6 +162,7 @@ function renderStrum(){
   // the hint has to say which tier you're in — and that the guide guitar goes quiet
   const hint=document.getElementById('sp-hint'); if(hint) hint.textContent=t(spScore.on()?'sp_hint_scored':'sp_hint');
   spScore.render();
+  applyDrillCtx();     // B2: the shell owns the mic's visibility
 }
 function renderStrumGrid(){
   const g=document.getElementById('sp-grid'); if(!g) return;
@@ -177,28 +180,28 @@ function spHighlightSlot(slot){
 // re-localize an in-flight strum trainer on a language switch (called from applyLang)
 function refreshStrumLang(){ if(spDrill){ renderStrum(); spScore.refreshLang(); } }
 
-registerDrill({ id:'strum', area:'sp-area', tempo:true,   // the 8th-note clock is beat()-driven
+registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',   // the 8th-note clock is beat()-driven
                 tracks:[{ id:'strum', kind:'perf', sess:'strum', label:'drill_strum',
                           better:'high', unit:'bars', start:startStrum }],
                 isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang,
+                mic:()=>spScore.available(),
+                // toggling the tier mid-run would change what's being measured under a score
+                // in progress, so it stops first and the next run is measured from bar one
+                onMic:()=>{ if(spDrill&&spDrill.playing) spStop();
+                            spScore.toggle();
+                            // Scoring mutes the guide guitar, so without the click or the
+                            // band there would be nothing left to play against — and a
+                            // timing score against silence is meaningless. Turn the click
+                            // on rather than let the drill become a staring contest.
+                            if(spScore.on() && !spClick && !spBand) spClick=true;
+                            renderStrum(); },
                 // the loop reads currentChordVoicing() live, so a key change only needs a repaint
                 onKey:()=>{ if(spDrill) renderStrum(); } });
 
 (function initStrum(){
-  const card=document.getElementById('start-strum'); if(!card) return;
-  card.onclick=startStrum;
+  const area=document.getElementById('sp-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('sp-play',   spToggle);
-  // toggling the tier mid-run would change what's being measured under a score in
-  // progress, so it stops first and the next run is measured cleanly from bar one
-  wire('sp-mic',    ()=>{ if(spDrill&&spDrill.playing) spStop();
-                          spScore.toggle();
-                          // Scoring mutes the guide guitar, so without the click or the
-                          // band there would be nothing left to play against — and a
-                          // timing score against silence is meaningless. Turn the click
-                          // on rather than let the drill become a staring contest.
-                          if(spScore.on() && !spClick && !spBand) spClick=true;
-                          renderStrum(); });
   wire('sp-click',  ()=>{ spClick=!spClick;   renderStrum(); });
   wire('sp-accent', ()=>{ spAccent=!spAccent; renderStrum(); });
   wire('sp-mute',   ()=>{ spMute=!spMute;     renderStrum(); });

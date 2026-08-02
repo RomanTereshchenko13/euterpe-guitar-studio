@@ -118,6 +118,9 @@ function applyLang(){
   renderChords(); renderArp(); renderTriads(); renderScales(); renderNotes(); renderCircle();
   if(typeof renderPractice==='function') renderPractice();   // 3b: re-localize the progress chips
   refreshDrillsLang();   // re-localize whatever drill is in flight (13-drill-registry.js)
+  // ...and the shared drill header with it (B2): the drill's NAME and the setup handle
+  // are painted from i18n there, not from a data-i18n attribute the sweep above sees.
+  if(typeof applyDrillCtx==='function') applyDrillCtx();
   setHView(hView); setScView(scView); updateGlobalPlay();
   if(typeof applyAudioAvailability==='function') applyAudioAvailability();
   if(typeof micRefreshLang==='function') micRefreshLang();   // F0: re-localize a live tuner readout

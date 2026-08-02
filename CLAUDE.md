@@ -71,11 +71,12 @@ Edit the sources, then run the build.
     · `07-render-shared.js` · `08-chords.js` · `09-triads.js`
   - `10-scales.js` · `11-notes-circle-lang.js` · `12-toolbar-state.js` (state save/load +
     the custom-tuning editor + the share-link codec `encodeShareState`/`applyShareHash` +
-    `setTempo()`, the one clamped setter both tempo controls go through, Phase 10/A1)
+    `setTempo()`, the one clamped setter both tempo controls go through, Phase 10/A1; and
+    `drillSeen`, the tracks already met, which drives B2's first-run hint reveal)
   - `13-drill-registry.js` — the **drill registry**: `DRILLS` + `registerDrill()`, plus the
-    generic shell helpers `activeDrill`/`exitAllDrills`/`showDrillHome`/`refreshDrillsLang`/
+    generic shell helpers `activeDrill`/`exitAllDrills`/`quitDrill`/`showDrillHome`/`refreshDrillsLang`/
     `drillKeyChanged`/`applyDrillCtx`. Every drill file self-registers at load
-    (`{id, area, isActive, exit, refreshLang?, onKey?, tempo?, tracks}`), and `setMode` (15) / `applyLang`
+    (`{id, area, isActive, exit, refreshLang?, onKey?, tempo?, setup?, mic?, onMic?, tracks}`), and `setMode` (15) / `applyLang`
     (11) iterate `DRILLS` instead of naming drills — so **adding a drill is one new `14-*.js`
     file + its markup, with nothing to register by hand**.
     There used to be a `mode:'practice'|'ear'` field; **Ear was folded into Practice** (it was
@@ -84,19 +85,43 @@ Edit the sources, then run the build.
     Loads at slot 13 (before the slot-14 drills) because `const DRILLS` isn't hoisted. The
     smoke suite guards the seam: every `*-area` in the markup must be claimed by a registered
     drill, so an unregistered drill fails the build rather than silently half-working.
-    **Shared drill chrome** (`#drill-ctx` in the template, built in 15): one Key picker, one
-    Tempo stepper and one Exit button for *all* drills, instead of the identical copy each
-    drill used to carry. Exit calls `activeDrill().exit()`; the key picker calls `setKey` then
-    `drillKeyChanged()`, which invokes the running drill's optional `onKey()` — "re-derive
-    yourself from the new key" (rebuild bars, deal a new round, repaint the board). A drill
-    with nothing key-dependent just omits `onKey`. CSS derives the strip's visibility from
-    `#practice-home:not([hidden]) ~ #drill-ctx`, so no drill manages it. Both *halves* of the
-    strip are derived too: `applyDrillCtx()` shows the key picker only for a drill declaring
-    `onKey` (so the ear / note-naming / one-minute-changes drills don't get a picker that
-    adjusts nothing) and the tempo stepper only for one declaring **`tempo:true`** (Phase
-    10/A1 — the four scheduler-driven drills: timing, strum, over-the-changes, changes).
-    It's called from one delegated listener on `#practice-home` (every drill starts
-    from a card or the Review button in there), so drills still register nothing by hand.
+    **THE ONE DRILL SHELL** (`#drill-ctx` in the template, built in 15; Phase 10/B2). Nine drills
+    each hand-rolled their own layout; they now fill in one shell — **header** → **setup**
+    disclosure → **hint** → **stage** → **action bar** (`.drill-bar`) → **summary**. The header
+    holds the drill NAME, the `?`, the setup handle, the mic, the Key picker, the Tempo stepper
+    and Quit; the drill areas below hold only their own stage. Everything in it is **derived
+    from the registry**, so adding a drill is still one file + its markup:
+    - **the name** comes from the *track* the player opened, not the drill — over-the-changes
+      hosts two and ear training three, and "Over the changes" is not what was pressed. This
+      works because **`startTrack()` is the one door in**: the practice cards carry
+      `data-track` and go through one delegated listener on `#practice-home`, as do the Review
+      button and the reference seams. `curTrack` is cleared by `showDrillHome`/`quitDrill`/
+      `exitAllDrills`. A drill's own `startX()` is still callable (the tests do) — it just
+      arrives unnamed, because the *door* records the choice.
+    - **the key picker** shows only for a drill declaring `onKey` (so the ear / note-naming /
+      one-minute-changes drills don't get a picker that adjusts nothing); it calls `setKey`
+      then `drillKeyChanged()`, which invokes `onKey()` — "re-derive yourself from the new
+      key" (rebuild bars, deal a new round, repaint the board).
+    - **the tempo stepper** only for a drill declaring **`tempo:true`** (Phase 10/A1 — the four
+      scheduler-driven drills: timing, strum, over-the-changes, changes).
+    - **the setup handle** only for one declaring **`setup:'<id>'`**. `drillShellEnter()` opens
+      it on entry, `drillRunStarted()` folds it when the run begins (a picker you have already
+      used is the least useful thing on screen while you play). One-minute changes declares
+      none — its setup is a whole exclusive step, which is the shape B2 took the rest from.
+    - **the hint** (`.drill-hint`) is revealed by `drillShellEnter()` the first time you open a
+      given **track** and is a `?` thereafter, riding a persisted `drillSeen` (12). Per *track*:
+      meeting one ear skill is not meeting the other two. Blanket-collapsing it would strand a
+      first-timer, for whom that paragraph is the only instruction on screen.
+    - **the mic** is ONE `#drill-ctx-mic` (was `#sd-mic`/`#sp-mic`/`#tg-mic`, the same control
+      three times). `applyDrillCtx` owns its *visibility* via the drill's `mic()` predicate;
+      13-scored.js still owns its label/pressed state, since only the running `scoredRun` knows
+      whether it is listening. That split is the point: `hidden = !available()` inside
+      13-scored.js could only speak about the device, but over-the-changes offers the tier in
+      `chords` mode and not in `tones`. `onMic()` handles the press.
+    Quit calls `quitDrill()`. CSS derives the strip's visibility from
+    `#practice-home:not([hidden]) ~ #drill-ctx`, and `body.drill-running` /
+    `.drill-setup-open` / `.drill-help-open` (set in `applyDrillCtx`) drive the panel heading
+    and the two disclosures — so no drill manages any of it.
     **Tracks** (Phase 10/B1): a drill also declares what it *teaches* —
     `tracks:[{id, kind:'recall'|'perf', items, sess, better, unit, label, start}]`. A track, not
     a drill, is the unit the learner model reads: over-the-changes is one drill with **two**
@@ -107,6 +132,9 @@ Edit the sources, then run the build.
     **Watch the `[hidden]` trap**: `#drill-ctx-key` / `#drill-ctx-tempo` are `.group`s
     (`display:flex`), which outrank the UA `[hidden]{display:none}` — hiding them needs the
     explicit CSS rule, and jsdom's `.hidden` property will happily report success without it.
+    (B2's `.drill-setup` / `.drill-hint` are the same trap from the other side: they are hidden
+    by an *author* rule keyed on a body class, so jsdom can't see them at all — the smoke suite
+    pins the two CSS rules by regex instead.)
   - `13-mic.js` — the **shared mic layer** (Phase 8). One microphone, three consumers
     (F0's tuner, F1's onset detector, F1's calibration), so acquisition, the permission
     prompt and the error vocabulary (`micErrKey` → i18n key) live here instead of being
@@ -127,7 +155,9 @@ Edit the sources, then run the build.
     sound actually landed after swing, meter and any mid-run tempo change. Slot 13 for the
     usual reason (its `const`s would be in the TDZ for a slot-14 drill loading earlier).
     Consumers: `sdScore` (every grid tick), `spScore` (the pattern's sounding slots, swing
-    included), `tgScore` (the bar downbeats — see the comp drill below).
+    included), `tgScore` (the bar downbeats — see the comp drill below). All three now point
+    `micId` at the shell's one `#drill-ctx-mic` (B2), and `render()` no longer sets its
+    `hidden` — visibility is the shell's, from the drill's `mic()` predicate.
   - `13-learner.js` — learner model (spine #3), **schema v2** since Phase 10/B1: per-item SRS
     history + a sessions ring buffer + a stored per-id **personal best**; persists via
     `12-toolbar-state.js`'s `saveState`/`loadState`. Exposes the progress-card readouts

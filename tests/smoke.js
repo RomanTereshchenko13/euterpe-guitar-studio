@@ -541,6 +541,147 @@ if (T) {
     T.resetLearner();
   })();
 
+  /* ---- Phase 10/B2: ONE DRILL SHELL ----------------------------------------
+     Nine hand-rolled drill layouts collapse into one shell each drill fills in:
+     header (name · setup handle · ? · 🎤 · key · tempo · Quit) → setup disclosure →
+     hint → stage → action bar → summary. The three problems it fixes all had one
+     cause — #drill-ctx was a key picker with an Exit button where a header belonged:
+       • a drill never said WHICH drill it was (all nine under one <h2>Практика</h2>),
+       • controls came before content and stayed there during the run,
+       • Play sat below the longest paragraph on the screen.
+     What the assertions guard is that the shell is DERIVED, not hand-wired: adding a
+     drill must still be one file + its markup. -------------------------------- */
+  (function oneDrillShell() {
+    const doc = win.document;
+    const vis = id => { const e = doc.getElementById(id); return !!e && !e.hidden; };
+    const bodyHas = c => doc.body.classList.contains(c);
+
+    /* --- the header exists and is one strip, not nine --- */
+    ['drill-ctx-name', 'drill-ctx-setup', 'drill-ctx-help', 'drill-ctx-mic', 'drill-ctx-quit']
+      .forEach(id => ok('B2: the shell header carries #' + id, !!doc.getElementById(id)));
+    /* No drill area may re-declare a header of its own. .drill-head was the closest
+       thing the drills had to a shared part and it never held the drill's name — so
+       its removal is the seam: a new drill that brings one back fails here. */
+    ok('B2: no drill area carries its own header any more',
+       doc.querySelectorAll('#panel-practice .drill-head').length === 0);
+    /* The stray vertical rule under PROGRESSION: renderTarget() hid #tg-mic but never
+       its .divider, so a floating rule sat in the row whenever the lead mode was on.
+       Both left with the button. */
+    ok('B2: the divider that outlived #tg-mic is gone with it',
+       !doc.getElementById('tg-mic') && doc.querySelectorAll('#tg-setup .divider').length === 0);
+
+    /* --- every declared setup element must exist (the registry seam, again) --- */
+    ok('B2: every drill that declares a setup element has one in the markup',
+       T.DRILLS.filter(d => d.setup).every(d => !!doc.getElementById(d.setup)),
+       T.DRILLS.filter(d => d.setup && !doc.getElementById(d.setup)).map(d => d.id).join(','));
+    ok('B2: a drill that declares mic() also declares onMic()',
+       T.DRILLS.filter(d => d.mic).every(d => typeof d.onMic === 'function'));
+
+    /* --- ONE DOOR: a practice card opens its track, and the header says which --- */
+    T.setMode('practice');
+    const cards = [...doc.querySelectorAll('#practice-home .drill-card')];
+    ok('B2: every practice card names its track',
+       cards.length > 0 && cards.every(c => c.dataset.track && T.trackById(c.dataset.track)),
+       cards.filter(c => !T.trackById(c.dataset.track || '')).map(c => c.id).join(','));
+    doc.getElementById('start-timing').click();
+    ok('B2: a card click opens its drill', vis('sd-area') && !vis('practice-home'));
+    ok('B2: ...and the header finally says which drill it is',
+       doc.getElementById('drill-ctx-name').textContent === T.I18N[T.state().lang].drill_timing,
+       doc.getElementById('drill-ctx-name').textContent);
+    /* It is the TRACK, not the drill: over-the-changes hosts two, and "Over the changes"
+       is not what the player pressed. */
+    T.exitAllDrills();
+    doc.getElementById('start-target').click();
+    ok('B2: two tracks behind one drill are named apart',
+       doc.getElementById('drill-ctx-name').textContent === T.I18N[T.state().lang].drill_target);
+    T.exitAllDrills();
+    ok('B2: leaving a drill clears the name', T.getCurTrack() === null);
+
+    /* --- the setup disclosure: open before Play, folded during the run --- */
+    T.setDrillSeen({});
+    doc.getElementById('start-strum').click();
+    ok('B2: the setup handle is offered for a drill that has a setup', vis('drill-ctx-setup'));
+    ok('B2: the setup opens on entry — you are about to configure a run', bodyHas('drill-setup-open'));
+    T.drillRunStarted();
+    ok('B2: ...and folds once the run starts', !bodyHas('drill-setup-open'));
+    T.drillSetupToggle();
+    ok('B2: ...and can be re-opened mid-run in one tap', bodyHas('drill-setup-open'));
+    T.exitAllDrills();
+    /* A drill that configures nothing gets no handle: a disclosure over an empty box is
+       worse than no disclosure. */
+    doc.getElementById('start-interval').click();
+    ok('B2: a drill with nothing to set up gets no setup handle', !vis('drill-ctx-setup'));
+    ok('B2: ...and no open-setup class to hide behind', !bodyHas('drill-setup-open'));
+    T.exitAllDrills();
+
+    /* --- the hint: revealed once per track, then collapsed ---
+       Collapsing a drill's instructions helps someone who knows the drill and ambushes a
+       first-timer, for whom that paragraph is the only instruction on the screen. So the
+       reveal is per track, and it happens exactly once. */
+    T.setDrillSeen({});
+    doc.getElementById('start-changes').click();
+    ok('B2: a drill you have never run opens with its hint showing', bodyHas('drill-help-open'));
+    ok('B2: ...and is remembered as met', !!T.getDrillSeen().changes);
+    T.exitAllDrills();
+    doc.getElementById('start-changes').click();
+    ok('B2: the second time, the hint is folded behind the ?', !bodyHas('drill-help-open'));
+    T.drillHintToggle();
+    ok('B2: ...and the ? brings it back', bodyHas('drill-help-open'));
+    /* per TRACK, not per drill: meeting one ear skill does not mean you have met the
+       other two, and they are three different exercises behind one area. */
+    T.exitAllDrills();
+    doc.getElementById('start-chordq').click();
+    ok('B2: a sibling track is still a first meeting', bodyHas('drill-help-open'));
+    T.exitAllDrills();
+    T.setDrillSeen({});
+
+    /* --- the mic: one button, routed to whichever drill is running --- */
+    doc.getElementById('start-comp').click();
+    const micWasOn = T.tgScore.on();
+    T.drillMicToggle();
+    ok('B2: the shared mic button reaches the running drill', T.tgScore.on() !== micWasOn);
+    T.drillMicToggle();
+    /* ...and it is hidden where the running drill has no tier at all. The lead mode of
+       this same drill is tap-scored until F2, which `hidden = !available()` inside
+       13-scored.js could never have expressed — availability is about the device. */
+    ok('B2: the mic is offered in comping mode', T.DRILLS.find(d => d.id === 'overchanges').mic() === T.tgScore.available());
+    T.exitAllDrills();
+    doc.getElementById('start-target').click();
+    T.applyDrillCtx();
+    ok('B2: the mic is not offered in the tap-scored lead mode', !vis('drill-ctx-mic'));
+    T.exitAllDrills();
+
+    /* --- a language switch mid-drill re-localizes the header ---
+       The name and the setup handle are painted from i18n by applyDrillCtx, not from a
+       data-i18n attribute, so applyLang's attribute sweep does not see them — it has to
+       call applyDrillCtx too, or a drill opened in one language keeps its old title. */
+    doc.getElementById('start-timing').click();
+    const langBtns = [...doc.querySelectorAll('.langbtn')];
+    const other = langBtns.find(b => b.dataset.lang !== T.state().lang);
+    other.click();
+    ok('B2: the header name follows a language switch mid-drill',
+       doc.getElementById('drill-ctx-name').textContent === T.I18N[T.state().lang].drill_timing,
+       doc.getElementById('drill-ctx-name').textContent);
+    langBtns.find(b => b.dataset.lang !== T.state().lang).click();   // back
+    T.exitAllDrills();
+
+    /* --- key and tempo stay derived, as A1 left them --- */
+    doc.getElementById('start-notes').click();
+    ok('B2: a drill that re-derives from nothing still gets no key picker', !vis('drill-ctx-key'));
+    ok('B2: ...and no tempo stepper', !vis('drill-ctx-tempo'));
+    T.exitAllDrills();
+    T.setMode('reference');
+
+    /* --- THE [hidden] TRAP, both ways. The disclosures are driven by body classes and
+       an author `display` rule, which outranks the UA [hidden]{display:none}; jsdom
+       reads the attribute, not the cascade, so every assertion above would pass on a
+       stylesheet that shows the setup permanently. Check the rules exist. --- */
+    ok('B2: the setup is hidden by CSS when its body class is off',
+       /body:not\(\.drill-setup-open\)\s*\.drill-setup\s*\{[^}]*display:\s*none/.test(html));
+    ok('B2: the hint is hidden by CSS when its body class is off',
+       /body:not\(\.drill-help-open\)\s*\.drill-hint\s*\{[^}]*display:\s*none/.test(html));
+  })();
+
   /* ---- 3c: note-naming drill — target positions, scoring, learner writes ---- */
   (function noteDrill() {
     // drillTargetsFor mirrors the board's cell set (open strings + window)
@@ -1308,15 +1449,20 @@ if (T) {
     T.startEar('interval');
     T.applyDrillCtx();
     ok('drill ctx: a key-independent drill (ear) hides the key picker', !keyShown());
-    ok('drill ctx: the divider + label hide with it',
-       doc.getElementById('drill-ctx-div').hidden && doc.getElementById('drill-ctx-keylbl').hidden);
+    ok('drill ctx: the label hides with it', doc.getElementById('drill-ctx-keylbl').hidden);
+    /* B2: no dividers left in the strip. The key picker is twelve buttons and wraps at
+       phone widths, so a divider between the groups reliably landed at the START of a
+       line — where it is not a separator but a stray vertical rule, the same defect B2
+       fixed under PROGRESSION. The group labels do the separating. */
+    ok('drill ctx: no stray vertical rules in the header',
+       doc.querySelectorAll('#drill-ctx .divider').length === 0);
     /* the .hidden property above is necessary but NOT sufficient: #drill-ctx-key is a
        .group (display:flex), which outranks the UA [hidden]{display:none}, so without
        an explicit rule the picker stays on screen in a real browser while jsdom
        happily reports it hidden. Pin the rule itself. */
     ok('drill ctx: CSS actually hides the key parts (display:flex outranks [hidden])',
        /#drill-ctx-key\[hidden\][^{]*\{[^}]*display:\s*none/.test(html)
-       && /#drill-ctx-div\[hidden\]/.test(html) && /#drill-ctx-keylbl\[hidden\]/.test(html));
+       && /#drill-ctx-keylbl\[hidden\]/.test(html));
     T.exitEar();
     ok('drill ctx: returning to the home hides the key picker', !keyShown());
 
@@ -1378,8 +1524,7 @@ if (T) {
     T.startTiming();
     T.applyDrillCtx();
     ok('A1: a tempo-driven drill (timing) shows the tempo stepper', tempoShown());
-    ok('A1: its divider + label show with it',
-       !doc.getElementById('drill-ctx-tdiv').hidden && !doc.getElementById('drill-ctx-tlbl').hidden);
+    ok('A1: its label shows with it', !doc.getElementById('drill-ctx-tlbl').hidden);
     T.exitTiming();
     T.startEar('interval');
     T.applyDrillCtx();
@@ -1389,7 +1534,7 @@ if (T) {
     // same [hidden] trap as the key half: .group is display:flex, which outranks the UA rule
     ok('A1: CSS actually hides the tempo parts (display:flex outranks [hidden])',
        /#drill-ctx-tempo\[hidden\][^{]*\{[^}]*display:\s*none/.test(html)
-       && /#drill-ctx-tdiv\[hidden\]/.test(html) && /#drill-ctx-tlbl\[hidden\]/.test(html));
+       && /#drill-ctx-tlbl\[hidden\]/.test(html));
     // every drill that rides the shared scheduler must declare it, or it silently loses
     // the only tempo control it has left
     const timed = ['timing', 'strum', 'overchanges', 'changes'];
@@ -2570,8 +2715,12 @@ if (T) {
     ok('F1: the score panel exists in the markup', !!box);
     T.sdScore.render();
     ok('F1: the score panel is hidden on a coach run', box.hidden === true);
+    /* B2: the three per-drill mic buttons collapsed into the shell's one, and its
+       VISIBILITY moved with it — a drill declares mic(), which folds in both onset
+       availability and whether this drill's current mode has a tier at all. */
+    T.applyDrillCtx();
     ok('F1: the scored-tier toggle is hidden where onset cannot run',
-       doc.getElementById('sd-mic').hidden === true);
+       doc.getElementById('drill-ctx-mic').hidden === true);
     ok('F1: the coach hint does not claim to be listening',
        doc.getElementById('sd-hint').textContent === T.I18N[T.state().lang].sd_hint);
 
@@ -2635,9 +2784,13 @@ if (T) {
     ok('rhythm: the strum drill has a scored-run controller', !!T.spScore);
     ok('rhythm: the comp drill has a scored-run controller', !!T.tgScore);
 
-    ['sp-mic', 'sp-status', 'sp-score', 'tg-mic', 'tg-status', 'tg-score'].forEach(id => {
+    /* B2: the status line and the score panel stay per-drill (they sit inside the
+       drill's own stage), but the mic TOGGLE is one button in the shared header — it
+       was the same control drawn three times, in three drills' control rows. */
+    ['sp-status', 'sp-score', 'tg-status', 'tg-score', 'drill-ctx-mic'].forEach(id => {
       ok('rhythm: markup carries #' + id, !!doc.getElementById(id));
     });
+    ok('B2: the per-drill mic buttons are gone', !doc.getElementById('sp-mic') && !doc.getElementById('tg-mic') && !doc.getElementById('sd-mic'));
 
     // Strumming: only the pattern's own slots are expected — the empty ones are
     // where the hand deliberately misses, and scoring them would be nonsense.

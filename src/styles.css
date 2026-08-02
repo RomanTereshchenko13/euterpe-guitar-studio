@@ -162,9 +162,9 @@
      phone-only) — so the controls + neck sit higher and the default screen reads clean;
      tap ? to reveal the explanatory text. A body-level .help-open drives both, since the
      description (.main) and the hint (.board-meta) live in different subtrees. */
-  .ph-help { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 22px; height: 22px; padding: 0; line-height: 1; border: 1px solid var(--border-strong); border-radius: 50%; background: var(--bg-panel); color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; cursor: pointer; }
-  .ph-help:hover { color: var(--text); border-color: var(--text-faint); }
-  .ph-help.on { background: var(--accent); color: #07203a; border-color: var(--accent); }
+  .ph-help, .drill-help { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 22px; height: 22px; padding: 0; line-height: 1; border: 1px solid var(--border-strong); border-radius: 50%; background: var(--bg-panel); color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .ph-help:hover, .drill-help:hover { color: var(--text); border-color: var(--text-faint); }
+  .ph-help.on, .drill-help.on { background: var(--accent); color: #07203a; border-color: var(--accent); }
   body.help-open .panel.active .panel-head p { display: block; margin-top: 6px; }
 
   /* ===== Mode axis (Phase 3a): Reference · Practice =====
@@ -185,10 +185,10 @@
   /* The key half of that row is hidden for drills that don't declare onKey (see
      applyDrillCtx). #drill-ctx-key is a .group, whose display:flex outranks the UA
      [hidden]{display:none} — the same trap the toolbar groups hit below — so the
-     three parts need an explicit rule or the picker stays on screen. */
-  #drill-ctx-div[hidden], #drill-ctx-keylbl[hidden], #drill-ctx-key[hidden] { display: none; }
+     two parts need an explicit rule or the picker stays on screen. */
+  #drill-ctx-keylbl[hidden], #drill-ctx-key[hidden] { display: none; }
   /* same trap, same fix, for the scoped tempo half (Phase 10/A1) */
-  #drill-ctx-tdiv[hidden], #drill-ctx-tlbl[hidden], #drill-ctx-tempo[hidden] { display: none; }
+  #drill-ctx-tlbl[hidden], #drill-ctx-tempo[hidden] { display: none; }
   /* In Practice, collapse the reference shell: hide the active reference panel, the
      context bar, the shared board (+ meta), harmony extras, suggester, shapes card
      and the reference sub-tab strip. This used to key off a `mode-activity` class
@@ -270,10 +270,39 @@
   .dc-meta { font-size: 12.5px; color: var(--text-dim); }
   .seam-btn { border-color: var(--accent); color: var(--accent); }
 
-  .drill-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  /* ---- THE ONE DRILL SHELL (Phase 10/B2) ----
+     Nine drills each hand-rolled their own layout; .drill-head was the closest thing to
+     a shared part and it only ever held a counter. The parts below are the shell, and a
+     drill fills them in: header (#drill-ctx) · setup · hint · stage · action bar · summary. */
+  .drill-ctx { flex-wrap: wrap; row-gap: 8px; }
+  /* the panel's own <h2>Практика</h2> is the wrong heading once a drill names itself */
+  body.drill-running .practice-panel .panel-head { display: none; }
+  /* the drill's NAME — the thing nine drill screens never said */
+  /* the title band: full width, so the twelve-button key picker below can wrap without
+     stranding Quit on a line by itself */
+  .drill-ctx-lead { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .drill-name { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin-right: 2px; }
+  .drill-sess { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); }
+  /* Quit is the way OUT, so it sits at the far end of the band rather than opening it. */
+  #drill-ctx-quit { margin-left: auto; }
+  /* SETUP: a disclosure, open before the first Play and folded during the run. THE
+     [hidden] TRAP applies in reverse here — this is the author display rule, so the
+     drill's own hidden children (e.g. #tg-tone-rows) still need theirs. */
+  body:not(.drill-setup-open) .drill-setup { display: none; }
+  .drill-setup { margin-bottom: 4px; }
+  /* HINT: collapsed behind the header's ?, revealed by itself the first time you open a
+     given drill (drillShellEnter) — collapsing it outright would strand a first-timer,
+     for whom that paragraph is the only instruction on the screen. */
+  body:not(.drill-help-open) .drill-hint { display: none; }
+  .drill-hint { font-size: 13.5px; color: var(--text-dim); margin: 4px 0 14px; max-width: 620px; }
+  /* STAGE head: the prompt, with the counter pushed to the far end. */
+  .drill-stage-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
   .drill-count { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text-dim); }
   .drill-prompt { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; display: flex; align-items: center; gap: 12px; }
   .drill-target { font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 700; color: var(--accent); }
+  /* ACTION BAR: the drill's primary verb, which used to sit BELOW a 3–6 line hint —
+     the longest thing on the screen — in every drill that had one. */
+  .drill-bar { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 14px auto 0; max-width: 620px; }
   .drill-sub { font-size: 13.5px; color: var(--text-dim); margin: 4px 0 16px; }
   /* blank tappable quiz dots; a hit reveals the note in green, a wrong tap flashes red */
   .dot.quiz { background: rgba(220,200,160,0.14); border: 1px solid rgba(220,200,160,0.28); box-shadow: none; color: var(--text); }
@@ -295,9 +324,11 @@
   .drill-actions { display: flex; gap: 10px; margin-top: 18px; }
 
   /* ---- ear-training drills (Phase 4) ---- */
-  .ear-prompt { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; text-align: center; margin: 10px 0 16px; }
-  .ear-controls { display: flex; justify-content: center; margin-bottom: 20px; }
-  .ear-controls .btn.play { font-size: 14px; padding: 9px 22px; }
+  /* The prompt keeps its own weight but no longer centres itself: it shares the shell's
+     .drill-stage-head with the round counter, and Replay moved to the shared .drill-bar
+     (the old .ear-controls was this drill's private copy of one). */
+  .ear-prompt { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; }
+  .drill-bar .btn.play { font-size: 14px; padding: 9px 22px; }
   /* answer grid — big tappable targets in the thumb zone */
   .ear-choices { display: grid; gap: 10px; max-width: 620px; margin: 0 auto; }
   .ear-choices.ear-interval { grid-template-columns: repeat(4, 1fr); }
@@ -346,10 +377,15 @@
   .cm-count-lab { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
   .cm-tally.bump .cm-count-val { animation: cmBump 0.18s ease; }
   @keyframes cmBump { 0% { transform: scale(1); } 40% { transform: scale(1.16); } 100% { transform: scale(1); } }
-  .cm-active-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 14px auto 0; max-width: 620px; }
+  /* .cm-active-foot was the drill footer three drills copied — hint on the left, the
+     primary verb squeezed onto the right. It is .drill-bar now, and the hint moved out
+     from under the button (B2). */
 
   /* ---- strumming-pattern trainer (Phase 5b) ---- */
   .sp-name { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin: 6px 0; }
+  /* the chord you are strumming over. It used to be the .drill-head's counter — which is
+     where the drill's NAME belonged — so it moved down onto the stage with the grid. */
+  .sp-chord { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); }
   .btn.sp-pat { font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; }
   .sp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; max-width: 620px; margin: 12px 0 4px; }
   .sp-cell { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 0; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); transition: border-color 0.1s, box-shadow 0.1s, background 0.1s; }
@@ -361,7 +397,6 @@
   .sp-dir.none { color: var(--text-faint); }
   .sp-cell.on .sp-dir.has { color: var(--root); }
   .sp-beat { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
-  .sp-controls { display: inline-flex; gap: 8px; flex-shrink: 0; }
 
   /* ---- subdivision & timing (Phase 7a) ---- */
   .sd-grid { display: grid; gap: 5px; max-width: 620px; margin: 12px 0 6px; }

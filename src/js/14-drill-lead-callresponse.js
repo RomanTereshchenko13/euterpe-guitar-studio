@@ -47,6 +47,7 @@ function startCallResp(){
   cr={ phase:'call', pool:[], motif:[], respIdx:0, round:0, correct:0, total:0, wrongNote:0, timers:[], scaleName:'' };
   const home=document.getElementById('practice-home'), area=document.getElementById('cr-area');
   if(home) home.hidden=true; if(area) area.hidden=false;
+  drillShellEnter();          // B2
   crRenderBoard();
   crNewRound();
 }
@@ -186,12 +187,12 @@ registerDrill({ id:'callresp', area:'cr-area',
                 isActive:()=>!!cr, exit:exitCallResp, refreshLang:refreshCallRespLang,
                 // the motif is drawn from the key's scale, so a key change deals a new round
                 onKey:()=>{ if(cr) crNewRound(); },
+                setup:'cr-setup',
                 tracks:[{ id:'callresp', kind:'perf', sess:'callresp', label:'drill_callresp',
                           better:'high', unit:'pct', start:startCallResp }] });
 
 (function initCallResp(){
-  const card=document.getElementById('start-callresp'); if(!card) return;
-  card.onclick=startCallResp;
+  const area=document.getElementById('cr-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('cr-replay', crReplay);
   const b=document.getElementById('cr-board');

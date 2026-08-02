@@ -127,6 +127,7 @@ function startEar(type){
   const home=document.getElementById('practice-home'), area=document.getElementById('ear-area'),
         act=document.getElementById('ear-active'), sum=document.getElementById('ear-summary');
   if(home) home.hidden=true; if(area) area.hidden=false; if(act) act.hidden=false; if(sum) sum.hidden=true;
+  drillShellEnter();          // B2
   nextEarPrompt();
 }
 function exitEar(){
@@ -218,6 +219,9 @@ function renderProgressInto(hostId){
 function renderEarPrompt(){
   const p=document.getElementById('ear-prompt'); if(p) p.textContent=ear.cfg.prompt();
   const c=document.getElementById('ear-count'); if(c) c.textContent=Math.min(ear.done+1, ear.total)+' / '+ear.total;
+  // B2: every drill wears the same shell, and part of that shell is an instruction the
+  // first-timer gets and the regular doesn't have to look at
+  const h=document.getElementById('ear-hint'); if(h) h.textContent=t('ear_hint');
   const rp=document.getElementById('ear-replay'); if(rp){ rp.innerHTML='&#9654; '+t('ear_replay'); rp.setAttribute('aria-label', t('ear_replay')); }
   const fb=document.getElementById('ear-feedback'); if(fb){ fb.textContent=''; fb.className='ear-feedback'; }
   const nx=document.getElementById('ear-next'); if(nx) nx.hidden=true;
@@ -280,9 +284,8 @@ registerDrill({ id:'ear', area:'ear-area',
 (function initEar(){
   const area=document.getElementById('ear-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('start-interval', ()=>startEar('interval'));
-  wire('start-chordq',   ()=>startEar('chordq'));
-  wire('start-rhythm',   ()=>startEar('rhythm'));
+  // the three cards go through startTrack() now (B2) — one door, so the shared header
+  // can name which of the three ear skills you opened
   wire('ear-replay', earReplay);
   wire('ear-next',   earNext);
   const ch=document.getElementById('ear-choices');

@@ -156,13 +156,18 @@ function scoredRun(cfg){
     release(){ st.live = false; unlisten(); },
     score: () => st.score,
     clearScore(){ st.score = null; status(null); },
+    /* The mic button is the SHELL's now (Phase 10/B2) — one #drill-ctx-mic in the drill
+       header instead of the identical #sd-mic / #sp-mic / #tg-mic in three drills'
+       control rows. So this paints its label and pressed state (only the running
+       scoredRun knows whether it is listening) and leaves VISIBILITY to
+       applyDrillCtx(), which asks the drill's own mic() predicate — a drill can offer
+       the tier in one mode and not another, which `hidden = !available()` could not say. */
     render(){
       const mb = document.getElementById(cfg.micId);
       if(mb){
         mb.textContent = t('on_listen');
         mb.classList.toggle('active', st.on);
         mb.setAttribute('aria-pressed', st.on ? 'true' : 'false');
-        mb.hidden = !available();
       }
       renderPanel();
     },

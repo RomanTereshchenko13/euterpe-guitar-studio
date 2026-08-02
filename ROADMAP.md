@@ -787,7 +787,7 @@ pickup, but that audience is tiny and the mic path already covers everyone — n
 
 **Size:** XL — two tracks, A1–A4 and B1–B4 below, each shippable · **Risk:** med (A2 and B2 are
 refactors of shipped, working surfaces; B1 needs a schema migration) · **Status:** in progress —
-**Track A complete (A1–A4) and B1 done** (unreleased); B2–B4 planned.
+**Track A complete (A1–A4), B1 and B2 done** (unreleased); B3–B4 planned.
 
 _(Sequenced between F1 and F2, not after Phase 9 — Phase 9 "runs throughout" and is not a gate.
 B3 delivers the first real slice of Phase 9's guided path, A4 the first slice of its onboarding.)_
@@ -843,7 +843,7 @@ the app has ever built is being actively denied by its own interface.
 
 | Spine | The claim | Actual |
 |---|---|---|
-| **#1** One musical context | every view reflects one key/mode | ⚠️ **the model holds, the control is closer** — A1 gave Circle the picker it never had; the drill strip is still a second one (B2) |
+| **#1** One musical context | every view reflects one key/mode | ✅ **the model holds, and so does the control** — A1 gave Circle the picker it never had; B2 folded the drill strip into the one drill header, where the key is the shell's, not a second picker |
 | **#2** Reference ↔ practice seam | *"from any reference view → drill this"* | ❌ **one button** — `nt-drill`, in 1 of 7 views |
 | **#3** The learner model | *"the app knows what you know"* | ✅ **fixed by B1** — was 4 of 10 tracks |
 
@@ -1070,24 +1070,40 @@ reports into. As shipped:
 
   _43 assertions in the smoke suite; lint / kbd-check clean._
 
-**B2 — One drill shell (the risky refactor · isolated).** The analogue of 1b's "one board, not four":
-nine hand-rolled layouts collapse into one shell each drill fills in — **header** (drill name · key ·
-🎤), **setup** (the drill's controls, in a disclosure open before the first Play and folded during the
-run), **stage**, **action bar**, **summary**. Three problems, one cause — `#drill-ctx` is a key picker
-with an Exit button where a drill header should be:
-- **A drill never says which drill it is.** All nine render under the same `<h2>Практика</h2>`;
-  `.drill-head` shows the chord, the hit count or the round — never the name.
-- **Controls before content.** *Over the changes* stacks Key · What-you-play · Progression · Position ·
-  Target above NOW/NEXT and the neck: roughly **55% of a 390×844 viewport is chrome**, and it stays
-  there during the run, when it is least useful.
-- **Play sits below the longest paragraph on screen** — every drill's primary verb is in
-  `.cm-active-foot`, after a 3–6 line hint.
+**B2 — One drill shell (the risky refactor · isolated).** ✅ **done** (unreleased). The analogue of
+1b's "one board, not four": nine hand-rolled layouts collapse into one shell each drill fills in —
+**header** (drill name · ? · setup · 🎤 · key · tempo · Quit), **setup** (the drill's controls, in a
+disclosure open before the first Play and folded during the run), **hint**, **stage**, **action bar**,
+**summary**. Three problems, one cause — `#drill-ctx` was a key picker with an Exit button where a
+drill header should be. As shipped:
+- **A drill says which drill it is.** All nine used to render under the same `<h2>Практика</h2>`, with
+  `.drill-head` showing the chord, the hit count or the round — never the name. The name comes from the
+  **track**, not the drill, because two entries host more than one (comping vs targeting; three ear
+  skills) and "Over the changes" is not what the player pressed. That works because **`startTrack()` is
+  now the one door in**: the ten practice cards carry `data-track` and go through one delegated
+  listener, as do the review button and the Notes seam, so eight `card.onclick=startX` lines left the
+  drill files. `.drill-head` is gone, and so is the panel's own heading while a drill runs.
+- **Content before controls.** The setup folds on Play (`drillRunStarted`), and *Over the changes* —
+  Key · What-you-play · Progression · Position · Target above NOW/NEXT and the neck, roughly **55% of a
+  390×844 viewport in chrome that stayed there during the run** — now shows its stage on the first
+  screen at that size, and the neck on the first screen of the note drill.
+- **Play sits above the hint**, not below the longest paragraph on screen. The hint moved out of the
+  transport row into its own collapsible line, and `.cm-active-foot` / `.sp-controls` / `.ear-controls`
+   — three drills' private copies of one footer — became `.drill-bar`.
+- **The `?` reveals itself once per track.** Collapsing a drill's instructions helps someone who knows
+  the drill and strands a first-timer, for whom that paragraph is the only instruction — so the reveal
+  is per track and happens exactly once, riding a persisted `drillSeen` (12-toolbar-state.js). Per
+  *track*, not per drill: meeting one ear skill is not meeting the other two.
+- **One mic, not three.** `#sd-mic` / `#sp-mic` / `#tg-mic` were the same control drawn three times;
+  there is one `#drill-ctx-mic`, routed to the running drill through the registry (`mic()` decides
+  whether it is offered *right now*, `onMic()` handles the press). That is what `hidden = !available()`
+  inside 13-scored.js could never express — availability is about the device, but the lead mode of
+  over-the-changes has no tier at all until F2. **The stray `.divider` went with it** (the bug logged
+  below), along with both dividers in the header itself, which wrapped to the start of a line and read
+  as vertical rules rather than separators.
 
-  The pattern is in the tree twice, unshared: `14-drill-rhythm-1-changes.js` has the right shape
-  (`#cm-setup` → `#cm-active` → `#cm-summary`), and the reference panels already tuck their description
-  behind `.ph-help`'s `?`. **Caveat, a real regression risk:** collapsing the hint helps someone who
-  knows the drill and hurts a first-timer, for whom that paragraph is the only instruction — so it
-  needs a first-run-per-drill reveal, not a blanket collapse.
+  _33 assertions in the smoke suite; lint / kbd-check / scroll-check clean; visual pass at 390×844,
+  844×390 and 1280×900 across all seven drill surfaces._
 
 **B3 — The session, and the seam (net-new value).** 1c's "the questions players actually arrive with",
 for practice. The question is **"I have 15 minutes — what do I do?"**, and the app has no answer: every
@@ -1109,9 +1125,9 @@ cards as compact rows below. Badge them **🎤 Scored** vs **Coach**. And run a 
 every string that promises a shipped feature is "coming later": `sd_hint`, `tg_hint` and the four
 `*_meta` subtitles, EN and UK both.
 
-**Two bugs, fixed on the way:** the `.divider` before `#tg-mic` is never hidden when
-`14-drill-overchanges.js:256` hides the button, leaving a stray vertical rule under PROGRESSION; and
-the stale strings above.
+**The stale strings above are the bug B4 still owes.** _(The other one logged here — the `.divider`
+before `#tg-mic`, never hidden when `renderTarget()` hid the button, leaving a stray vertical rule
+under PROGRESSION — went with the button itself in **B2**.)_
 
 ---
 
@@ -1137,10 +1153,11 @@ the harmony already on screen, next to the suggester that is *already* captioned
 this" and already knows the answer. That is a seam, so it belongs with **B3**, which is building the
 seam vocabulary — not with the shell.
 
-**Sequencing and the F2 gate.** **A1, B1 and B2 gate F2** — F2 stacks the Lead pillar's scored tier
-onto these drill screens, into this model, through this transport, so all three get unified before
-they are inherited. A2/A3 were the risky pair and wanted their own release — **Track A is now complete
-and unreleased, so it is one release ready to cut**; B3 and B4 can trickle.
+**Sequencing and the F2 gate.** **A1, B1 and B2 gate F2 — all three are now done** (unreleased). F2
+stacks the Lead pillar's scored tier onto these drill screens, into this model, through this
+transport, so all three got unified before they are inherited. A2/A3 were the risky pair and wanted
+their own release — **Track A and B1+B2 are complete and unreleased, so that is one release ready to
+cut**; B3 and B4 can trickle.
 Per the convention Phases 5 and 7 used, each track ships as one release rather than eight.
 
 **Why this is less risk than the smaller plans it replaces.** A1 and B1 are mostly deletion and pure

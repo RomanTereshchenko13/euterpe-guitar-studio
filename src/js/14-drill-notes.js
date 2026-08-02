@@ -49,6 +49,7 @@ function startDrill(){
   const home=document.getElementById('practice-home'), area=document.getElementById('drill-area'),
         act=document.getElementById('drill-active'), sum=document.getElementById('drill-summary');
   if(home) home.hidden=true; if(area) area.hidden=false; if(act) act.hidden=false; if(sum) sum.hidden=true;
+  drillShellEnter();          // B2
   renderDrillBoard();
   nextPrompt();
 }
@@ -153,6 +154,8 @@ registerDrill({ id:'notes', area:'drill-area',
 
 (function initDrill(){
   const b=document.getElementById('drill-board'); if(!b) return;
+  // the card that used to be wired here goes through startTrack() now (B2), like every
+  // other door into a drill — see the delegated listener in 15-wiring-init.js
   const fire=d=>{ if(d) drillAnswer(parseInt(d.dataset.si,10), parseInt(d.dataset.f,10)); };
   b.addEventListener('click', e=>fire(e.target.closest('.dot.quiz')));
   b.addEventListener('keydown', e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const d=e.target.closest('.dot.quiz'); if(!d) return; e.preventDefault(); fire(d); });

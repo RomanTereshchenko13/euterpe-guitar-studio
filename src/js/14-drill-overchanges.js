@@ -45,7 +45,7 @@ let tgDrill = null;
    `tones` mode stays tap-scored on accuracy: touch latency corrupts timing, which
    is the coach-tier rule, and real lead scoring waits on F2. */
 const tgScore = scoredRun({
-  micId:'tg-mic', statusId:'tg-status', scoreId:'tg-score', countKey:'on_changes',
+  micId:'drill-ctx-mic', statusId:'tg-status', scoreId:'tg-score', countKey:'on_changes',
   tol:()=>pulseSec()/2,
   onChange:()=>{ if(tgDrill) renderTarget(); },
 });
@@ -92,6 +92,7 @@ function startOverChanges(mode){
   if(tgTones()) tgScore.setOn(false);     // the lead mode has no mic tier to be in
   const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
   if(home) home.hidden=true; if(area) area.hidden=false;
+  drillShellEnter();          // B2
   renderTargetBoard();
   renderTarget();
 }
@@ -111,6 +112,7 @@ function targetPlay(){
   audio();
   if(typeof stopLoop==='function') stopLoop();       // don't fight the reference loop / progression
   if(typeof seqStop==='function') seqStop();
+  drillRunStarted();                                 // B2: fold the setup
   tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
   tgDrill.bar=0; tgDrill.cycles=0; tgDrill.hits=0; tgDrill.misses=0; tgDrill.found=new Set(); tgDrill.playing=true;
   tgScore.begin();                               // before the clock: a tick must not
@@ -251,10 +253,12 @@ function renderTarget(){
   const pb=document.getElementById('tg-play'); if(pb){ pb.innerHTML=(tgDrill.playing?'&#9632; ':'&#9654; ')+t(tgDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', tgDrill.playing); pb.setAttribute('aria-pressed', tgDrill.playing?'true':'false'); }
   const hint=document.getElementById('tg-hint');
   if(hint) hint.textContent = tones ? t('tg_hint') : t(tgScore.on()?'co_hint_scored':'co_hint');
-  // the mic tier belongs to comping only; render() then hides the button where onset
-  // detection can't run at all, so the lead mode simply never shows it
+  /* the mic tier belongs to comping only. B2: the button is the shell's, and the shell
+     asks mic() — which is tgScorable() AND onset availability — so the lead mode simply
+     never shows it. This used to be a hand-hide of #tg-mic that left its .divider on
+     screen as a floating vertical rule under PROGRESSION; both are gone with the row. */
   tgScore.render();
-  const mb=document.getElementById('tg-mic'); if(mb && !tgScorable()) mb.hidden=true;
+  applyDrillCtx();
   if(tones){ const sc=document.getElementById('tg-score'); if(sc) sc.hidden=true;
              const stt=document.getElementById('tg-status'); if(stt) stt.hidden=true; }
 }
@@ -304,6 +308,11 @@ registerDrill({ id:'overchanges', area:'tg-area', tempo:true,   // bars ride bar
                   { id:'target', kind:'perf', sess:'target', better:'high', unit:'pct',  label:'drill_target', start:startTarget }
                 ],
                 isActive:()=>!!tgDrill, exit:exitTarget, refreshLang:refreshTargetLang,
+                setup:'tg-setup',
+                // comping only — the lead mode stays tap-scored until F2
+                mic:()=>tgScorable() && tgScore.available(),
+                // stops first: flipping the tier mid-run would change what's being measured
+                onMic:()=>{ if(tgDrill&&tgDrill.playing) targetStop(); tgScore.toggle(); renderTarget(); },
                 // the progression is stored resolved to the key, so a key change rebuilds the bars
                 onKey:()=>{ if(!tgDrill) return;
                             tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
@@ -313,14 +322,8 @@ registerDrill({ id:'overchanges', area:'tg-area', tempo:true,   // bars ride bar
 
 (function initOverChanges(){
   const area=document.getElementById('tg-area'); if(!area) return;
-  // two entry points, one drill: the Rhythm card opens it comping, the Lead card opens it
-  // targeting. Keeping both cards keeps each pillar's picker honest about what it teaches.
-  const comp=document.getElementById('start-comp');   if(comp) comp.onclick=startComp;
-  const tgt=document.getElementById('start-target');  if(tgt)  tgt.onclick=startTarget;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('tg-play', targetToggle);
-  // stops first: flipping the tier mid-run would change what's being measured
-  wire('tg-mic',  ()=>{ if(tgDrill&&tgDrill.playing) targetStop(); tgScore.toggle(); renderTarget(); });
   const pg=document.getElementById('tg-progs');
   if(pg) pg.addEventListener('click', e=>{ const btn=e.target.closest('.tg-prog'); if(btn){ tgIdx=+btn.dataset.i; if(tgDrill){ tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]); if(tgDrill.bar>=tgDrill.bars.length) tgDrill.bar=0; } renderTarget(); } });
   const b=document.getElementById('tg-board');

@@ -14,6 +14,8 @@ const I18N = {
     ear_replay:'Ще раз', ear_next:'Далі', ear_right:'Правильно!', ear_wrong:'Не зовсім', ear_got:'Правильно',
     drill_notes:'Назви ноти на грифі', drill_notes_meta:'Грифознавство · рахунок за точністю',
     drill_quit:'Вийти', drill_find_pre:'Знайди всі', drill_find_sub:'Познач усі такі ноти на грифі',
+    // one drill shell (Phase 10/B2): the header's setup handle, and the ear drills' hint
+    drill_setup:'Параметри', ear_hint:'Послухай приклад і обери відповідь. «Ще раз» — скільки завгодно; помилка повернеться до тебе раніше.',
     drill_complete:'Сесію завершено', drill_score:'Рахунок', drill_clean:'Чисто', drill_misses:'Помилки', drill_time:'Час', drill_again:'Ще раз', drill_done:'Готово',
     seam_drill_notes:'Тренувати на грифі →',
     practice_grp_fretboard:'Гриф', practice_grp_rhythm:'Ритм', practice_grp_ear:'Слух',
@@ -168,6 +170,7 @@ const I18N = {
     ear_replay:'Replay', ear_next:'Next', ear_right:'Correct!', ear_wrong:'Not quite', ear_got:'Correct',
     drill_notes:'Name notes on the fretboard', drill_notes_meta:'Fretboard knowledge · scored on accuracy',
     drill_quit:'Quit', drill_find_pre:'Find every', drill_find_sub:'Tap every one of them on the neck',
+    drill_setup:'Setup', ear_hint:'Listen to the prompt, then pick the answer. Replay as often as you like; a wrong answer comes back sooner.',
     drill_complete:'Session complete', drill_score:'Score', drill_clean:'Clean', drill_misses:'Wrong taps', drill_time:'Time', drill_again:'Again', drill_done:'Done',
     seam_drill_notes:'Drill on the neck →',
     practice_grp_fretboard:'Fretboard', practice_grp_rhythm:'Rhythm', practice_grp_ear:'Ear',

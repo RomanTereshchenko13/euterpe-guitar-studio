@@ -231,8 +231,15 @@ function learnerReview(now){
    hand-written ns → starter map that quietly covered four of nine tracks. */
 function startTrack(id){
   const tr = (typeof trackById==='function') ? trackById(id) : null;
-  if(tr && typeof tr.start==='function'){ tr.start(); return true; }
-  return false;
+  if(!tr || typeof tr.start!=='function') return false;
+  /* Phase 10/B2 — this is now the ONE door into a drill: the practice cards, the
+     review button, the reference seams and the timed session all come through here,
+     which is what lets the shared header name the drill you actually opened. A drill's
+     own start() stays callable directly (the tests do that), it just leaves the header
+     unnamed — so the door records the choice, not the drill. */
+  if(typeof setCurTrack==='function') setCurTrack(tr.id);
+  tr.start();
+  return true;
 }
 // recent-activity readout: distinct calendar days practised within the last `win`
 // days (default 7), from the sessions ring buffer — powers the "active days" stat

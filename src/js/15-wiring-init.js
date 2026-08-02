@@ -359,10 +359,10 @@ function applyNav(){
   });
   applyNav();
 })();
-// Practice: start the note-naming drill from its card (3c)
-{ const s=document.getElementById('start-notes'); if(s) s.onclick=startDrill; }
-// Seam (spine #2): jump from the reference Notes view into the drill on the same neck
-{ const d=document.getElementById('nt-drill'); if(d) d.onclick=function(){ setMode('practice'); startDrill(); }; }
+/* Seam (spine #2): jump from the reference Notes view into the drill on the same neck.
+   Through startTrack() like every other door (B2), so the drill it opens arrives named.
+   The practice cards' own wiring lives in the delegated listener further down. */
+{ const d=document.getElementById('nt-drill'); if(d) d.onclick=function(){ setMode('practice'); startTrack('note'); }; }
 document.getElementById('lang-switch').addEventListener('click',e=>{
   const b=e.target.closest('.langbtn'); if(!b||b.dataset.lang===lang) return;
   lang=b.dataset.lang; applyLang(); saveState();
@@ -615,14 +615,28 @@ applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
   // Quit was a seventh identical button, one per drill area. The registry already knows
   // which drill is running and how to end it, so the shell owns the button.
   const dq=document.getElementById('drill-ctx-quit');
-  if(dq) dq.onclick=function(){ const d=activeDrill(); if(d && typeof d.exit==='function') d.exit(); }; }
+  if(dq) dq.onclick=quitDrill; }
 /* Every drill starts from inside #practice-home — a drill card, or the progress
-   card's Review button — so one delegated listener here keeps the shared strip in
-   step with whichever drill just took over, with no per-drill bookkeeping. It
-   bubbles after the starter's own onclick, so the drill's state is already set by
-   the time applyDrillCtx() reads the registry. */
+   card's Review button. Phase 10/B2 made that ONE listener instead of ten: each card
+   carries `data-track`, and startTrack() (13-learner.js) opens the registry's own
+   starter. The eight per-drill `card.onclick=startX` lines that used to live in the
+   drill files are gone with it, and — because the shell now knows which TRACK was
+   opened rather than only which drill is running — the header can finally say which
+   drill you are in. applyDrillCtx() still runs for every click here, so a drill
+   started any other way keeps the strip in step. */
 { const ph=document.getElementById('practice-home');
-  if(ph) ph.addEventListener('click', ()=>applyDrillCtx()); }
+  if(ph) ph.addEventListener('click', e=>{
+    const card=e.target.closest('[data-track]');
+    if(card && typeof startTrack==='function') startTrack(card.dataset.track);
+    applyDrillCtx();
+  }); }
+/* the drill header's own controls (B2). The mic is routed to the running drill rather
+   than owned here: three drills score, each with its own tier semantics, and the shell
+   has no business knowing which. */
+{ const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
+  wire('drill-ctx-setup', drillSetupToggle);
+  wire('drill-ctx-help',  drillHintToggle);
+  wire('drill-ctx-mic',   drillMicToggle); }
 // Deep link (Phase 9): if the URL hash carries a shared context, apply it over the
 // restored state now that the shell + setters are up, then strip the hash.
 const fromShare = (typeof applyShareHash==='function') && applyShareHash();
@@ -657,6 +671,9 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     encodeShareState, applyShareHash, shareURL,
     // drill registry (13): the one list the shell iterates instead of naming drills
     DRILLS, activeDrill, showDrillHome, exitAllDrills, refreshDrillsLang, drillKeyChanged, applyDrillCtx,
+    // one drill shell (Phase 10/B2)
+    drillSetupToggle, drillHintToggle, drillMicToggle, drillRunStarted, setCurTrack, quitDrill,
+    getCurTrack:()=>curTrack, getDrillSeen:()=>drillSeen, setDrillSeen:(o)=>{ drillSeen=o||{}; },
     // one practice model (Phase 10/B1)
     drillTracks, trackById, trackBySess, trackByItems, sessNs, startTrack, learnerTrend, learnerBest, scoredErr,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,

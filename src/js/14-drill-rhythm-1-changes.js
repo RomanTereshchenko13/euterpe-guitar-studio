@@ -54,6 +54,7 @@ function startChanges(){
   cmDrill={ phase:'setup', pairIdx:cmPairIdx, dur:CM_DURS[cmDurIdx] };
   const home=document.getElementById('practice-home'), area=document.getElementById('cm-area');
   if(home) home.hidden=true; if(area) area.hidden=false;
+  drillShellEnter();          // B2
   renderCm();
 }
 function exitChanges(){
@@ -188,8 +189,7 @@ registerDrill({ id:'changes', area:'cm-area', tempo:true,   // the optional beat
                 isActive:()=>!!cmDrill, exit:exitChanges, refreshLang:refreshChangesLang });
 
 (function initChanges(){
-  const card=document.getElementById('start-changes'); if(!card) return;
-  card.onclick=startChanges;
+  const area=document.getElementById('cm-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('cm-start-btn', cmBegin);
   wire('cm-stop',      finishChanges);   // finish early

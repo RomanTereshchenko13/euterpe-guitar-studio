@@ -206,6 +206,7 @@ function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
   seq, seqLoopOn,
   bassOn, grooveOn,
   calMs, calKnown,   // Phase 8/F1 latency + whether it was ever established (A4)
+  drillSeen,         // Phase 10/B2: tracks already run once — drives the first-run hint reveal
   learner   // spine #3: learner model (13-learner.js); saved verbatim, restored via normalizeLearner
 })); }catch(e){ devWarn('state could not be saved (localStorage unavailable?)', e); } }
 function loadState(){ try{
@@ -239,6 +240,17 @@ function loadState(){ try{
   // visitor (predates onboarding), so don't pop the welcome at them — only a
   // genuinely first visit (no saved state at all) leaves welcomeSeen false.
   welcomeSeen = (typeof s.welcomeSeen==='boolean') ? s.welcomeSeen : true;
+  /* Which drills the player has already met (B2). Rebuilt key-by-key rather than
+     assigned, so a tampered or stale blob can't put a non-track key in front of the
+     hint logic — and bounded for the same reason the learner model's tables are. */
+  if(s.drillSeen && typeof s.drillSeen==='object' && !Array.isArray(s.drillSeen)){
+    const out={}; let n=0;
+    for(const k of Object.keys(s.drillSeen)){
+      if(typeof k!=='string' || !k.length || k.length>32 || ++n>64) continue;
+      if(s.drillSeen[k]) out[k]=1;
+    }
+    drillSeen=out;
+  }
   if(Number.isInteger(s.gRoot)&&s.gRoot>=0&&s.gRoot<12){ gRoot=s.gRoot; if(typeof s.gRootLbl==='string') gRootLbl=s.gRootLbl; }
   if(s.gMode==='names'||s.gMode==='deg') gMode=s.gMode;
   if(s.hView==='chords'||s.hView==='triads'||s.hView==='arp') hView=s.hView;   // identify stays transient (idSel is scratch)

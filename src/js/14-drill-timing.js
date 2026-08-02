@@ -37,7 +37,7 @@ let sdLit = null;     // the currently-lit board dot (so we can clear it next ti
    to play, so the tolerance is half a subdivision — matching wider than that would
    start stealing the neighbouring slot's note. */
 const sdScore = scoredRun({
-  micId:'sd-mic', statusId:'sd-status', scoreId:'sd-score', countKey:'on_played',
+  micId:'drill-ctx-mic', statusId:'sd-status', scoreId:'sd-score', countKey:'on_played',
   tol:()=>beat()/(sd?sd.div:2)/2,
   onChange:()=>{ if(sd) renderTiming(); },
 });
@@ -75,6 +75,7 @@ function startTiming(){
   sdScore.clearScore();
   const home=document.getElementById('practice-home'), area=document.getElementById('sd-area');
   if(home) home.hidden=true; if(area) area.hidden=false;
+  drillShellEnter();          // B2: name the header, open the setup, reveal the hint once
   sdRenderBoard();
   renderTiming();
 }
@@ -92,6 +93,7 @@ function sdPlay(){
   audio();
   if(typeof stopLoop==='function') stopLoop();   // don't fight the reference loop / progression
   if(typeof seqStop==='function') seqStop();
+  drillRunStarted();                             // B2: fold the setup — the run owns the screen
   sd.playing=true; sd.count=0; sd.bars=0; sd.pathIdx=0;
   sd.div=SUBDIVS[sdSub].div; sd.path=sdPath();
   sdScore.begin();                               // before the clock: a tick must not
@@ -160,6 +162,7 @@ function renderTiming(){
   // over-claim the roadmap warns against.
   const hint=document.getElementById('sd-hint'); if(hint) hint.textContent=t(sdScore.on()?'sd_hint_scored':'sd_hint');
   sdScore.render();
+  applyDrillCtx();     // B2: the mic's visibility is the shell's, and it follows availability
 }
 /* one grid row of SD_BEATS·div cells: the bar downbeat + beats read stronger than the
    in-between subdivisions, with the beat number under each beat cell. */
@@ -210,20 +213,21 @@ function refreshTimingLang(){
   sdScore.refreshLang();
 }
 
-registerDrill({ id:'timing', area:'sd-area', tempo:true,
+registerDrill({ id:'timing', area:'sd-area', tempo:true, setup:'sd-setup',
                 tracks:[{ id:'timing', kind:'perf', sess:'timing', label:'drill_timing',
                           better:'high', unit:'bars', start:startTiming }],
                 isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang,
+                // B2: the shared header's mic, offered wherever onset detection can run
+                mic:()=>sdScore.available(),
+                // Toggling the mic mid-run would change the tier under a score in progress,
+                // so it stops first and the next run is measured cleanly from its first tick.
+                onMic:()=>{ if(sd&&sd.playing) sdStop(); sdScore.toggle(); renderTiming(); },
                 // the grid walks the key's scale, so a key change repaints the board and restarts
                 onKey:()=>{ if(!sd) return; sdRenderBoard(); sdRestart(); renderTiming(); } });
 
 (function initTiming(){
-  const card=document.getElementById('start-timing'); if(!card) return;
-  card.onclick=startTiming;
+  const area=document.getElementById('sd-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('sd-play',   sdToggle);
-  // Toggling the mic mid-run would change the tier under a score in progress, so it
-  // stops first and the next run is measured cleanly from its first tick.
-  wire('sd-mic',    ()=>{ if(sd&&sd.playing) sdStop(); sdScore.toggle(); renderTiming(); });
   wire('sd-notes',  ()=>{ sdNotes=!sdNotes; if(!sdNotes && sdLit){ sdLit.classList.remove('on'); sdLit=null; } renderTiming(); });
 })();

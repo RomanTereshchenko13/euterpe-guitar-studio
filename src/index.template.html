@@ -406,7 +406,7 @@
       <div class="practice-section">
         <div class="ps-label" data-i18n="practice_grp_fretboard">Гриф</div>
         <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-notes">
+          <li><button type="button" class="drill-card" id="start-notes" data-track="note">
             <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span>
             <span class="dc-meta" data-i18n="drill_notes_meta">Грифознавство · рахунок за точністю</span>
           </button></li>
@@ -416,7 +416,7 @@
       <div class="practice-section">
         <div class="ps-label" data-i18n="practice_grp_timing">Тайминг</div>
         <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-timing">
+          <li><button type="button" class="drill-card" id="start-timing" data-track="timing">
             <span class="dc-name" data-i18n="drill_timing">Поділ і тайминг</span>
             <span class="dc-meta" data-i18n="drill_timing_meta">Вісімки · тріолі · шістнадцятки · коуч</span>
           </button></li>
@@ -425,17 +425,17 @@
       <div class="practice-section">
         <div class="ps-label" data-i18n="practice_grp_rhythm">Ритм</div>
         <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-changes">
+          <li><button type="button" class="drill-card" id="start-changes" data-track="changes">
             <span class="dc-name" data-i18n="drill_changes">Зміна акордів за хвилину</span>
             <span class="dc-meta" data-i18n="drill_changes_meta">Чисті зміни за хвилину · коуч (без оцінки)</span>
           </button></li>
-          <li><button type="button" class="drill-card" id="start-strum">
+          <li><button type="button" class="drill-card" id="start-strum" data-track="strum">
             <span class="dc-name" data-i18n="drill_strum">Бій і відчуття</span>
             <span class="dc-meta" data-i18n="drill_strum_meta">Малюнки · свінг · акценти · глушіння · коуч</span>
           </button></li>
           <!-- opens the shared "over the changes" drill in comping mode; the Lead card
                below opens the same drill on chord tones. -->
-          <li><button type="button" class="drill-card" id="start-comp">
+          <li><button type="button" class="drill-card" id="start-comp" data-track="comp">
             <span class="dc-name" data-i18n="drill_comp">Акомпанемент прогресії</span>
             <span class="dc-meta" data-i18n="drill_comp_meta">Потрібний акорд вчасно · коуч</span>
           </button></li>
@@ -445,11 +445,11 @@
       <div class="practice-section">
         <div class="ps-label" data-i18n="practice_grp_lead">Соло</div>
         <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-target">
+          <li><button type="button" class="drill-card" id="start-target" data-track="target">
             <span class="dc-name" data-i18n="drill_target">Тони акорду в прогресії</span>
             <span class="dc-meta" data-i18n="drill_target_meta">Влучай у тони акорду під гурт · коуч</span>
           </button></li>
-          <li><button type="button" class="drill-card" id="start-callresp">
+          <li><button type="button" class="drill-card" id="start-callresp" data-track="callresp">
             <span class="dc-name" data-i18n="drill_callresp">Запитання-відповідь</span>
             <span class="dc-meta" data-i18n="drill_callresp_meta">Почуй фразу · повтори її на грифі · коуч</span>
           </button></li>
@@ -462,15 +462,15 @@
       <div class="practice-section">
         <div class="ps-label" data-i18n="practice_grp_ear">Слух</div>
         <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-interval">
+          <li><button type="button" class="drill-card" id="start-interval" data-track="interval">
             <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span>
             <span class="dc-meta" data-i18n="ear_intervals_meta">Почуй дві ноти · назви інтервал</span>
           </button></li>
-          <li><button type="button" class="drill-card" id="start-chordq">
+          <li><button type="button" class="drill-card" id="start-chordq" data-track="chordq">
             <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span>
             <span class="dc-meta" data-i18n="ear_chords_meta">Почуй акорд · визнач його тип</span>
           </button></li>
-          <li><button type="button" class="drill-card" id="start-rhythm">
+          <li><button type="button" class="drill-card" id="start-rhythm" data-track="rhythm">
             <span class="dc-name" data-i18n="ear_rhythm">Ритм на слух</span>
             <span class="dc-meta" data-i18n="ear_rhythm_meta">Почуй такт · обери ритмічний малюнок</span>
           </button></li>
@@ -485,18 +485,57 @@
       </div>
     </div>
 
-    <!-- Shared drill context (spine #1): ONE key picker for every practice drill. Each
-         drill used to carry its own identical copy of this row, all setting the same
-         global key. CSS shows it only while a drill is running (see #practice-home ~
-         #drill-ctx), and drillKeyChanged() tells the running drill to re-derive. -->
-    <div class="row" id="drill-ctx">
+    <!-- THE DRILL HEADER (Phase 10/B2). Was "#drill-ctx", a key picker with an Exit
+         button standing in for a header: nine drills all rendered under the same
+         <h2>Практика</h2> and none of them ever said which drill it was. It is now the
+         one header every drill wears — NAME · setup disclosure · ? · 🎤 · key · tempo ·
+         Quit — and the drill areas below hold only their own stage.
+         Everything in it is DERIVED from the registry (applyDrillCtx), so a drill still
+         registers nothing by hand: the name comes from the track that was started, the
+         key half from onKey(), the tempo half from `tempo:true`, the mic from mic().
+         CSS shows the whole strip only while a drill is running (see #practice-home ~
+         #drill-ctx); drillKeyChanged() tells the running drill to re-derive. -->
+    <div class="row drill-ctx" id="drill-ctx">
+      <!-- The TITLE BAND. It takes the full width of the strip on purpose: the key
+           picker below it is twelve buttons and wraps to two lines at phone widths, and
+           with everything in one flex flow that pushed Quit onto a line of its own with
+           nothing beside it. Name and the way out are the two things that must never
+           move; the pickers flow underneath. -->
+      <span class="drill-ctx-lead">
+      <span class="drill-name" id="drill-ctx-name"></span>
+      <!-- B3: how far into a timed session you are, when one is running -->
+      <span class="drill-sess" id="drill-ctx-sess" hidden></span>
+      <!-- The hint reveal, right beside the name it explains. Collapsing a drill's
+           instructions helps someone who knows the drill and strands a first-timer, for
+           whom that paragraph is the only instruction — so it opens by itself the first
+           time you run a given track (drillSeen) and is a `?` thereafter, the same idiom
+           as the reference panels.
+           Deliberately NOT .ph-help: that class is swept by a querySelectorAll that
+           drives the reference panels' one shared `helpOpen`, and this disclosure is
+           per-drill. Same look (see styles.css), different state. -->
+      <button type="button" class="drill-help" id="drill-ctx-help" aria-expanded="false" title="?">?</button>
+      <!-- The setup disclosure's handle. Shown only for a drill that declares a setup
+           element; it opens before the first Play and folds when the run starts, because
+           a picker you have already used is the least useful thing on screen while you
+           are playing. -->
+      <button type="button" class="btn" id="drill-ctx-setup" aria-expanded="true" hidden></button>
+      <!-- ONE mic toggle for all three scored tiers (was #sd-mic / #sp-mic / #tg-mic,
+           three copies of the same button in three drills' control rows). 13-scored.js
+           paints it for whichever drill is running; applyDrillCtx() decides whether it
+           is on screen at all, from the drill's own mic() predicate. -->
+      <button type="button" class="btn" id="drill-ctx-mic" aria-pressed="false" hidden></button>
+      <!-- Quit sits at the end of the title band (it used to open the strip). A header
+           reads left to right as "what am I doing · how is it set up"; the way out
+           belongs at the far end, and CSS pushes it there with margin-left:auto. -->
       <button type="button" class="btn" id="drill-ctx-quit" data-i18n="drill_quit">Вийти</button>
+      </span>
       <!-- The key half is only meaningful to a drill that re-derives from the key, i.e.
            one that declares onKey(). The ear + note-naming + one-minute-changes drills
-           don't, so applyDrillCtx() hides these three rather than parking a control
-           that adjusts nothing. Kept as direct .row children so the flex layout of the
-           visible case is byte-identical to before. -->
-      <div class="divider" id="drill-ctx-div" hidden></div>
+           don't, so applyDrillCtx() hides these two rather than parking a control that
+           adjusts nothing.
+           There used to be a .divider here too, separating the key picker from the Quit
+           button that opened the strip. With the title band above taking the full width
+           it always began a line, which is a stray vertical rule, not a separator. -->
       <span class="ctrl-label" id="drill-ctx-keylbl" data-i18n="dr_key" hidden>Тональність</span>
       <div class="group root-row" id="drill-ctx-key" hidden></div>
       <!-- Tempo, scoped (Phase 10/A1). FOUR drills run on the shared scheduler, and all
@@ -506,7 +545,6 @@
            nothing. One control, in the shell, shown for the drills that declare
            `tempo:true`; applyDrillCtx() derives it from the registry the same way it
            derives the key half. -->
-      <div class="divider" id="drill-ctx-tdiv" hidden></div>
       <span class="ctrl-label" id="drill-ctx-tlbl" data-i18n="tb_tempo" hidden>Темп</span>
       <div class="group tempo-group" id="drill-ctx-tempo" hidden>
         <button type="button" class="btn" id="drill-ctx-slower" aria-label="−5 BPM">&#8722;</button>
@@ -519,9 +557,10 @@
          setup → timed run → summary flow. Reuses the chord diagrams; counts taps, not
          audio (honest coach framing). Hidden until started. -->
     <div id="cm-area" hidden>
-      <div class="drill-head">
-        <span class="drill-count" data-i18n="drill_changes">Зміна акордів за хвилину</span>
-      </div>
+      <!-- No .drill-head: the drill's NAME lives in the shared header above (B2), and
+           this one used to carry it twice over. Its setup is a whole exclusive step
+           rather than a disclosure (setup → run → summary), which is the shape B2 took
+           the rest of the shell from — so it declares no shell setup element. -->
       <!-- setup: pick a chord pair + length, optional click; then Start -->
       <div id="cm-setup">
         <div class="row"><span class="ctrl-label" data-i18n="cm_pair">Пара акордів</span><div class="group" id="cm-pairs"></div></div>
@@ -531,8 +570,10 @@
           <button type="button" class="btn" id="cm-click" aria-pressed="false"></button>
         </div>
         <div class="cm-best-line" id="cm-setup-best"></div>
+        <!-- Play above the paragraph, not below it (B2): the primary verb of every drill
+             used to sit after a 3–6 line hint, which is the longest thing on the screen. -->
         <div class="drill-actions"><button class="btn play" id="cm-start-btn"></button></div>
-        <p class="drill-sub" id="cm-setup-note" data-i18n="cm_setup_note">Перемикайся між акордами якомога чистіше й натискай велику кнопку на кожній чистій зміні. Лічильник рахує твої натискання, а не звук гітари — оцінку з мікрофоном додамо згодом.</p>
+        <p class="drill-hint" id="cm-setup-note" data-i18n="cm_setup_note">Перемикайся між акордами якомога чистіше й натискай велику кнопку на кожній чистій зміні. Лічильник рахує твої натискання, а не звук гітари — оцінку з мікрофоном додамо згодом.</p>
       </div>
       <!-- active: timer, the two shapes, a big thumb-zone tally -->
       <div id="cm-active" hidden>
@@ -549,10 +590,10 @@
           <span class="cm-count-val" id="cm-count-val">0</span>
           <span class="cm-count-lab" id="cm-count-lab"></span>
         </button>
-        <div class="cm-active-foot">
-          <span class="drill-sub" id="cm-sub"></span>
+        <div class="drill-bar">
           <button type="button" class="btn" id="cm-untap"></button>
         </div>
+        <p class="drill-hint" id="cm-sub"></p>
       </div>
       <div class="drill-summary" id="cm-summary" hidden></div>
     </div>
@@ -562,32 +603,31 @@
          8th-note slot in time; swing / backbeat / palm-mute / band shape how it feels.
          Was two cards (patterns + groove) driving one 8th-note clock. Coach tier. -->
     <div id="sp-area" hidden>
-      <div class="drill-head">
-        <span class="drill-count" id="sp-chord"></span>
+      <!-- SETUP (B2): everything that shapes the run, in the disclosure the shell folds
+           away once you press Play. The mic toggle left this row for the shared header —
+           it was the third copy of one button. -->
+      <div class="drill-setup" id="sp-setup">
+        <div class="row"><span class="ctrl-label" data-i18n="sp_pattern">Малюнок</span><div class="group" id="sp-patterns"></div></div>
+        <div class="row">
+          <span class="ctrl-label" data-i18n="sp_swing">Свінг</span><div class="group" id="sp-swings"></div>
+          <div class="divider"></div>
+          <button type="button" class="btn" id="sp-accent" aria-pressed="false"></button>
+          <button type="button" class="btn" id="sp-mute" aria-pressed="false"></button>
+          <button type="button" class="btn" id="sp-band" aria-pressed="false"></button>
+        </div>
       </div>
-      <div class="row"><span class="ctrl-label" data-i18n="sp_pattern">Малюнок</span><div class="group" id="sp-patterns"></div></div>
-      <div class="row">
-        <span class="ctrl-label" data-i18n="sp_swing">Свінг</span><div class="group" id="sp-swings"></div>
-        <div class="divider"></div>
-        <button type="button" class="btn" id="sp-accent" aria-pressed="false"></button>
-        <button type="button" class="btn" id="sp-mute" aria-pressed="false"></button>
-        <button type="button" class="btn" id="sp-band" aria-pressed="false"></button>
-        <!-- Phase 8/F1: flips the coach into a scored run. It sits with the other
-             tier-shaping toggles rather than in the footer — the footer is the
-             hint + transport, and a third button there squeezes Play off the row. -->
-        <button type="button" class="btn" id="sp-mic" aria-pressed="false" hidden></button>
-      </div>
+      <p class="drill-hint" id="sp-hint"></p>
+      <!-- STAGE -->
       <div class="sp-name" id="sp-name"></div>
+      <div class="sp-chord" id="sp-chord"></div>
       <div class="sp-grid" id="sp-grid"></div>
       <!-- Filled after a scored run only (13-scored.js), plus the mic-error line. -->
       <p class="scored-status" id="sp-status" role="status" hidden></p>
       <div class="scored-panel" id="sp-score" hidden></div>
-      <div class="cm-active-foot">
-        <span class="drill-sub" id="sp-hint"></span>
-        <span class="sp-controls">
-          <button type="button" class="btn" id="sp-click" aria-pressed="false"></button>
-          <button type="button" class="btn play" id="sp-play"></button>
-        </span>
+      <!-- ACTION BAR -->
+      <div class="drill-bar">
+        <button type="button" class="btn" id="sp-click" aria-pressed="false"></button>
+        <button type="button" class="btn play" id="sp-play"></button>
       </div>
     </div>
 
@@ -598,22 +638,23 @@
          switch is what used to be two separate cards; both cards still open it, each in
          its own mode. Its own board so the reference board stays put. Hidden until started. -->
     <div id="tg-area" hidden>
-      <div class="drill-head">
-        <span class="drill-count" id="tg-hits"></span>
+      <!-- SETUP (B2). Roughly 55% of a 390×844 viewport used to be these five control
+           rows, stacked ABOVE the NOW/NEXT stage and the neck, and they stayed there
+           during the run — when they are least useful. They fold now. The mic button
+           moved to the shared header, taking with it the stray .divider that was left
+           on screen as a floating vertical rule whenever renderTarget() hid it. -->
+      <div class="drill-setup" id="tg-setup">
+        <div class="row"><span class="ctrl-label" data-i18n="oc_mode">Що граєш</span><div class="group" id="tg-mode"></div></div>
+        <div class="row"><span class="ctrl-label" data-i18n="tg_prog">Прогресія</span><div class="group" id="tg-progs"></div></div>
+        <!-- lead-only: windowing the targets to one box / one degree means nothing when
+             you're comping the chord, so the whole block hides in `chords` mode. -->
+        <div id="tg-tone-rows" hidden>
+          <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="tg-pos"></div></div>
+          <div class="row"><span class="ctrl-label" data-i18n="tg_deg">Ціль</span><div class="group" id="tg-deg"></div></div>
+        </div>
       </div>
-      <div class="row"><span class="ctrl-label" data-i18n="oc_mode">Що граєш</span><div class="group" id="tg-mode"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="tg_prog">Прогресія</span><div class="group" id="tg-progs"></div>
-        <!-- Phase 8/F1: comping only. Sits with the controls, not the footer, so it
-             can't crowd Play off the transport row. -->
-        <div class="divider"></div>
-        <button type="button" class="btn" id="tg-mic" aria-pressed="false" hidden></button>
-      </div>
-      <!-- lead-only: windowing the targets to one box / one degree means nothing when
-           you're comping the chord, so the whole block hides in `chords` mode. -->
-      <div id="tg-tone-rows" hidden>
-        <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="tg-pos"></div></div>
-        <div class="row"><span class="ctrl-label" data-i18n="tg_deg">Ціль</span><div class="group" id="tg-deg"></div></div>
-      </div>
+      <p class="drill-hint" id="tg-hint"></p>
+      <div class="drill-count" id="tg-hits"></div>
       <div class="co-stage">
         <div class="co-slot">
           <div class="co-lab" id="tg-now-lab" data-i18n="co_now">Зараз</div>
@@ -634,11 +675,8 @@
            on accuracy until F2, and renderTarget() hides these there. -->
       <p class="scored-status" id="tg-status" role="status" hidden></p>
       <div class="scored-panel" id="tg-score" hidden></div>
-      <div class="cm-active-foot">
-        <span class="drill-sub" id="tg-hint"></span>
-        <span class="sp-controls">
-          <button type="button" class="btn play" id="tg-play"></button>
-        </span>
+      <div class="drill-bar">
+        <button type="button" class="btn play" id="tg-play"></button>
       </div>
     </div>
 
@@ -647,18 +685,18 @@
          paced, scored on echo accuracy — its listen/answer structure is the play-vs-rest
          phrasing lesson. Its own board so the reference board stays put. Hidden until started. -->
     <div id="cr-area" hidden>
-      <div class="drill-head">
-        <span class="drill-count" id="cr-round"></span>
-      </div>
       <div id="cr-active">
-        <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="cr-pos"></div></div>
+        <div class="drill-setup" id="cr-setup">
+          <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="cr-pos"></div></div>
+        </div>
+        <p class="drill-hint" id="cr-hint"></p>
         <div class="cr-stage">
           <div class="cr-status" id="cr-status"></div>
+          <div class="drill-count" id="cr-round"></div>
           <div class="cr-scale" id="cr-scale"></div>
         </div>
         <div class="scroll"><div class="board"><div class="fretboard" id="cr-board"></div></div><div class="fretnums" id="cr-nums"></div></div>
-        <div class="cm-active-foot">
-          <span class="drill-sub" id="cr-hint"></span>
+        <div class="drill-bar">
           <button type="button" class="btn play" id="cr-replay"></button>
         </div>
       </div>
@@ -671,29 +709,25 @@
          (coach tier; mic-scored timing is Phase 8/F1). Its own display board. Hidden
          until started. -->
     <div id="sd-area" hidden>
-      <div class="drill-head">
-        <span class="drill-count" id="sd-title"></span>
+      <!-- Tempo used to sit in these rows as a private −/BPM/+ copy. It moved to the
+           shared header in Phase 10/A1 — one home, and now the three other tempo-driven
+           drills reach it too. The mic toggle followed it there in B2. -->
+      <div class="drill-setup" id="sd-setup">
+        <div class="row"><span class="ctrl-label" data-i18n="sd_subdiv">Поділ</span><div class="group" id="sd-subs"></div></div>
+        <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="sd-pos"></div></div>
+        <div class="row">
+          <button type="button" class="btn" id="sd-notes" aria-pressed="true"></button>
+        </div>
       </div>
-      <div class="row"><span class="ctrl-label" data-i18n="sd_subdiv">Поділ</span><div class="group" id="sd-subs"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="sd-pos"></div></div>
-      <!-- Tempo used to sit here as a private −/BPM/+ copy. It moved to the shared
-           #drill-ctx strip in Phase 10/A1 — one home, and now the three other
-           tempo-driven drills reach it too. -->
-      <div class="row">
-        <button type="button" class="btn" id="sd-notes" aria-pressed="true"></button>
-        <!-- Phase 8/F1: flips this drill from the screen-only coach tier to a scored
-             one. 13-scored.js hides it wherever onset detection can't run, so
-             the coach tier stays whole rather than showing a dead promise. -->
-        <button type="button" class="btn" id="sd-mic" aria-pressed="false" hidden></button>
-      </div>
+      <p class="drill-hint" id="sd-hint"></p>
+      <div class="drill-count" id="sd-title"></div>
       <div class="sd-grid" id="sd-grid"></div>
       <div class="scroll"><div class="board"><div class="fretboard" id="sd-board"></div></div><div class="fretnums" id="sd-nums"></div></div>
       <p class="scored-status" id="sd-status" role="status" hidden></p>
       <!-- Filled after a scored run only; an empty scoreboard would imply the app
            had been listening when it hadn't. -->
       <div class="scored-panel" id="sd-score" hidden></div>
-      <div class="cm-active-foot">
-        <span class="drill-sub" id="sd-hint"></span>
+      <div class="drill-bar">
         <button type="button" class="btn play" id="sd-play"></button>
       </div>
     </div>
@@ -701,12 +735,12 @@
     <!-- Active drill (3c): note-naming. Its own board (painted by renderBoard into
          #drill-board) so the shared reference board stays put. Hidden until started. -->
     <div id="drill-area" hidden>
-      <div class="drill-head">
-        <span class="drill-count" id="drill-count"></span>
-      </div>
       <div id="drill-active">
-        <div class="drill-prompt" id="drill-prompt"></div>
-        <div class="drill-sub" id="drill-sub" data-i18n="drill_find_sub">Познач усі такі ноти на грифі</div>
+        <p class="drill-hint" id="drill-sub" data-i18n="drill_find_sub">Познач усі такі ноти на грифі</p>
+        <div class="drill-stage-head">
+          <div class="drill-prompt" id="drill-prompt"></div>
+          <span class="drill-count" id="drill-count"></span>
+        </div>
         <div class="scroll"><div class="board"><div class="fretboard" id="drill-board"></div></div><div class="fretnums" id="drill-nums"></div></div>
       </div>
       <div class="drill-summary" id="drill-summary" hidden></div>
@@ -717,12 +751,13 @@
          until started; swapped for #ear-summary at the end. Quit comes from the
          shared #drill-ctx strip like every other drill's. -->
     <div id="ear-area" hidden>
-      <div class="drill-head">
-        <span class="drill-count" id="ear-count"></span>
-      </div>
       <div id="ear-active">
-        <div class="ear-prompt" id="ear-prompt"></div>
-        <div class="ear-controls"><button type="button" class="btn play" id="ear-replay"></button></div>
+        <p class="drill-hint" id="ear-hint"></p>
+        <div class="drill-stage-head">
+          <div class="ear-prompt" id="ear-prompt"></div>
+          <span class="drill-count" id="ear-count"></span>
+        </div>
+        <div class="drill-bar"><button type="button" class="btn play" id="ear-replay"></button></div>
         <div class="ear-choices" id="ear-choices"></div>
         <div class="ear-feedback" id="ear-feedback"></div>
         <div class="ear-next-row"><button type="button" class="btn play" id="ear-next" hidden></button></div>
