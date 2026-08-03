@@ -293,6 +293,9 @@
         <div id="ch-quals"></div>
       </div>
       <div class="info" id="ch-info"></div>
+      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
+           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
+      <div class="row"><button class="btn seam-btn" data-seam="chords" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
 
     <div id="sub-triads" hidden>
@@ -302,6 +305,9 @@
       <div class="info" id="tr-info"></div>
       <div class="cd-head"><span class="cd-h" data-i18n="tr_shapes">Форми тризвуку</span></div>
       <div class="chorddia" id="tr-diagram"></div>
+      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
+           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
+      <div class="row"><button class="btn seam-btn" data-seam="triads" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
 
     <div id="sub-arp" hidden>
@@ -314,6 +320,9 @@
       </div>
       <div class="row"><span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="arp-pos"></div></div>
       <div class="info" id="arp-info"></div>
+      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
+           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
+      <div class="row"><button class="btn seam-btn" data-seam="arp" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
 
     <div id="sub-identify" hidden>
@@ -324,6 +333,9 @@
         <button class="btn" id="id-clear" data-i18n="b_clear">Зняти</button>
       </div>
       <div class="info" id="id-result"></div>
+      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
+           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
+      <div class="row"><button class="btn seam-btn" data-seam="identify" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
   </section>
 
@@ -341,6 +353,9 @@
       </div>
       <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="sc-diatonic"></div></div>
       <div class="info" id="sc-info"></div>
+      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
+           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
+      <div class="row"><button class="btn seam-btn" data-seam="scale" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
 
     <!-- Notes is a reference view (#4): the highlighted note follows the shared Root
@@ -354,7 +369,7 @@
       </div>
       <!-- seam (spine #2): jump straight from this reference view into the note-naming
            drill on the same neck (switches to Practice mode + starts the session). -->
-      <div class="row"><button class="btn seam-btn" id="nt-drill" data-i18n="seam_drill_notes">Тренувати на грифі →</button></div>
+      <div class="row"><button class="btn seam-btn" data-seam="notes" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
   </section>
 
@@ -370,6 +385,7 @@
         <div class="row" style="margin-top:14px">
           <button class="btn" id="cof-open"></button>
           <button class="btn" id="cof-harmony"></button>
+          <button class="btn seam-btn" data-seam="circle" data-i18n="seam_drill">Тренувати це →</button>
         </div>
         <div class="legend" style="margin-top:18px">
           <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_tonic">Тоніка</span></div>
@@ -393,12 +409,30 @@
     <!-- Practice home: the drill picker + the progress readout. Swapped out for the
          active drill (#drill-area) while a session runs. -->
     <div id="practice-home">
-      <!-- The drill picker (left) and the progress card (right) are two columns on a
-           desktop viewport (Phase 10/A3) — hence the wrapper: it is what the progress
-           card sits BESIDE. Ten cards in one stretched column pushed "what should I
-           practise next?" ~1700px down the page, which is the one question the home
-           screen exists to answer. Below 940px the wrapper is inert and the card falls
-           back under the lists, in source order. -->
+      <!-- INVERTED (Phase 10/B4). A3 had already pulled the progress card out of the
+           bottom of a 1700px column and set it BESIDE the lists; B4 finishes the move
+           and puts it, and the session starter, ON TOP — because "what should I do now?"
+           is the question this screen exists to answer and the ten cards are the answer
+           to a different one ("show me everything"). The two ride a two-column block on
+           a desktop viewport and stack in source order below 940px. -->
+      <div id="ph-top-block">
+        <!-- B3: the timed session. The one thing here that decides FOR you. -->
+        <div class="practice-session-card">
+          <div class="pp-title" data-i18n="sess_title">Заняття</div>
+          <p class="ps-lead" data-i18n="sess_lead">Скажи, скільки маєш часу — застосунок збере вправи, які варто повторити, відлічить час і підсумує.</p>
+          <div class="row"><span class="ctrl-label" data-i18n="sess_len">Тривалість</span><div class="group" id="sess-mins"></div></div>
+          <div class="drill-bar"><button type="button" class="btn play" id="sess-start">Почати заняття</button></div>
+        </div>
+        <!-- Progress readout (3b, rewritten in B4): what's next, then a row per drill you
+             have run — latest, direction of travel, best, timing — then the aggregates. -->
+        <div class="practice-progress-card">
+          <div class="pp-title" data-i18n="prog_title">Прогрес</div>
+          <div id="practice-progress"></div>
+        </div>
+      </div>
+      <!-- The closing screen of a session (B3). Exclusive: applySessionViews() hides the
+           two blocks above and the picker below while it is up. -->
+      <div class="session-report" id="session-report" hidden></div>
       <div class="ph-drills">
       <p class="practice-soon" data-i18n="practice_intro">Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.</p>
       <!-- Drills grouped by pillar (Phase 5 adds the Rhythm group): Fretboard
@@ -407,7 +441,7 @@
         <div class="ps-label" data-i18n="practice_grp_fretboard">Гриф</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-notes" data-track="note">
-            <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span>
+            <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_notes_meta">Грифознавство · рахунок за точністю</span>
           </button></li>
         </ul>
@@ -417,7 +451,7 @@
         <div class="ps-label" data-i18n="practice_grp_timing">Тайминг</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-timing" data-track="timing">
-            <span class="dc-name" data-i18n="drill_timing">Поділ і тайминг</span>
+            <span class="dc-name" data-i18n="drill_timing">Поділ і тайминг</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_timing_meta">Вісімки · тріолі · шістнадцятки · коуч</span>
           </button></li>
         </ul>
@@ -426,17 +460,17 @@
         <div class="ps-label" data-i18n="practice_grp_rhythm">Ритм</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-changes" data-track="changes">
-            <span class="dc-name" data-i18n="drill_changes">Зміна акордів за хвилину</span>
+            <span class="dc-name" data-i18n="drill_changes">Зміна акордів за хвилину</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_changes_meta">Чисті зміни за хвилину · коуч (без оцінки)</span>
           </button></li>
           <li><button type="button" class="drill-card" id="start-strum" data-track="strum">
-            <span class="dc-name" data-i18n="drill_strum">Бій і відчуття</span>
+            <span class="dc-name" data-i18n="drill_strum">Бій і відчуття</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_strum_meta">Малюнки · свінг · акценти · глушіння · коуч</span>
           </button></li>
           <!-- opens the shared "over the changes" drill in comping mode; the Lead card
                below opens the same drill on chord tones. -->
           <li><button type="button" class="drill-card" id="start-comp" data-track="comp">
-            <span class="dc-name" data-i18n="drill_comp">Акомпанемент прогресії</span>
+            <span class="dc-name" data-i18n="drill_comp">Акомпанемент прогресії</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_comp_meta">Потрібний акорд вчасно · коуч</span>
           </button></li>
         </ul>
@@ -446,11 +480,11 @@
         <div class="ps-label" data-i18n="practice_grp_lead">Соло</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-target" data-track="target">
-            <span class="dc-name" data-i18n="drill_target">Тони акорду в прогресії</span>
+            <span class="dc-name" data-i18n="drill_target">Тони акорду в прогресії</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_target_meta">Влучай у тони акорду під гурт · коуч</span>
           </button></li>
           <li><button type="button" class="drill-card" id="start-callresp" data-track="callresp">
-            <span class="dc-name" data-i18n="drill_callresp">Запитання-відповідь</span>
+            <span class="dc-name" data-i18n="drill_callresp">Запитання-відповідь</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_callresp_meta">Почуй фразу · повтори її на грифі · коуч</span>
           </button></li>
         </ul>
@@ -463,25 +497,19 @@
         <div class="ps-label" data-i18n="practice_grp_ear">Слух</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-interval" data-track="interval">
-            <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span>
+            <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="ear_intervals_meta">Почуй дві ноти · назви інтервал</span>
           </button></li>
           <li><button type="button" class="drill-card" id="start-chordq" data-track="chordq">
-            <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span>
+            <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="ear_chords_meta">Почуй акорд · визнач його тип</span>
           </button></li>
           <li><button type="button" class="drill-card" id="start-rhythm" data-track="rhythm">
-            <span class="dc-name" data-i18n="ear_rhythm">Ритм на слух</span>
+            <span class="dc-name" data-i18n="ear_rhythm">Ритм на слух</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="ear_rhythm_meta">Почуй такт · обери ритмічний малюнок</span>
           </button></li>
         </ul>
       </div>
-      </div>
-      <!-- Progress readout (3b): the learner model's aggregate stats; renderPractice()
-           fills #practice-progress, empty until the drill writes the first attempt. -->
-      <div class="practice-progress-card">
-        <div class="pp-title" data-i18n="prog_title">Прогрес</div>
-        <div id="practice-progress"></div>
       </div>
     </div>
 
@@ -503,8 +531,12 @@
            move; the pickers flow underneath. -->
       <span class="drill-ctx-lead">
       <span class="drill-name" id="drill-ctx-name"></span>
-      <!-- B3: how far into a timed session you are, when one is running -->
+      <!-- B3: how far into a timed session you are, and the way past a block you have
+           had enough of. Both are hidden unless a session is actually running — the
+           session module paints them (sessionPaint), for the same reason 13-scored.js
+           still paints the mic's label: only the running session knows there is one. -->
       <span class="drill-sess" id="drill-ctx-sess" hidden></span>
+      <button type="button" class="btn" id="drill-ctx-skip" hidden></button>
       <!-- The hint reveal, right beside the name it explains. Collapsing a drill's
            instructions helps someone who knows the drill and strands a first-timer, for
            whom that paragraph is the only instruction — so it opens by itself the first
@@ -796,6 +828,13 @@
     <div class="aside-head"><span id="suggest-title" data-i18n="suggest_title">Що грати над цим</span><button class="aside-toggle" id="aside-toggle">−</button></div>
     <div id="aside-body">
       <div id="suggest-body"></div>
+      <!-- "Jam over this" (Phase 10/B3) — the other seam. Playing along to the harmony
+           on screen took five steps (pick a key, pick a chord or progression, open
+           Backing, enable bass and drums, hit Loop); the backing band is one of the best
+           things the app does and it had no front door. It belongs HERE, beside the
+           suggester captioned "What to play over this", which already knows the answer.
+           Wired in 15-wiring-init.js; it is a toggle, so it is also how you stop. -->
+      <div class="row"><button class="btn play seam-btn" id="seam-jam"></button></div>
     </div>
   </div>
 </aside>

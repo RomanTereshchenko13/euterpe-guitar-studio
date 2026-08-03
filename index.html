@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 2.14.0  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 2.15.0  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="2.14.0">
+<meta name="version" content="2.15.0">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -187,14 +187,16 @@
   .practice-list { list-style: none; margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
   .practice-list li { display: flex; }
 
-  .practice-progress-card { margin-top: 28px; padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); max-width: 620px; }
+  .practice-progress-card, .practice-session-card { padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); }
+  .ps-lead { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
 
+  #ph-top-block { display: grid; gap: 14px; margin-bottom: 8px; }
+  #ph-top-block[hidden], .ph-drills[hidden] { display: none; }
   @media (min-width: 941px) {
-    #practice-home { display: grid; grid-template-columns: minmax(0,1fr) 320px; column-gap: 30px; align-items: start; }
+    #ph-top-block { grid-template-columns: 340px minmax(0,1fr); align-items: start; }
 
     #practice-home[hidden] { display: none; }
     .ph-drills { min-width: 0; }
-    #practice-home > .practice-progress-card { margin-top: 0; max-width: none; position: sticky; top: 14px; }
   }
   .pp-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; margin-bottom: 14px; }
   .pp-empty { color: var(--text-dim); font-size: 14px; }
@@ -202,16 +204,38 @@
   .pp-stat { flex: 1 1 110px; min-width: 92px; padding: 12px 14px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius); }
   .pp-val { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: var(--text); }
   .pp-lab { font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
+  .pp-stats { margin-top: 16px; }
 
-  .pp-review { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .pp-review { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 14px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
   .pp-review-n { font-size: 13.5px; color: var(--text-dim); }
   .pp-review-btn { margin-left: auto; }
+
+  .pp-sec { font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin: 14px 0 6px; }
+  .pp-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 10px; width: 100%; text-align: left; padding: 8px 10px; background: none; border: 1px solid transparent; border-radius: var(--radius); color: var(--text); font-family: inherit; cursor: pointer; }
+  .pp-row:hover { border-color: var(--border-strong); background: var(--bg-panel-2); }
+  .pp-row-name { font-size: 13.5px; font-weight: 500; min-width: 0; }
+  .pp-row-val { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; white-space: nowrap; }
+  .pp-row-sub { grid-column: 1 / -1; font-size: 11.5px; color: var(--text-dim); }
+  .pp-dir.up { color: var(--root); }
+  .pp-dir.down { color: var(--ext); }
+  .pp-dir.flat { color: var(--text-dim); }
+
+  .session-report { padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); max-width: 620px; }
+  .sr-lead { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; color: var(--text-dim); margin-bottom: 12px; }
+  .sr-row { display: flex; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border); }
+  .sr-name { flex: 1 1 auto; font-size: 14px; }
+  .sr-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); }
 
 
   .drill-card { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; padding: 15px 18px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); color: var(--text); cursor: pointer; font-family: inherit; transition: border-color 0.15s, background 0.15s; }
   .drill-card:hover { border-color: var(--accent); background: var(--bg-panel-2); }
   .dc-name { font-size: 16px; font-weight: 600; }
   .dc-meta { font-size: 12.5px; color: var(--text-dim); }
+
+  .dc-badge { align-self: flex-start; margin-top: 2px; padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.03em; border: 1px solid var(--border-strong); color: var(--text-dim); }
+  .dc-badge.b-mic { border-color: var(--accent); color: var(--accent); }
+  .dc-badge.b-acc { border-color: var(--border-strong); color: var(--text); }
+  .dc-badge:empty { display: none; }
   .seam-btn { border-color: var(--accent); color: var(--accent); }
 
 
@@ -623,6 +647,12 @@
         "boardmeta boardmeta";
       column-gap: 16px;
       padding-top: 12px;
+    }
+
+    body.mode-practice .layout:has(#board-region:not([hidden])) {
+      grid-template-columns: minmax(0,1fr);
+      grid-template-areas: "main";
+      column-gap: 0;
     }
 
     .layout:has(#board-region:not([hidden])) #board-region {
@@ -1134,6 +1164,9 @@
         <div id="ch-quals"></div>
       </div>
       <div class="info" id="ch-info"></div>
+      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
+           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
+      <div class="row"><button class="btn seam-btn" data-seam="chords" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
 
     <div id="sub-triads" hidden>
@@ -1143,6 +1176,9 @@
       <div class="info" id="tr-info"></div>
       <div class="cd-head"><span class="cd-h" data-i18n="tr_shapes">Форми тризвуку</span></div>
       <div class="chorddia" id="tr-diagram"></div>
+      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
+           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
+      <div class="row"><button class="btn seam-btn" data-seam="triads" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
 
     <div id="sub-arp" hidden>
@@ -1155,6 +1191,9 @@
       </div>
       <div class="row"><span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="arp-pos"></div></div>
       <div class="info" id="arp-info"></div>
+      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
+           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
+      <div class="row"><button class="btn seam-btn" data-seam="arp" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
 
     <div id="sub-identify" hidden>
@@ -1165,6 +1204,9 @@
         <button class="btn" id="id-clear" data-i18n="b_clear">Зняти</button>
       </div>
       <div class="info" id="id-result"></div>
+      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
+           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
+      <div class="row"><button class="btn seam-btn" data-seam="identify" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
   </section>
 
@@ -1182,6 +1224,9 @@
       </div>
       <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="sc-diatonic"></div></div>
       <div class="info" id="sc-info"></div>
+      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
+           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
+      <div class="row"><button class="btn seam-btn" data-seam="scale" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
 
     <!-- Notes is a reference view (#4): the highlighted note follows the shared Root
@@ -1195,7 +1240,7 @@
       </div>
       <!-- seam (spine #2): jump straight from this reference view into the note-naming
            drill on the same neck (switches to Practice mode + starts the session). -->
-      <div class="row"><button class="btn seam-btn" id="nt-drill" data-i18n="seam_drill_notes">Тренувати на грифі →</button></div>
+      <div class="row"><button class="btn seam-btn" data-seam="notes" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
   </section>
 
@@ -1211,6 +1256,7 @@
         <div class="row" style="margin-top:14px">
           <button class="btn" id="cof-open"></button>
           <button class="btn" id="cof-harmony"></button>
+          <button class="btn seam-btn" data-seam="circle" data-i18n="seam_drill">Тренувати це →</button>
         </div>
         <div class="legend" style="margin-top:18px">
           <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_tonic">Тоніка</span></div>
@@ -1234,12 +1280,30 @@
     <!-- Practice home: the drill picker + the progress readout. Swapped out for the
          active drill (#drill-area) while a session runs. -->
     <div id="practice-home">
-      <!-- The drill picker (left) and the progress card (right) are two columns on a
-           desktop viewport (Phase 10/A3) — hence the wrapper: it is what the progress
-           card sits BESIDE. Ten cards in one stretched column pushed "what should I
-           practise next?" ~1700px down the page, which is the one question the home
-           screen exists to answer. Below 940px the wrapper is inert and the card falls
-           back under the lists, in source order. -->
+      <!-- INVERTED (Phase 10/B4). A3 had already pulled the progress card out of the
+           bottom of a 1700px column and set it BESIDE the lists; B4 finishes the move
+           and puts it, and the session starter, ON TOP — because "what should I do now?"
+           is the question this screen exists to answer and the ten cards are the answer
+           to a different one ("show me everything"). The two ride a two-column block on
+           a desktop viewport and stack in source order below 940px. -->
+      <div id="ph-top-block">
+        <!-- B3: the timed session. The one thing here that decides FOR you. -->
+        <div class="practice-session-card">
+          <div class="pp-title" data-i18n="sess_title">Заняття</div>
+          <p class="ps-lead" data-i18n="sess_lead">Скажи, скільки маєш часу — застосунок збере вправи, які варто повторити, відлічить час і підсумує.</p>
+          <div class="row"><span class="ctrl-label" data-i18n="sess_len">Тривалість</span><div class="group" id="sess-mins"></div></div>
+          <div class="drill-bar"><button type="button" class="btn play" id="sess-start">Почати заняття</button></div>
+        </div>
+        <!-- Progress readout (3b, rewritten in B4): what's next, then a row per drill you
+             have run — latest, direction of travel, best, timing — then the aggregates. -->
+        <div class="practice-progress-card">
+          <div class="pp-title" data-i18n="prog_title">Прогрес</div>
+          <div id="practice-progress"></div>
+        </div>
+      </div>
+      <!-- The closing screen of a session (B3). Exclusive: applySessionViews() hides the
+           two blocks above and the picker below while it is up. -->
+      <div class="session-report" id="session-report" hidden></div>
       <div class="ph-drills">
       <p class="practice-soon" data-i18n="practice_intro">Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.</p>
       <!-- Drills grouped by pillar (Phase 5 adds the Rhythm group): Fretboard
@@ -1248,7 +1312,7 @@
         <div class="ps-label" data-i18n="practice_grp_fretboard">Гриф</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-notes" data-track="note">
-            <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span>
+            <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_notes_meta">Грифознавство · рахунок за точністю</span>
           </button></li>
         </ul>
@@ -1258,7 +1322,7 @@
         <div class="ps-label" data-i18n="practice_grp_timing">Тайминг</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-timing" data-track="timing">
-            <span class="dc-name" data-i18n="drill_timing">Поділ і тайминг</span>
+            <span class="dc-name" data-i18n="drill_timing">Поділ і тайминг</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_timing_meta">Вісімки · тріолі · шістнадцятки · коуч</span>
           </button></li>
         </ul>
@@ -1267,17 +1331,17 @@
         <div class="ps-label" data-i18n="practice_grp_rhythm">Ритм</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-changes" data-track="changes">
-            <span class="dc-name" data-i18n="drill_changes">Зміна акордів за хвилину</span>
+            <span class="dc-name" data-i18n="drill_changes">Зміна акордів за хвилину</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_changes_meta">Чисті зміни за хвилину · коуч (без оцінки)</span>
           </button></li>
           <li><button type="button" class="drill-card" id="start-strum" data-track="strum">
-            <span class="dc-name" data-i18n="drill_strum">Бій і відчуття</span>
+            <span class="dc-name" data-i18n="drill_strum">Бій і відчуття</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_strum_meta">Малюнки · свінг · акценти · глушіння · коуч</span>
           </button></li>
           <!-- opens the shared "over the changes" drill in comping mode; the Lead card
                below opens the same drill on chord tones. -->
           <li><button type="button" class="drill-card" id="start-comp" data-track="comp">
-            <span class="dc-name" data-i18n="drill_comp">Акомпанемент прогресії</span>
+            <span class="dc-name" data-i18n="drill_comp">Акомпанемент прогресії</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_comp_meta">Потрібний акорд вчасно · коуч</span>
           </button></li>
         </ul>
@@ -1287,11 +1351,11 @@
         <div class="ps-label" data-i18n="practice_grp_lead">Соло</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-target" data-track="target">
-            <span class="dc-name" data-i18n="drill_target">Тони акорду в прогресії</span>
+            <span class="dc-name" data-i18n="drill_target">Тони акорду в прогресії</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_target_meta">Влучай у тони акорду під гурт · коуч</span>
           </button></li>
           <li><button type="button" class="drill-card" id="start-callresp" data-track="callresp">
-            <span class="dc-name" data-i18n="drill_callresp">Запитання-відповідь</span>
+            <span class="dc-name" data-i18n="drill_callresp">Запитання-відповідь</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_callresp_meta">Почуй фразу · повтори її на грифі · коуч</span>
           </button></li>
         </ul>
@@ -1304,25 +1368,19 @@
         <div class="ps-label" data-i18n="practice_grp_ear">Слух</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-interval" data-track="interval">
-            <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span>
+            <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="ear_intervals_meta">Почуй дві ноти · назви інтервал</span>
           </button></li>
           <li><button type="button" class="drill-card" id="start-chordq" data-track="chordq">
-            <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span>
+            <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="ear_chords_meta">Почуй акорд · визнач його тип</span>
           </button></li>
           <li><button type="button" class="drill-card" id="start-rhythm" data-track="rhythm">
-            <span class="dc-name" data-i18n="ear_rhythm">Ритм на слух</span>
+            <span class="dc-name" data-i18n="ear_rhythm">Ритм на слух</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="ear_rhythm_meta">Почуй такт · обери ритмічний малюнок</span>
           </button></li>
         </ul>
       </div>
-      </div>
-      <!-- Progress readout (3b): the learner model's aggregate stats; renderPractice()
-           fills #practice-progress, empty until the drill writes the first attempt. -->
-      <div class="practice-progress-card">
-        <div class="pp-title" data-i18n="prog_title">Прогрес</div>
-        <div id="practice-progress"></div>
       </div>
     </div>
 
@@ -1344,8 +1402,12 @@
            move; the pickers flow underneath. -->
       <span class="drill-ctx-lead">
       <span class="drill-name" id="drill-ctx-name"></span>
-      <!-- B3: how far into a timed session you are, when one is running -->
+      <!-- B3: how far into a timed session you are, and the way past a block you have
+           had enough of. Both are hidden unless a session is actually running — the
+           session module paints them (sessionPaint), for the same reason 13-scored.js
+           still paints the mic's label: only the running session knows there is one. -->
       <span class="drill-sess" id="drill-ctx-sess" hidden></span>
+      <button type="button" class="btn" id="drill-ctx-skip" hidden></button>
       <!-- The hint reveal, right beside the name it explains. Collapsing a drill's
            instructions helps someone who knows the drill and strands a first-timer, for
            whom that paragraph is the only instruction — so it opens by itself the first
@@ -1637,6 +1699,13 @@
     <div class="aside-head"><span id="suggest-title" data-i18n="suggest_title">Що грати над цим</span><button class="aside-toggle" id="aside-toggle">−</button></div>
     <div id="aside-body">
       <div id="suggest-body"></div>
+      <!-- "Jam over this" (Phase 10/B3) — the other seam. Playing along to the harmony
+           on screen took five steps (pick a key, pick a chord or progression, open
+           Backing, enable bass and drums, hit Loop); the backing band is one of the best
+           things the app does and it had no front door. It belongs HERE, beside the
+           suggester captioned "What to play over this", which already knows the answer.
+           Wired in 15-wiring-init.js; it is a toggle, so it is also how you stop. -->
+      <div class="row"><button class="btn play seam-btn" id="seam-jam"></button></div>
     </div>
   </div>
 </aside>
@@ -2361,8 +2430,8 @@ return PitchDetector;
 })();
 
 
-const APP_VERSION = '2.14.0';
-const CHANGELOG = [{"v":"2.14.0","date":"2026-08-02","en":["Mic scoring reaches the Rhythm drills. Strumming & feel now grades the pattern you play — every strum is timed against the pattern's own slots, swing included, so a correctly swung player is not marked late. Over the changes grades the thing comping is actually about: landing each chord change in time. What you strum between the changes is your own rhythm and is left alone.","Fixed something important about the scored tier: on speakers the microphone also hears the app, and because the click was scheduled on the grid it lands there perfectly — so a run where you never touched the guitar could come back \"Tight, 32/32\". Euterpe now recognises a reading that is too machine-even to be human and says so instead of printing a flattering score. Headphones are the clean fix, and every scored drill now says so.","In the scored Rhythm drills the guide guitar goes quiet — it was landing on exactly the beats being measured, so the app would have been scoring itself. That is also the better lesson: mic off and you hear the pattern played for you, mic on and you play it. The click and band stay, so you always have something to lock to.","One scoring engine now serves all three scored drills, so a fix to any of them is a fix to all of them."],"uk":["Оцінка з мікрофоном дійшла до ритм-вправ. «Бій і відчуття» тепер оцінює малюнок, який ти граєш: кожен удар звіряється з власними слотами малюнка — зі свінгом включно, тож зіграний зі свінгом не рахується як запізнення. «Крізь зміни» оцінює те, про що акомпанемент і є насправді: чи вчасно ти заходиш на кожну зміну акорду. Те, що ти граєш між змінами, — твій ритм, і його не чіпають.","Виправлено важливе в рівні з оцінкою: з колонок мікрофон чує й сам застосунок, а що клацання заплановане рівно по сітці, воно лягає ідеально — тож прогон, у якому ти й не торкався гітари, міг повернутися як «Чітко, 32/32». Тепер Euterpe розпізнає надто машинно-рівний результат і чесно про це каже замість того, щоб намалювати приємну оцінку. Навушники — чисте вирішення, і кожна вправа з оцінкою тепер про це нагадує.","У ритм-вправах з оцінкою гітара-підказка стихає — вона лягала рівно на ті долі, що вимірюються, тож застосунок оцінював би сам себе. Так і корисніше: мікрофон вимкнений — малюнок грають тобі, увімкнений — граєш ти. Клацання й гурт лишаються, щоб завжди було за що зачепитися.","Один рушій оцінювання тепер обслуговує всі три вправи з оцінкою, тож виправлення в одній — виправлення в усіх."]},{"v":"2.13.0","date":"2026-08-02","en":["Euterpe can now hear you play. Turn the microphone on in Subdivision & timing and the drill stops being a metronome you follow and becomes one that grades you: every note you pick is timed against the grid, and at the end you get your average error in milliseconds, how tight your spread is, and how many grid slots you actually hit.","It also tells you *which way* you are off — rushing or dragging — but only when the lean is real. If your notes are scattered rather than consistently early or late, it says so instead of inventing a tendency out of noise. A drill that flatters you is not a coach.","New in Settings ▸ Instrument: Audio latency. Your device takes time to get sound out of the speaker and back in through the mic, and without measuring it every player on earth would be told they drag. Press Measure, keep the guitar quiet for a few seconds and let it click — it plays a click, listens for it, and takes the middle of several readings so one stray noise can not skew it. On headphones there is nothing for the mic to hear, so it says so plainly and leaves you the manual slider.","The timing you are scored on is measured on the audio thread, not the animation frame, so the number is the note you played rather than how busy the browser was. Without the mic the drill works exactly as before — the coach tier is unchanged, the scored tier is opt-in.","As with the tuner, your audio never leaves the browser: the microphone runs only while you are in a scored run or measuring latency, and nothing is recorded or sent anywhere."],"uk":["Euterpe тепер чує, як ти граєш. Увімкни мікрофон у вправі «Поділ і тайминг» — і вона перестає бути метрономом, за яким ти йдеш, і стає таким, що тебе оцінює: кожна зіграна нота звіряється з сіткою, а наприкінці ти бачиш середню похибку в мілісекундах, наскільки щільний розкид і скільки клітинок сітки ти справді влучив.","Вправа також каже, *у який бік* ти відхиляєшся — поспішаєш чи запізнюєшся, — але лише коли нахил справжній. Якщо ноти просто розкидані, а не стабільно раніше чи пізніше, вона так і скаже, замість вигадувати тенденцію з шуму. Вправа, що тобі лестить, — не коуч.","Нове в «Налаштуваннях ▸ Інструмент»: затримка звуку. Пристрою потрібен час, щоб випустити звук з динаміка й повернути його через мікрофон, і без цього виміру будь-якому гітаристу світу казали б, що він запізнюється. Натисни «Виміряти», кілька секунд не чіпай гітару й дай йому поклацати — він грає клац, слухає його й бере середину з кількох замірів, щоб випадковий шум не зіпсував результат. У навушниках мікрофону нічого чути, тож він чесно про це скаже й лишить ручний повзунок.","Тайминг, за яким тебе оцінюють, міряється на аудіопотоці, а не на кадрі анімації, тож число описує зіграну ноту, а не завантаженість браузера. Без мікрофона вправа працює точно як раніше — коуч-рівень не змінився, рівень з оцінкою вмикається за бажанням.","Як і в тюнері, звук нікуди не йде з браузера: мікрофон працює лише під час прогону з оцінкою чи виміру затримки, і нічого не записується й нікуди не надсилається."]},{"v":"2.12.0","date":"2026-08-01","en":["New: a microphone tuner. Play any note on the guitar and see which note it is and how far off you are, on a needle that reads up to 50 cents sharp or flat — plus the nearest open string of whatever tuning you are in, so Drop D and the rest re-label themselves. It is chromatic, so you can also check your intonation at the 12th fret, not just tune the open strings. Open it with the Mic button next to the Tuner in Settings.","The existing reference-tone tuner stays exactly as it was — that one plays a pitch for you to tune against by ear, the new one listens to you. Use whichever suits the room you are in; the mic tuner needs a microphone and a secure (https) connection, and quietly hides itself when it cannot work, so nothing on screen ever pretends to do something it can't.","Your audio never leaves the browser: the microphone is only on while the tuner panel is open, is released the moment you close it or switch tabs, and nothing is sent anywhere or recorded."],"uk":["Нове: тюнер із мікрофоном. Зіграй будь-яку ноту на гітарі — і побачиш, що це за нота й наскільки ти відхилився, на шкалі до 50 центів вгору чи вниз, а ще найближчу відкриту струну твого поточного строю, тож Drop D та інші перепозначаються самі. Тюнер хроматичний, тож ним можна перевірити й інтонацію на 12-му ладі, а не лише налаштувати відкриті струни. Відкривається кнопкою «Мікрофон» поруч із «Тюнером» у «Налаштуваннях».","Старий тюнер з еталонним тоном лишився без змін — той грає висоту, щоб ти підстроївся на слух, а новий слухає тебе. Обирай, що зручніше в конкретній кімнаті; тюнер із мікрофоном потребує мікрофона й захищеного зʼєднання (https) і тихо ховається, коли працювати не може, — щоб на екрані не було кнопок, які нічого не роблять.","Звук нікуди не йде з браузера: мікрофон увімкнений лише поки відкрита панель тюнера, вимикається щойно ти її закриваєш або перемикаєш вкладку, і нічого не надсилається й не записується."]},{"v":"2.11.0","date":"2026-08-01","en":["New Foundations drill — Subdivision & timing: a smart visual metronome for locking in your time. Pick a subdivision (quarter notes → eighths → triplets → sixteenths) and a tempo; an accented click and a grid tick out the bar (a strong beat 1, softer subdivisions), and the current key's scale is walked note-by-note across the grid in one neck box so you always have something to play. Change key, box or tempo without leaving Practice. A coach that serves both the Rhythm and Lead pillars — mic-scored timing arrives with microphone input later.","Time signatures: a new Meter picker in Settings (2/4, 3/4, 4/4, 6/8, 12/8). The metronome accent, the backing groove (kick/snare pattern), the bass, the single-chord loop and the whole progression / comping / targeting bar length all follow the meter — so you can jam a waltz in 3/4 or a 6/8 feel, not just 4/4.","Fixed: with the Subdivision & timing drill open, tapping \"Practice\" again drew the drill list on top of the still-running drill. Switching modes now handles every drill the same way.","Leaner app: the release-notes archive no longer ships with the page — only the newest releases are in-app, and the full history lives in CHANGELOG.md — and the timing-calibration control (which nothing used yet) is gone. The download is about 15% smaller.","Settings now starts closed and reads as three groups — Instrument, Neck & meter, App — instead of eleven controls in one flat row. The colour-blind palette and note-shape toggles moved in with the app settings, where set-once preferences belong.","Strumming patterns and Groove & feel are now one drill, Strumming & feel: pick a pattern AND how it feels — swing, backbeat accent, palm-muting, and an optional drums+bass band. Combinations neither drill could reach before (a swung folk pattern, a palm-muted strum over the band) now just work.","Comp the progression and Chord tones over changes are now one drill with a You-play switch: Chords (comp it, with shapes in Now/Next) or Chord tones (aim at the tones on the neck, with Position and Target). Both practice cards still open it, each in the mode it teaches, and your recorded progress for either is unchanged.","Every drill now shares one Key picker and one Exit button at the top of Practice instead of carrying its own copy. The Key picker also only appears for drills that actually use it — ear training and note naming no longer show you a control that changes nothing.","Ear training is no longer a separate mode: its three drills moved into Practice as an Ear group, alongside Fretboard, Timing, Rhythm and Lead. One drill list, one progress card, one Exit — it was always the same learner model behind both screens. Everything you had recorded still counts, and an old link or saved session that opened Ear now opens Practice.","Much smaller download: the page no longer ships the developer comments written for whoever edits the source. Together with the earlier trims the page is about 36% smaller than last release, and roughly a third smaller over the wire."],"uk":["Нова вправа-основа — «Поділ і тайминг»: розумний візуальний метроном, щоб тримати час. Обери поділ (чвертки → вісімки → тріолі → шістнадцятки) і темп; акцентоване клацання й сітка відбивають такт (сильний «раз», тихіші поділи), а гама поточної тональності «прокрокує» по сітці нота за нотою в одній позиції на грифі — тож завжди є що грати. Змінюй тональність, позицію чи темп, не виходячи з «Практики». Коуч, що працює і на ритм-, і на соло-пілон — оцінку тайминга з мікрофоном додамо згодом.","Розміри такту: у «Налаштуваннях» зʼявився вибір розміру (2/4, 3/4, 4/4, 6/8, 12/8). Акцент метронома, грув супроводу (малюнок бочки/малого), бас, луп одного акорду й довжина такту всієї прогресії / акомпанементу / прицілювання — усе слідує за розміром, тож можна зіграти вальс у 3/4 чи відчуття 6/8, а не лише 4/4.","Виправлено: якщо була відкрита вправа «Поділ і тайминг», повторне натискання «Практики» малювало список вправ поверх тієї, що ще працювала. Тепер перемикання режимів однаково опрацьовує всі вправи.","Легший застосунок: архів нотаток до випусків більше не вантажиться зі сторінкою — у застосунку лишились найновіші випуски, а повна історія в CHANGELOG.md — і зник регулятор зсуву часу, який ще нічим не використовувався. Завантаження приблизно на 15% менше.","«Налаштування» тепер стартують згорнутими й читаються як три групи — Інструмент, Гриф і розмір, Застосунок — замість одинадцяти контролів в один ряд. Палітра для дальтоніків і форми на нотах переїхали до налаштувань застосунку, де й місце разовим уподобанням.","«Малюнки боя» і «Грув і відчуття» тепер одна вправа — «Бій і відчуття»: обирай і малюнок, і відчуття — свінг, бекбіт-акцент, глушіння та гурт (барабани з басом). Поєднання, недосяжні раніше в жодній із них (фолк-малюнок зі свінгом, приглушений бій під гурт), тепер просто працюють.","«Акомпанемент прогресії» і «Тони акорду в прогресії» тепер одна вправа з перемикачем «Що граєш»: «Акорди» (акомпануй, з формами у «Зараз/Далі») або «Тони акорду» (влучай у тони на грифі, з позицією та ціллю). Обидві картки в «Практиці» відкривають її — кожна у своєму режимі, а збережений прогрес для обох лишився без змін.","Усі вправи тепер мають один спільний вибір тональності й одну кнопку «Вийти» вгорі «Практики» замість власної копії в кожній. А вибір тональності зʼявляється лише для вправ, які його справді використовують — у вправах на слух і в назвах нот більше немає контролю, що нічого не змінює.","«Слух» більше не окремий режим: три вправи на слух переїхали в «Практику» окремою групою «Слух» — поруч із «Грифом», «Таймингом», «Ритмом» і «Соло». Один список вправ, одна картка прогресу, один «Вийти» — за обома екранами й так стояла та сама модель навчання. Увесь збережений прогрес лишився, а старе посилання чи сесія, що відкривали «Слух», тепер відкривають «Практику».","Значно менше завантаження: сторінка більше не вантажить коментарі розробника, написані для тих, хто редагує вихідний код. Разом із попередніми скороченнями сторінка приблизно на 36% менша, ніж у минулому випуску, і приблизно на третину менша «по дротах»."]},{"v":"2.10.0","date":"2026-07-12","en":["New Lead drill — Call & response: the app plays a short phrase from the key's scale in one neck box, then you echo it back on the fretboard in the same order. Listen while it plays, answer in the space it leaves — the turn structure itself trains soloing phrasing (when to play, when to leave space). Scored on how cleanly you echo each phrase; the phrases grow as you go. This completes the Lead pillar's coach tiers."],"uk":["Нова соло-вправа — «Запитання-відповідь»: застосунок грає коротку фразу з гами тональності в одній позиції на грифі, а ти повторюєш її на грифі в тому ж порядку. Слухай, поки грає, і відповідай у паузі — сама структура «запит-відповідь» тренує фразування (коли грати, а коли лишити тишу). Рахунок — наскільки чисто ти повторюєш кожну фразу; фрази довшають по ходу. Це завершує коуч-рівні соло-пілона."]}];
+const APP_VERSION = '2.15.0';
+const CHANGELOG = [{"v":"2.15.0","date":"2026-08-03","en":["Practice sessions. Say how long you have — five minutes to twenty — and Euterpe lines up what you are actually due to work on, runs the clock, moves you from one drill to the next, ends by itself, and tells you what the session was. Until now every drill was an endless loop you left by hand, and the app had no notion of a day's practice at all.","\"Drill this\" from anywhere. Every reference view now has a one-tap route into the drill that is about what is on your screen: a chord into comping it in time, an arpeggio into targeting those tones over the changes, a scale into echoing phrases built from it, the circle into changing between the key's chords. It was a promise the app had been making since the beginning and keeping in exactly one place.","\"Jam over this\". Playing along to the harmony on screen used to take five steps — pick a key, pick a chord, open Backing, switch on bass and drums, press Loop. It is one button now, sitting next to the panel that already tells you what to play over this.","Progress that tells you something. The five all-time numbers are replaced by the story your practice actually has: a line per drill with your latest result, which way it is heading, your personal best, and — for the drills that listen — your best timing error in milliseconds. The app has been keeping all of that and showing none of it. Each line is also a way straight back into that drill.","One screen for every drill. All nine used to render under the same heading and never say which drill you were in; there is now a single drill header that names it, holds the key, the tempo, the microphone and the way out, and folds its setup away once you start playing. The practice home leads with what to do next instead of ten cards, and each card is badged with what it does — scored with the microphone, scored on accuracy, or a coach.","One navigation bar instead of three stacked strips, and the fretboard now sits above the controls that change it rather than below them. Settings are sorted by what you do with them, with the tuner and the latency measurement gathered under Tools. On a phone the four destinations are a bottom bar in the thumb zone.","Honest labels throughout: every string that still promised a shipped feature was \"coming later\" has been retired. Three drills gained microphone scoring in the last release and their own descriptions had not been told."],"uk":["Заняття. Скажи, скільки маєш часу — від п'яти хвилин до двадцяти — і Euterpe збере те, що тобі справді час повторити, відлічить час, переведе з вправи у вправу, сама завершить і підсумує. Досі кожна вправа була нескінченним циклом, з якого ти виходив руками, а поняття «сьогоднішня практика» в застосунку не існувало.","«Тренувати це» звідусіль. Кожен довідковий вид тепер має вихід в одне натискання до вправи саме про те, що в тебе на екрані: акорд — до акомпанементу вчасно, арпеджіо — до влучання в тони крізь зміни, гама — до повторення фраз, побудованих з неї, коло квінт — до чистих змін між акордами тональності. Цю обіцянку застосунок давав з самого початку, а тримав рівно в одному місці.","«Джем над цим». Заграти під гармонію, що на екрані, коштувало п'яти кроків — обрати тональність, обрати акорд, розкрити «Супровід», увімкнути бас і ударні, натиснути «Луп». Тепер це одна кнопка, поруч із панеллю, яка вже й так каже, що над цим грати.","Прогрес, який щось розповідає. Замість п'яти чисел за весь час — історія, яка в твоєї практики справді є: рядок на кожну вправу з останнім результатом, напрямком руху, особистим рекордом і — для вправ, що слухають, — найкращою похибкою тайминга в мілісекундах. Застосунок усе це зберігав і не показував нічого. Кожен рядок водночас — шлях назад у цю вправу.","Один екран для кожної вправи. Усі дев'ять малювалися під одним заголовком і жодного разу не казали, у якій ти вправі; тепер є єдина шапка вправи — вона називає її, тримає тональність, темп, мікрофон і вихід, а параметри згортає, щойно ти починаєш грати. Домівка практики починається з того, що робити далі, а не з десяти карток, і кожна картка позначена тим, що вона є: з оцінкою по мікрофону, з оцінкою за точністю або коуч.","Одна навігація замість трьох смуг одна над одною, і гриф тепер стоїть над контролами, які його змінюють, а не під ними. Налаштування впорядковані за тим, що ти з ними робиш, а тюнер і вимірювання затримки зібрані в «Інструменти». На телефоні чотири розділи — нижня панель під великим пальцем.","Чесні підписи скрізь: усі рядки, що обіцяли вже випущену можливість «згодом», прибрано. Три вправи отримали оцінку з мікрофоном у минулому випуску, а їхні власні описи про це не знали."]},{"v":"2.14.0","date":"2026-08-02","en":["Mic scoring reaches the Rhythm drills. Strumming & feel now grades the pattern you play — every strum is timed against the pattern's own slots, swing included, so a correctly swung player is not marked late. Over the changes grades the thing comping is actually about: landing each chord change in time. What you strum between the changes is your own rhythm and is left alone.","Fixed something important about the scored tier: on speakers the microphone also hears the app, and because the click was scheduled on the grid it lands there perfectly — so a run where you never touched the guitar could come back \"Tight, 32/32\". Euterpe now recognises a reading that is too machine-even to be human and says so instead of printing a flattering score. Headphones are the clean fix, and every scored drill now says so.","In the scored Rhythm drills the guide guitar goes quiet — it was landing on exactly the beats being measured, so the app would have been scoring itself. That is also the better lesson: mic off and you hear the pattern played for you, mic on and you play it. The click and band stay, so you always have something to lock to.","One scoring engine now serves all three scored drills, so a fix to any of them is a fix to all of them."],"uk":["Оцінка з мікрофоном дійшла до ритм-вправ. «Бій і відчуття» тепер оцінює малюнок, який ти граєш: кожен удар звіряється з власними слотами малюнка — зі свінгом включно, тож зіграний зі свінгом не рахується як запізнення. «Крізь зміни» оцінює те, про що акомпанемент і є насправді: чи вчасно ти заходиш на кожну зміну акорду. Те, що ти граєш між змінами, — твій ритм, і його не чіпають.","Виправлено важливе в рівні з оцінкою: з колонок мікрофон чує й сам застосунок, а що клацання заплановане рівно по сітці, воно лягає ідеально — тож прогон, у якому ти й не торкався гітари, міг повернутися як «Чітко, 32/32». Тепер Euterpe розпізнає надто машинно-рівний результат і чесно про це каже замість того, щоб намалювати приємну оцінку. Навушники — чисте вирішення, і кожна вправа з оцінкою тепер про це нагадує.","У ритм-вправах з оцінкою гітара-підказка стихає — вона лягала рівно на ті долі, що вимірюються, тож застосунок оцінював би сам себе. Так і корисніше: мікрофон вимкнений — малюнок грають тобі, увімкнений — граєш ти. Клацання й гурт лишаються, щоб завжди було за що зачепитися.","Один рушій оцінювання тепер обслуговує всі три вправи з оцінкою, тож виправлення в одній — виправлення в усіх."]},{"v":"2.13.0","date":"2026-08-02","en":["Euterpe can now hear you play. Turn the microphone on in Subdivision & timing and the drill stops being a metronome you follow and becomes one that grades you: every note you pick is timed against the grid, and at the end you get your average error in milliseconds, how tight your spread is, and how many grid slots you actually hit.","It also tells you *which way* you are off — rushing or dragging — but only when the lean is real. If your notes are scattered rather than consistently early or late, it says so instead of inventing a tendency out of noise. A drill that flatters you is not a coach.","New in Settings ▸ Instrument: Audio latency. Your device takes time to get sound out of the speaker and back in through the mic, and without measuring it every player on earth would be told they drag. Press Measure, keep the guitar quiet for a few seconds and let it click — it plays a click, listens for it, and takes the middle of several readings so one stray noise can not skew it. On headphones there is nothing for the mic to hear, so it says so plainly and leaves you the manual slider.","The timing you are scored on is measured on the audio thread, not the animation frame, so the number is the note you played rather than how busy the browser was. Without the mic the drill works exactly as before — the coach tier is unchanged, the scored tier is opt-in.","As with the tuner, your audio never leaves the browser: the microphone runs only while you are in a scored run or measuring latency, and nothing is recorded or sent anywhere."],"uk":["Euterpe тепер чує, як ти граєш. Увімкни мікрофон у вправі «Поділ і тайминг» — і вона перестає бути метрономом, за яким ти йдеш, і стає таким, що тебе оцінює: кожна зіграна нота звіряється з сіткою, а наприкінці ти бачиш середню похибку в мілісекундах, наскільки щільний розкид і скільки клітинок сітки ти справді влучив.","Вправа також каже, *у який бік* ти відхиляєшся — поспішаєш чи запізнюєшся, — але лише коли нахил справжній. Якщо ноти просто розкидані, а не стабільно раніше чи пізніше, вона так і скаже, замість вигадувати тенденцію з шуму. Вправа, що тобі лестить, — не коуч.","Нове в «Налаштуваннях ▸ Інструмент»: затримка звуку. Пристрою потрібен час, щоб випустити звук з динаміка й повернути його через мікрофон, і без цього виміру будь-якому гітаристу світу казали б, що він запізнюється. Натисни «Виміряти», кілька секунд не чіпай гітару й дай йому поклацати — він грає клац, слухає його й бере середину з кількох замірів, щоб випадковий шум не зіпсував результат. У навушниках мікрофону нічого чути, тож він чесно про це скаже й лишить ручний повзунок.","Тайминг, за яким тебе оцінюють, міряється на аудіопотоці, а не на кадрі анімації, тож число описує зіграну ноту, а не завантаженість браузера. Без мікрофона вправа працює точно як раніше — коуч-рівень не змінився, рівень з оцінкою вмикається за бажанням.","Як і в тюнері, звук нікуди не йде з браузера: мікрофон працює лише під час прогону з оцінкою чи виміру затримки, і нічого не записується й нікуди не надсилається."]},{"v":"2.12.0","date":"2026-08-01","en":["New: a microphone tuner. Play any note on the guitar and see which note it is and how far off you are, on a needle that reads up to 50 cents sharp or flat — plus the nearest open string of whatever tuning you are in, so Drop D and the rest re-label themselves. It is chromatic, so you can also check your intonation at the 12th fret, not just tune the open strings. Open it with the Mic button next to the Tuner in Settings.","The existing reference-tone tuner stays exactly as it was — that one plays a pitch for you to tune against by ear, the new one listens to you. Use whichever suits the room you are in; the mic tuner needs a microphone and a secure (https) connection, and quietly hides itself when it cannot work, so nothing on screen ever pretends to do something it can't.","Your audio never leaves the browser: the microphone is only on while the tuner panel is open, is released the moment you close it or switch tabs, and nothing is sent anywhere or recorded."],"uk":["Нове: тюнер із мікрофоном. Зіграй будь-яку ноту на гітарі — і побачиш, що це за нота й наскільки ти відхилився, на шкалі до 50 центів вгору чи вниз, а ще найближчу відкриту струну твого поточного строю, тож Drop D та інші перепозначаються самі. Тюнер хроматичний, тож ним можна перевірити й інтонацію на 12-му ладі, а не лише налаштувати відкриті струни. Відкривається кнопкою «Мікрофон» поруч із «Тюнером» у «Налаштуваннях».","Старий тюнер з еталонним тоном лишився без змін — той грає висоту, щоб ти підстроївся на слух, а новий слухає тебе. Обирай, що зручніше в конкретній кімнаті; тюнер із мікрофоном потребує мікрофона й захищеного зʼєднання (https) і тихо ховається, коли працювати не може, — щоб на екрані не було кнопок, які нічого не роблять.","Звук нікуди не йде з браузера: мікрофон увімкнений лише поки відкрита панель тюнера, вимикається щойно ти її закриваєш або перемикаєш вкладку, і нічого не надсилається й не записується."]},{"v":"2.11.0","date":"2026-08-01","en":["New Foundations drill — Subdivision & timing: a smart visual metronome for locking in your time. Pick a subdivision (quarter notes → eighths → triplets → sixteenths) and a tempo; an accented click and a grid tick out the bar (a strong beat 1, softer subdivisions), and the current key's scale is walked note-by-note across the grid in one neck box so you always have something to play. Change key, box or tempo without leaving Practice. A coach that serves both the Rhythm and Lead pillars — mic-scored timing arrives with microphone input later.","Time signatures: a new Meter picker in Settings (2/4, 3/4, 4/4, 6/8, 12/8). The metronome accent, the backing groove (kick/snare pattern), the bass, the single-chord loop and the whole progression / comping / targeting bar length all follow the meter — so you can jam a waltz in 3/4 or a 6/8 feel, not just 4/4.","Fixed: with the Subdivision & timing drill open, tapping \"Practice\" again drew the drill list on top of the still-running drill. Switching modes now handles every drill the same way.","Leaner app: the release-notes archive no longer ships with the page — only the newest releases are in-app, and the full history lives in CHANGELOG.md — and the timing-calibration control (which nothing used yet) is gone. The download is about 15% smaller.","Settings now starts closed and reads as three groups — Instrument, Neck & meter, App — instead of eleven controls in one flat row. The colour-blind palette and note-shape toggles moved in with the app settings, where set-once preferences belong.","Strumming patterns and Groove & feel are now one drill, Strumming & feel: pick a pattern AND how it feels — swing, backbeat accent, palm-muting, and an optional drums+bass band. Combinations neither drill could reach before (a swung folk pattern, a palm-muted strum over the band) now just work.","Comp the progression and Chord tones over changes are now one drill with a You-play switch: Chords (comp it, with shapes in Now/Next) or Chord tones (aim at the tones on the neck, with Position and Target). Both practice cards still open it, each in the mode it teaches, and your recorded progress for either is unchanged.","Every drill now shares one Key picker and one Exit button at the top of Practice instead of carrying its own copy. The Key picker also only appears for drills that actually use it — ear training and note naming no longer show you a control that changes nothing.","Ear training is no longer a separate mode: its three drills moved into Practice as an Ear group, alongside Fretboard, Timing, Rhythm and Lead. One drill list, one progress card, one Exit — it was always the same learner model behind both screens. Everything you had recorded still counts, and an old link or saved session that opened Ear now opens Practice.","Much smaller download: the page no longer ships the developer comments written for whoever edits the source. Together with the earlier trims the page is about 36% smaller than last release, and roughly a third smaller over the wire."],"uk":["Нова вправа-основа — «Поділ і тайминг»: розумний візуальний метроном, щоб тримати час. Обери поділ (чвертки → вісімки → тріолі → шістнадцятки) і темп; акцентоване клацання й сітка відбивають такт (сильний «раз», тихіші поділи), а гама поточної тональності «прокрокує» по сітці нота за нотою в одній позиції на грифі — тож завжди є що грати. Змінюй тональність, позицію чи темп, не виходячи з «Практики». Коуч, що працює і на ритм-, і на соло-пілон — оцінку тайминга з мікрофоном додамо згодом.","Розміри такту: у «Налаштуваннях» зʼявився вибір розміру (2/4, 3/4, 4/4, 6/8, 12/8). Акцент метронома, грув супроводу (малюнок бочки/малого), бас, луп одного акорду й довжина такту всієї прогресії / акомпанементу / прицілювання — усе слідує за розміром, тож можна зіграти вальс у 3/4 чи відчуття 6/8, а не лише 4/4.","Виправлено: якщо була відкрита вправа «Поділ і тайминг», повторне натискання «Практики» малювало список вправ поверх тієї, що ще працювала. Тепер перемикання режимів однаково опрацьовує всі вправи.","Легший застосунок: архів нотаток до випусків більше не вантажиться зі сторінкою — у застосунку лишились найновіші випуски, а повна історія в CHANGELOG.md — і зник регулятор зсуву часу, який ще нічим не використовувався. Завантаження приблизно на 15% менше.","«Налаштування» тепер стартують згорнутими й читаються як три групи — Інструмент, Гриф і розмір, Застосунок — замість одинадцяти контролів в один ряд. Палітра для дальтоніків і форми на нотах переїхали до налаштувань застосунку, де й місце разовим уподобанням.","«Малюнки боя» і «Грув і відчуття» тепер одна вправа — «Бій і відчуття»: обирай і малюнок, і відчуття — свінг, бекбіт-акцент, глушіння та гурт (барабани з басом). Поєднання, недосяжні раніше в жодній із них (фолк-малюнок зі свінгом, приглушений бій під гурт), тепер просто працюють.","«Акомпанемент прогресії» і «Тони акорду в прогресії» тепер одна вправа з перемикачем «Що граєш»: «Акорди» (акомпануй, з формами у «Зараз/Далі») або «Тони акорду» (влучай у тони на грифі, з позицією та ціллю). Обидві картки в «Практиці» відкривають її — кожна у своєму режимі, а збережений прогрес для обох лишився без змін.","Усі вправи тепер мають один спільний вибір тональності й одну кнопку «Вийти» вгорі «Практики» замість власної копії в кожній. А вибір тональності зʼявляється лише для вправ, які його справді використовують — у вправах на слух і в назвах нот більше немає контролю, що нічого не змінює.","«Слух» більше не окремий режим: три вправи на слух переїхали в «Практику» окремою групою «Слух» — поруч із «Грифом», «Таймингом», «Ритмом» і «Соло». Один список вправ, одна картка прогресу, один «Вийти» — за обома екранами й так стояла та сама модель навчання. Увесь збережений прогрес лишився, а старе посилання чи сесія, що відкривали «Слух», тепер відкривають «Практику».","Значно менше завантаження: сторінка більше не вантажить коментарі розробника, написані для тих, хто редагує вихідний код. Разом із попередніми скороченнями сторінка приблизно на 36% менша, ніж у минулому випуску, і приблизно на третину менша «по дротах»."]}];
 
 const I18N = {
   uk: {
@@ -2378,32 +2447,39 @@ const I18N = {
     drill_quit:'Вийти', drill_find_pre:'Знайди всі', drill_find_sub:'Познач усі такі ноти на грифі',
     drill_setup:'Параметри', ear_hint:'Послухай приклад і обери відповідь. «Ще раз» — скільки завгодно; помилка повернеться до тебе раніше.',
     drill_complete:'Сесію завершено', drill_score:'Рахунок', drill_clean:'Чисто', drill_misses:'Помилки', drill_time:'Час', drill_again:'Ще раз', drill_done:'Готово',
-    seam_drill_notes:'Тренувати на грифі →',
+    seam_drill:'Тренувати це →', seam_jam:'Джем над цим', seam_jam_stop:'Зупинити джем',
+    sess_title:'Заняття', sess_lead:'Скажи, скільки маєш часу — застосунок збере вправи, які варто повторити, відлічить час і підсумує.',
+    sess_len:'Тривалість', sess_min:'хв', sess_start:'Почати заняття', sess_next:'Далі →',
+    sess_done_h:'Заняття завершено', sess_none:'Цього разу нічого не зараховано — але час на інструменті все одно зарахований.',
+    sess_drills:'Вправ', sess_norun:'без результату',
+    badge_mic:'🎤 З мікрофоном', badge_acc:'З оцінкою', badge_coach:'Коуч',
     practice_grp_fretboard:'Гриф', practice_grp_rhythm:'Ритм', practice_grp_ear:'Слух',
-    drill_changes:'Зміна акордів за хвилину', drill_changes_meta:'Чисті зміни за хвилину · коуч (без оцінки)',
+    drill_changes:'Зміна акордів за хвилину', drill_changes_meta:'Скільки чистих змін встигаєш за хвилину',
     cm_pair:'Пара акордів', cm_dur:'Тривалість', cm_sec:'с', cm_click:'Метроном', cm_start:'Почати', cm_stop:'Завершити',
     cm_setup_note:'Перемикайся між акордами якомога чистіше й натискай велику кнопку на кожній чистій зміні. Лічильник рахує твої натискання, а не звук гітари — оцінку з мікрофоном додамо згодом.',
     cm_changes:'Зміни', cm_cpm:'За хвилину', cm_best:'Рекорд', cm_tap_hint:'Натискай на кожній чистій зміні', cm_undo:'Скасувати', cm_newbest:'Новий рекорд!',
-    drill_strum:'Бій і відчуття', drill_strum_meta:'Малюнки · свінг · акценти · глушіння · коуч',
+    drill_strum:'Бій і відчуття', drill_strum_meta:'Малюнки · свінг · акценти · глушіння',
     dr_key:'Тональність',
-    practice_grp_timing:'Тайминг', drill_timing:'Поділ і тайминг', drill_timing_meta:'Вісімки · тріолі · шістнадцятки · коуч',
+    practice_grp_timing:'Тайминг', drill_timing:'Поділ і тайминг', drill_timing_meta:'Вісімки · тріолі · шістнадцятки',
     sd_subdiv:'Поділ', sd_notes:'Ноти',
-    sd_hint:'Тримайся клацання — акцентований удар це «раз», тихі — поділи долі. Грай підсвічені ноти гами рівно по сітці. Це коуч: оцінку тайминга з мікрофоном додамо згодом.',
+    sd_hint:'Тримайся клацання — акцентований удар це «раз», тихі — поділи долі. Грай підсвічені ноти гами рівно по сітці. Увімкни 🎤 угорі, щоб застосунок слухав і оцінював твій тайминг.',
     sp_pattern:'Малюнок', sp_chord:'Акорд', sp_play:'Грати', sp_stop:'Стоп',
     sp_swing:'Свінг', sp_accent:'Бекбіт', sp_mute:'Глушіння', sp_band:'Гурт',
     sp_hint:'Грай разом — ↓ вниз, ↑ вгору; над порожніми клітинами рука рухається, але струн не торкається. Спробуй свінг, бекбіт-акцент, глушіння та гурт.',
-    drill_comp:'Акомпанемент прогресії', drill_comp_meta:'Потрібний акорд вчасно · коуч',
+    drill_comp:'Акомпанемент прогресії', drill_comp_meta:'Потрібний акорд вчасно, під гурт',
     co_now:'Зараз', co_next:'Далі',
     oc_mode:'Що граєш', oc_chords:'Акорди', oc_tones:'Тони акорду',
     co_hint:'Акомпануй показаний акорд — змінюй вчасно, поки гурт веде прогресію.',
-    practice_grp_lead:'Соло', drill_target:'Тони акорду в прогресії', drill_target_meta:'Влучай у тони акорду під гурт · коуч',
+    practice_grp_lead:'Соло', drill_target:'Тони акорду в прогресії', drill_target_meta:'Влучай у тони акорду під гурт',
     tg_prog:'Прогресія', tg_pos:'Позиція', tg_deg:'Ціль', tg_hits:'Влучань', tg_acc:'Точність',
-    tg_hint:'Гурт веде прогресію — влучай у підсвічені тони поточного акорду. Обери позицію, щоб грати одну форму арпеджіо крізь зміни, або ціль (1·3·5·7), щоб щоразу «приземлятися» на один тон. Це тренує, де лежать тони акорду (не звук гітари — оцінку з мікрофоном додамо згодом).',
-    drill_callresp:'Запитання-відповідь', drill_callresp_meta:'Почуй фразу · повтори її на грифі · коуч',
+    tg_hint:'Гурт веде прогресію — влучай у підсвічені тони поточного акорду. Обери позицію, щоб грати одну форму арпеджіо крізь зміни, або ціль (1·3·5·7), щоб щоразу «приземлятися» на один тон. Рахунок тут за натисканнями на грифі: тренуємо, де лежать тони акорду. Оцінка соло з мікрофоном — наступна фаза; акомпанемент уже оцінюється.',
+    drill_callresp:'Запитання-відповідь', drill_callresp_meta:'Почуй фразу · повтори її на грифі',
     cr_listen:'Слухай…', cr_your_turn:'Твоя черга', cr_replay:'Ще раз', cr_echoed:'Повторено', cr_rounds:'Фраз',
     cr_hint:'Застосунок грає фразу з гами — повтори її на грифі в тому ж порядку. Слухай, поки грає, і відповідай у паузі: саме так будується фразування.',
     prog_title:'Прогрес', prog_empty:'Ще немає практики — статистика з’явиться, щойно почнеш вправи.',
-    prog_tracked:'Вивчається', prog_accuracy:'Точність', prog_streak:'Найкраща серія', prog_sessions:'Сесій',
+    prog_accuracy:'Точність', prog_streak:'Найкраща серія', prog_sessions:'Сесій',
+    prog_yours:'Твої вправи', prog_best:'рекорд', prog_runs:'спроб', prog_timing:'тайминг',
+    unit_bars:'тактів', unit_cpm:'/хв',
     tab_harmony:'Акорди', lbl_view:'Вид', view_chords:'Тони акорду', view_triads:'Форми тріад',
     view_scale:'Гама', view_notes:'Ноти', view_identify:'Розпізнати',
     id_h:'Розпізнавання акорду', id_p:'Натисни на грифі ноти, які береш, — і дізнайся, що це за акорд.',
@@ -2532,32 +2608,39 @@ const I18N = {
     drill_quit:'Quit', drill_find_pre:'Find every', drill_find_sub:'Tap every one of them on the neck',
     drill_setup:'Setup', ear_hint:'Listen to the prompt, then pick the answer. Replay as often as you like; a wrong answer comes back sooner.',
     drill_complete:'Session complete', drill_score:'Score', drill_clean:'Clean', drill_misses:'Wrong taps', drill_time:'Time', drill_again:'Again', drill_done:'Done',
-    seam_drill_notes:'Drill on the neck →',
+    seam_drill:'Drill this →', seam_jam:'Jam over this', seam_jam_stop:'Stop the jam',
+    sess_title:'Practice session', sess_lead:'Say how long you have — the app lines up what is due, runs the clock, and tells you how it went.',
+    sess_len:'Length', sess_min:'min', sess_start:'Start session', sess_next:'Next →',
+    sess_done_h:'Session complete', sess_none:'Nothing scored this time — but the time on the instrument still counts.',
+    sess_drills:'Drills', sess_norun:'no run recorded',
+    badge_mic:'🎤 Scored', badge_acc:'Scored', badge_coach:'Coach',
     practice_grp_fretboard:'Fretboard', practice_grp_rhythm:'Rhythm', practice_grp_ear:'Ear',
-    drill_changes:'One-minute changes', drill_changes_meta:'Clean changes per minute · coach (unscored)',
+    drill_changes:'One-minute changes', drill_changes_meta:'How many clean changes you get in a minute',
     cm_pair:'Chord pair', cm_dur:'Length', cm_sec:'s', cm_click:'Click', cm_start:'Start', cm_stop:'Finish',
     cm_setup_note:'Switch between the chords as cleanly as you can and tap the big button on each clean change. The counter counts your taps, not your guitar — mic scoring comes later.',
     cm_changes:'Changes', cm_cpm:'Per minute', cm_best:'Best', cm_tap_hint:'Tap on each clean change', cm_undo:'Undo', cm_newbest:'New best!',
-    drill_strum:'Strumming & feel', drill_strum_meta:'Patterns · swing · accents · muting · coach',
+    drill_strum:'Strumming & feel', drill_strum_meta:'Patterns · swing · accents · muting',
     dr_key:'Key',
-    practice_grp_timing:'Timing', drill_timing:'Subdivision & timing', drill_timing_meta:'Eighths · triplets · sixteenths · coach',
+    practice_grp_timing:'Timing', drill_timing:'Subdivision & timing', drill_timing_meta:'Eighths · triplets · sixteenths',
     sd_subdiv:'Subdivision', sd_notes:'Notes',
-    sd_hint:'Lock to the click — the accented tick is beat 1, the soft ticks are the subdivisions. Play the lit scale notes evenly across the grid. A coach: mic-scored timing arrives later.',
+    sd_hint:'Lock to the click — the accented tick is beat 1, the soft ticks are the subdivisions. Play the lit scale notes evenly across the grid. Turn on 🎤 above and the app listens and scores your timing.',
     sp_pattern:'Pattern', sp_chord:'Chord', sp_play:'Play', sp_stop:'Stop',
     sp_swing:'Swing', sp_accent:'Backbeat', sp_mute:'Palm mute', sp_band:'Band',
     sp_hint:'Strum along — ↓ down, ↑ up; over the empty slots your hand keeps moving but misses the strings. Try swing, the backbeat accent, palm-muting and the band.',
-    drill_comp:'Comp the progression', drill_comp_meta:'Right chord, right time · coach',
+    drill_comp:'Comp the progression', drill_comp_meta:'The right chord, right on time, over a band',
     co_now:'Now', co_next:'Next',
     oc_mode:'You play', oc_chords:'Chords', oc_tones:'Chord tones',
     co_hint:'Comp the chord shown — switch on time as the band cycles the progression.',
-    practice_grp_lead:'Lead', drill_target:'Chord tones over changes', drill_target_meta:'Target the chord tones over a band · coach',
+    practice_grp_lead:'Lead', drill_target:'Chord tones over changes', drill_target_meta:'Target the chord tones over a band',
     tg_prog:'Progression', tg_pos:'Position', tg_deg:'Target', tg_hits:'Hits', tg_acc:'Accuracy',
-    tg_hint:'The band cycles the progression — hit the lit tones of the current chord. Pick a position to play one arpeggio shape through the changes, or a target (1·3·5·7) to land on a single tone each time. This trains where the chord tones are (not your guitar — mic scoring comes later).',
-    drill_callresp:'Call & response', drill_callresp_meta:'Hear a phrase · echo it on the neck · coach',
+    tg_hint:'The band cycles the progression — hit the lit tones of the current chord. Pick a position to play one arpeggio shape through the changes, or a target (1·3·5·7) to land on a single tone each time. Scoring here is on your taps: this trains where the chord tones are. Mic-scored lead is the next phase; comping is already scored.',
+    drill_callresp:'Call & response', drill_callresp_meta:'Hear a phrase · echo it on the neck',
     cr_listen:'Listen…', cr_your_turn:'Your turn', cr_replay:'Replay', cr_echoed:'Echoed', cr_rounds:'Phrases',
     cr_hint:'The app plays a phrase from the scale — echo it back on the neck in the same order. Listen while it plays, answer in the space it leaves: that is how phrasing is built.',
     prog_title:'Progress', prog_empty:'No practice yet — your stats will appear once you start a drill.',
-    prog_tracked:'Tracked', prog_accuracy:'Accuracy', prog_streak:'Best streak', prog_sessions:'Sessions',
+    prog_accuracy:'Accuracy', prog_streak:'Best streak', prog_sessions:'Sessions',
+    prog_yours:'Your drills', prog_best:'best', prog_runs:'runs', prog_timing:'timing',
+    unit_bars:'bars', unit_cpm:'/min',
     tab_harmony:'Chords', lbl_view:'View', view_chords:'Chord tones', view_triads:'Triad shapes',
     view_scale:'Scale', view_notes:'Notes', view_identify:'Identify',
     id_h:'Chord identifier', id_p:'Tap the notes you are playing on the neck to name the chord.',
@@ -3180,6 +3263,7 @@ function updateGlobalTransport(){
   if(seqClock){ label.textContent=t('tb_now_seq')+' · '+gRootLbl+QUALITIES[chQual].short; wrap.hidden=false; }
   else if(loopClock){ label.textContent=t('tb_now_loop')+' · '+loopChordLabel(); wrap.hidden=false; }
   else { wrap.hidden=true; }
+  if(typeof renderJamBtn==='function') renderJamBtn();
   syncWakeLock();
 }
 
@@ -4290,6 +4374,7 @@ function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
   bassOn, grooveOn,
   calMs, calKnown,   
   drillSeen,         
+  sessMins,          
   learner   
 })); }catch(e){ devWarn('state could not be saved (localStorage unavailable?)', e); } }
 function loadState(){ try{
@@ -4322,6 +4407,7 @@ function loadState(){ try{
     }
     drillSeen=out;
   }
+  if(typeof SESSION_MINS!=='undefined' && SESSION_MINS.indexOf(s.sessMins)>=0) sessMins=s.sessMins;
   if(Number.isInteger(s.gRoot)&&s.gRoot>=0&&s.gRoot<12){ gRoot=s.gRoot; if(typeof s.gRootLbl==='string') gRootLbl=s.gRootLbl; }
   if(s.gMode==='names'||s.gMode==='deg') gMode=s.gMode;
   if(s.hView==='chords'||s.hView==='triads'||s.hView==='arp') hView=s.hView;   
@@ -4411,7 +4497,11 @@ function quitDrill(){
   if(d && typeof d.exit==='function') d.exit();
   drillShellLeft();
 }
-function drillShellLeft(){ setCurTrack(null); applyDrillCtx(); }
+
+function drillShellLeft(){
+  if(typeof sessionInterrupt==='function') sessionInterrupt();
+  setCurTrack(null); applyDrillCtx();
+}
 
 
 function drillKeyChanged(){
@@ -4431,6 +4521,7 @@ let drillSeen = {};
 
 
 function drillShellEnter(){
+  if(typeof sessionClearReport==='function') sessionClearReport();
   drillSetupOpen = true;
   const tr = curTrack;
   drillHintOpen = !(tr && drillSeen[tr]);
@@ -4485,6 +4576,8 @@ function applyDrillCtx(){
     if(d && typeof d.mic==='function'){ try{ on=!!d.mic(); }catch(_){ on=false; } }
     mb.hidden=!on;
   }
+  
+  if(typeof sessionPaint==='function') sessionPaint();
 }
 function drillMicToggle(){
   const d=activeDrill();
@@ -4502,6 +4595,11 @@ function drillTracks(){
 function trackByItems(ns){ return drillTracks().find(tr => tr.items===ns) || null; }
 function trackBySess(ns){ return drillTracks().find(tr => tr.sess===ns) || null; }
 function trackById(id){ return drillTracks().find(tr => tr.id===id) || null; }
+
+function trackBadge(tr){
+  const s = tr && tr.scored;
+  return s==='mic' ? 'badge_mic' : s==='acc' ? 'badge_acc' : 'badge_coach';
+}
 
 function sessNs(drillId){
   const s=String(drillId||''), i=s.indexOf(':');
@@ -4523,9 +4621,12 @@ function showDrillHome(){
 function refreshDrillsLang(){
   DRILLS.forEach(d=>{ if(typeof d.refreshLang==='function' && drillIsActive(d)) d.refreshLang(); });
 }
+
+
 const LEARNER_V = 2;
 const SRS_EASE_MIN = 1.3, SRS_EASE_MAX = 3.0, SRS_EASE_START = 2.5;
 const DAY_MS = 86400000;
+
 const SESS_MAX = 300;       
 const SESS_PER_ID = 20;     
 const PERF_STALE_DAYS = 5;  
@@ -4533,18 +4634,22 @@ const PERF_TREND_N = 3;
 const ITEMS_MAX = 5000;     
 const IDS_MAX = 400;        
 const ID_MAX = 64;          
+
 function newLearner(){ return { v: LEARNER_V, items: {}, sessions: [], best: {} }; }
 let learner = newLearner();
+
 function learnerItem(id){
   let it = learner.items[id];
   if(!it) it = learner.items[id] = { seen:0, correct:0, streak:0, ease:SRS_EASE_START, due:0 };
   return it;
 }
+
 function srsInterval(streak, ease){
   if(streak<=1) return DAY_MS;
   if(streak===2) return 6*DAY_MS;
   return Math.round(6*DAY_MS * Math.pow(ease, streak-2));
 }
+
 function recordAttempt(id, correct, now){
   now = (typeof now==='number') ? now : Date.now();
   const it = learnerItem(id);
@@ -4560,12 +4665,15 @@ function recordAttempt(id, correct, now){
   }
   return it;
 }
+
 function dueItems(now, prefix){
   now = (typeof now==='number') ? now : Date.now();
   return Object.keys(learner.items)
     .filter(id => (!prefix || id.indexOf(prefix)===0) && learner.items[id].due <= now)
     .sort((a,b) => learner.items[a].due - learner.items[b].due);
 }
+
+
 function recordSession(drill, score, now, extra){
   now = (typeof now==='number') ? now : Date.now();
   const id = String(drill);
@@ -4576,6 +4684,7 @@ function recordSession(drill, score, now, extra){
   learnerNoteBest(id, s);
   pruneSessions();
 }
+
 function pruneSessions(){
   const seen = {};
   const keep = [];
@@ -4587,6 +4696,7 @@ function pruneSessions(){
   keep.reverse();                                          
   learner.sessions = keep.length > SESS_MAX ? keep.slice(-SESS_MAX) : keep;
 }
+
 function learnerNoteBest(id, s){
   const tr = (typeof trackBySess==='function') ? trackBySess(sessNs(id)) : null;
   const low = !!(tr && tr.better==='low');
@@ -4601,6 +4711,8 @@ function learnerNoteBest(id, s){
   if(typeof s.err==='number' && (typeof b.err!=='number' || s.err < b.err)) b.err = s.err;
 }
 function learnerBest(id){ return learner.best[String(id)] || null; }
+
+
 const TREND_EPS = 0.03;
 function learnerTrend(idOrNs, now){
   now = (typeof now==='number') ? now : Date.now();
@@ -4634,12 +4746,15 @@ function learnerTrend(idOrNs, now){
   }
   return out;
 }
+
 function learnerStats(){
   const ids = Object.keys(learner.items);
   let seen=0, correct=0, bestStreak=0;
   ids.forEach(id => { const it=learner.items[id]; seen+=it.seen; correct+=it.correct; if(it.streak>bestStreak) bestStreak=it.streak; });
   return { items: ids.length, seen, correct, accuracy: seen ? correct/seen : 0, bestStreak, sessions: learner.sessions.length };
 }
+
+
 function reviewNamespaces(){
   return (typeof drillTracks==='function' ? drillTracks() : [])
     .filter(tr => tr.kind==='recall' && tr.items).map(tr => tr.items);
@@ -4668,25 +4783,96 @@ function learnerReview(now){
   });
   return { total, by, top, due };
 }
+
 function startTrack(id){
   const tr = (typeof trackById==='function') ? trackById(id) : null;
   if(!tr || typeof tr.start!=='function') return false;
+  
   if(typeof setCurTrack==='function') setCurTrack(tr.id);
   tr.start();
   return true;
 }
+
+
+function trendScore(tn){
+  if(tn.last===null) return '';
+  const v=Math.round(tn.last);
+  if(tn.unit==='pct') return v+'%';
+  if(tn.unit==='bars') return v+' '+t('unit_bars');
+  if(tn.unit==='cpm') return v+t('unit_cpm');
+  return String(v);
+}
+function trendArrow(dir){ return dir==='up' ? '▲' : dir==='down' ? '▼' : '→'; }
+
+function renderProgressInto(hostId){
+  const host=document.getElementById(hostId); if(!host) return;
+  const s=learnerStats();
+  if(!s.seen && !s.sessions){ host.innerHTML='<div class="pp-empty">'+t('prog_empty')+'</div>'; return; }
+  const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  let html='';
+
+  
+  const rev=learnerReview();
+  if(rev.total>0 && rev.top){
+    html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_due')+' · '+rev.total+'</span>'+
+      '<button type="button" class="btn play pp-review-btn" data-review="'+esc(rev.top)+'">'+t('prog_review')+'</button></div>';
+  } else {
+    const nxt=(rev.due||[]).find(d=>d.kind==='perf');
+    const tr=nxt && typeof trackById==='function' ? trackById(nxt.track) : null;
+    if(tr && tr.label){
+      html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_next')+' · '+esc(t(tr.label))+'</span>'+
+        '<button type="button" class="btn play pp-review-btn" data-review="'+esc(tr.id)+'">'+t('prog_start')+'</button></div>';
+    }
+  }
+
+  
+  const rows=(typeof drillTracks==='function' ? drillTracks() : [])
+    .filter(tr=>tr.sess)
+    .map(tr=>({ tr, tn:learnerTrend(tr.sess) }))
+    .filter(x=>x.tn.n>0)
+    .sort((a,b)=>b.tn.lastT-a.tn.lastT);
+  if(rows.length){
+    html+='<div class="pp-sec">'+t('prog_yours')+'</div>';
+    html+=rows.map(({tr,tn})=>{
+      const sub=[];
+      if(tn.best!==null) sub.push(t('prog_best')+' '+trendScore({ last:tn.best, unit:tn.unit }));
+      if(tn.bestErr!==null) sub.push(t('prog_timing')+' ±'+Math.round(tn.bestErr)+' '+t('on_ms'));
+      sub.push(tn.n+' '+t('prog_runs'));
+      
+      return '<button type="button" class="pp-row" data-track="'+esc(tr.id)+'">'+
+        '<span class="pp-row-name">'+esc(t(tr.label))+'</span>'+
+        '<span class="pp-row-val">'+esc(trendScore(tn))+
+          ' <span class="pp-dir '+tn.dir+'">'+trendArrow(tn.dir)+'</span></span>'+
+        '<span class="pp-row-sub">'+esc(sub.join(' · '))+'</span>'+
+      '</button>';
+    }).join('');
+  }
+
+  const stat=(val,lab)=>'<div class="pp-stat"><div class="pp-val">'+val+'</div><div class="pp-lab">'+lab+'</div></div>';
+  const act=learnerActivity();
+  html+='<div class="pp-stats">'+
+    stat(Math.round(s.accuracy*100)+'%', t('prog_accuracy'))+
+    stat(s.bestStreak, t('prog_streak'))+
+    stat(act.days, t('prog_active'))+
+    stat(s.sessions, t('prog_sessions'))+
+  '</div>';
+  host.innerHTML=html;
+}
+
 function learnerActivity(now, win){
   now=(typeof now==='number')?now:Date.now(); win=win||7;
   const cutoff=now-win*DAY_MS, days={};
   learner.sessions.forEach(s=>{ if(s.t>=cutoff) days[Math.floor(s.t/DAY_MS)]=1; });
   return { days: Object.keys(days).length, window: win };
 }
+
 function lInt(v, def){ return (Number.isFinite(v) && Math.floor(v)===v) ? v : (def||0); }
 function lNum(v, def){ return (typeof v==='number' && isFinite(v)) ? v : (def||0); }
 function lClampNum(v, lo, hi, def){ return (typeof v==='number' && isFinite(v)) ? Math.min(hi, Math.max(lo, v)) : def; }
 function normalizeLearner(raw){
   const out = newLearner();
   if(!raw || typeof raw!=='object') return out;
+  
   if(raw.v !== LEARNER_V && raw.v !== 1) return out;
   if(raw.items && typeof raw.items==='object'){
     let n=0;
@@ -4727,6 +4913,7 @@ function normalizeLearner(raw){
       out.best[id] = o;
     }
   }
+  
   const keep = learner;
   learner = out;
   try{
@@ -5131,34 +5318,7 @@ function earAnswerLabel(){
 }
 
 
-function renderProgressInto(hostId){
-  const host=document.getElementById(hostId); if(!host) return;
-  const s=learnerStats();
-  if(!s.seen && !s.sessions){ host.innerHTML='<div class="pp-empty">'+t('prog_empty')+'</div>'; return; }
-  const stat=(val,lab)=>'<div class="pp-stat"><div class="pp-val">'+val+'</div><div class="pp-lab">'+lab+'</div></div>';
-  const act=learnerActivity();
-  let html='<div class="pp-stats">'+
-    stat(s.items, t('prog_tracked'))+
-    stat(Math.round(s.accuracy*100)+'%', t('prog_accuracy'))+
-    stat(s.bestStreak, t('prog_streak'))+
-    stat(act.days, t('prog_active'))+
-    stat(s.sessions, t('prog_sessions'))+
-  '</div>';
-  
-  const rev=learnerReview();
-  if(rev.total>0 && rev.top){
-    html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_due')+' · '+rev.total+'</span>'+
-      '<button type="button" class="btn play pp-review-btn" data-review="'+rev.top+'">'+t('prog_review')+'</button></div>';
-  } else {
-    const nxt=(rev.due||[]).find(d=>d.kind==='perf');
-    const tr=nxt && typeof trackById==='function' ? trackById(nxt.track) : null;
-    if(tr && tr.label){
-      html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_next')+' · '+t(tr.label)+'</span>'+
-        '<button type="button" class="btn play pp-review-btn" data-review="'+tr.id+'">'+t('prog_start')+'</button></div>';
-    }
-  }
-  host.innerHTML=html;
-}
+
 function renderEarPrompt(){
   const p=document.getElementById('ear-prompt'); if(p) p.textContent=ear.cfg.prompt();
   const c=document.getElementById('ear-count'); if(c) c.textContent=Math.min(ear.done+1, ear.total)+' / '+ear.total;
@@ -5213,9 +5373,9 @@ registerDrill({ id:'ear', area:'ear-area',
                 isActive:()=>!!ear, exit:exitEar, refreshLang:refreshEarLang,
                 
                 tracks:[
-                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', start:()=>startEar('interval') },
-                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    start:()=>startEar('chordq') },
-                  { id:'rhythm',   kind:'recall', items:'rhythm',   sess:'ear-rhythm',   label:'ear_rhythm',    start:()=>startEar('rhythm') }
+                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', scored:'acc', start:()=>startEar('interval') },
+                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    scored:'acc', start:()=>startEar('chordq') },
+                  { id:'rhythm',   kind:'recall', items:'rhythm',   sess:'ear-rhythm',   label:'ear_rhythm',    scored:'acc', start:()=>startEar('rhythm') }
                 ] });
 
 (function initEar(){
@@ -5387,7 +5547,7 @@ registerDrill({ id:'callresp', area:'cr-area',
                 onKey:()=>{ if(cr) crNewRound(); },
                 setup:'cr-setup',
                 tracks:[{ id:'callresp', kind:'perf', sess:'callresp', label:'drill_callresp',
-                          better:'high', unit:'pct', start:startCallResp }] });
+                          better:'high', unit:'pct', scored:'acc', start:startCallResp }] });
 
 (function initCallResp(){
   const area=document.getElementById('cr-area'); if(!area) return;
@@ -5524,7 +5684,7 @@ function renderDrillSummary(elapsed, acc){
 registerDrill({ id:'notes', area:'drill-area',
                 isActive:()=>!!drill, exit:exitDrill,
                 tracks:[{ id:'note', kind:'recall', items:'note', sess:'notes', label:'drill_notes',
-                          better:'high', unit:'pct', start:startDrill }] });
+                          better:'high', unit:'pct', scored:'acc', start:startDrill }] });
 
 (function initDrill(){
   const b=document.getElementById('drill-board'); if(!b) return;
@@ -5753,8 +5913,9 @@ function refreshTargetLang(){ if(tgDrill){ renderTarget(); tgScore.refreshLang()
 registerDrill({ id:'overchanges', area:'tg-area', tempo:true,   
                 
                 tracks:[
-                  { id:'comp',   kind:'perf', sess:'comp',   better:'high', unit:'bars', label:'drill_comp',   start:startComp },
-                  { id:'target', kind:'perf', sess:'target', better:'high', unit:'pct',  label:'drill_target', start:startTarget }
+                  
+                  { id:'comp',   kind:'perf', sess:'comp',   better:'high', unit:'bars', label:'drill_comp',   scored:'mic', start:startComp },
+                  { id:'target', kind:'perf', sess:'target', better:'high', unit:'pct',  label:'drill_target', scored:'acc', start:startTarget }
                 ],
                 isActive:()=>!!tgDrill, exit:exitTarget, refreshLang:refreshTargetLang,
                 setup:'tg-setup',
@@ -6107,7 +6268,7 @@ function refreshStrumLang(){ if(spDrill){ renderStrum(); spScore.refreshLang(); 
 
 registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',   
                 tracks:[{ id:'strum', kind:'perf', sess:'strum', label:'drill_strum',
-                          better:'high', unit:'bars', start:startStrum }],
+                          better:'high', unit:'bars', scored:'mic', start:startStrum }],
                 isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang,
                 mic:()=>spScore.available(),
                 onMic:()=>{ if(spDrill&&spDrill.playing) spStop();
@@ -6307,7 +6468,7 @@ function refreshTimingLang(){
 
 registerDrill({ id:'timing', area:'sd-area', tempo:true, setup:'sd-setup',
                 tracks:[{ id:'timing', kind:'perf', sess:'timing', label:'drill_timing',
-                          better:'high', unit:'bars', start:startTiming }],
+                          better:'high', unit:'bars', scored:'mic', start:startTiming }],
                 isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang,
                 mic:()=>sdScore.available(),
                 onMic:()=>{ if(sd&&sd.playing) sdStop(); sdScore.toggle(); renderTiming(); },
@@ -6660,6 +6821,164 @@ function onsetSelfHeard(scoreObj){
 }
 
 
+const SESSION_MINS = [5, 10, 15, 20];
+const SESSION_BLOCK_SEC = 300;     
+const SESSION_TICK_MS = 500;       
+
+let sessMins = 10;                 
+let psess = null;                  
+let sessLast = null;               
+let sessTimer = null;
+let sessChaining = false;          
+
+function sessionActive(){ return !!psess; }
+
+
+function sessionQueue(now){
+  const out=[];
+  const push=id=>{ if(id && out.indexOf(id)<0 && typeof trackById==='function' && trackById(id)) out.push(id); };
+  if(typeof learnerReview==='function'){
+    const rev=learnerReview(now);
+    (rev.due||[]).forEach(d=>push(d.track));
+  }
+  if(typeof drillTracks==='function') drillTracks().forEach(tr=>push(tr.id));
+  return out;
+}
+
+function sessionPlan(mins, now){
+  now=(typeof now==='number')?now:Date.now();
+  const total=Math.max(1, mins)*60;
+  const q=sessionQueue(now);
+  if(!q.length) return [];
+  const n=Math.max(1, Math.min(q.length, Math.round(total/SESSION_BLOCK_SEC) || 1));
+  const secs=Math.round(total/n);
+  return q.slice(0, n).map(id=>({ track:id, secs }));
+}
+
+function sessionStart(mins, now){
+  now=(typeof now==='number')?now:Date.now();
+  mins = SESSION_MINS.indexOf(mins)>=0 ? mins : sessMins;
+  if(psess) sessionEnd('quit', now);
+  const plan=sessionPlan(mins, now);
+  if(!plan.length) return false;
+  sessLast=null; sessMins=mins;
+  psess={ mins, plan, idx:-1, startedAt:now, blockEnds:now, endsAt:now+mins*60000 };
+  if(typeof setMode==='function') setMode('practice');
+  sessionAdvance(now);
+  if(!psess) return false;                       
+  if(typeof saveState==='function') saveState();
+  sessionStartTimer();
+  applySessionViews();
+  return true;
+}
+
+function sessionAdvance(now){
+  if(!psess) return;
+  now=(typeof now==='number')?now:Date.now();
+  psess.idx++;
+  if(psess.idx>=psess.plan.length){ sessionEnd('done', now); return; }
+  const b=psess.plan[psess.idx];
+  psess.blockEnds=Math.min(now + b.secs*1000, psess.endsAt);
+  sessChaining=true;
+  try{
+    if(typeof exitAllDrills==='function') exitAllDrills();
+    if(typeof startTrack==='function') startTrack(b.track);
+  } finally { sessChaining=false; }
+  if(typeof applyDrillCtx==='function') applyDrillCtx();
+}
+
+function sessionTick(now){
+  if(!psess) return;
+  now=(typeof now==='number')?now:Date.now();
+  if(now>=psess.endsAt){ sessionEnd('done', now); return; }
+  const running=(typeof activeDrill==='function') ? !!activeDrill() : true;
+  if(now>=psess.blockEnds || !running){ sessionAdvance(now); return; }
+  sessionPaint();
+}
+function sessionStartTimer(){
+  if(sessTimer || typeof setInterval!=='function') return;
+  sessTimer=setInterval(()=>{ try{ sessionTick(); }catch(_){} }, SESSION_TICK_MS);
+}
+
+function sessionEnd(reason, now){
+  if(!psess) return null;
+  const s=psess; psess=null;
+  if(sessTimer && typeof clearInterval==='function'){ clearInterval(sessTimer); }
+  sessTimer=null;
+  now=(typeof now==='number')?now:Date.now();
+  sessChaining=true;
+  try{ if(typeof exitAllDrills==='function') exitAllDrills(); }
+  finally{ sessChaining=false; }
+  sessLast={ mins:s.mins, from:s.startedAt, to:now, reason:reason||'done',
+             blocks:s.plan.slice(0, Math.max(0, Math.min(s.plan.length, s.idx+1))).map(b=>b.track) };
+  applySessionViews();
+  if(typeof applyDrillCtx==='function') applyDrillCtx();
+  return sessLast;
+}
+function sessionInterrupt(){ if(psess && !sessChaining) sessionEnd('quit'); }
+function sessionClearReport(){ if(sessLast){ sessLast=null; applySessionViews(); } }
+function sessionDismiss(){ sessionClearReport(); if(typeof renderPractice==='function') renderPractice(); }
+
+
+function sessionClock(sec){
+  sec=Math.max(0, Math.round(sec));
+  const m=Math.floor(sec/60), s=sec%60;
+  return m+':'+(s<10?'0':'')+s;
+}
+
+function sessionPaint(){
+  const chip=document.getElementById('drill-ctx-sess');
+  if(chip){
+    if(psess){
+      chip.hidden=false;
+      chip.textContent=(psess.idx+1)+'/'+psess.plan.length+' · '+sessionClock((psess.blockEnds-Date.now())/1000);
+    } else { chip.hidden=true; chip.textContent=''; }
+  }
+  const skip=document.getElementById('drill-ctx-skip');
+  if(skip){ skip.hidden=!psess; if(psess && typeof t==='function') skip.textContent=t('sess_next'); }
+}
+
+function applySessionViews(){
+  const rep=document.getElementById('session-report');
+  const show=!!sessLast;
+  if(rep){ rep.hidden=!show; if(show) renderSessionReport(); }
+  const top=document.getElementById('ph-top-block'); if(top) top.hidden=show;
+  const list=document.querySelector('#practice-home .ph-drills'); if(list) list.hidden=show;
+}
+function renderSessionCard(){
+  const host=document.getElementById('sess-mins');
+  if(host) host.innerHTML=SESSION_MINS.map(m=>
+    '<button type="button" class="btn'+(m===sessMins?' active':'')+'" data-mins="'+m+'">'+m+' '+t('sess_min')+'</button>').join('');
+  const b=document.getElementById('sess-start'); if(b) b.textContent=t('sess_start');
+}
+function renderSessionReport(){
+  const host=document.getElementById('session-report'); if(!host || !sessLast) return;
+  const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const mins=Math.max(1, Math.round((sessLast.to-sessLast.from)/60000));
+  
+  const runs=(typeof learner!=='undefined' && learner && Array.isArray(learner.sessions) ? learner.sessions : [])
+    .filter(s=>s.t>=sessLast.from && s.t<=sessLast.to);
+  const rows=sessLast.blocks.map(id=>{
+    const tr=(typeof trackById==='function') ? trackById(id) : null;
+    if(!tr) return '';
+    const mine=runs.filter(s=>(typeof sessNs==='function'?sessNs(s.drill):s.drill)===tr.sess);
+    let val=t('sess_norun');
+    if(mine.length){
+      const low=tr.better==='low';
+      const best=mine.reduce((b,s)=> b===null ? s.score : (low?Math.min(b,s.score):Math.max(b,s.score)), null);
+      val=(typeof trendScore==='function') ? trendScore({ last:best, unit:tr.unit }) : String(Math.round(best));
+    }
+    return '<div class="sr-row"><span class="sr-name">'+esc(t(tr.label))+'</span>'+
+           '<span class="sr-val">'+esc(val)+'</span></div>';
+  }).join('');
+  host.innerHTML='<div class="pp-title">'+t('sess_done_h')+'</div>'+
+    
+    '<div class="sr-lead">'+mins+' '+t('sess_min')+' · '+t('sess_drills')+': '+sessLast.blocks.length+'</div>'+
+    (runs.length ? rows : rows+'<div class="pp-empty">'+t('sess_none')+'</div>')+
+    '<div class="drill-bar"><button type="button" class="btn play" id="sess-close">'+t('drill_done')+'</button></div>';
+}
+
+
 
 function renderContextViews(){ renderChords(); renderTriads(); renderArp(); renderIdentify(); renderScales(); renderNotes(); markScrollables(); }
 function renderActiveContext(){
@@ -6668,7 +6987,23 @@ function renderActiveContext(){
   markScrollables();
 }
 
-function renderPractice(){ renderProgressInto('practice-progress'); }
+function renderPractice(){
+  renderProgressInto('practice-progress');                                  
+  if(typeof renderSessionCard==='function') renderSessionCard();            
+  if(typeof applySessionViews==='function') applySessionViews();
+  paintDrillBadges();                                                       
+}
+
+function paintDrillBadges(){
+  document.querySelectorAll('#practice-home .drill-card[data-track]').forEach(card=>{
+    const slot=card.querySelector('.dc-badge'); if(!slot) return;
+    const tr=(typeof trackById==='function') ? trackById(card.dataset.track) : null;
+    if(!tr){ slot.textContent=''; return; }
+    const key=trackBadge(tr);
+    slot.textContent=t(key);
+    slot.className='dc-badge '+(key==='badge_mic'?'b-mic':key==='badge_acc'?'b-acc':'b-coach');
+  });
+}
 
 
 function setKey(pc, lbl, mode){
@@ -6945,7 +7280,34 @@ function applyNav(){
   applyNav();
 })();
 
-{ const d=document.getElementById('nt-drill'); if(d) d.onclick=function(){ setMode('practice'); startTrack('note'); }; }
+const SEAM_TRACKS = { chords:'comp', triads:'comp', arp:'target', identify:'chordq',
+                      scale:'callresp', notes:'note', circle:'changes' };
+document.addEventListener('click', e=>{
+  const b=e.target.closest('[data-seam]'); if(!b) return;
+  const track=SEAM_TRACKS[b.dataset.seam]; if(!track) return;
+  setMode('practice');
+  startTrack(track);
+});
+
+function jamActive(){ return !!(typeof seqClock!=='undefined' && seqClock) || !!(typeof loopClock!=='undefined' && loopClock); }
+function renderJamBtn(){
+  const b=document.getElementById('seam-jam'); if(!b) return;
+  const on=jamActive();
+  b.textContent=t(on?'seam_jam_stop':'seam_jam');
+  b.classList.toggle('active', on);
+  b.setAttribute('aria-pressed', on?'true':'false');
+}
+function jamToggle(){
+  if(jamActive()){ if(seqClock) seqStop(); else stopLoop(); renderJamBtn(); return; }
+  audio();
+  if(!bassOn) bassToggle();
+  if(!grooveOn) drumsToggle();
+  
+  if(seq.length){ if(!seqClock) seqPlay(); }
+  else if(!loopClock) loopToggle();
+  renderJamBtn();
+}
+{ const j=document.getElementById('seam-jam'); if(j) j.onclick=jamToggle; }
 document.getElementById('lang-switch').addEventListener('click',e=>{
   const b=e.target.closest('.langbtn'); if(!b||b.dataset.lang===lang) return;
   lang=b.dataset.lang; applyLang(); saveState();
@@ -7154,7 +7516,17 @@ applyA11y();
 { const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('drill-ctx-setup', drillSetupToggle);
   wire('drill-ctx-help',  drillHintToggle);
-  wire('drill-ctx-mic',   drillMicToggle); }
+  wire('drill-ctx-mic',   drillMicToggle);
+  wire('drill-ctx-skip',  ()=>sessionAdvance()); }
+
+{ const m=document.getElementById('sess-mins');
+  if(m) m.addEventListener('click', e=>{
+    const b=e.target.closest('[data-mins]'); if(!b) return;
+    sessMins=+b.dataset.mins; renderSessionCard(); saveState();
+  });
+  const s=document.getElementById('sess-start'); if(s) s.onclick=()=>sessionStart(sessMins);
+  const r=document.getElementById('session-report');
+  if(r) r.addEventListener('click', e=>{ if(e.target.closest('#sess-close')) sessionDismiss(); }); }
 const fromShare = (typeof applyShareHash==='function') && applyShareHash();
 document.getElementById('app-ver').textContent = 'v' + APP_VERSION;
 if(!welcomeSeen && !fromShare) showWelcome();
@@ -7179,6 +7551,13 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     drillSetupToggle, drillHintToggle, drillMicToggle, drillRunStarted, setCurTrack, quitDrill,
     getCurTrack:()=>curTrack, getDrillSeen:()=>drillSeen, setDrillSeen:(o)=>{ drillSeen=o||{}; },
     drillTracks, trackById, trackBySess, trackByItems, sessNs, startTrack, learnerTrend, learnerBest, scoredErr,
+    
+    SESSION_MINS, sessionPlan, sessionQueue, sessionStart, sessionAdvance, sessionTick,
+    sessionEnd, sessionActive, sessionDismiss, sessionClock, renderSessionCard,
+    getSession:()=>psess, getSessReport:()=>sessLast,
+    getSessMins:()=>sessMins, setSessMins:(m)=>{ sessMins=m; },
+    SEAM_TRACKS, jamToggle, jamActive, renderJamBtn,
+    trackBadge, paintDrillBadges, renderProgressInto, renderPractice, trendScore,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
     setTempo, getTempo:()=>tempo, stopReferenceTransport, transportActive, applyContextBar, updateGlobalPlay,
     renderAllBoards,

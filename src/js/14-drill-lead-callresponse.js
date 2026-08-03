@@ -189,7 +189,7 @@ registerDrill({ id:'callresp', area:'cr-area',
                 onKey:()=>{ if(cr) crNewRound(); },
                 setup:'cr-setup',
                 tracks:[{ id:'callresp', kind:'perf', sess:'callresp', label:'drill_callresp',
-                          better:'high', unit:'pct', start:startCallResp }] });
+                          better:'high', unit:'pct', scored:'acc', start:startCallResp }] });
 
 (function initCallResp(){
   const area=document.getElementById('cr-area'); if(!area) return;

@@ -150,7 +150,7 @@ registerDrill({ id:'notes', area:'drill-area',
                 // one track with BOTH result kinds (B1): per-note SRS items, and a
                 // per-round accuracy that trends
                 tracks:[{ id:'note', kind:'recall', items:'note', sess:'notes', label:'drill_notes',
-                          better:'high', unit:'pct', start:startDrill }] });
+                          better:'high', unit:'pct', scored:'acc', start:startDrill }] });
 
 (function initDrill(){
   const b=document.getElementById('drill-board'); if(!b) return;

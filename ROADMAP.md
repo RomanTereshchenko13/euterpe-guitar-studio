@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-08-02 · shipping: v2.14.0_
+_Last updated: 2026-08-03 · shipping: v2.15.0_
 
 > **Consolidation note (v2.11.0).** Two debloat passes reshaped the *packaging* of what shipped
 > below, not its substance — worth knowing when reading the ✅ entries: **Ear folded from a
@@ -786,11 +786,11 @@ pickup, but that audience is tiny and the mic path already covers everyone — n
 ## Phase 10 — Unify the shell  (the whole-UI rework · two tracks)
 
 **Size:** XL — two tracks, A1–A4 and B1–B4 below, each shippable · **Risk:** med (A2 and B2 are
-refactors of shipped, working surfaces; B1 needs a schema migration) · **Status:** in progress —
-**Track A complete (A1–A4), B1 and B2 done** (unreleased); B3–B4 planned.
+refactors of shipped, working surfaces; B1 needs a schema migration) · **Status:** ✅ **complete —
+shipped v2.15.0** (A1–A4 · B1–B4, one release, per the Phase 5/7 convention).
 
 _(Sequenced between F1 and F2, not after Phase 9 — Phase 9 "runs throughout" and is not a gate.
-B3 delivers the first real slice of Phase 9's guided path, A4 the first slice of its onboarding.)_
+B3 delivered the first real slice of Phase 9's guided path, A4 the first slice of its onboarding.)_
 
 > **Supersedes two earlier plans in this slot** — the "Shell rework" (R1–R4) and the Practice-only
 > "Unify Practice". The first treated cluttered drill screens as the problem; the second found the
@@ -837,14 +837,16 @@ viewport empty**, its wheel pinned to a 360-unit viewBox beside a half-empty tex
 the mic button sits on the same screen: `sd_hint` ("A coach: mic-scored timing arrives later" — it
 arrived in v2.13.0), `tg_hint` ("not your guitar — mic scoring comes later" — comping has been scored
 since v2.14.0), and the four `*_meta` card subtitles still reading "coach". The most expensive feature
-the app has ever built is being actively denied by its own interface.
+the app has ever built is being actively denied by its own interface. _(Fixed in **B4**, and now
+asserted in both languages over every subtitle and every hint, so the next drill to gain a tier cannot
+leave its own description behind.)_
 
 ### Where the spine actually stands
 
 | Spine | The claim | Actual |
 |---|---|---|
 | **#1** One musical context | every view reflects one key/mode | ✅ **the model holds, and so does the control** — A1 gave Circle the picker it never had; B2 folded the drill strip into the one drill header, where the key is the shell's, not a second picker |
-| **#2** Reference ↔ practice seam | *"from any reference view → drill this"* | ❌ **one button** — `nt-drill`, in 1 of 7 views |
+| **#2** Reference ↔ practice seam | *"from any reference view → drill this"* | ✅ **fixed by B3** — was one button (`nt-drill`, 1 of 7 views); now all seven, plus "jam over this" |
 | **#3** The learner model | *"the app knows what you know"* | ✅ **fixed by B1** — was 4 of 10 tracks |
 
 **The evidence for #3** _(as audited at v2.14.0 — B1 has since fixed all of it)_. `13-learner.js`
@@ -1105,29 +1107,75 @@ drill header should be. As shipped:
   _33 assertions in the smoke suite; lint / kbd-check / scroll-check clean; visual pass at 390×844,
   844×390 and 1280×900 across all seven drill surfaces._
 
-**B3 — The session, and the seam (net-new value).** 1c's "the questions players actually arrive with",
-for practice. The question is **"I have 15 minutes — what do I do?"**, and the app has no answer: every
-drill is an infinite loop exited by hand, with no notion of *today*.
-- **A practice session** — pick a length, the app chains drills from the B1 queue, tracks the clock,
-  **ends**, and reports. The ritual is what practice apps live on; this is the first thing here that
-  is one.
-- **The seam, honoured** — "drill this" from **all seven** reference views, not only Notes. Cheap, and
-  a claim the app currently makes and does not keep.
-- **"Jam over this"** — the other seam, inherited from A4's answer to the Jam question (see above).
-  Playing along to the harmony on screen currently takes five steps; it should take one, from the
-  suggester that already says "What to play over this" and already knows what to play. Same shape as
-  "drill this", same vocabulary, so it costs almost nothing once that vocabulary exists.
+**B3 — The session, and the seam (net-new value).** ✅ **done** (v2.15.0). 1c's "the questions players
+actually arrive with", for practice. The question is **"I have 15 minutes — what do I do?"**, and the
+app had no answer: every drill was an infinite loop exited by hand, with no notion of *today*.
+As shipped:
+- **A practice session** (`14-session.js`) — pick 5 / 10 / 15 / 20 minutes and the app chains drills
+  from the B1 queue, runs the clock, moves you on, **ends by itself**, and reports. It owns no exercise
+  of its own, and that is the point: *what* to practise is `learnerReview().due` (B1), *how* it opens
+  is `startTrack()` (B2 — so each block arrives with the header naming it, exactly as if you had
+  pressed the card), and *what you did* is read back off the learner model's own ring buffer rather
+  than tallied a second time in parallel. The header gains a block counter and a **Next**; the home
+  gains a closing report that is exclusive, because a summary competing with the picker that starts the
+  next thing is not a closing screen.
+  - **The one entanglement is deliberate.** A session must end when the player abandons it, and both
+    ways to abandon one — the header's Quit and leaving Practice — already run through
+    `drillShellLeft()`. So that calls `sessionInterrupt()`, and the session guards its own chaining
+    with `sessChaining`: changing drill walks the same path, and a session that ended itself every
+    time it changed drill would be a session of exactly one drill.
+  - Every step takes `now`, so plan → start → tick → end → report is drivable with no timers at all,
+    which is how the harness asserts it.
+- **The seam, honoured** — "drill this" from **all seven** reference views, not only Notes. One label,
+  one delegated listener, and one curated `SEAM_TRACKS` map: chords/triads → comping, arpeggio →
+  chord-tone targeting, identify → chord quality *by ear*, scale → call-and-response phrases from it,
+  notes → the note drill (the original), circle → one-minute changes. A view is a thing you are looking
+  at and a track is the drill about that thing; only a person can say which is which, so that map is
+  the seam's one curated list and everything else about it is derived.
+- **"Jam over this"** — the other seam. One button beside the suggester already captioned "What to play
+  over this", replacing five steps (key → chord → open Backing → bass + drums → Loop). It plays the
+  **progression** when the player has built one and the current chord otherwise, and the same tap
+  stops it. _(Its one subtlety: enabling the band runs `ensureBacking()`, which starts the loop when
+  nothing is sounding — so an unconditional `loopToggle()` after it turns the jam straight back off.)_
 
-**B4 — Progress, and copy that tells the truth.** Replace the five-number stats dump with the narrative
-B1 makes possible: per-drill history, direction of travel, personal bests, and — for the three scored
-tiers — the timing trend in milliseconds. Invert the Practice home: progress + next-up on top, the nine
-cards as compact rows below. Badge them **🎤 Scored** vs **Coach**. And run a **copy-truth pass** over
-every string that promises a shipped feature is "coming later": `sd_hint`, `tg_hint` and the four
-`*_meta` subtitles, EN and UK both.
+  _49 assertions in the smoke suite._
 
-**The stale strings above are the bug B4 still owes.** _(The other one logged here — the `.divider`
-before `#tg-mic`, never hidden when `renderTarget()` hid the button, leaving a stray vertical rule
-under PROGRESSION — went with the button itself in **B2**.)_
+**B4 — Progress, and copy that tells the truth.** ✅ **done** (v2.15.0). As shipped:
+- **The narrative, at last.** The five all-time tiles are replaced by the story B1 made readable: what's
+  next (the queue, first, because it is the one question the screen exists to answer), then **a row per
+  track you have actually run** — latest score in the track's own unit, direction of travel, personal
+  best, and for the mic tiers the **best timing error in ms**, the number that was computed, shown once
+  and thrown away until B1 kept it. Each row is a real `<button>` carrying `data-track`, so it is also
+  a door: a line that names a drill and cannot open it is a tease. The four aggregates survive, demoted
+  to a footer. `renderProgressInto` moved from `14-drill-ear.js` (where it was born when Ear was a
+  duplicate mode) to `13-learner.js`, since every number in it now comes off the learner model.
+- **The Practice home inverted** — progress + the session starter on top, the ten cards below. A3 had
+  already pulled the card out of the bottom of a 1700px column and set it *beside* the picker; this
+  finishes the move.
+- **Badges, derived.** `🎤 Scored` / `Scored` / `Coach`, from a new `scored` field on the registry's
+  tracks. Declared rather than derived from the drill's `mic()` predicate, because those answer
+  different questions: `mic()` is "may I offer the tier right now on this device" (false with no
+  microphone, false in the lead mode of over-the-changes), the badge is "what kind of drill is this",
+  which is a property of the exercise.
+- **The copy-truth pass, done and now enforced.** `sd_hint` and three `*_meta` subtitles were still
+  promising mic scoring "arrives later" after F1 shipped it in v2.13/v2.14; `tg_hint` was vague about
+  which half of over-the-changes is scored. All six subtitles stopped naming a tier in prose at all —
+  prose is exactly what went stale, and the badge carries it now. The suite asserts it in both
+  languages, over every `*_meta` and every hint, so the next drill to gain a tier cannot leave its own
+  description behind.
+
+  _Found by the orientation pass B4's own validation demanded:_ **landscape phone + Practice was
+  laid out in two columns with the right 46% permanently empty.** `applyBoardRegion()` sets
+  `#board-region`'s `hidden` from the TAB, not the mode — in Practice the neck is hidden by a body
+  class and the element is not `[hidden]` — so the landscape `:has(#board-region:not([hidden]))`
+  two-column map still matched, and an id inside `:has()` outranks `body.mode-practice .layout`.
+  Fixed by restating the mode's single-column collapse at that specificity, and pinned in the suite
+  (jsdom resolves no cascade).
+
+  _23 assertions in the smoke suite._
+
+_(The other bug logged here — the `.divider` before `#tg-mic`, never hidden when `renderTarget()` hid
+the button, leaving a stray vertical rule under PROGRESSION — went with the button itself in **B2**.)_
 
 ---
 
@@ -1153,17 +1201,18 @@ the harmony already on screen, next to the suggester that is *already* captioned
 this" and already knows the answer. That is a seam, so it belongs with **B3**, which is building the
 seam vocabulary — not with the shell.
 
-**Sequencing and the F2 gate.** **A1, B1 and B2 gate F2 — all three are now done** (unreleased). F2
-stacks the Lead pillar's scored tier onto these drill screens, into this model, through this
-transport, so all three got unified before they are inherited. A2/A3 were the risky pair and wanted
-their own release — **Track A and B1+B2 are complete and unreleased, so that is one release ready to
-cut**; B3 and B4 can trickle.
-Per the convention Phases 5 and 7 used, each track ships as one release rather than eight.
+**Sequencing and the F2 gate.** **A1, B1 and B2 gated F2 — all three are done and shipped** (v2.15.0).
+F2 stacks the Lead pillar's scored tier onto these drill screens, into this model, through this
+transport, so all three got unified before they are inherited. In the end the whole phase shipped as
+ONE release rather than a track at a time, per the convention Phases 5 and 7 used: A2/A3 were the
+risky pair and were held behind a green harness until B3/B4 landed with them, so the visual pass and
+the orientation matrix were run once over the finished shell instead of twice over two halves of it.
 
-**Why this is less risk than the smaller plans it replaces.** A1 and B1 are mostly deletion and pure
+**Why this was less risk than the smaller plans it replaced.** A1 and B1 are mostly deletion and pure
 logic, both fully assertable, like 1a. A2 and B2 are isolated behind a green harness, like 1b. The
 smaller plans' risk was worse for being hidden: they would have shipped a Review queue promoted to the
-top of the Practice home that structurally ignores two-thirds of the app, and found out in use.
+top of the Practice home that structurally ignores two-thirds of the app, and found out in use — and,
+as B3 then proved, a timed session built on that queue would have inherited the same blind spot.
 
 **Validation:** the v1 → v2 learner migration round-trips a captured real store with no progress lost
 (asserted before the v1 read path is deleted); the registry seam stays enforced (every `*-area` claimed
@@ -1188,7 +1237,11 @@ product people find, adopt, and recommend — none of them DSP, all high-leverag
   _First step shipped (v2.5.0):_ the Practice/Ear progress card now **closes the SRS loop** — a
   **Due-for-review** count + **Active-days** stat (`learnerReview` / `learnerActivity`) and a
   one-tap **Review** that routes into the drill for the most-overdue namespace (`startReview`).
-  Not yet a curriculum, but the "what to practice next" surface the curriculum will sit on.
+  _Second step shipped (v2.15.0, Phase 10/B3+B4):_ the **timed practice session** — a length, a queue
+  chained from that same model over all ten tracks, a clock, an ending and a report — plus the
+  per-track progress narrative it reports into. Still not a curriculum (nothing yet says *why* this
+  drill before that one), but the curriculum now has a delivery shape to be poured into rather than a
+  list of drills to hope the player sequences for themselves.
 - **Distribution & shareability.** Installable PWA (offline, "add to home screen") ✅;
   **shareable deep links** ✅ **(v2.5.0)** — a Settings *Share* button copies a URL whose hash
   encodes the musical context (`encodeShareState`), applied once on load then stripped
@@ -1202,10 +1255,11 @@ product people find, adopt, and recommend — none of them DSP, all high-leverag
   and remembered) and the **colour-blind / alternate palette** option — an Okabe–Ito CVD-safe
   palette plus distinct per-function dot **shapes** (toggles in Settings ▸ Accessibility), so
   the function colours (root / third / fifth / seventh) no longer carry meaning by hue alone.
-  _Still open:_ deeper onboarding, empty/error states, and the broader feel pass. _(Onboarding is
-  partly claimed by **Phase 10**: A4 adds the opening question the first-run card never asks, and
-  B3/B4 build the session + progress narrative it needs somewhere to route **to**. What stays here
-  is the depth — a real curriculum on top of that routing.)_
+  _Still open:_ deeper onboarding, empty/error states, and the broader feel pass. _(Onboarding was
+  partly claimed by **Phase 10** and that part is now shipped: A4 added the opening question the
+  first-run card never asked, and B3/B4 built the timed session + progress narrative it needed
+  somewhere to route **to**. What stays here is the depth — a real curriculum on top of that routing,
+  which now has a session shape to be delivered through rather than a list of drills.)_
 
 **Honest scope.** Even complete, this wins its *niche* — the best free, private, no-login,
 install-free, bilingual tool unifying reference + jamming + practice — not a head-to-head win
@@ -1232,10 +1286,10 @@ Phase 1  Unify (spine + reference)           ← foundational; everything reuses
                └─ Phase 8  Mic input            F0 (tuner) ✅ shipped v2.12.0 — no scoring, low risk
                                                 F1 (onset) ✅ shipped v2.13.0 — scores 7 + 5 (v2.14.0)
                                                      │
-                                                     ├─ Phase 10  Unify the shell  ← ships next
+                                                     ├─ Phase 10  Unify the shell ✅ shipped v2.15.0
                                                      │   A  shell    A1 one function one home ─┐
                                                      │               A2 nav · A3 board-first   │ A1+B1+B2
-                                                     │               A4 tools + cold start     │  gate F2
+                                                     │               A4 tools + cold start     │  gated F2
                                                      │   B  practice B1 one model ─────────────┘
                                                      │               B2 drill shell · B3 session + seam
                                                      │               B4 progress + copy truth

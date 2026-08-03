@@ -177,45 +177,10 @@ function earAnswerLabel(){
 }
 
 /* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
-// shared progress readout: the learner model's aggregate stats as chips, or an
-// empty state until a drill writes the first attempt. One model (spine #3), and
-// since the Ear home folded into the Practice home, one host too.
-function renderProgressInto(hostId){
-  const host=document.getElementById(hostId); if(!host) return;
-  const s=learnerStats();
-  if(!s.seen && !s.sessions){ host.innerHTML='<div class="pp-empty">'+t('prog_empty')+'</div>'; return; }
-  const stat=(val,lab)=>'<div class="pp-stat"><div class="pp-val">'+val+'</div><div class="pp-lab">'+lab+'</div></div>';
-  const act=learnerActivity();
-  let html='<div class="pp-stats">'+
-    stat(s.items, t('prog_tracked'))+
-    stat(Math.round(s.accuracy*100)+'%', t('prog_accuracy'))+
-    stat(s.bestStreak, t('prog_streak'))+
-    stat(act.days, t('prog_active'))+
-    stat(s.sessions, t('prog_sessions'))+
-  '</div>';
-  /* Close the loop (spine #3): when the SRS says items are due, surface the count and
-     a one-tap Review that drops into the namespace with the most overdue items.
-
-     Phase 10/B1 — when nothing is due, fall through to the derived queue instead of
-     showing nothing. Six of the nine tracks mint no SRS items at all, so on the old
-     four-namespace list this row was blank for anyone whose practice was rhythm or
-     lead: the app had a full session history for them and still couldn't name one.
-     A performance track earns the row by being cold or by slipping (learnerReview),
-     and the registry's own `label` names it. */
-  const rev=learnerReview();
-  if(rev.total>0 && rev.top){
-    html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_due')+' · '+rev.total+'</span>'+
-      '<button type="button" class="btn play pp-review-btn" data-review="'+rev.top+'">'+t('prog_review')+'</button></div>';
-  } else {
-    const nxt=(rev.due||[]).find(d=>d.kind==='perf');
-    const tr=nxt && typeof trackById==='function' ? trackById(nxt.track) : null;
-    if(tr && tr.label){
-      html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_next')+' · '+t(tr.label)+'</span>'+
-        '<button type="button" class="btn play pp-review-btn" data-review="'+tr.id+'">'+t('prog_start')+'</button></div>';
-    }
-  }
-  host.innerHTML=html;
-}
+/* The shared progress readout moved to 13-learner.js in Phase 10/B4: it had lived here
+   since the Ear home was its own duplicate mode, and by B4 it reads eight things off the
+   learner model and nothing at all off `ear`. renderProgressInto() is still the entry
+   point; only its address changed. */
 function renderEarPrompt(){
   const p=document.getElementById('ear-prompt'); if(p) p.textContent=ear.cfg.prompt();
   const c=document.getElementById('ear-count'); if(c) c.textContent=Math.min(ear.done+1, ear.total)+' / '+ear.total;
@@ -276,9 +241,9 @@ registerDrill({ id:'ear', area:'ear-area',
                    with three independent SRS queues. Items are "interval:P5"; the
                    session ids keep their historic `ear-` prefix. */
                 tracks:[
-                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', start:()=>startEar('interval') },
-                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    start:()=>startEar('chordq') },
-                  { id:'rhythm',   kind:'recall', items:'rhythm',   sess:'ear-rhythm',   label:'ear_rhythm',    start:()=>startEar('rhythm') }
+                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', scored:'acc', start:()=>startEar('interval') },
+                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    scored:'acc', start:()=>startEar('chordq') },
+                  { id:'rhythm',   kind:'recall', items:'rhythm',   sess:'ear-rhythm',   label:'ear_rhythm',    scored:'acc', start:()=>startEar('rhythm') }
                 ] });
 
 (function initEar(){

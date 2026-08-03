@@ -215,7 +215,7 @@ function refreshTimingLang(){
 
 registerDrill({ id:'timing', area:'sd-area', tempo:true, setup:'sd-setup',
                 tracks:[{ id:'timing', kind:'perf', sess:'timing', label:'drill_timing',
-                          better:'high', unit:'bars', start:startTiming }],
+                          better:'high', unit:'bars', scored:'mic', start:startTiming }],
                 isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang,
                 // B2: the shared header's mic, offered wherever onset detection can run
                 mic:()=>sdScore.available(),

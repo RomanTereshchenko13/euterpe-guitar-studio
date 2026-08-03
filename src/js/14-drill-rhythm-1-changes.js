@@ -184,6 +184,7 @@ function refreshChangesLang(){ if(cmDrill) renderCm(); }
 /* card starter + in-drill controls — wired once at load (guarded so a missing panel
    never throws, mirroring initDrill / initEar). */
 registerDrill({ id:'changes', area:'cm-area', tempo:true,   // the optional beat-reference click rides pulseSec()
+                // the one genuinely unscored track left: it counts YOUR taps, not your guitar
                 tracks:[{ id:'changes', kind:'perf', sess:'changes', label:'drill_changes',
                           better:'high', unit:'cpm', start:startChanges }],
                 isActive:()=>!!cmDrill, exit:exitChanges, refreshLang:refreshChangesLang });

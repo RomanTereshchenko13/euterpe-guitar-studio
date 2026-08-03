@@ -241,6 +241,103 @@ function startTrack(id){
   tr.start();
   return true;
 }
+/* ---- the progress readout (Phase 10/B4) ----
+   What this replaced: five all-time tiles — items tracked, accuracy, best streak,
+   active days, sessions — none of which is a *story*. The app has held a per-track
+   time series since Phase 3b and a personal best since B1, and rendered neither, so
+   a player who had cut their timing error from 45 ms to 28 ms over six runs was shown
+   "23 sessions" and had to take the improvement on faith. B1 built learnerTrend for
+   exactly this; this is the thing that finally reads it.
+
+   The card is now, in order: WHAT'S NEXT (the queue — the one question the home screen
+   exists to answer, so it goes first), then a row per track you have actually run —
+   latest, direction of travel, personal best, and for the mic tiers the timing error —
+   then the four aggregates, demoted to a footer where they belong.
+
+   It lives here rather than in 14-drill-ear.js, where it was born when the Ear home was
+   a duplicate mode of its own: every number in it now comes off the learner model and
+   none of it off `ear`. */
+
+// a track's latest score, in its own unit
+function trendScore(tn){
+  if(tn.last===null) return '';
+  const v=Math.round(tn.last);
+  if(tn.unit==='pct') return v+'%';
+  if(tn.unit==='bars') return v+' '+t('unit_bars');
+  if(tn.unit==='cpm') return v+t('unit_cpm');
+  return String(v);
+}
+// ▲ / ▼ / → , oriented by the track's own `better` (learnerTrend already did that)
+function trendArrow(dir){ return dir==='up' ? '▲' : dir==='down' ? '▼' : '→'; }
+
+function renderProgressInto(hostId){
+  const host=document.getElementById(hostId); if(!host) return;
+  const s=learnerStats();
+  if(!s.seen && !s.sessions){ host.innerHTML='<div class="pp-empty">'+t('prog_empty')+'</div>'; return; }
+  const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  let html='';
+
+  /* WHAT'S NEXT. Close the loop (spine #3): when the SRS says items are due, surface
+     the count and a one-tap Review into the namespace with the most overdue items.
+     B1 — when nothing is due, fall through to the derived queue instead of showing
+     nothing: six of the ten tracks mint no SRS items at all, so on the old
+     four-namespace list this row was blank for anyone whose practice was rhythm or
+     lead. A performance track earns the row by being cold or by slipping. */
+  const rev=learnerReview();
+  if(rev.total>0 && rev.top){
+    html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_due')+' · '+rev.total+'</span>'+
+      '<button type="button" class="btn play pp-review-btn" data-review="'+esc(rev.top)+'">'+t('prog_review')+'</button></div>';
+  } else {
+    const nxt=(rev.due||[]).find(d=>d.kind==='perf');
+    const tr=nxt && typeof trackById==='function' ? trackById(nxt.track) : null;
+    if(tr && tr.label){
+      html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_next')+' · '+esc(t(tr.label))+'</span>'+
+        '<button type="button" class="btn play pp-review-btn" data-review="'+esc(tr.id)+'">'+t('prog_start')+'</button></div>';
+    }
+  }
+
+  /* A ROW PER TRACK YOU HAVE RUN, most recently practised first — the narrative. A
+     track with no history is left out rather than listed as a zero: the practice list
+     below is where you go to start something new, and a card is a better invitation
+     than an empty row. */
+  const rows=(typeof drillTracks==='function' ? drillTracks() : [])
+    .filter(tr=>tr.sess)
+    .map(tr=>({ tr, tn:learnerTrend(tr.sess) }))
+    .filter(x=>x.tn.n>0)
+    .sort((a,b)=>b.tn.lastT-a.tn.lastT);
+  if(rows.length){
+    html+='<div class="pp-sec">'+t('prog_yours')+'</div>';
+    html+=rows.map(({tr,tn})=>{
+      const sub=[];
+      if(tn.best!==null) sub.push(t('prog_best')+' '+trendScore({ last:tn.best, unit:tn.unit }));
+      // the mic tiers' timing error, kept by B1 and never shown until now. bestErr is
+      // the one to lead with: it is the number that says "this is what you can do".
+      if(tn.bestErr!==null) sub.push(t('prog_timing')+' ±'+Math.round(tn.bestErr)+' '+t('on_ms'));
+      sub.push(tn.n+' '+t('prog_runs'));
+      /* a real <button> carrying data-track, so the row is also a door: the delegated
+         listener on #practice-home already opens whatever carries one (B2), and a line
+         that names a drill and cannot open it is a tease. */
+      return '<button type="button" class="pp-row" data-track="'+esc(tr.id)+'">'+
+        '<span class="pp-row-name">'+esc(t(tr.label))+'</span>'+
+        '<span class="pp-row-val">'+esc(trendScore(tn))+
+          ' <span class="pp-dir '+tn.dir+'">'+trendArrow(tn.dir)+'</span></span>'+
+        '<span class="pp-row-sub">'+esc(sub.join(' · '))+'</span>'+
+      '</button>';
+    }).join('');
+  }
+
+  // the aggregates, demoted: still worth knowing, no longer the whole card
+  const stat=(val,lab)=>'<div class="pp-stat"><div class="pp-val">'+val+'</div><div class="pp-lab">'+lab+'</div></div>';
+  const act=learnerActivity();
+  html+='<div class="pp-stats">'+
+    stat(Math.round(s.accuracy*100)+'%', t('prog_accuracy'))+
+    stat(s.bestStreak, t('prog_streak'))+
+    stat(act.days, t('prog_active'))+
+    stat(s.sessions, t('prog_sessions'))+
+  '</div>';
+  host.innerHTML=html;
+}
+
 // recent-activity readout: distinct calendar days practised within the last `win`
 // days (default 7), from the sessions ring buffer — powers the "active days" stat
 // that makes the unscored coach tiers feel rewarding without a score.

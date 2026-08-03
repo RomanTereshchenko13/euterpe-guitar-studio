@@ -2,6 +2,16 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.15.0 — 2026-08-03
+
+- Practice sessions. Say how long you have — five minutes to twenty — and Euterpe lines up what you are actually due to work on, runs the clock, moves you from one drill to the next, ends by itself, and tells you what the session was. Until now every drill was an endless loop you left by hand, and the app had no notion of a day's practice at all.
+- "Drill this" from anywhere. Every reference view now has a one-tap route into the drill that is about what is on your screen: a chord into comping it in time, an arpeggio into targeting those tones over the changes, a scale into echoing phrases built from it, the circle into changing between the key's chords. It was a promise the app had been making since the beginning and keeping in exactly one place.
+- "Jam over this". Playing along to the harmony on screen used to take five steps — pick a key, pick a chord, open Backing, switch on bass and drums, press Loop. It is one button now, sitting next to the panel that already tells you what to play over this.
+- Progress that tells you something. The five all-time numbers are replaced by the story your practice actually has: a line per drill with your latest result, which way it is heading, your personal best, and — for the drills that listen — your best timing error in milliseconds. The app has been keeping all of that and showing none of it. Each line is also a way straight back into that drill.
+- One screen for every drill. All nine used to render under the same heading and never say which drill you were in; there is now a single drill header that names it, holds the key, the tempo, the microphone and the way out, and folds its setup away once you start playing. The practice home leads with what to do next instead of ten cards, and each card is badged with what it does — scored with the microphone, scored on accuracy, or a coach.
+- One navigation bar instead of three stacked strips, and the fretboard now sits above the controls that change it rather than below them. Settings are sorted by what you do with them, with the tuner and the latency measurement gathered under Tools. On a phone the four destinations are a bottom bar in the thumb zone.
+- Honest labels throughout: every string that still promised a shipped feature was "coming later" has been retired. Three drills gained microphone scoring in the last release and their own descriptions had not been told.
+
 ## v2.14.0 — 2026-08-02
 
 - Mic scoring reaches the Rhythm drills. Strumming & feel now grades the pattern you play — every strum is timed against the pattern's own slots, swing included, so a correctly swung player is not marked late. Over the changes grades the thing comping is actually about: landing each chord change in time. What you strum between the changes is your own rhythm and is left alone.

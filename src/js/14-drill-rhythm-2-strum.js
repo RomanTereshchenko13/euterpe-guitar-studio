@@ -182,7 +182,7 @@ function refreshStrumLang(){ if(spDrill){ renderStrum(); spScore.refreshLang(); 
 
 registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',   // the 8th-note clock is beat()-driven
                 tracks:[{ id:'strum', kind:'perf', sess:'strum', label:'drill_strum',
-                          better:'high', unit:'bars', start:startStrum }],
+                          better:'high', unit:'bars', scored:'mic', start:startStrum }],
                 isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang,
                 mic:()=>spScore.available(),
                 // toggling the tier mid-run would change what's being measured under a score

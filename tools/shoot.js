@@ -33,6 +33,9 @@
    Phase 7 Timing: `timing` for the subdivision & timing coach, or `timing-run` to also press Play
    and land on the ticking grid with the scale walking the neck.
 
+   Phase 10/B3 sessions: pass `session` to start a timed practice session (the shot lands on the
+   first drill of it, with the header's block counter + Next visible), or `session-report` to start
+   one and quit straight out of it, which is how the closing report is photographed.
    Phase 10/A4 Settings: pass `settings` to expand the Settings disclosure (Instrument / Tools /
    Preferences). Combines with a mode token — `settings practice` is how you check that Tools is
    reachable from Practice, which is the whole point of splitting it out. Adds a `-settings` suffix.
@@ -76,7 +79,8 @@ for (const a of process.argv.slice(2)) {
   else if (a === 'cbpalette' || a === 'shapes' || a === 'a11y') a11yArgs.push(a);
   else if (a === 'settings') openSettings = true;          // A4: expand the Settings disclosure
   else if (/^\d+\/\d+$/.test(a)) meterArg = a;              // time signature, e.g. 3/4 (Phase 7b)
-  else if (a === 'practice' || a === 'reference' || a === 'drill' || a === 'changes' || a === 'changes-run'
+  else if (a === 'practice' || a === 'reference' || a === 'drill' || a === 'session' || a === 'session-report'
+           || a === 'changes' || a === 'changes-run'
            || a === 'strum' || a === 'strum-run' || a === 'comp' || a === 'comp-run'
            || a === 'target' || a === 'target-run' || a === 'callresp'
            || a === 'timing' || a === 'timing-run'
@@ -116,6 +120,12 @@ function appFor(panel) {
   if (mode === 'callresp') clicks.push(`var s=document.getElementById('start-callresp');if(s)s.click();`);
   if (mode === 'timing' || mode === 'timing-run') clicks.push(`var s=document.getElementById('start-timing');if(s)s.click();`);
   if (mode === 'timing-run') clicks.push(`var g=document.getElementById('sd-play');if(g)g.click();`);
+  /* Phase 10/B3, the timed session. `session` photographs a drill running INSIDE one —
+     the only way to see the header's block counter and Next, which are hidden otherwise.
+     `session-report` ends it immediately so the closing screen is what lands in the shot.
+     Both go through the app's own buttons, so they exercise the real path. */
+  if (mode === 'session' || mode === 'session-report') clicks.push(`var s=document.getElementById('sess-start');if(s)s.click();`);
+  if (mode === 'session-report') clicks.push(`var q=document.getElementById('drill-ctx-quit');if(q)q.click();`);
   const earStart = { 'ear-interval': 'start-interval', 'ear-chordq': 'start-chordq', 'ear-rhythm': 'start-rhythm' }[mode];
   if (earStart) clicks.push(`var s=document.getElementById('${earStart}');if(s)s.click();`);
   // Settings disclosure (A4): expand it LAST, so the shot shows the three clusters

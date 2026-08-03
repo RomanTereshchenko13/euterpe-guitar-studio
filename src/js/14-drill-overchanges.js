@@ -304,8 +304,11 @@ registerDrill({ id:'overchanges', area:'tg-area', tempo:true,   // bars ride bar
                    with different metrics, opened from different practice cards, and
                    the model has to keep them apart. */
                 tracks:[
-                  { id:'comp',   kind:'perf', sess:'comp',   better:'high', unit:'bars', label:'drill_comp',   start:startComp },
-                  { id:'target', kind:'perf', sess:'target', better:'high', unit:'pct',  label:'drill_target', start:startTarget }
+                  /* comping is the only mic tier here: F1 scores the bar downbeats, and the lead mode
+                     stays tap-scored until F2 — exactly the distinction a badge derived from the
+                     drill's mic() predicate could not draw (see trackBadge). */
+                  { id:'comp',   kind:'perf', sess:'comp',   better:'high', unit:'bars', label:'drill_comp',   scored:'mic', start:startComp },
+                  { id:'target', kind:'perf', sess:'target', better:'high', unit:'pct',  label:'drill_target', scored:'acc', start:startTarget }
                 ],
                 isActive:()=>!!tgDrill, exit:exitTarget, refreshLang:refreshTargetLang,
                 setup:'tg-setup',

@@ -38,7 +38,15 @@
        sess:'notes',              // the session drill-id namespace ("timing:8ths")
        better:'high'|'low',       // perf only: which direction is improvement
        unit:'pct'|'bars'|'cpm',   // perf only: what the number is, for the readout
+       scored:'mic'|'acc',        // optional (B4): what tier this track offers
        start:fn }                 // open this track — the review router's one map
+
+   `scored` is DECLARED rather than derived from the drill's mic() predicate, and the
+   difference matters: mic() answers "may I offer the tier right now on this device",
+   which is false on a machine with no microphone and false in the lead mode of
+   over-the-changes. The badge on the practice card answers "what kind of drill is
+   this", which is a property of the exercise and true on every device. Omitted means
+   'coach' — the drill hands you a number to beat and judges nothing.
 
    Before this, three separate hand-maintained lists encoded the same knowledge and
    all three were incomplete: REVIEW_NS hardcoded four namespaces, startReview()
@@ -82,7 +90,16 @@ function quitDrill(){
   if(d && typeof d.exit==='function') d.exit();
   drillShellLeft();
 }
-function drillShellLeft(){ setCurTrack(null); applyDrillCtx(); }
+/* Both doors out run through here, which is also where a timed session (B3) has to
+   learn that it is over: Quit and a mode switch are the two ways a player abandons
+   one, and neither belongs to the session module. sessionInterrupt() is a no-op
+   while the session is itself chaining from one block to the next — that walks the
+   same path, and a session that ended itself every time it changed drill would be a
+   session of exactly one drill. */
+function drillShellLeft(){
+  if(typeof sessionInterrupt==='function') sessionInterrupt();
+  setCurTrack(null); applyDrillCtx();
+}
 
 /* The shared drill key picker (#drill-ctx) changed the context key. Every practice drill
    used to carry its own copy of that row — six identical markup blocks all calling the same
@@ -119,6 +136,8 @@ let drillSeen = {};
 /* Called by every drill's start(): reset the shell for a fresh drill. The setup opens
    (you are about to configure a run), and the hint opens only if this track is new. */
 function drillShellEnter(){
+  // a drill is starting, so whatever the last timed session reported has been read (B3)
+  if(typeof sessionClearReport==='function') sessionClearReport();
   drillSetupOpen = true;
   const tr = curTrack;
   drillHintOpen = !(tr && drillSeen[tr]);
@@ -202,6 +221,10 @@ function applyDrillCtx(){
     if(d && typeof d.mic==='function'){ try{ on=!!d.mic(); }catch(_){ on=false; } }
     mb.hidden=!on;
   }
+  /* the timed session's two header controls (B3) — the block counter and Next. Painted
+     by the session module for the same reason the mic's label is 13-scored.js's: only
+     the running session knows whether there is one. */
+  if(typeof sessionPaint==='function') sessionPaint();
 }
 // the shared mic button was pressed → hand it to whichever drill is running
 function drillMicToggle(){
@@ -226,6 +249,15 @@ function trackByItems(ns){ return drillTracks().find(tr => tr.items===ns) || nul
 function trackBySess(ns){ return drillTracks().find(tr => tr.sess===ns) || null; }
 // a track by its own id — what the review router is handed
 function trackById(id){ return drillTracks().find(tr => tr.id===id) || null; }
+/* What tier a track offers, as a badge key (Phase 10/B4). The practice cards used to
+   carry this in prose — five of the ten subtitles ended "· coach", three of them
+   untruthfully, because F1 shipped mic scoring underneath them and nobody went back to
+   the string. A badge derived from the registry cannot go stale the same way: the drill
+   that gains a tier declares it in the one place it declares everything else. */
+function trackBadge(tr){
+  const s = tr && tr.scored;
+  return s==='mic' ? 'badge_mic' : s==='acc' ? 'badge_acc' : 'badge_coach';
+}
 /* The session ids drills write are "<namespace>:<variant>" ("timing:8ths",
    "changes:C-G"), except the three ear tracks, which have no variant. One splitter,
    so every reader agrees on where the namespace ends. */

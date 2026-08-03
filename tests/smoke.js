@@ -189,8 +189,12 @@ if (T) {
    'view_arp','arp_h','arp_p','arp_hint','arp_word','tb_capo','capo_off','caged_desc',
    'mode_practice','practice_h','practice_intro','drill_notes','drill_notes_meta',
    'drill_quit','drill_find_pre','drill_find_sub','drill_complete','drill_score','drill_clean',
-   'drill_misses','drill_time','drill_again','drill_done','seam_drill_notes',
-   'prog_title','prog_empty','prog_tracked','prog_accuracy','prog_streak','prog_sessions',
+   'drill_misses','drill_time','drill_again','drill_done','seam_drill','seam_jam','seam_jam_stop',
+   'sess_title','sess_lead','sess_len','sess_min','sess_start','sess_next',
+   'sess_done_h','sess_none','sess_drills','sess_norun',
+   'badge_mic','badge_acc','badge_coach','unit_bars','unit_cpm',
+   'prog_title','prog_empty','prog_accuracy','prog_streak','prog_sessions',
+   'prog_yours','prog_best','prog_runs','prog_timing',
    'practice_grp_ear','ear_intervals','ear_intervals_meta','ear_chords','ear_chords_meta',
    'ear_rhythm','ear_rhythm_meta','ear_int_prompt','ear_chord_prompt','ear_rhythm_prompt',
    'ear_replay','ear_next','ear_right','ear_wrong','ear_got',
@@ -680,6 +684,247 @@ if (T) {
        /body:not\(\.drill-setup-open\)\s*\.drill-setup\s*\{[^}]*display:\s*none/.test(html));
     ok('B2: the hint is hidden by CSS when its body class is off',
        /body:not\(\.drill-help-open\)\s*\.drill-hint\s*\{[^}]*display:\s*none/.test(html));
+  })();
+
+  /* ---- Phase 10/B3: THE SESSION, AND THE SEAM -------------------------------
+     "I have fifteen minutes — what do I do?" was a question with no answer: every
+     drill is an infinite loop exited by hand, with no notion of today. The session
+     is the ritual — pick a length, the app chains what's due, runs the clock, ENDS,
+     and reports. What is asserted is that it owns none of that itself: the queue is
+     B1's, the door is B2's startTrack, and the report is read back off the learner
+     model rather than tallied a second time.
+     Every step takes `now`, so the whole flow runs with no timers at all. --------- */
+  (function timedSession() {
+    const doc = win.document;
+    const vis = id => { const e = doc.getElementById(id); return !!e && !e.hidden; };
+    const T0 = 1700000000000;
+
+    /* --- the plan is pure: minutes in, blocks out --- */
+    ok('B3: five minutes is one drill', T.sessionPlan(5, T0).length === 1);
+    ok('B3: fifteen minutes is three', T.sessionPlan(15, T0).length === 3);
+    ok('B3: twenty is four', T.sessionPlan(20, T0).length === 4);
+    const plan = T.sessionPlan(15, T0);
+    ok('B3: the whole length is spent', plan.reduce((s, b) => s + b.secs, 0) === 15 * 60);
+    ok('B3: every block names a real track', plan.every(b => !!T.trackById(b.track)));
+    ok('B3: ...and no drill comes round twice',
+       new Set(plan.map(b => b.track)).size === plan.length);
+    /* The queue is B1's, not a second ranking: whatever learnerReview puts at the head
+       of the due list is what the session opens with. */
+    T.resetLearner();
+    T.recordAttempt('interval:P5', false, T0);        // one overdue recall item
+    const due = T.learnerReview(T0 + 120000).due;
+    ok('B3: the session opens with whatever the review queue ranked first',
+       due.length > 0 && T.sessionQueue(T0 + 120000)[0] === due[0].track);
+    /* ...and it pads from the registry, so a player with an empty queue still gets a
+       full session rather than a short one. */
+    ok('B3: a session is filled out from the registry when nothing is due',
+       T.sessionQueue(T0).length === T.drillTracks().length);
+
+    /* --- running one: the header says where you are, and the clock moves it on --- */
+    T.setMode('practice');
+    const started = T.sessionStart(10, T0);
+    const s0 = T.getSession();
+    ok('B3: a session starts', started && T.sessionActive() && !!s0);
+    ok('B3: ...and opens its first drill through the one door',
+       T.getCurTrack() === s0.plan[0].track && !!T.activeDrill());
+    ok('B3: the header counts the blocks', vis('drill-ctx-sess')
+       && /^1\/2 · \d+:\d\d$/.test(doc.getElementById('drill-ctx-sess').textContent),
+       doc.getElementById('drill-ctx-sess').textContent);
+    ok('B3: ...and offers the way past one', vis('drill-ctx-skip'));
+    /* a block ends on its own clock. The next one opens with the header renamed — which
+       only works because the session goes through startTrack() like a card press. */
+    const second = s0.plan[1].track;
+    T.sessionTick(T0 + s0.plan[0].secs * 1000 + 1);
+    ok('B3: the clock moves the session on', T.getCurTrack() === second);
+    ok('B3: ...and the drill header renames itself',
+       doc.getElementById('drill-ctx-name').textContent === T.I18N[T.state().lang][T.trackById(second).label]);
+    ok('B3: the counter follows', /^2\/2/.test(doc.getElementById('drill-ctx-sess').textContent));
+    /* ...and the last block ENDS it. That is the whole point: the app had no notion of
+       a practice session finishing, only of a drill being quit. */
+    T.sessionTick(T0 + 10 * 60000 + 1);
+    ok('B3: the session ends itself', !T.sessionActive() && !T.activeDrill());
+    ok('B3: ...and leaves a report', !!T.getSessReport() && vis('session-report'));
+    ok('B3: the report is exclusive — it is a closing screen, not a sidebar',
+       !vis('ph-top-block') && doc.querySelector('#practice-home .ph-drills').hidden);
+    ok('B3: it names the blocks that were actually reached',
+       doc.querySelectorAll('#session-report .sr-row').length === T.getSessReport().blocks.length);
+    ok('B3: ...and the header stops counting', !vis('drill-ctx-sess') && !vis('drill-ctx-skip'));
+    doc.getElementById('sess-close').click();
+    ok('B3: Done puts the picker back', !vis('session-report') && vis('ph-top-block'));
+
+    /* --- the report reads the learner model, it does not keep a second tally --- */
+    T.resetLearner();
+    T.sessionStart(10, T0);
+    const s1 = T.getSession(), tr1 = T.trackById(s1.plan[0].track);
+    T.recordSession(tr1.sess + ':x', 42, T0 + 1000);
+    T.sessionEnd('quit', T0 + 60000);
+    ok('B3: a run inside the window is reported',
+       /42/.test(doc.querySelector('#session-report .sr-val').textContent),
+       doc.querySelector('#session-report .sr-val').textContent);
+    ok('B3: ...and only the blocks reached are listed, not the whole plan',
+       T.getSessReport().blocks.length === 1 && s1.plan.length === 2);
+    T.sessionDismiss();
+
+    /* --- the two ways to abandon one both end it. Both run through drillShellLeft(),
+       which is why the session hooks there rather than asking every door to remember. */
+    T.sessionStart(10, T0);
+    T.quitDrill();
+    ok('B3: Quit ends the session, not just the drill', !T.sessionActive());
+    T.sessionDismiss();
+    T.sessionStart(10, T0);
+    T.setMode('reference');
+    ok('B3: leaving Practice ends it too', !T.sessionActive());
+    T.setMode('practice');
+    T.sessionDismiss();
+    /* ...but the session chaining from one drill to the next walks that same path, and
+       must NOT end itself doing it — a session of exactly one drill is not a session. */
+    T.sessionStart(20, T0);
+    const n0 = T.getSession().plan.length;
+    T.sessionAdvance(T0 + 1000);
+    ok('B3: chaining to the next drill does not abandon the session',
+       T.sessionActive() && T.getSession().idx === 1 && T.getSession().plan.length === n0);
+    /* the header's Next is the same move, by hand */
+    doc.getElementById('drill-ctx-skip').click();
+    ok('B3: Next skips a block and keeps the session', T.sessionActive() && T.getSession().idx === 2);
+    T.sessionEnd('quit', T0 + 2000);
+    T.sessionDismiss();
+    /* a finite drill that ends by itself hands the block back early, rather than
+       leaving the player staring at the practice home with a session still running */
+    T.sessionStart(10, T0);
+    const s2 = T.getSession();
+    T.activeDrill().exit();                  // stands in for pressing Done on its summary
+    T.sessionTick(T0 + 1000);
+    ok('B3: a drill that finishes early moves the session on',
+       T.sessionActive() && T.getSession().idx === 1 && s2.plan.length === 2);
+    T.sessionEnd('quit', T0 + 2000);
+    T.sessionDismiss();
+    T.setMode('reference');
+
+    /* --- THE SEAM, HONOURED: "drill this" from all seven reference views --- */
+    const seams = [...doc.querySelectorAll('[data-seam]')];
+    ok('B3: every reference view offers the seam',
+       new Set(seams.map(b => b.dataset.seam)).size === 7,
+       seams.map(b => b.dataset.seam).join(','));
+    ok('B3: ...covering exactly the seven views',
+       ['chords', 'triads', 'arp', 'identify', 'scale', 'notes', 'circle']
+         .every(v => seams.some(b => b.dataset.seam === v)));
+    ok('B3: every seam points at a track that exists',
+       Object.keys(T.SEAM_TRACKS).every(v => !!T.trackById(T.SEAM_TRACKS[v])),
+       Object.keys(T.SEAM_TRACKS).filter(v => !T.trackById(T.SEAM_TRACKS[v])).join(','));
+    ok('B3: ...and every view in the markup has a mapping',
+       seams.every(b => !!T.SEAM_TRACKS[b.dataset.seam]));
+    /* pressing one lands you in Practice, in that drill, with the header naming it —
+       because the seam goes through startTrack() like every other door (B2) */
+    seams.find(b => b.dataset.seam === 'identify').click();
+    ok('B3: a seam press opens the mapped drill',
+       T.state().currentMode === 'practice' && T.getCurTrack() === 'chordq');
+    ok('B3: ...named', doc.getElementById('drill-ctx-name').textContent === T.I18N[T.state().lang].ear_chords);
+    T.exitAllDrills();
+    T.setMode('reference');
+
+    /* --- "JAM OVER THIS": five steps become one --- */
+    T.selectTab('harmony');
+    ok('B3: the jam seam sits with the suggester that already knows the answer',
+       !!doc.querySelector('#aside-body #seam-jam'));
+    const jamWas = T.state();
+    T.jamToggle();
+    ok('B3: one tap brings up the band and the loop',
+       T.jamActive() && T.state().loop !== jamWas.loop);
+    ok('B3: ...and the button becomes the way to stop it',
+       doc.getElementById('seam-jam').textContent === T.I18N[T.state().lang].seam_jam_stop);
+    T.jamToggle();
+    ok('B3: ...which it does', !T.jamActive());
+    ok('B3: the label goes back',
+       doc.getElementById('seam-jam').textContent === T.I18N[T.state().lang].seam_jam);
+  })();
+
+  /* ---- Phase 10/B4: PROGRESS, AND COPY THAT TELLS THE TRUTH ------------------
+     The five-number stats dump is replaced by the narrative B1 made possible, and
+     every string that promised a shipped feature was "coming later" is retired. --- */
+  (function progressAndTruth() {
+    const doc = win.document;
+    const T0 = 1700000000000;
+
+    /* --- the badge is DERIVED, so a card cannot drift from its drill --- */
+    T.setMode('practice');
+    const cards = [...doc.querySelectorAll('#practice-home .drill-card[data-track]')];
+    ok('B4: every practice card carries a badge slot',
+       cards.length === 10 && cards.every(c => !!c.querySelector('.dc-badge')));
+    ok('B4: ...filled from the registry, not written into the markup',
+       cards.every(c => c.querySelector('.dc-badge').textContent
+                        === T.I18N[T.state().lang][T.trackBadge(T.trackById(c.dataset.track))]),
+       cards.filter(c => !c.querySelector('.dc-badge').textContent).map(c => c.id).join(','));
+    ok('B4: the three mic tiers are the three badged 🎤 Scored',
+       T.drillTracks().filter(tr => T.trackBadge(tr) === 'badge_mic').map(tr => tr.id).sort().join(',')
+       === 'comp,strum,timing');
+    /* the one distinction a badge derived from the drill's mic() could never draw:
+       over-the-changes offers the tier in comping and not in the lead mode */
+    ok('B4: the two tracks behind one drill badge differently',
+       T.trackBadge(T.trackById('comp')) !== T.trackBadge(T.trackById('target')));
+    ok('B4: and one-minute changes is the coach it says it is',
+       T.trackBadge(T.trackById('changes')) === 'badge_coach');
+
+    /* --- the narrative: a row per drill you have run --- */
+    T.resetLearner();
+    T.renderPractice();
+    ok('B4: an untouched model still shows the empty state',
+       !!doc.querySelector('#practice-progress .pp-empty'));
+    // six runs on the timing coach, improving, with a timing error that improves too
+    [4, 5, 6, 10, 11, 12].forEach((n, i) => T.recordSession('timing:8ths', n, T0 + i * 1000, { err: 60 - i * 5 }));
+    T.recordSession('strum:down', 8, T0 + 9000);
+    T.renderPractice();
+    const rows = [...doc.querySelectorAll('#practice-progress .pp-row')];
+    ok('B4: only the drills you have actually run get a row',
+       rows.length === 2, rows.map(r => r.dataset.track).join(','));
+    ok('B4: most recently practised first', rows[0].dataset.track === 'strum');
+    const timing = rows.find(r => r.dataset.track === 'timing');
+    ok('B4: the row reports the latest score in the track\'s own unit',
+       /^12 /.test(timing.querySelector('.pp-row-val').textContent),
+       timing.querySelector('.pp-row-val').textContent);
+    ok('B4: ...with the direction of travel B1 computed and nothing rendered',
+       timing.querySelector('.pp-dir').classList.contains('up'));
+    ok('B4: ...the personal best',
+       timing.querySelector('.pp-row-sub').textContent.includes('12'));
+    /* the number the app computed, displayed once and threw away until B1 kept it —
+       "your timing went from 45 ms to 28 ms" is finally a sentence it can form */
+    ok('B4: ...and the timing error, which used to be shown once and discarded',
+       /±35/.test(timing.querySelector('.pp-row-sub').textContent),
+       timing.querySelector('.pp-row-sub').textContent);
+    ok('B4: a row is also a door into its drill',
+       rows.every(r => r.tagName === 'BUTTON' && !!T.trackById(r.dataset.track)));
+    timing.click();
+    ok('B4: ...and pressing it opens that drill', T.getCurTrack() === 'timing');
+    T.exitAllDrills();
+    /* the aggregates survive, demoted: still worth knowing, no longer the whole card */
+    ok('B4: the five-number dump is now a four-stat footer, below the story',
+       doc.querySelectorAll('#practice-progress .pp-stat').length === 4);
+    T.resetLearner();
+    T.renderPractice();
+
+    /* --- COPY TRUTH. F1 shipped mic scoring for three drills in v2.13/2.14 and the
+       strings underneath them still said it was coming later. Nothing user-facing may
+       promise a shipped feature is unbuilt; the badge carries the tier instead. --- */
+    const later = /coming later|arrives later|comes later|додамо згодом|згодом додамо/;
+    const promises = ['sd_hint', 'sp_hint', 'co_hint', 'drill_timing_meta', 'drill_strum_meta',
+                      'drill_comp_meta', 'drill_target_meta', 'drill_callresp_meta',
+                      'drill_changes_meta', 'drill_notes_meta'];
+    ['uk', 'en'].forEach(lg => promises.forEach(k => {
+      ok('B4: ' + lg + '.' + k + ' does not promise a shipped feature is unbuilt',
+         !later.test(T.I18N[lg][k]), T.I18N[lg][k]);
+    }));
+    /* ...and the subtitles stop claiming a tier in prose at all — that is the badge's
+       job now, and prose is exactly what went stale. */
+    ['uk', 'en'].forEach(lg => {
+      const metas = Object.keys(T.I18N[lg]).filter(k => /_meta$/.test(k));
+      ok('B4: no ' + lg + ' subtitle still ends "· coach"',
+         metas.every(k => !/·\s*(coach|коуч)/i.test(T.I18N[lg][k])),
+         metas.filter(k => /·\s*(coach|коуч)/i.test(T.I18N[lg][k])).join(','));
+    });
+    /* The two hints that DO still name a tier now name a true one: the lead mode of
+       over-the-changes is genuinely tap-scored until F2, and it says so. */
+    ok('B4: the lead hint is honest about which half of the drill is scored',
+       /F2|next phase|наступна фаза/.test(T.I18N.en.tg_hint + T.I18N.uk.tg_hint));
+    T.setMode('reference');
   })();
 
   /* ---- 3c: note-naming drill — target positions, scoring, learner writes ---- */
@@ -1751,13 +1996,25 @@ if (T) {
     ok('A3: every pillar sits in it',
        [...home.querySelectorAll('.practice-section')].every(s => s.closest('.ph-drills') === drills)
        && home.querySelectorAll('.practice-section').length === 5);
-    ok('A3: the progress card sits BESIDE the picker, not inside it',
-       !!home.querySelector(':scope > .practice-progress-card')
+    /* B4 finished the move A3 started: the progress card was pulled out of the bottom of
+       a 1700px column and set beside the picker; it now sits ON TOP of it, beside the
+       session starter. What A3 asserted — that it is not buried inside the picker — is
+       still the point, so it is still asserted, one level up. */
+    ok('A3/B4: the progress card is not buried inside the picker',
+       !!home.querySelector('#ph-top-block > .practice-progress-card')
        && !drills.querySelector('.practice-progress-card'));
-    ok('A3: ...on a rail that stays put while the drills scroll',
-       /#practice-home\s*>\s*\.practice-progress-card\s*\{[^}]*position:\s*sticky/.test(html));
-    ok('A3: the home is two columns above the shell breakpoint',
-       /@media \(min-width: 941px\) \{\s*#practice-home \{[^}]*grid-template-columns: minmax\(0,1fr\) 320px/.test(html));
+    ok('B4: ...and the whole top block comes BEFORE the picker in source order',
+       [...home.children].indexOf(doc.getElementById('ph-top-block')) < [...home.children].indexOf(drills));
+    ok('B4: progress and the session starter share a row above the shell breakpoint',
+       /@media \(min-width: 941px\) \{\s*#ph-top-block \{[^}]*grid-template-columns: 340px minmax\(0,1fr\)/.test(html));
+    /* Found in B4's own orientation pass. applyBoardRegion() sets #board-region's `hidden`
+       from the TAB, not the mode, so in Practice the neck is hidden by a body class and the
+       element is NOT [hidden] — which left the landscape-phone `:has(#board-region:not(
+       [hidden]))` two-column map matching there, with the right 46% permanently empty. An id
+       inside :has() outranks `body.mode-practice .layout`, so the collapse has to be restated
+       at that specificity. jsdom resolves no cascade, so the rule is pinned in the CSS. */
+    ok('B4: landscape Practice keeps one column, with no empty neck gutter',
+       /body\.mode-practice \.layout:has\(#board-region:not\(\[hidden\]\)\) \{[^}]*grid-template-areas: "main"/.test(html));
     /* ...and that display rule outranks the UA [hidden] rule, so the home needs an
        explicit escape hatch or it stays on screen behind every running drill. jsdom
        cannot see this — .hidden reads the attribute, not the cascade — so the rule is

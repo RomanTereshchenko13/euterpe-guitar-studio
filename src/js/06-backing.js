@@ -250,6 +250,9 @@ function updateGlobalTransport(){
   if(seqClock){ label.textContent=t('tb_now_seq')+' · '+gRootLbl+QUALITIES[chQual].short; wrap.hidden=false; }
   else if(loopClock){ label.textContent=t('tb_now_loop')+' · '+loopChordLabel(); wrap.hidden=false; }
   else { wrap.hidden=true; }
+  // B3's "Jam over this" is a play/stop toggle over the same two clocks, so it follows
+  // the transport from here — including when something else (or a mode switch) stops it
+  if(typeof renderJamBtn==='function') renderJamBtn();
   syncWakeLock();
 }
 

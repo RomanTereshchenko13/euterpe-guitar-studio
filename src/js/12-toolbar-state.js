@@ -207,6 +207,7 @@ function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
   bassOn, grooveOn,
   calMs, calKnown,   // Phase 8/F1 latency + whether it was ever established (A4)
   drillSeen,         // Phase 10/B2: tracks already run once — drives the first-run hint reveal
+  sessMins,          // Phase 10/B3: how long your practice session usually is
   learner   // spine #3: learner model (13-learner.js); saved verbatim, restored via normalizeLearner
 })); }catch(e){ devWarn('state could not be saved (localStorage unavailable?)', e); } }
 function loadState(){ try{
@@ -251,6 +252,8 @@ function loadState(){ try{
     }
     drillSeen=out;
   }
+  // B3: the session length you last chose, restored only if it is still one we offer
+  if(typeof SESSION_MINS!=='undefined' && SESSION_MINS.indexOf(s.sessMins)>=0) sessMins=s.sessMins;
   if(Number.isInteger(s.gRoot)&&s.gRoot>=0&&s.gRoot<12){ gRoot=s.gRoot; if(typeof s.gRootLbl==='string') gRootLbl=s.gRootLbl; }
   if(s.gMode==='names'||s.gMode==='deg') gMode=s.gMode;
   if(s.hView==='chords'||s.hView==='triads'||s.hView==='arp') hView=s.hView;   // identify stays transient (idSel is scratch)

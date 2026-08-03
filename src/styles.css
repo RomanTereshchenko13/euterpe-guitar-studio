@@ -235,14 +235,17 @@
      up); the card is the only box. */
   .practice-list { list-style: none; margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
   .practice-list li { display: flex; }
-  /* Progress readout (3b): the learner model's aggregate stats as stat chips. */
-  .practice-progress-card { margin-top: 28px; padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); max-width: 620px; }
-  /* Practice home as two columns on a desktop viewport: drills scroll on the left, the
-     progress card rides a sticky rail on the right where "practise this next" is visible
-     from the top of the screen instead of below every card. Gated to the same 940px
-     breakpoint as the rest of the shell, so the phone keeps the single stack. */
+  /* Progress readout (3b) + the session starter (B3): the two cards of the top block. */
+  .practice-progress-card, .practice-session-card { padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); }
+  .ps-lead { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
+  /* INVERTED (Phase 10/B4). A3 set the progress card BESIDE the ten drill cards; B4 puts
+     it and the session starter ON TOP, because "what should I do now?" is the question
+     this screen exists to answer. The two share a row on a desktop viewport (the session
+     is the narrower of them — it is four chips and a button) and stack below 940px. */
+  #ph-top-block { display: grid; gap: 14px; margin-bottom: 8px; }
+  #ph-top-block[hidden], .ph-drills[hidden] { display: none; }
   @media (min-width: 941px) {
-    #practice-home { display: grid; grid-template-columns: minmax(0,1fr) 320px; column-gap: 30px; align-items: start; }
+    #ph-top-block { grid-template-columns: 340px minmax(0,1fr); align-items: start; }
     /* THE [hidden] TRAP (see #drill-ctx-key above): an author display rule outranks the
        UA [hidden]{display:none}, so without this the home stays on screen behind every
        running drill — and jsdom's .hidden reports success the whole time, because it
@@ -250,7 +253,6 @@
        something toggles with .hidden needs its own [hidden] escape hatch. */
     #practice-home[hidden] { display: none; }
     .ph-drills { min-width: 0; }
-    #practice-home > .practice-progress-card { margin-top: 0; max-width: none; position: sticky; top: 14px; }
   }
   .pp-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; margin-bottom: 14px; }
   .pp-empty { color: var(--text-dim); font-size: 14px; }
@@ -258,16 +260,47 @@
   .pp-stat { flex: 1 1 110px; min-width: 92px; padding: 12px 14px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius); }
   .pp-val { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: var(--text); }
   .pp-lab { font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
-  /* due-for-review row (spine #3): surfaces the SRS queue + a one-tap Review CTA */
-  .pp-review { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .pp-stats { margin-top: 16px; }
+  /* due-for-review row (spine #3): surfaces the SRS queue + a one-tap Review CTA.
+     B4 moved it to the TOP of the card — it is the answer to the only question the
+     screen is asked — so its rule is a bottom border rather than a top one. */
+  .pp-review { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 14px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
   .pp-review-n { font-size: 13.5px; color: var(--text-dim); }
   .pp-review-btn { margin-left: auto; }
+  /* ---- the progress NARRATIVE (Phase 10/B4) ----
+     One row per drill you have actually run: latest score, direction of travel, personal
+     best and — for the mic tiers — the timing error B1 started keeping. Each row is a
+     real <button> carrying data-track, so it is also a door (the delegated listener on
+     #practice-home opens it); a line that names a drill and cannot open it is a tease. */
+  .pp-sec { font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin: 14px 0 6px; }
+  .pp-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 10px; width: 100%; text-align: left; padding: 8px 10px; background: none; border: 1px solid transparent; border-radius: var(--radius); color: var(--text); font-family: inherit; cursor: pointer; }
+  .pp-row:hover { border-color: var(--border-strong); background: var(--bg-panel-2); }
+  .pp-row-name { font-size: 13.5px; font-weight: 500; min-width: 0; }
+  .pp-row-val { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; white-space: nowrap; }
+  .pp-row-sub { grid-column: 1 / -1; font-size: 11.5px; color: var(--text-dim); }
+  .pp-dir.up { color: var(--root); }
+  .pp-dir.down { color: var(--ext); }
+  .pp-dir.flat { color: var(--text-dim); }
+  /* ---- the session report (Phase 10/B3): the closing screen of the ritual ---- */
+  .session-report { padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); max-width: 620px; }
+  .sr-lead { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; color: var(--text-dim); margin-bottom: 12px; }
+  .sr-row { display: flex; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border); }
+  .sr-name { flex: 1 1 auto; font-size: 14px; }
+  .sr-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); }
 
   /* ---- note-naming drill (3c) ---- */
   .drill-card { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; padding: 15px 18px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); color: var(--text); cursor: pointer; font-family: inherit; transition: border-color 0.15s, background 0.15s; }
   .drill-card:hover { border-color: var(--accent); background: var(--bg-panel-2); }
   .dc-name { font-size: 16px; font-weight: 600; }
   .dc-meta { font-size: 12.5px; color: var(--text-dim); }
+  /* What tier the drill offers (Phase 10/B4), painted from the registry's own `scored`.
+     Five of the ten subtitles used to end "· coach" and three of those had been false
+     since F1 shipped mic scoring underneath them — a card that never states its drill's
+     tier in prose cannot drift from it. */
+  .dc-badge { align-self: flex-start; margin-top: 2px; padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.03em; border: 1px solid var(--border-strong); color: var(--text-dim); }
+  .dc-badge.b-mic { border-color: var(--accent); color: var(--accent); }
+  .dc-badge.b-acc { border-color: var(--border-strong); color: var(--text); }
+  .dc-badge:empty { display: none; }
   .seam-btn { border-color: var(--accent); color: var(--accent); }
 
   /* ---- THE ONE DRILL SHELL (Phase 10/B2) ----
@@ -778,6 +811,18 @@
         "boardmeta boardmeta";
       column-gap: 16px;
       padding-top: 12px;
+    }
+    /* ...but NOT in Practice, which has no neck (found in B4's orientation pass).
+       `applyBoardRegion` sets #board-region's `hidden` from the TAB, not the mode — in
+       Practice the board is hidden by a body.mode-practice CSS rule instead — so
+       `:has(#board-region:not([hidden]))` still matched there, and because an id inside
+       :has() outranks `body.mode-practice .layout`, landscape Practice was laid out in
+       two columns with the right 46% permanently empty. The mode's own single-column
+       collapse has to be restated at this specificity to win it back. */
+    body.mode-practice .layout:has(#board-region:not([hidden])) {
+      grid-template-columns: minmax(0,1fr);
+      grid-template-areas: "main";
+      column-gap: 0;
     }
     /* pin the neck to the top of the right column; header is static here so it offsets from 8px,
        not --hdr-h. align-self:start keeps it from stretching down its (tall) grid cell. */

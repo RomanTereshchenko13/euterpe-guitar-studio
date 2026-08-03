@@ -8,11 +8,34 @@ function renderActiveContext(){
   else if(currentTab==='scales'){ scView==='notes'?renderNotes():renderScales(); }
   markScrollables();
 }
-/* Practice progress readout (3b): the learner model's aggregate stats as chips, or
-   an empty state until a drill (3c) writes the first attempt. Re-run on mode switch
-   and language change. Shares renderProgressInto (14-drill-ear.js) with the Ear
-   home — one learner model (spine #3), one readout. */
-function renderPractice(){ renderProgressInto('practice-progress'); }
+/* The whole Practice home, painted from the model in one pass (3b, rewritten B3/B4).
+   Re-run on a mode switch and on a language change, which is why the session card and
+   the badges hang off it: everything on this screen is derived — the progress narrative
+   from the learner model, the badges and the session's queue from the registry — so
+   there is one repaint, not four things to remember to call. */
+function renderPractice(){
+  renderProgressInto('practice-progress');                                  // 13-learner.js
+  if(typeof renderSessionCard==='function') renderSessionCard();            // B3
+  if(typeof applySessionViews==='function') applySessionViews();
+  paintDrillBadges();                                                       // B4
+}
+/* The practice cards' 🎤 Scored / Scored / Coach badge, from the registry's own `scored`
+   (trackBadge). Painted rather than written into the markup for the reason B4 exists:
+   five of the ten subtitles used to end "· coach" and three of them had been false since
+   F1 shipped mic scoring underneath them. A card cannot drift from its drill if it never
+   states the drill's tier itself. */
+function paintDrillBadges(){
+  document.querySelectorAll('#practice-home .drill-card[data-track]').forEach(card=>{
+    const slot=card.querySelector('.dc-badge'); if(!slot) return;
+    const tr=(typeof trackById==='function') ? trackById(card.dataset.track) : null;
+    if(!tr){ slot.textContent=''; return; }
+    const key=trackBadge(tr);
+    slot.textContent=t(key);
+    // spelled out rather than derived from the key: a class assembled at runtime is
+    // invisible to the linter's dead-CSS check, which is the whole point of having one
+    slot.className='dc-badge '+(key==='badge_mic'?'b-mic':key==='badge_acc'?'b-acc':'b-coach');
+  });
+}
 
 /* ---- one musical context (spine #1, 1a) ----
    gRoot/gRootLbl (key center) and scIdx (mode = selected scale) are the single
@@ -359,10 +382,62 @@ function applyNav(){
   });
   applyNav();
 })();
-/* Seam (spine #2): jump from the reference Notes view into the drill on the same neck.
-   Through startTrack() like every other door (B2), so the drill it opens arrives named.
-   The practice cards' own wiring lives in the delegated listener further down. */
-{ const d=document.getElementById('nt-drill'); if(d) d.onclick=function(){ setMode('practice'); startTrack('note'); }; }
+/* ---- "Drill this" — the seam, honoured (spine #2 · Phase 10/B3) ----
+   The app has claimed a reference→practice seam since Phase 1c and kept it in exactly
+   ONE of its seven reference views (Notes). All seven have it now, with one label, one
+   listener and one map: a view is a thing you are looking at, a track is the drill that
+   is about that thing, and only a person can say which is which — so this map is the
+   one curated list in the seam, and it is short enough to read.
+
+     chord tones / triad shapes → comp     the chord on screen, changed on time under a band
+     arpeggio                   → target   the same notes, aimed at while the chords move
+     identify                   → chordq   you named it by eye; name it by ear
+     scale                      → callresp phrases built out of this scale, echoed back
+     notes                      → note     the original seam, unchanged
+     circle                     → changes  the keys' chords, switched cleanly
+
+   Everything else about it is derived: startTrack() is the one door in (B2), so the
+   drill arrives with the shared header naming it, exactly as if the card had been
+   pressed. Nothing here knows about any individual drill. */
+const SEAM_TRACKS = { chords:'comp', triads:'comp', arp:'target', identify:'chordq',
+                      scale:'callresp', notes:'note', circle:'changes' };
+document.addEventListener('click', e=>{
+  const b=e.target.closest('[data-seam]'); if(!b) return;
+  const track=SEAM_TRACKS[b.dataset.seam]; if(!track) return;
+  setMode('practice');
+  startTrack(track);
+});
+/* ---- "Jam over this" — the other seam (B3) ----
+   Playing along to the harmony on screen took five steps: pick a key, pick a chord or a
+   progression, open the Backing disclosure, enable bass and drums, hit Loop. The backing
+   band is one of the strongest things the app does and it had no front door; this is the
+   door, and it sits beside the suggester that is already captioned "What to play over
+   this" and already knows the answer. One tap, and the same tap stops it.
+   It plays the PROGRESSION when there is one and the current chord otherwise, because
+   that is the more musical answer whenever the player has built one. */
+function jamActive(){ return !!(typeof seqClock!=='undefined' && seqClock) || !!(typeof loopClock!=='undefined' && loopClock); }
+function renderJamBtn(){
+  const b=document.getElementById('seam-jam'); if(!b) return;
+  const on=jamActive();
+  b.textContent=t(on?'seam_jam_stop':'seam_jam');
+  b.classList.toggle('active', on);
+  b.setAttribute('aria-pressed', on?'true':'false');
+}
+function jamToggle(){
+  if(jamActive()){ if(seqClock) seqStop(); else stopLoop(); renderJamBtn(); return; }
+  audio();
+  if(!bassOn) bassToggle();
+  if(!grooveOn) drumsToggle();
+  /* Enabling the band runs ensureBacking(), which starts the single-chord loop when
+     nothing is sounding — so by this line something may already be playing, and
+     unconditionally calling loopToggle() here would turn it straight back off. Play the
+     PROGRESSION when the player has built one (seqPlay stops the loop itself), and
+     otherwise start the loop only if the band has not already done it. */
+  if(seq.length){ if(!seqClock) seqPlay(); }
+  else if(!loopClock) loopToggle();
+  renderJamBtn();
+}
+{ const j=document.getElementById('seam-jam'); if(j) j.onclick=jamToggle; }
 document.getElementById('lang-switch').addEventListener('click',e=>{
   const b=e.target.closest('.langbtn'); if(!b||b.dataset.lang===lang) return;
   lang=b.dataset.lang; applyLang(); saveState();
@@ -636,7 +711,20 @@ applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
 { const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('drill-ctx-setup', drillSetupToggle);
   wire('drill-ctx-help',  drillHintToggle);
-  wire('drill-ctx-mic',   drillMicToggle); }
+  wire('drill-ctx-mic',   drillMicToggle);
+  // B3: "I'm done with this one" — end the block early, keep the session
+  wire('drill-ctx-skip',  ()=>sessionAdvance()); }
+/* The timed session's home controls (B3). The length chips and the report's Done are
+   both painted by the session module, so both are delegated rather than wired by id —
+   and the chips write straight through to sessMins, which is what Start reads. */
+{ const m=document.getElementById('sess-mins');
+  if(m) m.addEventListener('click', e=>{
+    const b=e.target.closest('[data-mins]'); if(!b) return;
+    sessMins=+b.dataset.mins; renderSessionCard(); saveState();
+  });
+  const s=document.getElementById('sess-start'); if(s) s.onclick=()=>sessionStart(sessMins);
+  const r=document.getElementById('session-report');
+  if(r) r.addEventListener('click', e=>{ if(e.target.closest('#sess-close')) sessionDismiss(); }); }
 // Deep link (Phase 9): if the URL hash carries a shared context, apply it over the
 // restored state now that the shell + setters are up, then strip the hash.
 const fromShare = (typeof applyShareHash==='function') && applyShareHash();
@@ -676,6 +764,15 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     getCurTrack:()=>curTrack, getDrillSeen:()=>drillSeen, setDrillSeen:(o)=>{ drillSeen=o||{}; },
     // one practice model (Phase 10/B1)
     drillTracks, trackById, trackBySess, trackByItems, sessNs, startTrack, learnerTrend, learnerBest, scoredErr,
+    /* the timed session + the seams (Phase 10/B3). Every step takes `now`, so the whole
+       flow is drivable with no timers: plan → start → tick → end → report. */
+    SESSION_MINS, sessionPlan, sessionQueue, sessionStart, sessionAdvance, sessionTick,
+    sessionEnd, sessionActive, sessionDismiss, sessionClock, renderSessionCard,
+    getSession:()=>psess, getSessReport:()=>sessLast,
+    getSessMins:()=>sessMins, setSessMins:(m)=>{ sessMins=m; },
+    SEAM_TRACKS, jamToggle, jamActive, renderJamBtn,
+    // progress narrative + card badges (Phase 10/B4)
+    trackBadge, paintDrillBadges, renderProgressInto, renderPractice, trendScore,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
     // one function, one home (Phase 10/A1)
     setTempo, getTempo:()=>tempo, stopReferenceTransport, transportActive, applyContextBar, updateGlobalPlay,

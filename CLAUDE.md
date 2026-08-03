@@ -71,8 +71,9 @@ Edit the sources, then run the build.
     · `07-render-shared.js` · `08-chords.js` · `09-triads.js`
   - `10-scales.js` · `11-notes-circle-lang.js` · `12-toolbar-state.js` (state save/load +
     the custom-tuning editor + the share-link codec `encodeShareState`/`applyShareHash` +
-    `setTempo()`, the one clamped setter both tempo controls go through, Phase 10/A1; and
-    `drillSeen`, the tracks already met, which drives B2's first-run hint reveal)
+    `setTempo()`, the one clamped setter both tempo controls go through, Phase 10/A1;
+    `drillSeen`, the tracks already met, which drives B2's first-run hint reveal; and `sessMins`,
+    the practice-session length you last chose, B3)
   - `13-drill-registry.js` — the **drill registry**: `DRILLS` + `registerDrill()`, plus the
     generic shell helpers `activeDrill`/`exitAllDrills`/`quitDrill`/`showDrillHome`/`refreshDrillsLang`/
     `drillKeyChanged`/`applyDrillCtx`. Every drill file self-registers at load
@@ -88,15 +89,16 @@ Edit the sources, then run the build.
     **THE ONE DRILL SHELL** (`#drill-ctx` in the template, built in 15; Phase 10/B2). Nine drills
     each hand-rolled their own layout; they now fill in one shell — **header** → **setup**
     disclosure → **hint** → **stage** → **action bar** (`.drill-bar`) → **summary**. The header
-    holds the drill NAME, the `?`, the setup handle, the mic, the Key picker, the Tempo stepper
-    and Quit; the drill areas below hold only their own stage. Everything in it is **derived
+    holds the drill NAME, the `?`, the setup handle, the mic, the Key picker, the Tempo stepper,
+    Quit — and, when a B3 session is running, its block counter (`#drill-ctx-sess`) and Next
+    (`#drill-ctx-skip`), painted by `14-session.js` from `applyDrillCtx`; the drill areas below hold only their own stage. Everything in it is **derived
     from the registry**, so adding a drill is still one file + its markup:
     - **the name** comes from the *track* the player opened, not the drill — over-the-changes
       hosts two and ear training three, and "Over the changes" is not what was pressed. This
       works because **`startTrack()` is the one door in**: the practice cards carry
       `data-track` and go through one delegated listener on `#practice-home`, as do the Review
-      button and the reference seams. `curTrack` is cleared by `showDrillHome`/`quitDrill`/
-      `exitAllDrills`. A drill's own `startX()` is still callable (the tests do) — it just
+      button, the B4 progress rows, the seven B3 seams and the B3 timed session. `curTrack` is
+      cleared by `showDrillHome`/`quitDrill`/`exitAllDrills`. A drill's own `startX()` is still callable (the tests do) — it just
       arrives unnamed, because the *door* records the choice.
     - **the key picker** shows only for a drill declaring `onKey` (so the ear / note-naming /
       one-minute-changes drills don't get a picker that adjusts nothing); it calls `setKey`
@@ -123,12 +125,16 @@ Edit the sources, then run the build.
     `.drill-setup-open` / `.drill-help-open` (set in `applyDrillCtx`) drive the panel heading
     and the two disclosures — so no drill manages any of it.
     **Tracks** (Phase 10/B1): a drill also declares what it *teaches* —
-    `tracks:[{id, kind:'recall'|'perf', items, sess, better, unit, label, start}]`. A track, not
+    `tracks:[{id, kind:'recall'|'perf', items, sess, better, unit, label, scored, start}]`.
+    `scored:'mic'|'acc'` (B4) is what the practice card badges — **declared**, not derived from the
+    drill's `mic()` predicate, because those answer different questions: `mic()` is "may I offer the
+    tier right now on this device", the badge is "what kind of drill is this". Omitted = coach.
+    `trackBadge(tr)` turns it into an i18n key. A track, not
     a drill, is the unit the learner model reads: over-the-changes is one drill with **two**
     (comping and targeting), ear training is one with **three**, and the note drill is **both
     kinds at once**. Ten tracks over seven entries — one per practice card, and the smoke suite
     counts the cards from the markup, so a card without a track fails the build. Helpers:
-    `drillTracks`/`trackById`/`trackBySess`/`trackByItems`/`sessNs`/`startTrack`.
+    `drillTracks`/`trackById`/`trackBySess`/`trackByItems`/`sessNs`/`startTrack`/`trackBadge`.
     **Watch the `[hidden]` trap**: `#drill-ctx-key` / `#drill-ctx-tempo` are `.group`s
     (`display:flex`), which outrank the UA `[hidden]{display:none}` — hiding them needs the
     explicit CSS rule, and jsdom's `.hidden` property will happily report success without it.
@@ -163,7 +169,12 @@ Edit the sources, then run the build.
     `12-toolbar-state.js`'s `saveState`/`loadState`. Exposes the progress-card readouts
     `learnerReview` (the queue) + `learnerActivity` (active days) + **`learnerTrend`** (runs,
     latest, best, direction of travel, staleness — the ring buffer read as the time series it
-    always was) + `learnerBest`.
+    always was) + `learnerBest`. Since **B4** it also owns **`renderProgressInto`**, the Practice
+    home's progress card, which moved here from `14-drill-ear.js` (where it was born when Ear was a
+    duplicate top-level mode): it now reads what's next, a row per track you have run — latest score,
+    direction of travel, personal best, and the mic tiers' best timing error in ms — and only then
+    the four aggregates it used to be entirely made of. Each row is a `<button data-track>`, so the
+    delegated listener on `#practice-home` opens it.
     **What B1 changed and why**: `REVIEW_NS` was four hardcoded strings and `startReview` a
     four-branch router, so six of the ten practice tracks were not ranked low by "what should I
     practise next?" — they were absent from its vocabulary. Both are now derived from the
@@ -228,12 +239,27 @@ Edit the sources, then run the build.
     scale is walked note-by-note across the grid inside one Phase-2 `boxWindow` on its own display
     board; in-drill position only (key **and tempo** come from the shared `#drill-ctx` strip —
     its private tempo stepper was the duplicate Phase 10/A1 collapsed), records a
-    `timing:<subdiv>` session (no SRS). Coach tier
-    (serves both pillars) — mic scoring is Phase 8/F1.
+    `timing:<subdiv>` session (no SRS). Scored tier shipped in Phase 8/F1; it serves both pillars.
     They reuse the cue bus and the
-    learner model; the shared progress readout (`renderProgressInto`) lives in the ear module.
+    learner model; the shared progress readout (`renderProgressInto`) lives in `13-learner.js`
+    (it was in the ear module until B4 rewrote it).
     The note/ear drills write per-item SRS; the rhythm + lead coaches write only a sessions entry
     (best-per-pair / bars-played / accuracy is derived from the ring buffer, so the pinned item shape stays untouched).
+  - `14-session.js` — the **timed practice session** (Phase 10/B3, `sess*`/`psess`/`SESSION_*`).
+    "I have 15 minutes — what do I do?" It owns no exercise: *what* to practise is B1's queue
+    (`learnerReview().due`, padded from the registry so an empty queue still fills the clock),
+    *how* it opens is B2's `startTrack()` (so each block arrives with the header naming it), and
+    the report is read back off the learner model's ring buffer between the session's start and end
+    rather than tallied a second time. `sessionPlan(mins, now)` is pure — one block per
+    `SESSION_BLOCK_SEC`, capped at the number of distinct tracks — and every step takes `now`, so
+    plan → start → tick → end → report runs with no timers (which is how the suite drives it).
+    Paints two header controls (`#drill-ctx-sess`, `#drill-ctx-skip`) from `applyDrillCtx`, and the
+    home's starter + report. **The one entanglement**: a session must end when the player abandons
+    it, and both ways to do that (the header's Quit, leaving Practice) run through
+    `drillShellLeft()` — so that calls `sessionInterrupt()`, guarded by `sessChaining`, because the
+    session changing drill walks the same path and a session that ended itself doing so would be a
+    session of exactly one drill. Not a drill: no registry entry, no `-area` (deliberately
+    `#session-report`, since the smoke suite requires every `*-area` to be claimed by a drill).
   - `14-mic-tuner.js` — the **chromatic mic tuner** (Phase 8/F0, `mic*`/`mt*`, `#mt-*`). Real
     `getUserMedia` → `AnalyserNode` → the vendored `PitchDetector` → a ±50-cent needle, note
     name + octave, and a nearest-open-string readout derived from the live `OPEN_MIDI`/`SNAMES`
@@ -315,6 +341,17 @@ Edit the sources, then run the build.
     the header for `#board-lens` inside `#board-region` — a lens on the board it changes,
     hidden and moved with the neck by `applyBoardRegion`, which is what Phase 1b already
     made true underneath (one board, four renderers).
+    Also holds the **two seams** (Phase 10/B3). **`SEAM_TRACKS`** is the one curated view→track map
+    behind "Drill this →", which now exists in all seven reference views instead of only Notes; one
+    delegated `[data-seam]` listener routes it through `startTrack()`, so the drill arrives named
+    like any other door. **`jamToggle`/`jamActive`/`renderJamBtn`** is "Jam over this" — one button
+    beside the suggester replacing five steps; it plays the *progression* when there is one and the
+    current chord otherwise, and `renderJamBtn` rides `updateGlobalTransport` so it follows the
+    transport however it changed. _Careful:_ enabling the band runs `ensureBacking()`, which starts
+    the loop when nothing is sounding — an unconditional `loopToggle()` after it stops the jam it
+    just started. Also **`paintDrillBadges`** (B4), which fills each card's `.dc-badge` from
+    `trackBadge`, and `renderPractice()`, the one repaint of the whole Practice home (progress card
+    + session card + session views + badges), called from `setMode` and `applyLang`.
   - `16-pwa.js`
 - `src/styles.css` — all CSS. The shell's layout lives in **`.layout`'s named grid areas**, and
   since Phase 10/A3 the neck **leads**: the maps run `ctx` → `board` → `boardmeta` → `main` →
@@ -328,12 +365,14 @@ Edit the sources, then run the build.
   the `#drill-ctx` groups hit): any author `display` rule on an element something toggles with
   `.hidden` needs its own `[hidden]{display:none}` escape hatch — `#practice-home` got a
   `display:grid` in A3 and instantly started showing through behind every running drill, with jsdom
-  reporting success the whole time.
+  reporting success the whole time. B4 moved that grid down to `#ph-top-block` and gave it, and
+  `.ph-drills`, the same escape hatch, because the B3 session report hides both with `hidden`.
 - `src/index.template.html` — markup shell with `@@STYLES@@` / `@@SCRIPT@@` / `@@FAVICON@@` markers.
   `#board-region` + `.board-meta` sit **before** `.main` in the source, not only in the area maps
   (Phase 10/A3): source order is focus order, so a grid-only reorder would have handed a keyboard
-  user the chord picker before the neck it changes. Practice's home wraps its pillars in
-  `.ph-drills` so the progress card has something to sit *beside* on a desktop viewport.
+  user the chord picker before the neck it changes. Practice's home leads with **`#ph-top-block`**
+  (the B3 session starter + the B4 progress card, two columns on desktop) and then wraps its pillars in
+  `.ph-drills` — which the session report hides wholesale, being a closing screen rather than a panel.
 - `src/sw.template.js` — service worker (`@@VERSION@@` → cache name)
 - `src/icons/icon.svg` — the app icon, authored once
 
