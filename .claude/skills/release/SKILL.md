@@ -1,6 +1,6 @@
 ---
 name: release
-description: Ship a new Euterpe version. Use when asked to release, cut a version, bump the version, publish a build, or tag a release. Handles APP_VERSION, the EN+UK changelog entry, build/lint/test, ROADMAP version line, and the git tag.
+description: Ship a new Euterpe version. Use when asked to release, cut a version, bump the version, publish a build, or tag a release. Handles APP_VERSION, the EN+UK changelog entry, build/lint/test, PLAN.md version line, and the git tag.
 ---
 
 # Release a new Euterpe version
@@ -30,7 +30,7 @@ When unsure, prefer patch — see the project's "small changes = patch" rule.
    - `date` = today.
    - **`en` and `uk` arrays must have the same number of bullets** and say the
      same thing. Write for users (what changed for them), not commits.
-3. `ROADMAP.md` — update the current-shipping-version line at the top.
+3. `PLAN.md` — update the `_Shipping: vX.Y.Z_` line at the top.
 4. Leave `package.json` `version` alone unless the user asks — it is *not* the
    source of truth and is intentionally allowed to lag.
 

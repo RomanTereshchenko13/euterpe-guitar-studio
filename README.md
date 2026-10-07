@@ -118,7 +118,7 @@ git tag v1.11.0 && git push --tags
 ```
 
 The currently shipping version is recorded at the top of
-[`ROADMAP.md`](./ROADMAP.md).
+[`PLAN.md`](./PLAN.md).
 
 ## Layout
 
@@ -139,7 +139,7 @@ guitar-studio/
 │   ├── icons/icon.svg      the app icon, authored once (favicon + PNG source)
 │   └── js/                 ordered modules (01-version, 02-changelog … 16-pwa)
 ├── README.md               this file
-├── ROADMAP.md              phased plan; current shipping version at the top
+├── PLAN.md                 the plan; current shipping version at the top
 ├── .gitignore
 ├── tools/
 │   ├── shoot.js            dev-only responsive screenshots (system Edge/Chrome)

@@ -499,7 +499,7 @@ request matches its description, or you can run it by name (e.g. `/release`). Ea
 leads with the "edit `src/`, never the generated files" rule.
 
 - **`release`** — bump `APP_VERSION` + paired EN/UK changelog entry, build/lint/test,
-  ROADMAP version line, tag & push.
+  PLAN.md version line, tag & push.
 - **`visual-review`** — run the `shoot.js` orientation matrix across all tabs and
   review the PNGs for overflow / landscape-parity / header issues (the manual step
   the pre-commit hook only nudges about).
@@ -518,7 +518,7 @@ leads with the "edit `src/`, never the generated files" rule.
 - Versioning: bump `APP_VERSION` in `src/js/01-version.js`; add a matching
   `02-changelog.js` entry. Polish/fixes = patch bump (1.25.0 → 1.25.1), not minor.
 - Release: `git tag vX.Y.Z && git push --tags`. Current shipping version is at the
-  top of `ROADMAP.md`.
+  top of `PLAN.md`.
 - **Dependency policy (the guarantee is behavioural, not purist):** one file,
   fetches nothing at runtime, no supply-chain dependency, works offline. The only
   thing the app fetches is Google Fonts. Third-party code is *not* banned but is
@@ -530,8 +530,8 @@ leads with the "edit `src/`, never the generated files" rule.
   dependency `fft.js` 4.0.4**, both MIT-class, both in `src/js/00-vendor-*.js`, for
   pitch detection. Note the roadmap originally promised "the one code dependency,
   0BSD" and both halves were off — pitchy is MIT/ISC, and it does not stand alone.
-  Everything else stays hand-rolled. See the Dependency policy in `ROADMAP.md`
-  before adding any lib.
+  Everything else stays hand-rolled. The same constraints are restated at the top
+  of `PLAN.md`.
 
-See `README.md` for the full architecture write-up and `ROADMAP.md` for the
-phased plan.
+See `README.md` for the full architecture write-up and `PLAN.md` for the
+current plan.
