@@ -10,7 +10,7 @@ Code is authored as small `src/js/NN-*.js` modules and concatenated by a pure-st
 `build.js` (no bundler, no transpile). Every item below is reachable with the Web Audio API
 and vanilla JS. New phases add new `src/` modules; they never add a dependency.
 
-_Last updated: 2026-08-03 · shipping: v2.15.0_
+_Last updated: 2026-08-03 · shipping: v2.15.0 · next: the v2.15.0 audit, then Phase 11 (soloing on F1)_
 
 > **Consolidation note (v2.11.0).** Two debloat passes reshaped the *packaging* of what shipped
 > below, not its substance — worth knowing when reading the ✅ entries: **Ear folded from a
@@ -103,8 +103,10 @@ Three cross-cutting pieces that every phase hangs off. Build them once; reuse th
 > of 7 reference views), not the bidirectional navigability claimed above. #3 covered **4 of the 10
 > practice tracks** — the other six recorded a session that nothing read, so "what to practise next"
 > could not name them and no trend was ever shown. Phases 4–8 stacked ten tracks onto that.
-> **B1 has since fixed #3** (see Phase 10); #1 and #2 are still open.
-> **Phase 10 finishes the spine before F2 stacks more on it.**
+> **All three are closed as of v2.15.0** — see the scorecard in Phase 10 (A1+B2 for #1, B3 for #2,
+> B1 for #3). The spine is done; what the **v2.15.0 audit** then found is a different class of
+> problem — not a missing structure but four things the finished structure *says* that are not
+> true, and a Lead pillar built on a mistaken gate. See the audit block and **Phase 11**.
 
 ---
 
@@ -640,6 +642,15 @@ The improviser's half — turning fretboard knowledge into melody:
 **Phase 6 complete** (coach tiers). Coach/recognition tiers ship on screen; the real "play your guitar
 and get scored" version needs Phase 8 (F2 pitch).
 
+> **Superseded in part by Phase 11 — and the sentence above is where the error is.** "Needs F2" is
+> true of *note choice* and false of soloing as a whole. Audited at v2.15.0, **neither Lead drill
+> asks the player to touch the guitar**: chord-tone targeting is tapped on a diagram (its own header
+> says so — *"a location/recognition game, not soloing"*), and call-and-response is tapped back
+> **with no clock at all** (`14-drill-lead-callresponse.js:11` — *"self-paced, no scheduler clock"*),
+> so the drill that claims to teach phrasing has removed the one dimension phrasing is made of.
+> F1 has been able to score *when* a note was played since v2.13.0, and when is the half of soloing
+> that screen drills cannot teach. See **Phase 11**.
+
 ---
 
 ## Phase 7 — Timing & subdivision  (foundation for both pillars)
@@ -767,9 +778,14 @@ Mic via `AnalyserNode`, split by difficulty. This is what turns every "coach" ti
   - _Still open:_ tempo laddering (auto-bump BPM when consistently in the pocket).
 - **F2 — Pitch (which).** Monophonic McLeod (MPM) via **the `pitchy` + `fft.js` pair already
   vendored by F0** — no new dependency to take, and proven there on sustained notes, so what F2
-  adds is doing it *under time pressure*. Unlocks the **Lead pillar** scored
-  tier and real-guitar note-naming. Single notes first; polyphonic chord recognition remains
-  the moonshot.
+  adds is doing it *under time pressure*. Unlocks **note-accurate** scoring and real-guitar
+  note-naming. Single notes first; polyphonic chord recognition remains the moonshot.
+  - **Correction (Phase 11):** this used to read "unlocks the **Lead pillar** scored tier", and
+    that framing backloaded the whole pillar behind the riskiest thing in the project. F1 already
+    scores *when*, which is enough for phrasing, space, resolution and motif development — the
+    half of soloing a screen cannot teach and the half most players are worst at. What F2 unlocks
+    is **note choice**: guide-tone lines, "and it had to be a chord tone", ear→neck. So F2 is the
+    gate on the *second* half of Lead, not on Lead.
 
 **Substrate (free platform API, no dependency):** **AudioWorklet** — run the mic analysis (and
 ideally the synth) off the main thread, or scoring latency will be unacceptable. Treat as a
@@ -1225,6 +1241,147 @@ phone, tablet and desktop.
 
 ---
 
+## Before Phase 11 — the v2.15.0 audit  (corrections to shipped work · ships first)
+
+**Size:** M · **Risk:** low — each item is a correction to something already shipped, all of it
+assertable. The same "fix the shared surface before the phase that inherits it" move as the
+pre-Phase-3 mobile pass and the pre-Phase-6 flexibility pass.
+
+Phase 10 finished the spine, and an audit of what it now carries found four things the app tells
+the player that are not true, plus the flexibility items still open from before Phase 6. Phase 11
+adds scored Lead tracks on top of exactly this machinery, so it gets corrected before it is
+inherited.
+
+- **Three tracks are scored on endurance, not skill.** `comp`, `strum` and `timing` record **bars
+  played** as the session score (`14-drill-timing.js:118`, `14-drill-rhythm-2-strum.js:98`,
+  `14-drill-overchanges.js:136`). So the progress row's headline number and its ▲/▼ say *you played
+  longer*, not *you played better* — and B1's slippage rule marks a track as going backwards when a
+  player does two short focused runs instead of one long one. These are also the three **mic-scored**
+  tiers, so the number that actually measures the skill (`err`, the mean timing error B1 went to the
+  trouble of keeping) is demoted to the row's sub-line while a duration leads. Fix: for a mic-scored
+  run the score **is** the timing error (`better:'low'`, unit ms), with bars kept as context; the
+  unscored run keeps bars, since "how long did you hold it together" is a real coach metric when
+  nothing better is available. Touches the track declarations and one `recordSession` call each.
+- **A timed session does not fill its time.** `sessionTick` advances the block when the drill inside
+  it ends (`14-session.js:111`) and the plan never refills, so a 15-minute session planned as three
+  blocks — two of them the note drill (6 prompts) or an ear drill (6–8) — is genuinely over in a few
+  minutes. The report is honest about elapsed time, but the promise the feature is *named for* is
+  not kept. Fix: on an early finish, re-enter the same track until `blockEnds`, then move on. (B3
+  built the block clock correctly; what is missing is only what to do with the remainder.)
+- **The note drill drills 7 of the 12 notes, and forgets where they were.** `buildQueue()` walks
+  `NAT` only (`14-drill-notes.js:29`), so F♯ / C♯ / B♭ never appear; and the SRS id is `note:C`
+  (line 84), per **pitch class**, so "C on the low E" and "C on the B string" are one item. The hard
+  half of fretboard knowledge is exactly the per-string half, and Phase 3's own schema example was
+  `note:E:str6`. Fix: id per string, accidentals behind a "naturals only" toggle — the app already
+  has that control's vocabulary in the Notes view. Needs an additive migration or a namespace bump,
+  since `note:C` and `note:C:s5` are different items.
+- **Nothing scales with the player.** The interval drill opens with **all twelve** intervals and
+  chord-quality with eight qualities including m7♭5 and aug; the note drill opens on the whole neck.
+  Every serious trainer starts narrow and widens on mastery. The learner model already holds the
+  per-item accuracy needed to decide this and nothing reads it for **scoping** — only for ordering.
+  This is the largest retention lever left in Practice and it adds no drill: a level per recall
+  track, widening the pool as items mature. It is also the first thing in the app that could
+  honestly be called a curriculum, so it feeds **Phase 9**'s guided path directly.
+- **Two smaller ones.** `learnerReview`'s performance half pushes `new` / `stale` / `slipping` in
+  flat registry order (`13-learner.js:221-227`), so a slipping track ranks no higher than one never
+  touched and a session always opens with the same drills — rank by reason, then by staleness. And
+  the template's `dc-meta` fallbacks still read `· коуч` (`src/index.template.html:455` and five
+  more) though B4 removed it from i18n: invisible at runtime because `applyLang` overwrites them,
+  but it is precisely the stale-copy pattern B4 existed to kill, and the linter cannot see it
+  because the string is in the markup, not the dictionary.
+
+_Still open from the pre-Phase-6 flexibility pass, unchanged:_ free chord pairs in one-minute
+changes (`CM_PAIRS` is 10 fixed pairs), custom progressions in over-the-changes (`SEQ_PRESETS` is
+5), in-drill chord *quality* for the single-chord coaches.
+
+---
+
+## Phase 11 — Soloing, for real  (the Lead pillar, rebuilt on F1)
+
+**Size:** L — 11a–11d below, each shippable · **Risk:** med (11a is pure logic; the rest is new
+drill surface on a proven scorer)
+
+### The diagnosis
+
+**Neither Lead drill involves playing the guitar.** Both are tapping games on a fretboard diagram,
+and both say so in their own source:
+
+- **Chord-tone targeting** — the band loops, the current chord's tones light, you tap them.
+  `14-drill-overchanges.js:22` calls it *"a location/recognition game, not soloing"*, which is
+  accurate. It is fretboard knowledge with a backing track, and it can be scored 100% by someone
+  holding no instrument. It is a good drill in the wrong pillar.
+- **Call & response** — the app plays a motif, you tap it back in order.
+  `14-drill-lead-callresponse.js:11` — *"Self-paced (no scheduler clock, no scoring window)"*. The
+  drill whose stated lesson is *"the turn structure **is** the phrasing lesson"* has no time in it.
+  Phrasing **is** rhythm; what is left when the clock is removed is a pitch-sequence memory test.
+
+The reason both landed this way is the sentence corrected in Phase 8 above — "real soloing needs
+F2" — which put the entire pillar behind the riskiest thing in the project and left the coach tiers
+to approximate it on screen in the meantime.
+
+### The insight this phase rests on
+
+**Onset detection tells you *when* a note was played without knowing *which*.** F1 has shipped that
+since v2.13.0, it is measured at 0.1 ms interval error (`tools/onset-check.js`), and *when* is the
+half of soloing that a screen cannot teach and that most intermediate players are worst at. The
+machinery is not hypothetical either: `tgScore` (`14-drill-overchanges.js:47`) already scores
+comping against the bar downbeats at half-a-beat tolerance, and `onsetMatch` already separates hits
+from `extra` — which is exactly the primitive needed to score **silence**.
+
+So the honest split is not "screen drills now, real drills after F2". It is **rhythm and phrasing
+now, note choice after F2** — and the app can say so plainly: *we score your time and your
+phrasing, not your note choice.* A real drill with a stated limit, rather than a coach tier
+apologising for itself.
+
+### The steps
+
+**11a — Land on the change (the smallest possible proof · ships first).** The band cycles the
+progression, you solo freely over it, and the one requirement is that you **hit a note on beat 1 of
+every bar**. This is `tgScore` re-pointed: same expected times (the bar downbeats), same tolerance,
+same self-hearing guard, same calibration gate — a different pillar and a different sentence around
+it. It is deliberately first because it is nearly all reuse, so it proves the framing ("mic-scored
+lead, before F2") at the smallest possible cost. When F2 lands it upgrades **in place** to *"and it
+had to be a chord tone"*, which is the guide-tone drill, so nothing built here is thrown away.
+
+**11b — Leave space.** The changes loop; the target is a phrase of roughly N notes followed by a
+full bar of **rest**. F1 counts onsets per bar and scores whether you actually stopped. Nothing on
+the market drills "play less", it is the number-one fault at this level, and it needs no pitch
+detection whatsoever — the measurement is onset *density* against a required-silence window, which
+`onsetMatch`'s `extra` bucket already expresses. The most distinctive drill in this phase.
+
+**11c — Trading fours.** Four bars the app plays a line, four bars are yours, over the looping
+progression. Scored on two things F1 reads cleanly: did you play **in** your bars, and did you stay
+**silent** in the app's (onsets during the call are the measurement that you were not listening).
+The most authentic soloing exercise that exists, and it maps onto the existing bar-expansion +
+`scheduleBand(force)` bed almost unchanged. Builds on 11b's silence scoring, which is why it
+follows it.
+
+**11d — Call & response, played (the rework).** The existing drill, given the clock it never had:
+the call arrives in bar 1 on the scheduler, you answer in bar 2 **on the guitar**, and the *rhythm*
+of your answer is scored against the call's. The tap version survives as the no-mic fallback — it
+is a legitimate screen drill, it was only ever mislabelled as the phrasing tier. _(This is where
+`CR_ROUNDS`, `crMakeMotif` and the box palette get reused; what changes is the turn structure and
+what is measured.)_
+
+**11e — And what genuinely waits for F2.** Guide-tone lines (3rds and 7ths through the changes),
+note-accurate scoring on any of the above, ear→neck ("hear it, find it"). Real, valuable, and
+correctly gated — they are the *second* half of soloing.
+
+**Re-homing what exists.** Chord-tone targeting moves to **Foundations** beside the note drill (it
+is the same skill one level up), or stays in Lead explicitly framed as the warm-up that precedes
+11a. Either way it stops presenting tap-accuracy as a lead score, which is the copy-truth rule B4
+established applied to a drill's *placement* rather than its subtitle.
+
+**Validation:** the scoring maths stays in `14-onset.js` where it is pure and assertable without a
+microphone (the silence/density scorers join `onsetMatch`/`onsetScore` there, not in the drills);
+every new tier inherits the **self-hearing guard** and the **`calKnown`** refusal, since a lead
+drill scored against an uncalibrated device would lie in exactly the way A4 exists to prevent; the
+band bed must be muted or ducked on the slots being measured, per the v2.14.0 structural fix;
+symmetric EN/UK; and each drill declares its track with the **corrected metric convention** from
+the audit above, so the trend reads a skill and not a duration.
+
+---
+
 ## Phase 9 — Product layer  (good tool → competitive product · runs throughout)
 
 **Size:** M · **Risk:** low — no DSP; all high-leverage product work.
@@ -1280,7 +1437,7 @@ Phase 1  Unify (spine + reference)           ← foundational; everything reuses
          │
          ├─ Phase 4  Ear                        (parallel; independent of 1–3)
          ├─ Phase 5  Rhythm pillar              (broad audience; reuses backing) ── needs F1 to score
-         ├─ Phase 6  Lead pillar                ────────────────────────────────── needs F2 to score
+         ├─ Phase 6  Lead pillar                (coach tiers only — see Phase 11)
          └─ Phase 7  Timing & subdivision       (small; feeds 5 & 6) ───────────── needs F1 to score
                │
                └─ Phase 8  Mic input            F0 (tuner) ✅ shipped v2.12.0 — no scoring, low risk
@@ -1294,7 +1451,14 @@ Phase 1  Unify (spine + reference)           ← foundational; everything reuses
                                                      │               B2 drill shell · B3 session + seam
                                                      │               B4 progress + copy truth
                                                      │
-                                                F2 (pitch) → scores 6 + real note-naming
+                                                     ├─ v2.15.0 audit  (corrections; ships first)
+                                                     │   metric · session clock · note ids · levels
+                                                     │
+                                                     ├─ Phase 11  Soloing, for real   ── on F1, not F2
+                                                     │   11a land the change → 11b leave space
+                                                     │   11c trade fours → 11d call & response, played
+                                                     │
+                                                F2 (pitch) → note choice: guide tones, ear→neck (11e)
 
 Phase 9  Product layer                          (curriculum / distribution / polish — throughout)
 ```
@@ -1321,11 +1485,17 @@ Phase 9  Product layer                          (curriculum / distribution / pol
   coaches), and F2 would stack the Lead pillar onto the same shell, the same screens and the same
   model. So all three get unified once, before they are inherited — the same argument that put
   Phase 1 first, applied to what it left behind.
-- **Know what's backloaded.** By design, Phases 1–7 produce an excellent *coach + reference
-  toolbox*; the stated true differentiator — "play your real guitar and get scored" — lives
-  entirely in Phase 8. That's the correct risk order (prove the coach tiers cheaply on screen
-  first), but it means the product-defining bet is also the last and riskiest. So every coach
-  tier must be worth shipping *without* its eventual mic score, never a placeholder for it.
+- **Know what's backloaded — and Phase 11 says less of it is than we thought.** By design, Phases
+  1–7 produce an excellent *coach + reference toolbox*, and the stated differentiator — "play your
+  real guitar and get scored" — lives in Phase 8. That is the correct risk order, and every coach
+  tier must still be worth shipping *without* its eventual mic score. But the audit at v2.15.0
+  found the rule had been over-applied to **Lead**: both its drills avoid the guitar entirely
+  because the pillar was filed behind F2, when F1 can already score the half of soloing that a
+  screen cannot teach. Rhythm and phrasing are not waiting on the moonshot. **Note choice is.**
+- **Correct before you extend (the v2.15.0 audit, then Phase 11).** Same move as the pre-Phase-3
+  mobile pass and the pre-Phase-6 flexibility pass: Phase 11 declares new scored tracks into the
+  metric convention, the session clock and the review ranking that Phase 10 shipped, so the four
+  things those get wrong are fixed while they are still cheap to fix.
 - **Phase 9 runs throughout** — ship the PWA + share links the moment there's anything worth
   sharing; hold a polish bar on every phase rather than deferring feel to the end.
 
