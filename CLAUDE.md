@@ -141,6 +141,12 @@ Edit the sources, then run the build.
     (B2's `.drill-setup` / `.drill-hint` are the same trap from the other side: they are hidden
     by an *author* rule keyed on a body class, so jsdom can't see them at all — the smoke suite
     pins the two CSS rules by regex instead.)
+  - `13-backup.js` — **protect progress** (PLAN step 0): Settings ▸ Progress export/import of
+    `snapshotState()` (the one list `saveState` writes) as a local JSON file; import is validated by
+    `progressParse` (envelope, format, learner version — a newer one is refused, not normalized to empty —
+    `normalizeLearner`, known keys only), written, then reloaded through `loadState`, with `saveBlocked`
+    stopping a stray save from undoing it. Also `progressPersist()` (`navigator.storage.persist()` after a
+    recorded session) and `saveFailed()`, the once-per-load `#app-toast` when a save throws.
   - `13-mic.js` — the **shared mic layer** (Phase 8). One microphone, three consumers
     (F0's tuner, F1's onset detector, F1's calibration), so acquisition, the permission
     prompt and the error vocabulary (`micErrKey` → i18n key) live here instead of being

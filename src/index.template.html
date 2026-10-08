@@ -201,6 +201,17 @@
           <button class="btn" id="tb-share" data-i18n="share_btn">Поділитися</button>
         </div>
       </div>
+      <!-- Progress backup (13-backup.js): the practice history + preferences as a local
+           JSON file, out and back in. Nothing leaves the device. -->
+      <div class="tb-cluster" id="tb-progress">
+        <span class="tbc-label" data-i18n="tbc_progress">Прогрес</span>
+        <div class="tbc-items">
+          <button class="btn" id="bk-export" data-i18n="bk_export">Експорт</button>
+          <button class="btn" id="bk-import" data-i18n="bk_import">Імпорт…</button>
+          <input type="file" id="bk-file" accept="application/json,.json" hidden>
+          <span class="bk-status" id="bk-status" role="status" hidden></span>
+        </div>
+      </div>
     </div>
     <!-- Backing band (metronome + synth bass/drums): secondary jam-along tools, one
          tap to reveal. The toggle tints green while any of them is active so you can
@@ -980,6 +991,8 @@
      waiting version (14-pwa.js fills in the localized message + buttons and
      unhides it). role=status so it's announced politely. -->
 <div class="toast" id="pwa-toast" role="status" aria-live="polite" hidden></div>
+<!-- App notices (13-backup.js): today only "your progress isn't being saved". -->
+<div class="toast" id="app-toast" role="alert" hidden></div>
 
 <script>@@SCRIPT@@</script>
 </body>

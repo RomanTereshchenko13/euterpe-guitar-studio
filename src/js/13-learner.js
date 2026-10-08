@@ -92,6 +92,7 @@ function recordSession(drill, score, now, extra){
   learner.sessions.push(s);
   learnerNoteBest(id, s);
   pruneSessions();
+  progressPersist();   // 13-backup.js: there is now something worth keeping
 }
 /* Keep the newest SESS_PER_ID of each session id, then trim oldest-first to the
    global ceiling. Per-id, so a weekly drill's history isn't evicted by a daily one. */

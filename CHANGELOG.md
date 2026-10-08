@@ -2,6 +2,12 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.16.0 — 2026-10-08
+
+- Your progress can leave the browser and come back. Settings ▸ Progress has Export, which saves your practice history and preferences as a file on your device, and Import, which brings one back — on a new phone, after clearing the browser, or simply as a backup. Nothing is uploaded anywhere. Before it replaces anything, Import tells you how many sessions are on this device and how many are in the file, and it refuses a file from a newer version of the app rather than reading it as empty.
+- Euterpe now asks the browser to keep its storage once you have finished a practice session. Some browsers — Safari above all — otherwise clear a site's data after a week without a visit, and your history with it.
+- If this browser cannot save at all (private mode, storage full), you are now told so once, with a button to export what you have, instead of finding out the next time you open the app.
+
 ## v2.15.0 — 2026-08-03
 
 - Practice sessions. Say how long you have — five minutes to twenty — and Euterpe lines up what you are actually due to work on, runs the clock, moves you from one drill to the next, ends by itself, and tells you what the session was. Until now every drill was an endless loop you left by hand, and the app had no notion of a day's practice at all.

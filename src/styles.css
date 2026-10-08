@@ -72,6 +72,8 @@
   @supports (padding: max(0px, env(safe-area-inset-bottom))) {
     .toast { bottom: max(16px, env(safe-area-inset-bottom)); }
   }
+  /* two toasts at once (update + save notice) stack instead of overlapping */
+  #pwa-toast:not([hidden]) ~ #app-toast { bottom: 76px; }
   .langbtn { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; padding: 5px 11px; border: none; background: transparent; color: var(--text-dim); border-radius: 6px; cursor: pointer; transition: all 0.12s; }
   .langbtn:hover:not(.active) { color: var(--text); }
   .langbtn.active { background: var(--accent); color: #07203a; }
@@ -1105,8 +1107,8 @@
   /* ---- latency calibration row (Phase 8 / F1) ---- */
   .tb-cal { flex-wrap: wrap; }
   .tb-cal input[type="range"] { width: 96px; }
-  .cal-status { font-size: 11px; line-height: 1.45; color: var(--text-dim); max-width: 260px; }
-  .cal-status[hidden] { display: none; }
+  .cal-status, .bk-status { font-size: 11px; line-height: 1.45; color: var(--text-dim); max-width: 260px; }
+  .cal-status[hidden], .bk-status[hidden] { display: none; }
 
   /* ---- scored timing readout (Phase 8 / F1) ----
      Deliberately quiet until there is something real to say: the panel only renders

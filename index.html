@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- Euterpe (Guitar Studio) — generated single-file build (do not edit; edit src/ and run build.js).
-     Version: 2.15.0  (source of truth: APP_VERSION in src/js/01-version.js;
+     Version: 2.16.0  (source of truth: APP_VERSION in src/js/01-version.js;
      build.js fills this in). Release notes live in src/js/02-changelog.js (drives
      the in-app "What's new" modal and CHANGELOG.md). -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="2.15.0">
+<meta name="version" content="2.16.0">
 <meta name="description" content="Euterpe — a guitar studio for music theory and practice: scales, modes, chords, the fretboard, the circle of fifths, and a jam-along backing band. Works offline.">
 <meta name="theme-color" content="#16140f">
 <!-- Installed-app (standalone) hints. The manifest covers Android/desktop; these
@@ -90,6 +90,8 @@
   @supports (padding: max(0px, env(safe-area-inset-bottom))) {
     .toast { bottom: max(16px, env(safe-area-inset-bottom)); }
   }
+
+  #pwa-toast:not([hidden]) ~ #app-toast { bottom: 76px; }
   .langbtn { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; padding: 5px 11px; border: none; background: transparent; color: var(--text-dim); border-radius: 6px; cursor: pointer; transition: all 0.12s; }
   .langbtn:hover:not(.active) { color: var(--text); }
   .langbtn.active { background: var(--accent); color: #07203a; }
@@ -884,8 +886,8 @@
 
   .tb-cal { flex-wrap: wrap; }
   .tb-cal input[type="range"] { width: 96px; }
-  .cal-status { font-size: 11px; line-height: 1.45; color: var(--text-dim); max-width: 260px; }
-  .cal-status[hidden] { display: none; }
+  .cal-status, .bk-status { font-size: 11px; line-height: 1.45; color: var(--text-dim); max-width: 260px; }
+  .cal-status[hidden], .bk-status[hidden] { display: none; }
 
 
   .scored-status { font-size: 12px; line-height: 1.5; color: var(--seventh); margin-top: 10px; }
@@ -1070,6 +1072,17 @@
           <!-- Share (Phase 9 distribution): copy a deep link encoding the current
                key / scale / chord view (encodeShareState → URL hash). -->
           <button class="btn" id="tb-share" data-i18n="share_btn">Поділитися</button>
+        </div>
+      </div>
+      <!-- Progress backup (13-backup.js): the practice history + preferences as a local
+           JSON file, out and back in. Nothing leaves the device. -->
+      <div class="tb-cluster" id="tb-progress">
+        <span class="tbc-label" data-i18n="tbc_progress">Прогрес</span>
+        <div class="tbc-items">
+          <button class="btn" id="bk-export" data-i18n="bk_export">Експорт</button>
+          <button class="btn" id="bk-import" data-i18n="bk_import">Імпорт…</button>
+          <input type="file" id="bk-file" accept="application/json,.json" hidden>
+          <span class="bk-status" id="bk-status" role="status" hidden></span>
         </div>
       </div>
     </div>
@@ -1851,6 +1864,8 @@
      waiting version (14-pwa.js fills in the localized message + buttons and
      unhides it). role=status so it's announced politely. -->
 <div class="toast" id="pwa-toast" role="status" aria-live="polite" hidden></div>
+<!-- App notices (13-backup.js): today only "your progress isn't being saved". -->
+<div class="toast" id="app-toast" role="alert" hidden></div>
 
 <script>var FFT = (function () {
 'use strict';
@@ -2430,8 +2445,8 @@ return PitchDetector;
 })();
 
 
-const APP_VERSION = '2.15.0';
-const CHANGELOG = [{"v":"2.15.0","date":"2026-08-03","en":["Practice sessions. Say how long you have — five minutes to twenty — and Euterpe lines up what you are actually due to work on, runs the clock, moves you from one drill to the next, ends by itself, and tells you what the session was. Until now every drill was an endless loop you left by hand, and the app had no notion of a day's practice at all.","\"Drill this\" from anywhere. Every reference view now has a one-tap route into the drill that is about what is on your screen: a chord into comping it in time, an arpeggio into targeting those tones over the changes, a scale into echoing phrases built from it, the circle into changing between the key's chords. It was a promise the app had been making since the beginning and keeping in exactly one place.","\"Jam over this\". Playing along to the harmony on screen used to take five steps — pick a key, pick a chord, open Backing, switch on bass and drums, press Loop. It is one button now, sitting next to the panel that already tells you what to play over this.","Progress that tells you something. The five all-time numbers are replaced by the story your practice actually has: a line per drill with your latest result, which way it is heading, your personal best, and — for the drills that listen — your best timing error in milliseconds. The app has been keeping all of that and showing none of it. Each line is also a way straight back into that drill.","One screen for every drill. All nine used to render under the same heading and never say which drill you were in; there is now a single drill header that names it, holds the key, the tempo, the microphone and the way out, and folds its setup away once you start playing. The practice home leads with what to do next instead of ten cards, and each card is badged with what it does — scored with the microphone, scored on accuracy, or a coach.","One navigation bar instead of three stacked strips, and the fretboard now sits above the controls that change it rather than below them. Settings are sorted by what you do with them, with the tuner and the latency measurement gathered under Tools. On a phone the four destinations are a bottom bar in the thumb zone.","Honest labels throughout: every string that still promised a shipped feature was \"coming later\" has been retired. Three drills gained microphone scoring in the last release and their own descriptions had not been told."],"uk":["Заняття. Скажи, скільки маєш часу — від п'яти хвилин до двадцяти — і Euterpe збере те, що тобі справді час повторити, відлічить час, переведе з вправи у вправу, сама завершить і підсумує. Досі кожна вправа була нескінченним циклом, з якого ти виходив руками, а поняття «сьогоднішня практика» в застосунку не існувало.","«Тренувати це» звідусіль. Кожен довідковий вид тепер має вихід в одне натискання до вправи саме про те, що в тебе на екрані: акорд — до акомпанементу вчасно, арпеджіо — до влучання в тони крізь зміни, гама — до повторення фраз, побудованих з неї, коло квінт — до чистих змін між акордами тональності. Цю обіцянку застосунок давав з самого початку, а тримав рівно в одному місці.","«Джем над цим». Заграти під гармонію, що на екрані, коштувало п'яти кроків — обрати тональність, обрати акорд, розкрити «Супровід», увімкнути бас і ударні, натиснути «Луп». Тепер це одна кнопка, поруч із панеллю, яка вже й так каже, що над цим грати.","Прогрес, який щось розповідає. Замість п'яти чисел за весь час — історія, яка в твоєї практики справді є: рядок на кожну вправу з останнім результатом, напрямком руху, особистим рекордом і — для вправ, що слухають, — найкращою похибкою тайминга в мілісекундах. Застосунок усе це зберігав і не показував нічого. Кожен рядок водночас — шлях назад у цю вправу.","Один екран для кожної вправи. Усі дев'ять малювалися під одним заголовком і жодного разу не казали, у якій ти вправі; тепер є єдина шапка вправи — вона називає її, тримає тональність, темп, мікрофон і вихід, а параметри згортає, щойно ти починаєш грати. Домівка практики починається з того, що робити далі, а не з десяти карток, і кожна картка позначена тим, що вона є: з оцінкою по мікрофону, з оцінкою за точністю або коуч.","Одна навігація замість трьох смуг одна над одною, і гриф тепер стоїть над контролами, які його змінюють, а не під ними. Налаштування впорядковані за тим, що ти з ними робиш, а тюнер і вимірювання затримки зібрані в «Інструменти». На телефоні чотири розділи — нижня панель під великим пальцем.","Чесні підписи скрізь: усі рядки, що обіцяли вже випущену можливість «згодом», прибрано. Три вправи отримали оцінку з мікрофоном у минулому випуску, а їхні власні описи про це не знали."]},{"v":"2.14.0","date":"2026-08-02","en":["Mic scoring reaches the Rhythm drills. Strumming & feel now grades the pattern you play — every strum is timed against the pattern's own slots, swing included, so a correctly swung player is not marked late. Over the changes grades the thing comping is actually about: landing each chord change in time. What you strum between the changes is your own rhythm and is left alone.","Fixed something important about the scored tier: on speakers the microphone also hears the app, and because the click was scheduled on the grid it lands there perfectly — so a run where you never touched the guitar could come back \"Tight, 32/32\". Euterpe now recognises a reading that is too machine-even to be human and says so instead of printing a flattering score. Headphones are the clean fix, and every scored drill now says so.","In the scored Rhythm drills the guide guitar goes quiet — it was landing on exactly the beats being measured, so the app would have been scoring itself. That is also the better lesson: mic off and you hear the pattern played for you, mic on and you play it. The click and band stay, so you always have something to lock to.","One scoring engine now serves all three scored drills, so a fix to any of them is a fix to all of them."],"uk":["Оцінка з мікрофоном дійшла до ритм-вправ. «Бій і відчуття» тепер оцінює малюнок, який ти граєш: кожен удар звіряється з власними слотами малюнка — зі свінгом включно, тож зіграний зі свінгом не рахується як запізнення. «Крізь зміни» оцінює те, про що акомпанемент і є насправді: чи вчасно ти заходиш на кожну зміну акорду. Те, що ти граєш між змінами, — твій ритм, і його не чіпають.","Виправлено важливе в рівні з оцінкою: з колонок мікрофон чує й сам застосунок, а що клацання заплановане рівно по сітці, воно лягає ідеально — тож прогон, у якому ти й не торкався гітари, міг повернутися як «Чітко, 32/32». Тепер Euterpe розпізнає надто машинно-рівний результат і чесно про це каже замість того, щоб намалювати приємну оцінку. Навушники — чисте вирішення, і кожна вправа з оцінкою тепер про це нагадує.","У ритм-вправах з оцінкою гітара-підказка стихає — вона лягала рівно на ті долі, що вимірюються, тож застосунок оцінював би сам себе. Так і корисніше: мікрофон вимкнений — малюнок грають тобі, увімкнений — граєш ти. Клацання й гурт лишаються, щоб завжди було за що зачепитися.","Один рушій оцінювання тепер обслуговує всі три вправи з оцінкою, тож виправлення в одній — виправлення в усіх."]},{"v":"2.13.0","date":"2026-08-02","en":["Euterpe can now hear you play. Turn the microphone on in Subdivision & timing and the drill stops being a metronome you follow and becomes one that grades you: every note you pick is timed against the grid, and at the end you get your average error in milliseconds, how tight your spread is, and how many grid slots you actually hit.","It also tells you *which way* you are off — rushing or dragging — but only when the lean is real. If your notes are scattered rather than consistently early or late, it says so instead of inventing a tendency out of noise. A drill that flatters you is not a coach.","New in Settings ▸ Instrument: Audio latency. Your device takes time to get sound out of the speaker and back in through the mic, and without measuring it every player on earth would be told they drag. Press Measure, keep the guitar quiet for a few seconds and let it click — it plays a click, listens for it, and takes the middle of several readings so one stray noise can not skew it. On headphones there is nothing for the mic to hear, so it says so plainly and leaves you the manual slider.","The timing you are scored on is measured on the audio thread, not the animation frame, so the number is the note you played rather than how busy the browser was. Without the mic the drill works exactly as before — the coach tier is unchanged, the scored tier is opt-in.","As with the tuner, your audio never leaves the browser: the microphone runs only while you are in a scored run or measuring latency, and nothing is recorded or sent anywhere."],"uk":["Euterpe тепер чує, як ти граєш. Увімкни мікрофон у вправі «Поділ і тайминг» — і вона перестає бути метрономом, за яким ти йдеш, і стає таким, що тебе оцінює: кожна зіграна нота звіряється з сіткою, а наприкінці ти бачиш середню похибку в мілісекундах, наскільки щільний розкид і скільки клітинок сітки ти справді влучив.","Вправа також каже, *у який бік* ти відхиляєшся — поспішаєш чи запізнюєшся, — але лише коли нахил справжній. Якщо ноти просто розкидані, а не стабільно раніше чи пізніше, вона так і скаже, замість вигадувати тенденцію з шуму. Вправа, що тобі лестить, — не коуч.","Нове в «Налаштуваннях ▸ Інструмент»: затримка звуку. Пристрою потрібен час, щоб випустити звук з динаміка й повернути його через мікрофон, і без цього виміру будь-якому гітаристу світу казали б, що він запізнюється. Натисни «Виміряти», кілька секунд не чіпай гітару й дай йому поклацати — він грає клац, слухає його й бере середину з кількох замірів, щоб випадковий шум не зіпсував результат. У навушниках мікрофону нічого чути, тож він чесно про це скаже й лишить ручний повзунок.","Тайминг, за яким тебе оцінюють, міряється на аудіопотоці, а не на кадрі анімації, тож число описує зіграну ноту, а не завантаженість браузера. Без мікрофона вправа працює точно як раніше — коуч-рівень не змінився, рівень з оцінкою вмикається за бажанням.","Як і в тюнері, звук нікуди не йде з браузера: мікрофон працює лише під час прогону з оцінкою чи виміру затримки, і нічого не записується й нікуди не надсилається."]},{"v":"2.12.0","date":"2026-08-01","en":["New: a microphone tuner. Play any note on the guitar and see which note it is and how far off you are, on a needle that reads up to 50 cents sharp or flat — plus the nearest open string of whatever tuning you are in, so Drop D and the rest re-label themselves. It is chromatic, so you can also check your intonation at the 12th fret, not just tune the open strings. Open it with the Mic button next to the Tuner in Settings.","The existing reference-tone tuner stays exactly as it was — that one plays a pitch for you to tune against by ear, the new one listens to you. Use whichever suits the room you are in; the mic tuner needs a microphone and a secure (https) connection, and quietly hides itself when it cannot work, so nothing on screen ever pretends to do something it can't.","Your audio never leaves the browser: the microphone is only on while the tuner panel is open, is released the moment you close it or switch tabs, and nothing is sent anywhere or recorded."],"uk":["Нове: тюнер із мікрофоном. Зіграй будь-яку ноту на гітарі — і побачиш, що це за нота й наскільки ти відхилився, на шкалі до 50 центів вгору чи вниз, а ще найближчу відкриту струну твого поточного строю, тож Drop D та інші перепозначаються самі. Тюнер хроматичний, тож ним можна перевірити й інтонацію на 12-му ладі, а не лише налаштувати відкриті струни. Відкривається кнопкою «Мікрофон» поруч із «Тюнером» у «Налаштуваннях».","Старий тюнер з еталонним тоном лишився без змін — той грає висоту, щоб ти підстроївся на слух, а новий слухає тебе. Обирай, що зручніше в конкретній кімнаті; тюнер із мікрофоном потребує мікрофона й захищеного зʼєднання (https) і тихо ховається, коли працювати не може, — щоб на екрані не було кнопок, які нічого не роблять.","Звук нікуди не йде з браузера: мікрофон увімкнений лише поки відкрита панель тюнера, вимикається щойно ти її закриваєш або перемикаєш вкладку, і нічого не надсилається й не записується."]},{"v":"2.11.0","date":"2026-08-01","en":["New Foundations drill — Subdivision & timing: a smart visual metronome for locking in your time. Pick a subdivision (quarter notes → eighths → triplets → sixteenths) and a tempo; an accented click and a grid tick out the bar (a strong beat 1, softer subdivisions), and the current key's scale is walked note-by-note across the grid in one neck box so you always have something to play. Change key, box or tempo without leaving Practice. A coach that serves both the Rhythm and Lead pillars — mic-scored timing arrives with microphone input later.","Time signatures: a new Meter picker in Settings (2/4, 3/4, 4/4, 6/8, 12/8). The metronome accent, the backing groove (kick/snare pattern), the bass, the single-chord loop and the whole progression / comping / targeting bar length all follow the meter — so you can jam a waltz in 3/4 or a 6/8 feel, not just 4/4.","Fixed: with the Subdivision & timing drill open, tapping \"Practice\" again drew the drill list on top of the still-running drill. Switching modes now handles every drill the same way.","Leaner app: the release-notes archive no longer ships with the page — only the newest releases are in-app, and the full history lives in CHANGELOG.md — and the timing-calibration control (which nothing used yet) is gone. The download is about 15% smaller.","Settings now starts closed and reads as three groups — Instrument, Neck & meter, App — instead of eleven controls in one flat row. The colour-blind palette and note-shape toggles moved in with the app settings, where set-once preferences belong.","Strumming patterns and Groove & feel are now one drill, Strumming & feel: pick a pattern AND how it feels — swing, backbeat accent, palm-muting, and an optional drums+bass band. Combinations neither drill could reach before (a swung folk pattern, a palm-muted strum over the band) now just work.","Comp the progression and Chord tones over changes are now one drill with a You-play switch: Chords (comp it, with shapes in Now/Next) or Chord tones (aim at the tones on the neck, with Position and Target). Both practice cards still open it, each in the mode it teaches, and your recorded progress for either is unchanged.","Every drill now shares one Key picker and one Exit button at the top of Practice instead of carrying its own copy. The Key picker also only appears for drills that actually use it — ear training and note naming no longer show you a control that changes nothing.","Ear training is no longer a separate mode: its three drills moved into Practice as an Ear group, alongside Fretboard, Timing, Rhythm and Lead. One drill list, one progress card, one Exit — it was always the same learner model behind both screens. Everything you had recorded still counts, and an old link or saved session that opened Ear now opens Practice.","Much smaller download: the page no longer ships the developer comments written for whoever edits the source. Together with the earlier trims the page is about 36% smaller than last release, and roughly a third smaller over the wire."],"uk":["Нова вправа-основа — «Поділ і тайминг»: розумний візуальний метроном, щоб тримати час. Обери поділ (чвертки → вісімки → тріолі → шістнадцятки) і темп; акцентоване клацання й сітка відбивають такт (сильний «раз», тихіші поділи), а гама поточної тональності «прокрокує» по сітці нота за нотою в одній позиції на грифі — тож завжди є що грати. Змінюй тональність, позицію чи темп, не виходячи з «Практики». Коуч, що працює і на ритм-, і на соло-пілон — оцінку тайминга з мікрофоном додамо згодом.","Розміри такту: у «Налаштуваннях» зʼявився вибір розміру (2/4, 3/4, 4/4, 6/8, 12/8). Акцент метронома, грув супроводу (малюнок бочки/малого), бас, луп одного акорду й довжина такту всієї прогресії / акомпанементу / прицілювання — усе слідує за розміром, тож можна зіграти вальс у 3/4 чи відчуття 6/8, а не лише 4/4.","Виправлено: якщо була відкрита вправа «Поділ і тайминг», повторне натискання «Практики» малювало список вправ поверх тієї, що ще працювала. Тепер перемикання режимів однаково опрацьовує всі вправи.","Легший застосунок: архів нотаток до випусків більше не вантажиться зі сторінкою — у застосунку лишились найновіші випуски, а повна історія в CHANGELOG.md — і зник регулятор зсуву часу, який ще нічим не використовувався. Завантаження приблизно на 15% менше.","«Налаштування» тепер стартують згорнутими й читаються як три групи — Інструмент, Гриф і розмір, Застосунок — замість одинадцяти контролів в один ряд. Палітра для дальтоніків і форми на нотах переїхали до налаштувань застосунку, де й місце разовим уподобанням.","«Малюнки боя» і «Грув і відчуття» тепер одна вправа — «Бій і відчуття»: обирай і малюнок, і відчуття — свінг, бекбіт-акцент, глушіння та гурт (барабани з басом). Поєднання, недосяжні раніше в жодній із них (фолк-малюнок зі свінгом, приглушений бій під гурт), тепер просто працюють.","«Акомпанемент прогресії» і «Тони акорду в прогресії» тепер одна вправа з перемикачем «Що граєш»: «Акорди» (акомпануй, з формами у «Зараз/Далі») або «Тони акорду» (влучай у тони на грифі, з позицією та ціллю). Обидві картки в «Практиці» відкривають її — кожна у своєму режимі, а збережений прогрес для обох лишився без змін.","Усі вправи тепер мають один спільний вибір тональності й одну кнопку «Вийти» вгорі «Практики» замість власної копії в кожній. А вибір тональності зʼявляється лише для вправ, які його справді використовують — у вправах на слух і в назвах нот більше немає контролю, що нічого не змінює.","«Слух» більше не окремий режим: три вправи на слух переїхали в «Практику» окремою групою «Слух» — поруч із «Грифом», «Таймингом», «Ритмом» і «Соло». Один список вправ, одна картка прогресу, один «Вийти» — за обома екранами й так стояла та сама модель навчання. Увесь збережений прогрес лишився, а старе посилання чи сесія, що відкривали «Слух», тепер відкривають «Практику».","Значно менше завантаження: сторінка більше не вантажить коментарі розробника, написані для тих, хто редагує вихідний код. Разом із попередніми скороченнями сторінка приблизно на 36% менша, ніж у минулому випуску, і приблизно на третину менша «по дротах»."]}];
+const APP_VERSION = '2.16.0';
+const CHANGELOG = [{"v":"2.16.0","date":"2026-10-08","en":["Your progress can leave the browser and come back. Settings ▸ Progress has Export, which saves your practice history and preferences as a file on your device, and Import, which brings one back — on a new phone, after clearing the browser, or simply as a backup. Nothing is uploaded anywhere. Before it replaces anything, Import tells you how many sessions are on this device and how many are in the file, and it refuses a file from a newer version of the app rather than reading it as empty.","Euterpe now asks the browser to keep its storage once you have finished a practice session. Some browsers — Safari above all — otherwise clear a site's data after a week without a visit, and your history with it.","If this browser cannot save at all (private mode, storage full), you are now told so once, with a button to export what you have, instead of finding out the next time you open the app."],"uk":["Твій прогрес тепер може покинути браузер і повернутися. У «Налаштування ▸ Прогрес» є «Експорт», який зберігає історію практики й налаштування у файл на твоєму пристрої, та «Імпорт», який повертає його — на новому телефоні, після очищення браузера чи просто як резервна копія. Нічого нікуди не завантажується. Перш ніж щось замінити, «Імпорт» показує, скільки сесій на цьому пристрої і скільки у файлі, а файл від новішої версії застосунку відхиляє, замість того щоб прочитати його як порожній.","Після першого завершеного заняття Euterpe просить браузер зберігати її дані надійно. Інакше деякі браузери — насамперед Safari — стирають дані сайту після тижня без відвідувань, а з ними й твою історію.","Якщо цей браузер узагалі не може зберігати (приватний режим, забракло місця), ти тепер дізнаєшся про це одразу й один раз — з кнопкою, щоб експортувати те, що є, — а не наступного разу, коли відкриєш застосунок."]},{"v":"2.15.0","date":"2026-08-03","en":["Practice sessions. Say how long you have — five minutes to twenty — and Euterpe lines up what you are actually due to work on, runs the clock, moves you from one drill to the next, ends by itself, and tells you what the session was. Until now every drill was an endless loop you left by hand, and the app had no notion of a day's practice at all.","\"Drill this\" from anywhere. Every reference view now has a one-tap route into the drill that is about what is on your screen: a chord into comping it in time, an arpeggio into targeting those tones over the changes, a scale into echoing phrases built from it, the circle into changing between the key's chords. It was a promise the app had been making since the beginning and keeping in exactly one place.","\"Jam over this\". Playing along to the harmony on screen used to take five steps — pick a key, pick a chord, open Backing, switch on bass and drums, press Loop. It is one button now, sitting next to the panel that already tells you what to play over this.","Progress that tells you something. The five all-time numbers are replaced by the story your practice actually has: a line per drill with your latest result, which way it is heading, your personal best, and — for the drills that listen — your best timing error in milliseconds. The app has been keeping all of that and showing none of it. Each line is also a way straight back into that drill.","One screen for every drill. All nine used to render under the same heading and never say which drill you were in; there is now a single drill header that names it, holds the key, the tempo, the microphone and the way out, and folds its setup away once you start playing. The practice home leads with what to do next instead of ten cards, and each card is badged with what it does — scored with the microphone, scored on accuracy, or a coach.","One navigation bar instead of three stacked strips, and the fretboard now sits above the controls that change it rather than below them. Settings are sorted by what you do with them, with the tuner and the latency measurement gathered under Tools. On a phone the four destinations are a bottom bar in the thumb zone.","Honest labels throughout: every string that still promised a shipped feature was \"coming later\" has been retired. Three drills gained microphone scoring in the last release and their own descriptions had not been told."],"uk":["Заняття. Скажи, скільки маєш часу — від п'яти хвилин до двадцяти — і Euterpe збере те, що тобі справді час повторити, відлічить час, переведе з вправи у вправу, сама завершить і підсумує. Досі кожна вправа була нескінченним циклом, з якого ти виходив руками, а поняття «сьогоднішня практика» в застосунку не існувало.","«Тренувати це» звідусіль. Кожен довідковий вид тепер має вихід в одне натискання до вправи саме про те, що в тебе на екрані: акорд — до акомпанементу вчасно, арпеджіо — до влучання в тони крізь зміни, гама — до повторення фраз, побудованих з неї, коло квінт — до чистих змін між акордами тональності. Цю обіцянку застосунок давав з самого початку, а тримав рівно в одному місці.","«Джем над цим». Заграти під гармонію, що на екрані, коштувало п'яти кроків — обрати тональність, обрати акорд, розкрити «Супровід», увімкнути бас і ударні, натиснути «Луп». Тепер це одна кнопка, поруч із панеллю, яка вже й так каже, що над цим грати.","Прогрес, який щось розповідає. Замість п'яти чисел за весь час — історія, яка в твоєї практики справді є: рядок на кожну вправу з останнім результатом, напрямком руху, особистим рекордом і — для вправ, що слухають, — найкращою похибкою тайминга в мілісекундах. Застосунок усе це зберігав і не показував нічого. Кожен рядок водночас — шлях назад у цю вправу.","Один екран для кожної вправи. Усі дев'ять малювалися під одним заголовком і жодного разу не казали, у якій ти вправі; тепер є єдина шапка вправи — вона називає її, тримає тональність, темп, мікрофон і вихід, а параметри згортає, щойно ти починаєш грати. Домівка практики починається з того, що робити далі, а не з десяти карток, і кожна картка позначена тим, що вона є: з оцінкою по мікрофону, з оцінкою за точністю або коуч.","Одна навігація замість трьох смуг одна над одною, і гриф тепер стоїть над контролами, які його змінюють, а не під ними. Налаштування впорядковані за тим, що ти з ними робиш, а тюнер і вимірювання затримки зібрані в «Інструменти». На телефоні чотири розділи — нижня панель під великим пальцем.","Чесні підписи скрізь: усі рядки, що обіцяли вже випущену можливість «згодом», прибрано. Три вправи отримали оцінку з мікрофоном у минулому випуску, а їхні власні описи про це не знали."]},{"v":"2.14.0","date":"2026-08-02","en":["Mic scoring reaches the Rhythm drills. Strumming & feel now grades the pattern you play — every strum is timed against the pattern's own slots, swing included, so a correctly swung player is not marked late. Over the changes grades the thing comping is actually about: landing each chord change in time. What you strum between the changes is your own rhythm and is left alone.","Fixed something important about the scored tier: on speakers the microphone also hears the app, and because the click was scheduled on the grid it lands there perfectly — so a run where you never touched the guitar could come back \"Tight, 32/32\". Euterpe now recognises a reading that is too machine-even to be human and says so instead of printing a flattering score. Headphones are the clean fix, and every scored drill now says so.","In the scored Rhythm drills the guide guitar goes quiet — it was landing on exactly the beats being measured, so the app would have been scoring itself. That is also the better lesson: mic off and you hear the pattern played for you, mic on and you play it. The click and band stay, so you always have something to lock to.","One scoring engine now serves all three scored drills, so a fix to any of them is a fix to all of them."],"uk":["Оцінка з мікрофоном дійшла до ритм-вправ. «Бій і відчуття» тепер оцінює малюнок, який ти граєш: кожен удар звіряється з власними слотами малюнка — зі свінгом включно, тож зіграний зі свінгом не рахується як запізнення. «Крізь зміни» оцінює те, про що акомпанемент і є насправді: чи вчасно ти заходиш на кожну зміну акорду. Те, що ти граєш між змінами, — твій ритм, і його не чіпають.","Виправлено важливе в рівні з оцінкою: з колонок мікрофон чує й сам застосунок, а що клацання заплановане рівно по сітці, воно лягає ідеально — тож прогон, у якому ти й не торкався гітари, міг повернутися як «Чітко, 32/32». Тепер Euterpe розпізнає надто машинно-рівний результат і чесно про це каже замість того, щоб намалювати приємну оцінку. Навушники — чисте вирішення, і кожна вправа з оцінкою тепер про це нагадує.","У ритм-вправах з оцінкою гітара-підказка стихає — вона лягала рівно на ті долі, що вимірюються, тож застосунок оцінював би сам себе. Так і корисніше: мікрофон вимкнений — малюнок грають тобі, увімкнений — граєш ти. Клацання й гурт лишаються, щоб завжди було за що зачепитися.","Один рушій оцінювання тепер обслуговує всі три вправи з оцінкою, тож виправлення в одній — виправлення в усіх."]},{"v":"2.13.0","date":"2026-08-02","en":["Euterpe can now hear you play. Turn the microphone on in Subdivision & timing and the drill stops being a metronome you follow and becomes one that grades you: every note you pick is timed against the grid, and at the end you get your average error in milliseconds, how tight your spread is, and how many grid slots you actually hit.","It also tells you *which way* you are off — rushing or dragging — but only when the lean is real. If your notes are scattered rather than consistently early or late, it says so instead of inventing a tendency out of noise. A drill that flatters you is not a coach.","New in Settings ▸ Instrument: Audio latency. Your device takes time to get sound out of the speaker and back in through the mic, and without measuring it every player on earth would be told they drag. Press Measure, keep the guitar quiet for a few seconds and let it click — it plays a click, listens for it, and takes the middle of several readings so one stray noise can not skew it. On headphones there is nothing for the mic to hear, so it says so plainly and leaves you the manual slider.","The timing you are scored on is measured on the audio thread, not the animation frame, so the number is the note you played rather than how busy the browser was. Without the mic the drill works exactly as before — the coach tier is unchanged, the scored tier is opt-in.","As with the tuner, your audio never leaves the browser: the microphone runs only while you are in a scored run or measuring latency, and nothing is recorded or sent anywhere."],"uk":["Euterpe тепер чує, як ти граєш. Увімкни мікрофон у вправі «Поділ і тайминг» — і вона перестає бути метрономом, за яким ти йдеш, і стає таким, що тебе оцінює: кожна зіграна нота звіряється з сіткою, а наприкінці ти бачиш середню похибку в мілісекундах, наскільки щільний розкид і скільки клітинок сітки ти справді влучив.","Вправа також каже, *у який бік* ти відхиляєшся — поспішаєш чи запізнюєшся, — але лише коли нахил справжній. Якщо ноти просто розкидані, а не стабільно раніше чи пізніше, вона так і скаже, замість вигадувати тенденцію з шуму. Вправа, що тобі лестить, — не коуч.","Нове в «Налаштуваннях ▸ Інструмент»: затримка звуку. Пристрою потрібен час, щоб випустити звук з динаміка й повернути його через мікрофон, і без цього виміру будь-якому гітаристу світу казали б, що він запізнюється. Натисни «Виміряти», кілька секунд не чіпай гітару й дай йому поклацати — він грає клац, слухає його й бере середину з кількох замірів, щоб випадковий шум не зіпсував результат. У навушниках мікрофону нічого чути, тож він чесно про це скаже й лишить ручний повзунок.","Тайминг, за яким тебе оцінюють, міряється на аудіопотоці, а не на кадрі анімації, тож число описує зіграну ноту, а не завантаженість браузера. Без мікрофона вправа працює точно як раніше — коуч-рівень не змінився, рівень з оцінкою вмикається за бажанням.","Як і в тюнері, звук нікуди не йде з браузера: мікрофон працює лише під час прогону з оцінкою чи виміру затримки, і нічого не записується й нікуди не надсилається."]},{"v":"2.12.0","date":"2026-08-01","en":["New: a microphone tuner. Play any note on the guitar and see which note it is and how far off you are, on a needle that reads up to 50 cents sharp or flat — plus the nearest open string of whatever tuning you are in, so Drop D and the rest re-label themselves. It is chromatic, so you can also check your intonation at the 12th fret, not just tune the open strings. Open it with the Mic button next to the Tuner in Settings.","The existing reference-tone tuner stays exactly as it was — that one plays a pitch for you to tune against by ear, the new one listens to you. Use whichever suits the room you are in; the mic tuner needs a microphone and a secure (https) connection, and quietly hides itself when it cannot work, so nothing on screen ever pretends to do something it can't.","Your audio never leaves the browser: the microphone is only on while the tuner panel is open, is released the moment you close it or switch tabs, and nothing is sent anywhere or recorded."],"uk":["Нове: тюнер із мікрофоном. Зіграй будь-яку ноту на гітарі — і побачиш, що це за нота й наскільки ти відхилився, на шкалі до 50 центів вгору чи вниз, а ще найближчу відкриту струну твого поточного строю, тож Drop D та інші перепозначаються самі. Тюнер хроматичний, тож ним можна перевірити й інтонацію на 12-му ладі, а не лише налаштувати відкриті струни. Відкривається кнопкою «Мікрофон» поруч із «Тюнером» у «Налаштуваннях».","Старий тюнер з еталонним тоном лишився без змін — той грає висоту, щоб ти підстроївся на слух, а новий слухає тебе. Обирай, що зручніше в конкретній кімнаті; тюнер із мікрофоном потребує мікрофона й захищеного зʼєднання (https) і тихо ховається, коли працювати не може, — щоб на екрані не було кнопок, які нічого не роблять.","Звук нікуди не йде з браузера: мікрофон увімкнений лише поки відкрита панель тюнера, вимикається щойно ти її закриваєш або перемикаєш вкладку, і нічого не надсилається й не записується."]}];
 
 const I18N = {
   uk: {
@@ -2564,6 +2579,13 @@ const I18N = {
       prog_active:'Активних днів', prog_due:'До повтору', prog_review:'Повторити',
       prog_next:'Наступне', prog_start:'Почати',
     share_btn:'Поділитися', share_copied:'Скопійовано!',
+    tbc_progress:'Прогрес', bk_export:'Експорт', bk_import:'Імпорт…',
+    bk_exported:'Збережено:', bk_err_export:'Не вдалося створити файл.',
+    bk_err_parse:'Це не файл JSON.', bk_err_notours:'Це не файл прогресу Euterpe.',
+    bk_err_newer:'Файл створено новішою версією Euterpe — спершу оновіть застосунок.',
+    bk_err_store:'Цей браузер не дозволяє зберігати дані.',
+    bk_confirm:'Замінити прогрес на цьому пристрої (сесій: {cur}) даними з файлу від {date} (сесій: {n})?',
+    bk_save_fail:'Цей браузер не зберігає ваш прогрес (приватний режим або забракло місця). Експортуйте його, щоб не втратити.',
     wc_title:'Вітаємо в Euterpe',
     wc_lead:'Що хочеш зробити зараз?',
     wc_look:'Подивитись акорд або гаму',
@@ -2725,6 +2747,13 @@ const I18N = {
       prog_active:'Active days', prog_due:'Due to review', prog_review:'Review',
       prog_next:'Practise next', prog_start:'Start',
     share_btn:'Share', share_copied:'Copied!',
+    tbc_progress:'Progress', bk_export:'Export', bk_import:'Import…',
+    bk_exported:'Saved:', bk_err_export:'Could not create the file.',
+    bk_err_parse:"That isn't a JSON file.", bk_err_notours:"That isn't a Euterpe progress file.",
+    bk_err_newer:'This file is from a newer version of Euterpe — update the app first.',
+    bk_err_store:"This browser won't let the app store data.",
+    bk_confirm:'Replace the progress on this device ({cur} sessions) with the file from {date} ({n} sessions)?',
+    bk_save_fail:"This browser isn't saving your progress (private mode or storage full). Export it to keep a copy.",
     wc_title:'Welcome to Euterpe',
     wc_lead:'What do you want to do right now?',
     wc_look:'Look up a chord or scale',
@@ -4362,7 +4391,8 @@ if(typeof window!=='undefined'){
 const LS_KEY='guitarStudio.v1';
 let currentTab='harmony';
 let currentMode='reference';
-function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
+
+function snapshotState(){ return {
   lang, mode:currentMode, tab:currentTab, tuningIdx, customTuning, fretRangeIdx, tempo, meterIdx, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
   cbPalette, fnShapes, welcomeSeen,
   gRoot, gRootLbl, gMode, hView, scView,
@@ -4376,7 +4406,12 @@ function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
   drillSeen,         
   sessMins,          
   learner   
-})); }catch(e){ devWarn('state could not be saved (localStorage unavailable?)', e); } }
+}; }
+
+let saveBlocked=false;
+function saveState(){ if(saveBlocked) return;
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(snapshotState())); }
+  catch(e){ devWarn('state could not be saved (localStorage unavailable?)', e); saveFailed(); } }
 function loadState(){ try{
   const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(!s) return false;
   if(s.lang==='uk'||s.lang==='en') lang=s.lang;
@@ -4475,6 +4510,114 @@ function applyShareHash(){
   return true;
 }
 
+const BACKUP_APP = 'guitar-studio';
+const BACKUP_KIND = 'progress';
+const BACKUP_FORMAT = 1;
+const BACKUP_MAX_BYTES = 5e6;   
+var persistAsked = false;       
+var saveFailShown = false;      
+function progressPersist(){
+  if(persistAsked) return;
+  persistAsked = true;
+  try{
+    const st = (typeof navigator!=='undefined') ? navigator.storage : null;
+    if(!st || typeof st.persist!=='function') return;
+    const ask = ()=>st.persist().catch(()=>false);
+    if(typeof st.persisted==='function') st.persisted().then(p=>{ if(!p) ask(); }).catch(_=>{});
+    else ask();
+  }catch(_){}
+}
+function progressPayload(now){
+  now = (typeof now==='number') ? now : Date.now();
+  return { app:BACKUP_APP, kind:BACKUP_KIND, format:BACKUP_FORMAT, version:APP_VERSION,
+           exported:new Date(now).toISOString(), state:snapshotState() };
+}
+function progressFileName(now){
+  const d = new Date((typeof now==='number') ? now : Date.now());
+  const p = n=>(n<10?'0':'')+n;
+  return 'euterpe-progress-'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'.json';
+}
+function progressParse(text){
+  if(typeof text!=='string' || text.length > BACKUP_MAX_BYTES) return { ok:false, err:'bk_err_notours' };
+  let raw;
+  try{ raw = JSON.parse(text); }catch(_){ return { ok:false, err:'bk_err_parse' }; }
+  if(!raw || typeof raw!=='object' || raw.app!==BACKUP_APP || raw.kind!==BACKUP_KIND ||
+     !raw.state || typeof raw.state!=='object' || Array.isArray(raw.state))
+    return { ok:false, err:'bk_err_notours' };
+  if(!Number.isInteger(raw.format) || raw.format < 1) return { ok:false, err:'bk_err_notours' };
+  if(raw.format > BACKUP_FORMAT) return { ok:false, err:'bk_err_newer' };
+  const rl = raw.state.learner;
+  if(rl && typeof rl==='object' && typeof rl.v==='number' && rl.v > LEARNER_V) return { ok:false, err:'bk_err_newer' };
+  const known = snapshotState(), state = {};
+  Object.keys(known).forEach(k=>{ if(Object.prototype.hasOwnProperty.call(raw.state, k)) state[k] = raw.state[k]; });
+  state.learner = normalizeLearner(rl);
+  const ex = Date.parse(raw.exported);
+  return { ok:true, state, exported: isFinite(ex) ? ex : null };
+}
+function progressExport(){
+  const now = Date.now();
+  const name = progressFileName(now);
+  try{
+    const blob = new Blob([JSON.stringify(progressPayload(now))], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.hidden = true;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 10000);
+    backupStatus(t('bk_exported')+' '+name);
+  }catch(e){ devWarn('export failed', e); backupStatus(t('bk_err_export')); }
+}
+function progressApply(state){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+  catch(e){ devWarn('import could not be stored', e); return false; }
+  saveBlocked = true;
+  return true;
+}
+function progressImportText(text){
+  const r = progressParse(text);
+  if(!r.ok){ backupStatus(t(r.err)); return; }
+  const loc = lang==='en' ? 'en-GB' : 'uk-UA';
+  const when = r.exported ? new Date(r.exported).toLocaleDateString(loc) : '?';
+  const msg = t('bk_confirm').replace('{cur}', learner.sessions.length)
+    .replace('{date}', when).replace('{n}', r.state.learner.sessions.length);
+  if(!window.confirm(msg)) return;
+  if(!progressApply(r.state)){ backupStatus(t('bk_err_store')); return; }
+  location.reload();
+}
+function backupStatus(msg){
+  const el = document.getElementById('bk-status');
+  if(!el) return;
+  el.textContent = msg; el.hidden = !msg;
+}
+function saveFailed(){
+  if(saveFailShown) return;
+  const toast = document.getElementById('app-toast');
+  if(!toast) return;
+  saveFailShown = true;
+  toast.innerHTML =
+    '<span class="toast-msg">' + t('bk_save_fail') + '</span>' +
+    '<button class="toast-act" id="app-toast-act">' + t('bk_export') + '</button>' +
+    '<button class="toast-x" id="app-toast-x" aria-label="' + t('pwa_dismiss') + '">✕</button>';
+  toast.hidden = false;
+  document.getElementById('app-toast-act').onclick = function(){ toast.hidden = true; progressExport(); };
+  document.getElementById('app-toast-x').onclick = function(){ toast.hidden = true; };
+}
+{ const ex = document.getElementById('bk-export'), im = document.getElementById('bk-import'),
+        f = document.getElementById('bk-file');
+  if(ex) ex.onclick = progressExport;
+  if(im && f){
+    im.onclick = ()=>{ f.value = ''; f.click(); };
+    f.onchange = ()=>{
+      const file = f.files && f.files[0];
+      if(!file) return;
+      if(file.size > BACKUP_MAX_BYTES){ backupStatus(t('bk_err_notours')); return; }
+      const rd = new FileReader();
+      rd.onload = ()=>progressImportText(String(rd.result));
+      rd.onerror = ()=>backupStatus(t('bk_err_parse'));
+      rd.readAsText(file);
+    };
+  }
+}
 
 
 const DRILLS = [];
@@ -4683,6 +4826,7 @@ function recordSession(drill, score, now, extra){
   learner.sessions.push(s);
   learnerNoteBest(id, s);
   pruneSessions();
+  progressPersist();   
 }
 
 function pruneSessions(){
@@ -7564,6 +7708,9 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     recordAttempt, dueItems, recordSession, learnerStats, srsInterval, normalizeLearner,
     getLearner:()=>learner, resetLearner:()=>{ learner=newLearner(); }, LEARNER_V,
     setLearner:(l)=>{ learner=l; }, SESS_PER_ID, SESS_MAX, PERF_STALE_DAYS,
+    saveState, loadState, snapshotState, progressPayload, progressParse, progressApply, progressFileName, saveFailed,
+    BACKUP_FORMAT, getSaveBlocked:()=>saveBlocked, setSaveBlocked:(v)=>{ saveBlocked=!!v; },
+    resetSaveFailShown:()=>{ saveFailShown=false; },
     startDrill, drillAnswer, drillTargetsFor, exitDrill, DRILL_LEN, getDrill:()=>drill,
     startEar, earAnswer, earNext, earReplay, exitEar, getEar:()=>ear,
     earChoices:()=>(ear?ear.cfg.choices(ear.cur):[]), INTERVALS, EAR_QUAL_IDX, RHYTHMS,

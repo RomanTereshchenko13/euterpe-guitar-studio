@@ -195,7 +195,9 @@ let currentTab='harmony';
 // nests Harmony/Scales/Circle; Practice is its own surface. Defaults to reference so
 // older saves (no `mode`) and the existing reference behaviour are untouched.
 let currentMode='reference';
-function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
+/* The one list of what is saved. Export (13-backup.js) reads the same snapshot, so a
+   backup file can't drift from what the browser actually keeps. */
+function snapshotState(){ return {
   lang, mode:currentMode, tab:currentTab, tuningIdx, customTuning, fretRangeIdx, tempo, meterIdx, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
   cbPalette, fnShapes, welcomeSeen,
   gRoot, gRootLbl, gMode, hView, scView,
@@ -209,7 +211,13 @@ function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({
   drillSeen,         // Phase 10/B2: tracks already run once — drives the first-run hint reveal
   sessMins,          // Phase 10/B3: how long your practice session usually is
   learner   // spine #3: learner model (13-learner.js); saved verbatim, restored via normalizeLearner
-})); }catch(e){ devWarn('state could not be saved (localStorage unavailable?)', e); } }
+}; }
+/* Set by an import just before it reloads: the in-memory state is the OLD progress, and
+   any save between the write and the reload would put it straight back. */
+let saveBlocked=false;
+function saveState(){ if(saveBlocked) return;
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(snapshotState())); }
+  catch(e){ devWarn('state could not be saved (localStorage unavailable?)', e); saveFailed(); } }
 function loadState(){ try{
   const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(!s) return false;
   if(s.lang==='uk'||s.lang==='en') lang=s.lang;

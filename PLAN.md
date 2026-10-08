@@ -1,6 +1,6 @@
 # Euterpe — Plan
 
-_Shipping: v2.15.0 · Updated: 2026-10-08_
+_Shipping: v2.16.0 · Updated: 2026-10-08_
 
 The app is feature-rich and healthy (lint clean, 1102 smoke checks green, 425 KB / 120 KB gzipped).
 What holds it back now is not missing features but **architecture and layout debt**: state with no
@@ -123,11 +123,11 @@ review), and changes no saved data unless it says so.
 and can ship in any order; 7 needs 4 and 6; 9 needs 5 and 6.
 
 ### 0 — Protect progress · S · low risk (first)
-- [ ] `navigator.storage.persist()` after the first recorded session (granted silently for
+- [x] `navigator.storage.persist()` after the first recorded session (granted silently for
       installed PWAs on most browsers).
-- [ ] Settings ▸ **Export / Import progress** (JSON file of the learner model + preferences;
+- [x] Settings ▸ **Export / Import progress** (JSON file of the learner model + preferences;
       import validates through `normalizeLearner`). Local file only — nothing leaves the device.
-- [ ] A failed save is shown to the user once, not only logged.
+- [x] A failed save is shown to the user once, not only logged.
 
 ### 1 — Cleanup (no behaviour change) · S · low risk
 - [ ] One global `[hidden]{display:none!important}`; delete the per-element patches (the smoke

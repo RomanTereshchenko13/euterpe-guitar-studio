@@ -781,6 +781,10 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     recordAttempt, dueItems, recordSession, learnerStats, srsInterval, normalizeLearner,
     getLearner:()=>learner, resetLearner:()=>{ learner=newLearner(); }, LEARNER_V,
     setLearner:(l)=>{ learner=l; }, SESS_PER_ID, SESS_MAX, PERF_STALE_DAYS,
+    // progress backup (step 0)
+    saveState, loadState, snapshotState, progressPayload, progressParse, progressApply, progressFileName, saveFailed,
+    BACKUP_FORMAT, getSaveBlocked:()=>saveBlocked, setSaveBlocked:(v)=>{ saveBlocked=!!v; },
+    resetSaveFailShown:()=>{ saveFailShown=false; },
     // note-naming drill (3c)
     startDrill, drillAnswer, drillTargetsFor, exitDrill, DRILL_LEN, getDrill:()=>drill,
     // ear-training drills (Phase 4)
