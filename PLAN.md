@@ -130,15 +130,15 @@ and can ship in any order; 7 needs 4 and 6; 9 needs 5 and 6.
 - [x] A failed save is shown to the user once, not only logged.
 
 ### 1 — Cleanup (no behaviour change) · S · low risk
-- [ ] One global `[hidden]{display:none!important}`; delete the per-element patches (the smoke
+- [x] One global `[hidden]{display:none!important}`; delete the per-element patches (the smoke
       suite's regex pins move to the one rule).
-- [ ] Remove the dead `typeof fn==='function'` guards (keep the `clearInterval` one and the
+- [x] Remove the dead `typeof fn==='function'` guards (keep the `clearInterval` one and the
       `typeof d.exit` / `typeof s.err` value checks — those are real).
-- [ ] Copy: "Тайминг" → "Таймінг"; remove dev-speak from user text ("…наступна фаза").
-- [ ] Consistent note glyphs (`E♭` vs `Eb`) across pickers and the circle.
-- [ ] `package.json` version (1.25.1) follows `APP_VERSION`, or is dropped from the release story.
-- [ ] Trim `CLAUDE.md` to rules + file map (~5 KB); drop history narration from comments.
-- [ ] Strip HTML comments from the bundle in `build.js` (−24.5 KB raw, a few KB gzipped — cheap,
+- [x] Copy: "Тайминг" → "Таймінг"; remove dev-speak from user text ("…наступна фаза").
+- [x] Consistent note glyphs (`E♭` vs `Eb`) across pickers and the circle.
+- [x] `package.json` version (1.25.1) follows `APP_VERSION`, or is dropped from the release story.
+- [x] Trim `CLAUDE.md` to rules + file map (~5 KB); drop history narration from comments.
+- [x] Strip HTML comments from the bundle in `build.js` (−24.5 KB raw, a few KB gzipped — cheap,
       low value; not inside `<script>`/`<style>`/`<pre>` or attributes).
 
 ### 2 — Quick UI fixes · S · low risk (no new structure)

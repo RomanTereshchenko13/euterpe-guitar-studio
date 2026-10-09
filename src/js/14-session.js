@@ -1,4 +1,4 @@
-/* ===================== The timed practice session (Phase 10/B3) =====================
+/* ===================== The timed practice session =====================
    The question a practice app exists to answer is "I have fifteen minutes — what do I
    do?", and until now this one had no answer to it. Every drill is an infinite loop you
    leave by hand: nothing picks what to play, nothing keeps time, nothing ends, and
@@ -45,12 +45,9 @@ function sessionActive(){ return !!psess; }
    session never hands you the same drill twice. */
 function sessionQueue(now){
   const out=[];
-  const push=id=>{ if(id && out.indexOf(id)<0 && typeof trackById==='function' && trackById(id)) out.push(id); };
-  if(typeof learnerReview==='function'){
-    const rev=learnerReview(now);
-    (rev.due||[]).forEach(d=>push(d.track));
-  }
-  if(typeof drillTracks==='function') drillTracks().forEach(tr=>push(tr.id));
+  const push=id=>{ if(id && out.indexOf(id)<0 && trackById(id)) out.push(id); };
+  (learnerReview(now).due||[]).forEach(d=>push(d.track));
+  drillTracks().forEach(tr=>push(tr.id));
   return out;
 }
 /* Pure: minutes in, blocks out. One block per SESSION_BLOCK_SEC, at least one, never
@@ -75,10 +72,10 @@ function sessionStart(mins, now){
   if(!plan.length) return false;
   sessLast=null; sessMins=mins;
   psess={ mins, plan, idx:-1, startedAt:now, blockEnds:now, endsAt:now+mins*60000 };
-  if(typeof setMode==='function') setMode('practice');
+  setMode('practice');
   sessionAdvance(now);
   if(!psess) return false;                       // nothing would open — don't pretend
-  if(typeof saveState==='function') saveState();
+  saveState();
   sessionStartTimer();
   applySessionViews();
   return true;
@@ -95,10 +92,10 @@ function sessionAdvance(now){
   psess.blockEnds=Math.min(now + b.secs*1000, psess.endsAt);
   sessChaining=true;
   try{
-    if(typeof exitAllDrills==='function') exitAllDrills();
-    if(typeof startTrack==='function') startTrack(b.track);
+    exitAllDrills();
+    startTrack(b.track);
   } finally { sessChaining=false; }
-  if(typeof applyDrillCtx==='function') applyDrillCtx();
+  applyDrillCtx();
 }
 /* One tick. A block ends on its own clock OR when the drill inside it ends by itself —
    the note and ear drills are finite, and their summary screen keeps them active, so
@@ -107,7 +104,7 @@ function sessionTick(now){
   if(!psess) return;
   now=(typeof now==='number')?now:Date.now();
   if(now>=psess.endsAt){ sessionEnd('done', now); return; }
-  const running=(typeof activeDrill==='function') ? !!activeDrill() : true;
+  const running=!!activeDrill();
   if(now>=psess.blockEnds || !running){ sessionAdvance(now); return; }
   sessionPaint();
 }
@@ -124,19 +121,19 @@ function sessionEnd(reason, now){
   sessTimer=null;
   now=(typeof now==='number')?now:Date.now();
   sessChaining=true;
-  try{ if(typeof exitAllDrills==='function') exitAllDrills(); }
+  try{ exitAllDrills(); }
   finally{ sessChaining=false; }
   sessLast={ mins:s.mins, from:s.startedAt, to:now, reason:reason||'done',
              blocks:s.plan.slice(0, Math.max(0, Math.min(s.plan.length, s.idx+1))).map(b=>b.track) };
   applySessionViews();
-  if(typeof applyDrillCtx==='function') applyDrillCtx();
+  applyDrillCtx();
   return sessLast;
 }
 // the header's Quit, or leaving Practice — both arrive here through drillShellLeft()
 function sessionInterrupt(){ if(psess && !sessChaining) sessionEnd('quit'); }
 // a drill started outside the session: whatever the last report said, it has been read
 function sessionClearReport(){ if(sessLast){ sessLast=null; applySessionViews(); } }
-function sessionDismiss(){ sessionClearReport(); if(typeof renderPractice==='function') renderPractice(); }
+function sessionDismiss(){ sessionClearReport(); renderPractice(); }
 
 /* ---- paint ---- */
 function sessionClock(sec){
@@ -157,7 +154,7 @@ function sessionPaint(){
     } else { chip.hidden=true; chip.textContent=''; }
   }
   const skip=document.getElementById('drill-ctx-skip');
-  if(skip){ skip.hidden=!psess; if(psess && typeof t==='function') skip.textContent=t('sess_next'); }
+  if(skip){ skip.hidden=!psess; if(psess) skip.textContent=t('sess_next'); }
 }
 /* The report is EXCLUSIVE inside the practice home: it is the closing screen of a
    ritual, and a summary competing for the screen with the picker that starts the next
@@ -189,14 +186,14 @@ function renderSessionReport(){
   const runs=(typeof learner!=='undefined' && learner && Array.isArray(learner.sessions) ? learner.sessions : [])
     .filter(s=>s.t>=sessLast.from && s.t<=sessLast.to);
   const rows=sessLast.blocks.map(id=>{
-    const tr=(typeof trackById==='function') ? trackById(id) : null;
+    const tr=trackById(id);
     if(!tr) return '';
-    const mine=runs.filter(s=>(typeof sessNs==='function'?sessNs(s.drill):s.drill)===tr.sess);
+    const mine=runs.filter(s=>sessNs(s.drill)===tr.sess);
     let val=t('sess_norun');
     if(mine.length){
       const low=tr.better==='low';
       const best=mine.reduce((b,s)=> b===null ? s.score : (low?Math.min(b,s.score):Math.max(b,s.score)), null);
-      val=(typeof trendScore==='function') ? trendScore({ last:best, unit:tr.unit }) : String(Math.round(best));
+      val=trendScore({ last:best, unit:tr.unit });
     }
     return '<div class="sr-row"><span class="sr-name">'+esc(t(tr.label))+'</span>'+
            '<span class="sr-val">'+esc(val)+'</span></div>';

@@ -15,10 +15,10 @@ function buildToolbar(){
   const vv=document.getElementById('tb-vol-val'); if(vv) vv.textContent=Math.round(masterVol*100)+'%';
   buildTuner();
   const lb=document.getElementById('tb-lefty'); lb.classList.toggle('active', lefty); lb.setAttribute('aria-pressed', lefty);
-  if(typeof applyA11y==='function') applyA11y();   // keep the accessibility toggles in sync after a rebuild (e.g. language switch)
+  applyA11y();   // keep the accessibility toggles in sync after a rebuild (e.g. language switch)
   applyToolbarState();
 }
-/* ---- tempo: one setter, every readout (Phase 10/A1) ----
+/* ---- tempo: one setter, every readout ----
    `tempo` is one global that two controls display — the header slider and the drill
    strip's stepper — so it needs one place that clamps it and repaints both. Before
    this the timing drill kept a private copy of exactly this function, which is how the
@@ -48,7 +48,7 @@ function applyToolbarState(){
   tg.classList.toggle('open', toolbarOpen);
   tg.setAttribute('aria-expanded', toolbarOpen);
 }
-/* custom tuning (Phase 2): six per-string note selects (high → low, matching the
+/* custom tuning: six per-string note selects (high → low, matching the
    board's top-to-bottom string order), shown only when the Custom tuning is picked.
    Each option is a MIDI pitch labelled note+octave; the board/highlight math is
    already tuning-driven, so changing one rebuilds customTuning and re-applies. */
@@ -191,7 +191,7 @@ if(typeof window!=='undefined'){
 
 const LS_KEY='guitarStudio.v1';
 let currentTab='harmony';
-// Phase 3a: the primary navigation axis (mode), orthogonal to currentTab. Reference
+// the primary navigation axis (mode), orthogonal to currentTab. Reference
 // nests Harmony/Scales/Circle; Practice is its own surface. Defaults to reference so
 // older saves (no `mode`) and the existing reference behaviour are untouched.
 let currentMode='reference';
@@ -207,9 +207,9 @@ function snapshotState(){ return {
   ntRoot, ntFilter,
   seq, seqLoopOn,
   bassOn, grooveOn,
-  calMs, calKnown,   // Phase 8/F1 latency + whether it was ever established (A4)
-  drillSeen,         // Phase 10/B2: tracks already run once — drives the first-run hint reveal
-  sessMins,          // Phase 10/B3: how long your practice session usually is
+  calMs, calKnown,   // round-trip latency + whether it was ever established
+  drillSeen,         // tracks already run once — drives the first-run hint reveal
+  sessMins,          // how long your practice session usually is
   learner   // spine #3: learner model (13-learner.js); saved verbatim, restored via normalizeLearner
 }; }
 /* Set by an import just before it reloads: the in-memory state is the OLD progress, and
@@ -221,7 +221,7 @@ function saveState(){ if(saveBlocked) return;
 function loadState(){ try{
   const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(!s) return false;
   if(s.lang==='uk'||s.lang==='en') lang=s.lang;
-  // mode axis (3a) — default reference. Phase 4's 'ear' mode folded into Practice,
+  // mode axis — default reference. The old 'ear' mode folded into Practice,
   // so an older save that pinned it lands on Practice rather than falling back to
   // Reference: the ear drills are still right there, one group down.
   if(s.mode==='practice'||s.mode==='ear') currentMode='practice';
@@ -298,7 +298,7 @@ function loadState(){ try{
   }
 }catch(e){ devWarn('saved state could not be restored; using defaults', e); return false; } return true; }
 
-/* ---- shareable deep links (Phase 9 distribution) ----
+/* ---- shareable deep links ----
    Encode the musical context (the things a "look at this" link should carry) into
    the URL hash, so a backend-less single-file build is still addressable: open the
    link and the app lands on that key / scale / chord view. Applied once on load via

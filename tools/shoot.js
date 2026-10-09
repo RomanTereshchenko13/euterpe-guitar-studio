@@ -194,7 +194,7 @@ for (const { w, h } of specs) {
 
     const out = path.join(outDir, `w${tag}.png`);
     execFileSync(browser, [
-      '--headless=new', '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=2',
+      '--headless=new', '--disable-gpu', '--disable-extensions', '--disable-sync', '--hide-scrollbars', '--force-device-scale-factor=2',
       '--virtual-time-budget=3000',
       `--screenshot=${out}`, `--window-size=${w},${h}`, fileUrl(wrapper),
     ], { stdio: 'ignore' });

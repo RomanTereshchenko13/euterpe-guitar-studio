@@ -1,4 +1,4 @@
-/* ===================== Drill: Strumming & feel (Phase 5b + 5d, merged) =====================
+/* ===================== Drill: Strumming & feel =====================
    A coach LAB, not a quiz: a one-bar pattern of down/up strums on an 8th-note grid, looped
    over the current context chord (spine #1) and highlighted slot-by-slot in time — so you SEE
    and HEAR it and strum along. On top of the pattern sit the things that make a groove FEEL
@@ -12,7 +12,7 @@
    the combinations that were previously unreachable (a swung folk pattern, a palm-muted
    "common one", any pattern over the band) just work.
 
-   Two tiers (Phase 8/F1): a coach that shows and plays the pattern, and — with the mic on —
+   Two tiers: a coach that shows and plays the pattern, and — with the mic on —
    a SCORED run through the shared 13-scored.js layer, where the expected slots are the
    pattern's own strums (with swing applied, because that's where the drill actually put
    them). Scoring MUTES the guide strum: the app's guitar lands on exactly the slots being
@@ -51,7 +51,7 @@ let spClick = false;    // optional beat-reference click
 let spDrill = null;
 // spDrill = { patIdx, slot, bars, clock, playing }
 
-/* Phase 8/F1 scored tier (13-scored.js). The tolerance is half an 8th — the pattern's
+/* Scored tier (13-scored.js). The tolerance is half an 8th — the pattern's
    own resolution — so a hit means "that strum", not the one next door. */
 const spScore = scoredRun({
   micId:'drill-ctx-mic', statusId:'sp-status', scoreId:'sp-score', countKey:'on_played',
@@ -73,29 +73,29 @@ function exitStrum(){
   spDrill=null;
   const home=document.getElementById('practice-home'), area=document.getElementById('sp-area');
   if(area) area.hidden=true; if(home) home.hidden=false;
-  if(typeof renderPractice==='function') renderPractice();
+  renderPractice();
 }
 function spToggle(){ if(spDrill && spDrill.playing) spStop(); else spPlay(); }
 function spPlay(){
   if(!spDrill || spDrill.playing) return;
   audio();
-  if(typeof stopLoop==='function') stopLoop();   // don't fight the reference loop / progression
-  if(typeof seqStop==='function') seqStop();
+  stopLoop();   // don't fight the reference loop / progression
+  seqStop();
   drillRunStarted();                             // B2: fold the setup
   spDrill.patIdx=spIdx; spDrill.slot=-1; spDrill.bars=0; spDrill.playing=true;
   spScore.begin();                               // before the clock: a tick must not
   spDrill.clock={ interval:()=>beat()/2, tick:(time,count)=>spTick(time,count) };
-  if(typeof addClock==='function') addClock(spDrill.clock);   // ...land in a run we then reset
+  addClock(spDrill.clock);   // ...land in a run we then reset
   renderStrum();
 }
 function spStop(){
   if(!spDrill || !spDrill.playing) return;
-  if(spDrill.clock){ if(typeof removeClock==='function') removeClock(spDrill.clock); spDrill.clock=null; }
-  if(typeof clearVisualQ==='function') clearVisualQ();
+  if(spDrill.clock){ removeClock(spDrill.clock); spDrill.clock=null; }
+  clearVisualQ();
   spDrill.playing=false; spDrill.slot=-1;
   const sc=spScore.end();
   // bars played stays the session score; the scored tier's timing error rides along (B1)
-  if(spDrill.bars>=1){ recordSession('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars, undefined, scoredErr(sc)); saveState(); if(typeof renderPractice==='function') renderPractice(); }
+  if(spDrill.bars>=1){ recordSession('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars, undefined, scoredErr(sc)); saveState(); renderPractice(); }
   renderStrum();
 }
 /* a strum that can be palm-muted (short, chunky) or open (ringing) — pluckAt lets us set
@@ -139,7 +139,7 @@ function spTick(time, count){
     if(slot===4) bassNote(time, 36+gRoot+fifthInterval(chQual), b*1.7, 0.8);
   }
   if(spClick && beatPos) metroClick(time, slot===0);              // beat-reference click
-  if(typeof enqueueVisual==='function') enqueueVisual(time, ()=>spHighlightSlot(slot));
+  enqueueVisual(time, ()=>spHighlightSlot(slot));
 }
 
 /* ---- DOM paint ---- */
@@ -150,7 +150,7 @@ function renderStrum(){
   const sw=document.getElementById('sp-swings');
   if(sw) sw.innerHTML=SP_SWINGS.map((s,i)=>`<button type="button" class="btn sp-swing${i===spSwing?' active':''}" data-i="${i}" aria-pressed="${i===spSwing}">${spName(s)}</button>`).join('');
   const nm=document.getElementById('sp-name'); if(nm) nm.textContent=spName(STRUM_PATTERNS[spIdx]);
-  const ch=document.getElementById('sp-chord'); if(ch) ch.textContent=t('sp_chord')+' · '+gRootLbl+QUALITIES[chQual].short;
+  const ch=document.getElementById('sp-chord'); if(ch) ch.textContent=t('sp_chord')+' · '+noteTxt(gRootLbl)+QUALITIES[chQual].short;
   renderStrumGrid();
   const toggle=(id,on,label)=>{ const el=document.getElementById(id); if(!el) return;
     el.textContent=t(label); el.classList.toggle('active', on); el.setAttribute('aria-pressed', on?'true':'false'); };

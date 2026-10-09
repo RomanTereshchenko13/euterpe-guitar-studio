@@ -1,4 +1,4 @@
-/* ===================== Drill: Ear training (Phase 4) =====================
+/* ===================== Drill: Ear training =====================
    The EAR pillar: recognition by sound. Three multiple-choice drills sharing one
    engine — hear a prompt on the audio buses, pick the answer, get cue feedback,
    scored on accuracy and recorded to the learner model (13-learner.js):
@@ -10,7 +10,7 @@
    Honest framing (roadmap): these are RECOGNITION drills — a multiple-choice
    answer, never a timing window — so they are legitimately scored on accuracy
    without breaking the "never score tap timing" rule (the rhythm is *identified*,
-   not tapped back; a real play-it-back tier waits on Phase 8 onset detection).
+   not tapped back).
    Each prompt writes one learner item (interval:P5 / chordq:m7 / rhythm:r3), so
    Ear feeds the SAME spaced-repetition model as the fretboard drills (spine #3):
    due items resurface first, the session score lands in the ring buffer, and the
@@ -172,12 +172,12 @@ function finishEar(){
 function earAnswerLabel(){
   if(!ear || !ear.cur) return '';
   if(ear.type==='interval') return earIvName(ear.cur.iv);
-  if(ear.type==='chordq')   return ROOTS[ear.cur.root]+' '+qName(QUALITIES[ear.cur.qi]);
+  if(ear.type==='chordq')   return noteTxt(ROOTS[ear.cur.root])+' '+qName(QUALITIES[ear.cur.qi]);
   return '';
 }
 
 /* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
-/* The shared progress readout moved to 13-learner.js in Phase 10/B4: it had lived here
+/* The shared progress readout lives in 13-learner.js: it had lived here
    since the Ear home was its own duplicate mode, and by B4 it reads eight things off the
    learner model and nothing at all off `ear`. renderProgressInto() is still the entry
    point; only its address changed. */

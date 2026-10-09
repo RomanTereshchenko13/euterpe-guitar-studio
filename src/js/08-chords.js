@@ -75,7 +75,7 @@ let gRoot=9, gRootLbl='A', gMode='names';
 let chQual=1;
 let chVoicing=0;   // index of the selected voicing card (open / E-barre / A-barre / computed)
 let chShapesExpanded=false;   // collapsed by default: show the first few shapes, expand for the rest
-let arpPos=0;      // Arpeggio view (Phase 2): isolated practice box (0 = whole neck, 1..5)
+let arpPos=0;      // Arpeggio view: isolated practice box (0 = whole neck, 1..5)
 let idSel=[];      // Identify sub-view (1c): MIDIs the user has tapped on the board (transient scratch)
 function chDegClass(iv){ if(iv===0)return'd-root'; if(iv===3||iv===4)return'd-third'; if([6,7,8].includes(iv))return'd-fifth'; return'd-sev'; }
 
@@ -95,7 +95,7 @@ function identifyChord(pcs, bassPc){
       if(cpcs.join(',')===key){
         const slash = (bassPc!=null && bassPc!==root);
         out.push({ root, short:q.short, q, slash,
-                   name: ROOTS[root]+q.short + (slash?'/'+ROOTS[bassPc]:'') });
+                   name: noteTxt(ROOTS[root])+q.short + (slash?'/'+noteTxt(ROOTS[bassPc]):'') });
       }
     });
   }
@@ -126,9 +126,9 @@ function nearChords(pcs, bassPc){
       if(cpcs.length-missing.length<2) return;         // too little overlap to call it "close"
       const slash=(bassPc!=null && bassPc in cmap && bassPc!==root);
       out.push({ root, q, short:q.short, slash, diff,
-                 name: ROOTS[root]+q.short + (slash?'/'+ROOTS[bassPc]:''),
+                 name: noteTxt(ROOTS[root])+q.short + (slash?'/'+noteTxt(ROOTS[bassPc]):''),
                  missing: missing.map(pc=>cmap[pc]),
-                 extra:   extra.map(pc=>NOTES[pc]) });
+                 extra:   extra.map(pc=>noteTxt(NOTES[pc])) });
     });
   }
   out.sort((a,b)=> a.diff-b.diff || a.missing.length-b.missing.length || a.short.length-b.short.length);
@@ -192,7 +192,7 @@ function renderChords(){
   // panel content (always current so a tab switch shows the latest)
   const notes=q.iv.map((iv,i)=>spellNote(gRootLbl,(gRoot+iv)%12,q.deg[i])).join(' – ');
   const degs=q.lab.join('  ');
-  document.getElementById('ch-info').innerHTML=`<div class="big">${gRootLbl}${q.short} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
+  document.getElementById('ch-info').innerHTML=`<div class="big">${noteTxt(gRootLbl)}${q.short} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
   renderChordDiagram();
   // shared board: only when chord tones is the active mode
   if(isBoardMode('chords')){
@@ -205,7 +205,7 @@ function renderChords(){
   renderSuggester();
 }
 
-/* ---- Arpeggios (Phase 2) ----
+/* ---- Arpeggios ----
    The chord ↔ scale bridge: the same chord tones as the chord-tones view, but
    framed as an arpeggio you run melodically up the neck (Listen plays it
    ascending) and can isolate to one practice box. Shares the chord quality
@@ -223,7 +223,7 @@ function renderArp(){
   const notes=q.iv.map((iv,i)=>spellNote(gRootLbl,(gRoot+iv)%12,q.deg[i])).join(' – ');
   const degs=q.lab.join('  ');
   const info=document.getElementById('arp-info');
-  if(info) info.innerHTML=`<div class="big">${gRootLbl}${q.short} ${t('arp_word')} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
+  if(info) info.innerHTML=`<div class="big">${noteTxt(gRootLbl)}${q.short} ${t('arp_word')} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
   if(isBoardMode('arp')){
     const map={}; q.iv.forEach((iv,i)=>{ map[(gRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
     const win=boxWindow(arpPos);
@@ -256,7 +256,7 @@ function renderIdentify(){
     const selSet=new Set(idSel);
     paintBoard((pc,si,f)=>{
       const midi=OPEN_MIDI[si]+f, sharp=NOTES[pc].includes('#');
-      return makeDot(selSet.has(midi)?'d-root':(sharp?'d-sharp':'d-natural'), NOTES[pc], midi);
+      return makeDot(selSet.has(midi)?'d-root':(sharp?'d-sharp':'d-natural'), noteTxt(NOTES[pc]), midi);
     }, notesLegendHTML(), t('id_p'));
   }
 }
@@ -274,7 +274,7 @@ function renderSuggester(){
   const chips = scalesOverChord(ch.rootPc, ch.pcs)
     .map(i=>`<button class="btn dia" data-scale="${i}">${sName(SCALES[i])}</button>`).join('') || `<span class="muted">—</span>`;
   body.innerHTML =
-    `<div class="sug-chord">${ch.rootLbl}${ch.short}</div>`+
+    `<div class="sug-chord">${noteTxt(ch.rootLbl)}${ch.short}</div>`+
     `<div class="sug-row"><span class="ctrl-label">${t('suggest_arp')}</span> ${arp}</div>`+
     `<div class="sug-row"><span class="ctrl-label">${t('suggest_scales')}</span></div>`+
     `<div class="group sug-scales">${chips}</div>`;
@@ -457,7 +457,7 @@ function renderChordDiagram(){
   const q=QUALITIES[chQual], short=q.short;
   const funcMap={}; q.iv.forEach((iv,i)=>{ funcMap[mod(gRoot+iv,12)]=labClass(q.lab[i]); });
   const list=chordVoicings(gRoot, short, q.iv);
-  if(!list.length){ cont.innerHTML=`<div class="chordbox"><div class="cb-name">${gRootLbl}${short}</div><div class="cb-cap">${t('cd_na')}</div></div>`; return; }
+  if(!list.length){ cont.innerHTML=`<div class="chordbox"><div class="cb-name">${noteTxt(gRootLbl)}${short}</div><div class="cb-cap">${t('cd_na')}</div></div>`; return; }
   if(chVoicing>list.length-1) chVoicing=0;             // clamp after a quality change
   // Collapsed by default to a handful of shapes (the long up-the-neck tail reads as
   // overwhelming on a phone); the "More shapes" toggle below reveals the rest.
@@ -468,7 +468,7 @@ function renderChordDiagram(){
   cont.innerHTML = list.map((v,i)=>{
     const hide = collapsed && i>=CHORD_SHAPES_COLLAPSED;
     return `<button type="button" class="chordbox${i===chVoicing?' sel':''}" data-v="${i}" aria-pressed="${i===chVoicing}"${hide?' hidden':''}>`+
-      `<div class="cb-name">${gRootLbl}${short}</div>${chordBoxSVG(v, funcMap)}`+
+      `<div class="cb-name">${noteTxt(gRootLbl)}${short}</div>${chordBoxSVG(v, funcMap)}`+
       `<div class="cb-cap">${voicingCaption(v)}</div></button>`;
   }).join('');
   const more=document.getElementById('cd-more');

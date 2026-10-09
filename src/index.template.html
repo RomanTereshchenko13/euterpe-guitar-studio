@@ -50,7 +50,7 @@
            Share → Add to Home Screen instead). -->
       <button class="install-btn" id="pwa-install" data-i18n="pwa_install" hidden>Встановити</button>
     </div>
-    <!-- ONE navigation surface (Phase 10/A2). This was two strips stacked on top of
+    <!-- ONE navigation surface. This was two strips stacked on top of
          each other — a mode pill row (Reference · Practice) above a tab underline row
          (Harmony · Scales · Circle) — plus a third, the view switch, down in the
          context bar. Three visual languages in three places, all answering "what am I
@@ -98,7 +98,7 @@
     <!-- Settings. These were eleven controls in one flat wrap-flow — the "console" the
          transport bar's disclosure toggles exist to avoid, just moved one tap down — so
          they read as labelled clusters instead.
-         Phase 10/A4 re-sorted those clusters by WHAT YOU DO WITH THEM, which is the
+         The clusters are sorted by WHAT YOU DO WITH THEM, which is the
          question a visitor actually has, rather than by what they happen to act on:
            Інструмент  — the guitar you're holding and the music you're counting; you
                          change these mid-session and keep going.
@@ -121,7 +121,7 @@
             <span class="tb-label" data-i18n="tb_tuning">Стрій</span>
             <select id="tb-tuning"></select>
           </div>
-          <!-- Custom tuning (Phase 2): six per-string note selects, shown only when the
+          <!-- Custom tuning: six per-string note selects, shown only when the
                Custom tuning preset is picked (applyCustomTuningVis). Built by
                buildCustomTuning() from the live customTuning. -->
           <div class="tb-group tb-custom" id="tb-custom" hidden>
@@ -136,7 +136,7 @@
             <span class="tb-label" data-i18n="tb_frets">Лади</span>
             <select id="tb-frets"></select>
           </div>
-          <!-- Meter / time signature (Phase 7b): the metronome accent, backing groove and
+          <!-- Meter / time signature: the metronome accent, backing groove and
                progression bar length all follow it; 4/4 is the default. -->
           <div class="tb-group">
             <span class="tb-label" data-i18n="tb_meter">Розмір</span>
@@ -144,7 +144,7 @@
           </div>
         </div>
       </div>
-      <!-- TOOLS (Phase 10/A4). Reachable from Practice as well as Reference — nothing
+      <!-- TOOLS. Reachable from Practice as well as Reference — nothing
            in this cluster acts on the reference board, and two of the three are what
            makes a scored drill honest. -->
       <div class="tb-cluster" id="tb-tools">
@@ -153,7 +153,7 @@
           <!-- Reference-tone tuner (no mic): one button per open string of the current
                tuning; tap to hold a sustained pitch and tune a real guitar against it.
                Buttons are built from the live tuning by buildTuner().
-               Beside it, the Phase 8/F0 chromatic MIC tuner — a different tool, not a
+               Beside it, the chromatic MIC tuner — a different tool, not a
                replacement: this one plays a pitch at you, that one listens. 14-mic-tuner.js
                REMOVES the mic button when there's no secure context (file:// / jsdom),
                so it never sits there as a control that can only report an error. -->
@@ -162,7 +162,7 @@
             <span class="tuner-strings" id="tb-tuner-strings"></span>
             <button class="btn tuner-mic" id="tb-mic" data-i18n="mic_open">🎤 Мікрофон</button>
           </div>
-          <!-- Latency calibration (Phase 8/F1). Measures the audio round trip by
+          <!-- Latency calibration. Measures the audio round trip by
                playing a click and hearing it back through the mic, so timing scores
                measure the player and not the buffer size. 14-calibration.js removes
                the whole row where there is no mic path — nothing else consumes the
@@ -179,7 +179,7 @@
       <div class="tb-cluster">
         <span class="tbc-label" data-i18n="tbc_prefs">Налаштування застосунку</span>
         <div class="tbc-items">
-          <!-- Master volume (Phase 10/A1). It used to live inside the Backing panel,
+          <!-- Master volume. It used to live inside the Backing panel,
                which made an app-level output control read as a property of the backing
                band — and put it out of reach in Practice, where the whole Backing panel
                is a Reference tool. It scales everything the app makes, so it belongs
@@ -190,13 +190,13 @@
             <span class="bpm-val" id="tb-vol-val">100%</span>
           </div>
           <button class="btn" id="tb-lefty" aria-pressed="false" data-i18n="tb_lefty">Ліворукий</button>
-          <!-- Accessibility (Phase 9 feel pass): the function colours carry meaning by
+          <!-- Accessibility: the function colours carry meaning by
                hue alone, so offer a colour-blind-safe palette + distinct per-function
                dot shapes. Both are body-class toggles (applyA11y) and persisted — set
                once and forgotten, which is why they sit here and not in the hot path. -->
           <button class="btn" id="tb-cbpalette" aria-pressed="false" data-i18n="a11y_palette">Палітра для дальтоніків</button>
           <button class="btn" id="tb-shapes" aria-pressed="false" data-i18n="a11y_shapes">Форми на нотах</button>
-          <!-- Share (Phase 9 distribution): copy a deep link encoding the current
+          <!-- Share: copy a deep link encoding the current
                key / scale / chord view (encodeShareState → URL hash). -->
           <button class="btn" id="tb-share" data-i18n="share_btn">Поділитися</button>
         </div>
@@ -231,10 +231,10 @@
 <div class="layout">
 
   <!-- shared control header (1e): Root · Display on one bar. The per-tab view switch
-       was folded up out of each panel (and in Phase 10/A2 down onto the board itself,
+       was folded up out of each panel (and then down onto the board itself,
        as a lens) so Harmony / Scales carry no separate ВИД row — fewer control layers
        before the board.
-       A direct child of .layout, NOT of .main, since Phase 10/A3: it is the one band
+       A direct child of .layout, NOT of .main: it is the one band
        that has to stay ABOVE the neck (it answers "in what key", which the neck is an
        answer to), while everything else in .main — the view's own controls and its
        info readout — moved BELOW it. Being its own grid item is what lets the area
@@ -253,14 +253,14 @@
      the active mode. Hidden on the Circle tab. A direct child of .layout (not
      .main) so the grid can slot the suggester between it and the chord reference
      on a phone (1e).
-     BOARD-FIRST (Phase 10/A3): it sits here, BEFORE .main, in the source too — not
+     BOARD-FIRST: it sits here, BEFORE .main, in the source too — not
      only in the area maps. The grid alone would have put the neck above controls that
      still came first in the DOM, so a keyboard or screen-reader user would meet the
      chord picker before the neck it changes and the lens after it. Source order is the
      focus order; moving the markup is what keeps the two telling the same story. -->
-<!-- The view switch, as a LENS ON THE BOARD (Phase 10/A2). It used to be a third
+<!-- The view switch, as a LENS ON THE BOARD. It used to be a third
      navigation strip up in the header's context bar, which is where you look to
-     answer "where am I", not "how am I reading this neck". Phase 1b already made it
+     answer "where am I", not "how am I reading this neck". The shared board already made it
      a lens underneath — one board with four renderers — and the UI never followed.
      It now sits on the board it changes, inside #board-region so it moves, hides and
      sticks with the neck instead of being managed separately (applyBoardRegion). -->
@@ -408,7 +408,7 @@
     </div>
   </section>
 
-  <!-- Practice mode panel (Phase 3a stub). The mode axis lands here first with an
+  <!-- Practice mode panel. The mode axis lands here first with an
        empty destination; the fretboard note-naming drill + session scoring + learner
        model (spine #3) arrive in 3b/3c. NOT a .panel — those are the reference
        sub-tabs — so it never collides with the .panel.active rule; shown only under
@@ -420,7 +420,7 @@
     <!-- Practice home: the drill picker + the progress readout. Swapped out for the
          active drill (#drill-area) while a session runs. -->
     <div id="practice-home">
-      <!-- INVERTED (Phase 10/B4). A3 had already pulled the progress card out of the
+      <!-- INVERTED. A3 had already pulled the progress card out of the
            bottom of a 1700px column and set it BESIDE the lists; B4 finishes the move
            and puts it, and the session starter, ON TOP — because "what should I do now?"
            is the question this screen exists to answer and the ten cards are the answer
@@ -446,7 +446,7 @@
       <div class="session-report" id="session-report" hidden></div>
       <div class="ph-drills">
       <p class="practice-soon" data-i18n="practice_intro">Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.</p>
-      <!-- Drills grouped by pillar (Phase 5 adds the Rhythm group): Fretboard
+      <!-- Drills grouped by pillar: Fretboard
            knowledge vs playing THE changes. -->
       <div class="practice-section">
         <div class="ps-label" data-i18n="practice_grp_fretboard">Гриф</div>
@@ -457,12 +457,12 @@
           </button></li>
         </ul>
       </div>
-      <!-- Foundations (Phase 7): subdivision & timing — serves both pillars. -->
+      <!-- Foundations: subdivision & timing — serves both pillars. -->
       <div class="practice-section">
-        <div class="ps-label" data-i18n="practice_grp_timing">Тайминг</div>
+        <div class="ps-label" data-i18n="practice_grp_timing">Таймінг</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-timing" data-track="timing">
-            <span class="dc-name" data-i18n="drill_timing">Поділ і тайминг</span><span class="dc-badge"></span>
+            <span class="dc-name" data-i18n="drill_timing">Поділ і таймінг</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_timing_meta">Вісімки · тріолі · шістнадцятки · коуч</span>
           </button></li>
         </ul>
@@ -486,7 +486,7 @@
           </button></li>
         </ul>
       </div>
-      <!-- Lead pillar (Phase 6): playing OVER the changes. -->
+      <!-- Lead pillar: playing OVER the changes. -->
       <div class="practice-section">
         <div class="ps-label" data-i18n="practice_grp_lead">Соло</div>
         <ul class="practice-list">
@@ -500,7 +500,7 @@
           </button></li>
         </ul>
       </div>
-      <!-- Ear pillar (Phase 4): recognition by sound. Was its own top-level mode with a
+      <!-- Ear pillar: recognition by sound. Was its own top-level mode with a
            duplicate home — the same drill-card list, the same progress card rendering the
            same learner model, its own Quit. It's a pillar like the others, so it lives
            here and rides the shared shell. -->
@@ -524,7 +524,7 @@
       </div>
     </div>
 
-    <!-- THE DRILL HEADER (Phase 10/B2). Was "#drill-ctx", a key picker with an Exit
+    <!-- THE DRILL HEADER. Was "#drill-ctx", a key picker with an Exit
          button standing in for a header: nine drills all rendered under the same
          <h2>Практика</h2> and none of them ever said which drill it was. It is now the
          one header every drill wears — NAME · setup disclosure · ? · 🎤 · key · tempo ·
@@ -581,7 +581,7 @@
            it always began a line, which is a stray vertical rule, not a separator. -->
       <span class="ctrl-label" id="drill-ctx-keylbl" data-i18n="dr_key" hidden>Тональність</span>
       <div class="group root-row" id="drill-ctx-key" hidden></div>
-      <!-- Tempo, scoped (Phase 10/A1). FOUR drills run on the shared scheduler, and all
+      <!-- Tempo, scoped. FOUR drills run on the shared scheduler, and all
            four used to reach for the header slider — which the condensing header folds
            away exactly when a run starts. So the timing drill grew a private −/BPM/+ (two
            tempo controls on one screen, two visual languages) and the other three got
@@ -596,7 +596,7 @@
       </div>
     </div>
 
-    <!-- Chord-change fluency / "one-minute changes" (Phase 5a): a coach drill with a
+    <!-- Chord-change fluency / "one-minute changes": a coach drill with a
          setup → timed run → summary flow. Reuses the chord diagrams; counts taps, not
          audio (honest coach framing). Hidden until started. -->
     <div id="cm-area" hidden>
@@ -641,7 +641,7 @@
       <div class="drill-summary" id="cm-summary" hidden></div>
     </div>
 
-    <!-- Strumming & feel (Phase 5b + 5d, merged): a coach lab — pick a pattern, press
+    <!-- Strumming & feel: a coach lab — pick a pattern, press
          Play, and the down/up strums loop over the current chord, highlighting each
          8th-note slot in time; swing / backbeat / palm-mute / band shape how it feels.
          Was two cards (patterns + groove) driving one 8th-note clock. Coach tier. -->
@@ -674,7 +674,7 @@
       </div>
     </div>
 
-    <!-- Over the changes (Phase 5c + 6a/6b/6c, merged): a progression loops with a
+    <!-- Over the changes: a progression loops with a
          backing band, and you either COMP it (chord diagrams in NOW/NEXT, no neck) or
          play its CHORD TONES (chord names + a tappable neck whose lit dots are the
          current chord's tones, windowed by Position and narrowed by Target). The mode
@@ -714,7 +714,7 @@
       <div id="tg-board-wrap" hidden>
         <div class="scroll"><div class="board"><div class="fretboard" id="tg-board"></div></div><div class="fretnums" id="tg-nums"></div></div>
       </div>
-      <!-- Phase 8/F1 scored tier — comping mode only; the lead mode stays tap-scored
+      <!-- Scored tier — comping mode only; the lead mode stays tap-scored
            on accuracy until F2, and renderTarget() hides these there. -->
       <p class="scored-status" id="tg-status" role="status" hidden></p>
       <div class="scored-panel" id="tg-score" hidden></div>
@@ -723,7 +723,7 @@
       </div>
     </div>
 
-    <!-- Call & response (Phase 6c): the app plays a lick from the key's scale in one
+    <!-- Call & response: the app plays a lick from the key's scale in one
          box (LISTEN), then you echo it back on the neck (YOUR TURN). Turn-based, self-
          paced, scored on echo accuracy — its listen/answer structure is the play-vs-rest
          phrasing lesson. Its own board so the reference board stays put. Hidden until started. -->
@@ -746,14 +746,14 @@
       <div class="drill-summary" id="cr-summary" hidden></div>
     </div>
 
-    <!-- Subdivision & timing (Phase 7a): a smart visual metronome — pick a subdivision
+    <!-- Subdivision & timing: a smart visual metronome — pick a subdivision
          + tempo, an accented click + grid tick it out, and the context scale is walked
          note-by-note across the grid in one box so there's something to play. No score
-         (coach tier; mic-scored timing is Phase 8/F1). Its own display board. Hidden
+         (coach tier, or mic-scored). Its own display board. Hidden
          until started. -->
     <div id="sd-area" hidden>
       <!-- Tempo used to sit in these rows as a private −/BPM/+ copy. It moved to the
-           shared header in Phase 10/A1 — one home, and now the three other tempo-driven
+           shared header — one home, and now the three other tempo-driven
            drills reach it too. The mic toggle followed it there in B2. -->
       <div class="drill-setup" id="sd-setup">
         <div class="row"><span class="ctrl-label" data-i18n="sd_subdiv">Поділ</span><div class="group" id="sd-subs"></div></div>
@@ -789,7 +789,7 @@
       <div class="drill-summary" id="drill-summary" hidden></div>
     </div>
 
-    <!-- Active ear drill (Phase 4): a central prompt, a Replay button, the multiple-
+    <!-- Active ear drill: a central prompt, a Replay button, the multiple-
          choice answer grid (thumb-zone), a feedback line and a Next button. Hidden
          until started; swapped for #ear-summary at the end. Quit comes from the
          shared #drill-ctx strip like every other drill's. -->
@@ -839,7 +839,7 @@
     <div class="aside-head"><span id="suggest-title" data-i18n="suggest_title">Що грати над цим</span><button class="aside-toggle" id="aside-toggle">−</button></div>
     <div id="aside-body">
       <div id="suggest-body"></div>
-      <!-- "Jam over this" (Phase 10/B3) — the other seam. Playing along to the harmony
+      <!-- "Jam over this" — the other seam. Playing along to the harmony
            on screen took five steps (pick a key, pick a chord or progression, open
            Backing, enable bass and drums, hit Loop); the backing band is one of the best
            things the app does and it had no front door. It belongs HERE, beside the
@@ -885,14 +885,14 @@
   </div>
 </div>
 
-<!-- First-run welcome (Phase 9 onboarding; rebuilt in Phase 10/A4): a one-time,
+<!-- First-run welcome: a one-time,
      dismissible card shown only to brand-new visitors (no saved state). Reuses the
      changelog overlay/modal styling; dismissing it records welcomeSeen.
      It used to LIST two abstract nouns — "Reference" and "Practice" — and hand you a
      Got it button that dropped you on chord tones in A minor regardless of which one
      you'd read. It described the app instead of asking anything, so nothing a visitor
      knew about themselves could change where they landed. It now asks ONE question and
-     every answer is a real route. (Depth beyond this is Phase 9's, which B3/B4 give
+     every answer is a real route. (Depth beyond this is what B3/B4 give
      somewhere to route to.) The choices reuse the Practice home's .drill-card pattern
      on purpose: the first card a visitor taps looks like the cards they meet next.
      The list also outlived its own vocabulary — its first bullet still pointed at
@@ -914,7 +914,7 @@
         </button>
         <button type="button" class="drill-card" id="wc-go-practice">
           <span class="dc-name" data-i18n="wc_drill">Повправлятися</span>
-          <span class="dc-meta" data-i18n="wc_drill_d">Вправи з рахунком — гриф, тайминг, ритм, соло та слух.</span>
+          <span class="dc-meta" data-i18n="wc_drill_d">Вправи з рахунком — гриф, таймінг, ритм, соло та слух.</span>
         </button>
         <button type="button" class="drill-card" id="wc-go-tune">
           <span class="dc-name" data-i18n="wc_tune">Налаштувати гітару</span>
@@ -945,7 +945,7 @@
   </div>
 </div>
 
-<!-- Chromatic mic tuner (Phase 8 / F0). Reuses the changelog overlay chrome. The
+<!-- Chromatic mic tuner. Reuses the changelog overlay chrome. The
      needle is a single absolutely-positioned marker inside a ±50-cent track, moved
      by 17-mic-tuner.js; the gauge carries .in-tune / data-dir for the colour state,
      so hue is never the only signal (the number and the arrow say it too). -->

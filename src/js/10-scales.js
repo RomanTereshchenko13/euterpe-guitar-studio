@@ -40,7 +40,7 @@ function triadQi(iv){
 }
 const MODE_OFF={1:2,2:4,3:5,4:7,5:9,6:11};
 const BOX_OFFSETS=[0,3,5,7,10];
-/* CAGED (Phase 2): the app's five scale positions cycle through the five movable
+/* CAGED: the app's five scale positions cycle through the five movable
    chord shapes. With positions anchored at (root−4)+BOX_OFFSETS, position 1..5
    land on the E·D·C·A·G shapes going up the neck. This mapping is exact only for
    the MAJOR scale (Ionian), where the scale root IS the parent-major root; for
@@ -87,7 +87,7 @@ function renderScales(){
   // panel content (info + diatonic)
   const notes=s.iv.map(iv=>scName((gRoot+iv)%12)).join(' – ');
   const degs=s.iv.map(iv=>SDEG[iv]).join(' ');
-  let html=`<div class="big">${gRootLbl} ${sName(s)}: ${notes}</div><div class="sub">${t('degrees_word')}: ${degs}</div>`;
+  let html=`<div class="big">${noteTxt(gRootLbl)} ${sName(s)}: ${notes}</div><div class="sub">${t('degrees_word')}: ${degs}</div>`;
   if(MODE_OFF[scIdx]!==undefined){ const pr=noteName((gRoot-MODE_OFF[scIdx]+120)%12,flat); html+=`<div class="sub">${t('samenotes')} ${pr} ${t('major_word')} ${t('mode_tail')}</div>`; }
   if(isCAGEDScale() && scPos>0){ const letter=CAGED_BY_POS[scPos-1]; html+=`<div class="sub">CAGED · ${cagedShapeName(letter)} — ${t('caged_desc')}</div>`; }
   if(scOverlay){ html+=`<div class="sub" style="color:var(--third)">${t('overlay_msg')} <button class="btn dia sc-open-harmony" type="button">${t('b_open_harmony')} →</button></div>`; }

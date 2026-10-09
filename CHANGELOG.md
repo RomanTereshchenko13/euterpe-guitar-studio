@@ -212,7 +212,7 @@ _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
 ## v1.18.0 — 2026-06-16
 
-- Feel pass (Phase 1d): subtle, motion-respecting animation that makes sound and rhythm visible.
+- Feel pass: subtle, motion-respecting animation that makes sound and rhythm visible.
 - Beat pulse — while a loop or the backing band plays, the transport indicator now pumps on every beat (a stronger pulse on the downbeat), locked to the same precise clock as the sound, so you can see the tempo.
 - Pluck ripple — tapping a note on the fretboard sends a one-shot halo out from the dot, so a pluck reads as sound emanating.
 - Smoother board changes — when you change key, chord or scale the fretboard dots now fade in with a quick left-to-right sweep instead of snapping, so a re-draw reads as a transition.

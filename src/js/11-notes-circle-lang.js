@@ -8,7 +8,7 @@ function renderNotes(){
     const note=NOTES[pc], sharp=note.includes('#'), root=ntMatch(note);
     if(ntFilter==='nat' && sharp && !root) return null;
     let label=note; if(root && ENHARM[note] && FLAT.includes(ntRoot)) label=ENHARM[note];
-    return makeDot(root?'d-root':(sharp?'d-sharp':'d-natural'), label, OPEN_MIDI[si]+f);
+    return makeDot(root?'d-root':(sharp?'d-sharp':'d-natural'), noteTxt(label), OPEN_MIDI[si]+f);
   }, notesLegendHTML(), '');
 }
 
@@ -48,7 +48,7 @@ function buildDia(rootPc, sc, flat){
 function ctxCofMinor(){ return !isMajorFamily(scIdx); }
 function ctxCofSel(){ const minor=ctxCofMinor(); const i=COF.findIndex(c=>(minor?c.minPc:c.majPc)===gRoot); return i<0?0:i; }
 function pcToRootLabel(pc){ const i=ROOTS.findIndex(r=> (FLAT_ROOTS[r]!==undefined?FLAT_ROOTS[r]:NOTES.indexOf(r))===pc ); return ROOTS[i]; }
-function activateRoot(container, pc){ [...container.children].forEach(b=>{ const lbl=b.textContent; const p=FLAT_ROOTS[lbl]!==undefined?FLAT_ROOTS[lbl]:NOTES.indexOf(lbl); b.classList.toggle('active', p===pc); }); }
+function activateRoot(container, pc){ [...container.children].forEach(b=>{ b.classList.toggle('active', +b.dataset.pc===pc); }); }
 function cofXY(i,r){ const a=(-90+i*30)*Math.PI/180; return [180+r*Math.cos(a), 180+r*Math.sin(a)]; }
 function renderCircle(){
   const cofSel=ctxCofSel(), cofMinor=ctxCofMinor();
@@ -116,15 +116,15 @@ function applyLang(){
   buildSeqPresets(); renderSeq(); setSeqTransport();
   { const o=document.getElementById('cl-overlay'); if(o && !o.hidden) renderChangelog(); }
   renderChords(); renderArp(); renderTriads(); renderScales(); renderNotes(); renderCircle();
-  if(typeof renderPractice==='function') renderPractice();   // 3b: re-localize the progress chips
+  renderPractice();   // 3b: re-localize the progress chips
   refreshDrillsLang();   // re-localize whatever drill is in flight (13-drill-registry.js)
   // ...and the shared drill header with it (B2): the drill's NAME and the setup handle
   // are painted from i18n there, not from a data-i18n attribute the sweep above sees.
-  if(typeof applyDrillCtx==='function') applyDrillCtx();
+  applyDrillCtx();
   setHView(hView); setScView(scView); updateGlobalPlay();
-  if(typeof applyAudioAvailability==='function') applyAudioAvailability();
-  if(typeof micRefreshLang==='function') micRefreshLang();   // F0: re-localize a live tuner readout
-  if(typeof calRefreshLang==='function') calRefreshLang();   // F1: ...and the calibration row
+  applyAudioAvailability();
+  micRefreshLang();   // F0: re-localize a live tuner readout
+  calRefreshLang();   // F1: ...and the calibration row
   activateRoot(document.getElementById('g-roots'), gRoot);
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));

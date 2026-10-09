@@ -57,6 +57,11 @@ const html = fs.readFileSync(htmlPath, 'utf8');
      'meta tag does not match ' + ver);
   ok('top comment lists current version', ver && html.includes('Version: ' + ver),
      'header comment missing Version: ' + ver);
+  // build.js strips the template's HTML comments (notes for whoever edits src/);
+  // only the generated-file header survives
+  { const markup = html.replace(/<script>[\s\S]*?<\/script>/g, '').replace(/<style>[\s\S]*?<\/style>/g, '');
+    const n = (markup.match(/<!--/g) || []).length;
+    ok('bundle ships one HTML comment (the version header)', n === 1, n + ' found'); }
   // build.js re-serializes the sliced changelog as JSON ("v":"2.11.0"), while the
   // src/ form is hand-written JS (v:'2.11.0'); accept either so the invariant is
   // about the entry existing, not about how build.js happens to emit it.
@@ -676,10 +681,9 @@ if (T) {
     T.exitAllDrills();
     T.setMode('reference');
 
-    /* --- THE [hidden] TRAP, both ways. The disclosures are driven by body classes and
-       an author `display` rule, which outranks the UA [hidden]{display:none}; jsdom
-       reads the attribute, not the cascade, so every assertion above would pass on a
-       stylesheet that shows the setup permanently. Check the rules exist. --- */
+    /* --- The disclosures are hidden by author rules keyed on body classes, not by the
+       `hidden` attribute; jsdom doesn't apply the cascade, so every assertion above
+       would pass on a stylesheet that shows the setup permanently. Check the rules exist. --- */
     ok('B2: the setup is hidden by CSS when its body class is off',
        /body:not\(\.drill-setup-open\)\s*\.drill-setup\s*\{[^}]*display:\s*none/.test(html));
     ok('B2: the hint is hidden by CSS when its body class is off',
@@ -920,10 +924,14 @@ if (T) {
          metas.every(k => !/·\s*(coach|коуч)/i.test(T.I18N[lg][k])),
          metas.filter(k => /·\s*(coach|коуч)/i.test(T.I18N[lg][k])).join(','));
     });
-    /* The two hints that DO still name a tier now name a true one: the lead mode of
-       over-the-changes is genuinely tap-scored until F2, and it says so. */
+    /* The lead mode of over-the-changes is genuinely tap-scored, and it says so —
+       without promising a roadmap phase, which is dev-speak to a player. */
     ok('B4: the lead hint is honest about which half of the drill is scored',
-       /F2|next phase|наступна фаза/.test(T.I18N.en.tg_hint + T.I18N.uk.tg_hint));
+       /your taps/.test(T.I18N.en.tg_hint) && /натисканнями/.test(T.I18N.uk.tg_hint));
+    ['uk', 'en'].forEach(lg => {
+      const bad = Object.keys(T.I18N[lg]).filter(k => /next phase|наступна фаза|\bphase \d|фаза \d/i.test(T.I18N[lg][k]));
+      ok('step 1: no ' + lg + ' string talks about roadmap phases', bad.length === 0, bad.join(','));
+    });
     T.setMode('reference');
   })();
 
@@ -1701,13 +1709,11 @@ if (T) {
        fixed under PROGRESSION. The group labels do the separating. */
     ok('drill ctx: no stray vertical rules in the header',
        doc.querySelectorAll('#drill-ctx .divider').length === 0);
-    /* the .hidden property above is necessary but NOT sufficient: #drill-ctx-key is a
-       .group (display:flex), which outranks the UA [hidden]{display:none}, so without
-       an explicit rule the picker stays on screen in a real browser while jsdom
-       happily reports it hidden. Pin the rule itself. */
-    ok('drill ctx: CSS actually hides the key parts (display:flex outranks [hidden])',
-       /#drill-ctx-key\[hidden\][^{]*\{[^}]*display:\s*none/.test(html)
-       && /#drill-ctx-keylbl\[hidden\]/.test(html));
+    /* the .hidden property above is necessary but NOT sufficient: jsdom reads the
+       attribute, not the cascade, and #drill-ctx-key is a display:flex .group. What makes
+       it true in a browser is the one global [hidden] rule — pin that. */
+    ok('[hidden] always wins: one global !important rule',
+       /(^|[\s}])\[hidden\]\s*\{\s*display:\s*none\s*!important/m.test(html));
     T.exitEar();
     ok('drill ctx: returning to the home hides the key picker', !keyShown());
 
@@ -1776,10 +1782,6 @@ if (T) {
     ok('A1: an untimed drill (ear) hides the tempo stepper', !tempoShown());
     T.exitEar();
     ok('A1: returning to the practice home hides it too', !tempoShown());
-    // same [hidden] trap as the key half: .group is display:flex, which outranks the UA rule
-    ok('A1: CSS actually hides the tempo parts (display:flex outranks [hidden])',
-       /#drill-ctx-tempo\[hidden\][^{]*\{[^}]*display:\s*none/.test(html)
-       && /#drill-ctx-tlbl\[hidden\]/.test(html));
     // every drill that rides the shared scheduler must declare it, or it silently loses
     // the only tempo control it has left
     const timed = ['timing', 'strum', 'overchanges', 'changes'];
@@ -1795,11 +1797,6 @@ if (T) {
        && /body\.mode-practice\s+\.tb-bar\s+\.tb-tempo/.test(html)
        && /body\.mode-practice\s+#backing-panel/.test(html)
        && /body\.mode-practice\s+#backing-toggle/.test(html));
-    /* updateGlobalPlay() hides Listen where there is nothing to listen to, but an author
-       `display` rule beats the UA [hidden] whatever the specificity — so `.tb-bar > .btn`
-       silently defeated the button's own .hidden until this rule was added after it. */
-    ok('A1: [hidden] is re-asserted for the transport buttons',
-       /\.tb-bar\s*>\s*\.btn\[hidden\][^{]*\{[^}]*display:\s*none/.test(html));
 
     /* --- entering Practice stops what the reference transport owns --- */
     T.setMode('reference');
@@ -2015,12 +2012,7 @@ if (T) {
        at that specificity. jsdom resolves no cascade, so the rule is pinned in the CSS. */
     ok('B4: landscape Practice keeps one column, with no empty neck gutter',
        /body\.mode-practice \.layout:has\(#board-region:not\(\[hidden\]\)\) \{[^}]*grid-template-areas: "main"/.test(html));
-    /* ...and that display rule outranks the UA [hidden] rule, so the home needs an
-       explicit escape hatch or it stays on screen behind every running drill. jsdom
-       cannot see this — .hidden reads the attribute, not the cascade — so the rule is
-       pinned in the built CSS instead. The same trap the drill-ctx groups hit. */
-    ok('A3: ...and still disappears when a drill takes over',
-       /#practice-home\[hidden\] \{ display: none; \}/.test(html));
+    // ...and it still disappears when a drill takes over: the global [hidden] rule
     ok('A3: drill cards wrap into a grid instead of one card per row',
        /\.practice-list \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(auto-fill, minmax\(250px, 1fr\)\)/.test(html));
     /* The list began as the Phase-3a "coming soon" text stub; when real .drill-card
@@ -3106,6 +3098,41 @@ if (T) {
     ok('F1: calMs is written into saved state',
        (win.localStorage.getItem('guitarStudio.v1') || '').indexOf('"calMs":87') > 0);
     T.calSetMs(0);
+  })();
+
+  /* ---- Step 1: one spelling of accidentals on screen. Data labels stay ASCII ('Eb',
+     'C#' — saves, share links and session ids hold them); everything rendered goes
+     through noteTxt(). Walk the views in a flat key and a sharp key and scan the text
+     that is actually painted (scripts and the changelog excluded). ---- */
+  (function noteGlyphs() {
+    const doc = win.document;
+    const ascii = /(^|[^A-Za-z])[A-G](#|b(?![a-ln-z]))/;
+    const offenders = [];
+    const scan = (where) => {
+      const tw = doc.createTreeWalker(doc.body, win.NodeFilter.SHOW_TEXT);
+      for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+        const p = n.parentElement;
+        if (!p || p.closest('script,style,#cl-overlay')) continue;
+        const m = n.nodeValue.match(ascii);
+        if (m) offenders.push(where + ': ' + (p.id || p.className || p.tagName) + ' "' + n.nodeValue.trim().slice(0, 40) + '"');
+      }
+    };
+    ok('glyphs: noteTxt spells for display', T.noteTxt('Eb') === 'E♭' && T.noteTxt('C#') === 'C♯' && T.noteTxt('B') === 'B');
+    [[3, 'Eb'], [1, 'C#'], [10, 'Bb']].forEach(([pc, lbl]) => {
+      T.setKey(pc, lbl);
+      ok('glyphs: the key label itself stays ASCII in state (' + lbl + ')', T.state().gRootLbl === lbl);
+      ['harmony', 'scales', 'circle'].forEach(tab => {
+        T.selectTab(tab);
+        if (tab === 'harmony') ['chords', 'triads', 'arp'].forEach(v => { T.setHView(v); scan(lbl + '/' + v); });
+        else if (tab === 'scales') ['scale', 'notes'].forEach(v => { T.setScView(v); scan(lbl + '/' + v); });
+        else scan(lbl + '/circle');
+      });
+    });
+    ok('glyphs: no ASCII accidental is painted anywhere', offenders.length === 0, offenders.slice(0, 6).join(' | '));
+    const btn = doc.querySelector('#g-roots .btn[data-pc="3"]');
+    ok('glyphs: root buttons carry their pitch class, not a label to parse back',
+       !!btn && btn.textContent === 'E♭');
+    T.setKey(9, 'A'); T.setHView('chords'); T.setScView('scale'); T.selectTab('harmony');
   })();
 
   /* ---- Step 0: protect progress. Export is the saved snapshot in an envelope;

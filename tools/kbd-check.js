@@ -39,7 +39,7 @@ const probe = `
     key('1');
     key('1');
     key('g'); ok('key "g" -> root G', activeRoot()==='G');
-    key(']'); ok('"]" transpose up -> Ab', activeRoot()==='Ab');
+    key(']'); ok('"]" transpose up -> A♭', activeRoot()==='A♭');
     key('['); ok('"[" transpose down -> G', activeRoot()==='G');
     key('a'); ok('key "a" -> root A', activeRoot()==='A');
     key('c'); ok('key "c" -> root C', activeRoot()==='C');
@@ -65,7 +65,7 @@ const fileUrl = p => 'file:///' + p.replace(/\\/g, '/');
 let dom = '';
 try {
   dom = execFileSync(browser, [
-    '--headless=new', '--disable-gpu', '--virtual-time-budget=4000', '--dump-dom', fileUrl(appCopy),
+    '--headless=new', '--disable-gpu', '--disable-extensions', '--disable-sync', '--virtual-time-budget=4000', '--dump-dom', fileUrl(appCopy),
   ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 });
 } catch (e) { console.error('headless run failed:', e.message); process.exit(1); }
 fs.unlinkSync(appCopy);

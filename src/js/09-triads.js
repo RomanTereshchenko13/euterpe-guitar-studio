@@ -80,7 +80,7 @@ function renderTriadCards(){
   const invName=[t('inv_root'),t('inv_1st'),t('inv_2nd')];
   cont.innerHTML = pats.map(p=>{
     const notes=normalizeTriPat(p.notes);
-    return `<div class="chordbox tri"><div class="cb-name">${gRootLbl}${tri.short} · ${invName[p.inv]}</div>`+
+    return `<div class="chordbox tri"><div class="cb-name">${noteTxt(gRootLbl)}${tri.short} · ${invName[p.inv]}</div>`+
            `${triadCardSVG(notes, iv)}<div class="cb-cap">${t('strings_word')} ${set.label}</div></div>`;
   }).join('');
 }
@@ -102,7 +102,7 @@ function renderTriads(){
   const notes=iv.map(i=>spellNote(gRootLbl,mod(gRoot+i,12),DEG_OF[i])).join(' – ');
   const invDesc=[t('inv_all_desc'),t('inv_root_desc'),t('inv_1st_desc'),t('inv_2nd_desc')][trInv];
   document.getElementById('tr-info').innerHTML=
-    `<div class="big">${gRootLbl}${tri.short} · ${qName(tri)} · ${t('strings_word')} ${set.label}: ${notes}</div><div class="sub">${invDesc}</div>`;
+    `<div class="big">${noteTxt(gRootLbl)}${tri.short} · ${qName(tri)} · ${t('strings_word')} ${set.label}: ${notes}</div><div class="sub">${invDesc}</div>`;
   renderTriadCards();
   // shared board
   if(isBoardMode('triads')){

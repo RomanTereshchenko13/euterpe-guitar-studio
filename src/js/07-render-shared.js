@@ -202,7 +202,7 @@ function buildRootBtns(container, current, onPick){
   container.innerHTML='';
   ROOTS.forEach(r=>{
     const pc = FLAT_ROOTS[r]!==undefined ? FLAT_ROOTS[r] : NOTES.indexOf(r);
-    const b=document.createElement('button'); b.className='btn'+(pc===current?' active':''); b.textContent=r; b.setAttribute('aria-pressed', pc===current);
+    const b=document.createElement('button'); b.className='btn'+(pc===current?' active':''); b.textContent=noteTxt(r); b.dataset.pc=pc; b.setAttribute('aria-pressed', pc===current);
     b.onclick=()=>{ [...container.children].forEach(x=>{x.classList.remove('active');x.setAttribute('aria-pressed','false');}); b.classList.add('active'); b.setAttribute('aria-pressed','true'); onPick(pc,r); };
     container.appendChild(b);
   });

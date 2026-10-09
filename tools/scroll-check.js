@@ -170,7 +170,10 @@ function runSpec({ w, h }) {
       // --headless=new, not the bare --headless: Chromium REMOVED the old headless
       // mode in 132, and on a newer Edge/Chrome the legacy flag makes the browser
       // never produce diagnostic output, so this gate silently "failed" everywhere.
-      '--headless=new', '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=1',
+      // --disable-extensions: Edge installs the user's synced extensions even into a
+      // fresh profile, and one that opens a welcome tab backgrounds this page — whose
+      // timers are then throttled, so the real-time diagnostic never finishes.
+      '--headless=new', '--disable-gpu', '--disable-extensions', '--disable-sync', '--hide-scrollbars', '--force-device-scale-factor=1',
       '--enable-logging=stderr', '--v=1', '--no-first-run', '--no-default-browser-check',
       `--user-data-dir=${profile}`, fileUrl(wrapper),
     ]);

@@ -1,4 +1,4 @@
-/* ===================== Drill: Call & response (Phase 6c) =====================
+/* ===================== Drill: Call & response =====================
    The Lead pillar's phrasing tier — motif call-and-response. The app plays a short
    lick (the CALL) from the current key's scale inside one neck box; you echo it back
    (the RESPONSE) by tapping the pitches in order. The turn structure itself teaches
@@ -7,8 +7,8 @@
 
    Honest framing (roadmap): tap input, so it is scored on ACCURACY (did you echo the
    right pitches), never on timing — a re-tap of a wrong note just buzzes and you try
-   again; the elapsed pace is not the score. Real "play it back on your guitar and get
-   scored" waits on Phase 8/F2. Self-paced (no scheduler clock, no scoring window), so
+   again; the elapsed pace is not the score. Playing it back on the guitar, scored by
+   pitch, is PLAN step 9. Self-paced (no scheduler clock, no scoring window), so
    it needs no latency offset. A finished session records one accuracy score to the
    sessions ring buffer (13), minting no per-item SRS — like the other Lead/Rhythm
    coaches, the pinned item shape stays untouched.
@@ -19,7 +19,7 @@
    the cue bus (05) for right/wrong feedback. */
 
 const CR_ROUNDS = 4;         // motifs per session
-let crPos = 1;               // neck box (1–5, Phase 2 boxWindow); no "all" — a lick needs one shape
+let crPos = 1;               // neck box (1–5, boxWindow); no "all" — a lick needs one shape
 let cr = null;
 // cr = { phase:'call'|'response'|'done', pool:[{si,f,midi}], motif:[poolIdx…], respIdx,
 //        round, correct, total, wrongNote, timers:[], scaleName }
@@ -56,7 +56,7 @@ function exitCallResp(){
   cr=null;
   const home=document.getElementById('practice-home'), area=document.getElementById('cr-area');
   if(area) area.hidden=true; if(home) home.hidden=false;
-  if(typeof renderPractice==='function') renderPractice();
+  renderPractice();
 }
 function crClearTimers(){ if(cr){ cr.timers.forEach(clearTimeout); cr.timers=[]; } }
 
@@ -120,7 +120,7 @@ function crFinish(){
   const acc=cr.total ? cr.correct/cr.total : 0;
   recordSession('callresp:'+gRootLbl, Math.round(acc*100));
   saveState();
-  if(typeof renderPractice==='function') renderPractice();
+  renderPractice();
   crRenderSummary(acc);
 }
 

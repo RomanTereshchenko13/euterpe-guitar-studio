@@ -157,11 +157,50 @@ function stripCss(src) {
 }
 
 // Compiling the body validates syntax without running a line of it.
+/* HTML comments in the template are notes to whoever edits src/ (~24 KB of them),
+   so they go too — except the generated-file header, which carries `Version:`.
+   A scanner, not a regex: a comment is only recognised in text content, never
+   inside a tag (an attribute value may legally contain `<!--`) nor inside the
+   raw-text elements (<script>, <style>, <pre>, <textarea>). A comment that fills
+   its line(s) takes the line with it, so no blank gaps are left behind. */
+function stripHtmlComments(src, keep) {
+  let out = '', i = 0;
+  const raw = /^<(script|style|pre|textarea)\b/i;
+  while (i < src.length) {
+    if (src.startsWith('<!--', i)) {
+      const end = src.indexOf('-->', i + 4);
+      if (end < 0) { out += src.slice(i); break; }
+      const body = src.slice(i, end + 3);
+      if (keep && keep(body)) { out += body; i = end + 3; continue; }
+      const lineStart = out.lastIndexOf('\n') + 1;
+      const before = out.slice(lineStart);
+      const nl = src.slice(end + 3).match(/^[ \t]*\r?\n/);
+      if (/^[ \t]*$/.test(before) && nl) { out = out.slice(0, lineStart); i = end + 3 + nl[0].length; }
+      else i = end + 3;
+      continue;
+    }
+    if (src[i] === '<' && /[A-Za-z\/!]/.test(src[i + 1] || '')) {
+      const m = raw.exec(src.slice(i, i + 12));
+      // copy the whole tag, honouring quoted attribute values
+      let j = i + 1, q = null;
+      while (j < src.length && (q || src[j] !== '>')) { const c = src[j]; if (q) { if (c === q) q = null; } else if (c === '"' || c === "'") q = c; j++; }
+      if (m) {   // raw-text element: copy verbatim up to its close tag
+        const close = src.toLowerCase().indexOf('</' + m[1].toLowerCase(), j);
+        j = close < 0 ? src.length - 1 : close - 1;
+      }
+      out += src.slice(i, j + 1); i = j + 1; continue;
+    }
+    out += src[i++];
+  }
+  return out;
+}
+
 function parsesAsScript(code) {
   try { new Function(code); return true; } catch (e) { return false; }
 }
 
-const tpl = fs.readFileSync(path.join(root, 'src', 'index.template.html'), 'utf8');
+const tplSrc = fs.readFileSync(path.join(root, 'src', 'index.template.html'), 'utf8');
+const tpl = stripHtmlComments(tplSrc, c => c.includes('@@VERSION@@'));
 const css = fs.readFileSync(path.join(root, 'src', 'styles.css'), 'utf8');
 
 const jsDir = path.join(root, 'src', 'js');

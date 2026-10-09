@@ -1,4 +1,4 @@
-/* ===================== SHARED MIC INPUT (Phase 8) =====================
+/* ===================== SHARED MIC INPUT =====================
    One microphone, many consumers. F0's tuner acquired the mic itself; F1 adds a
    second consumer (onset detection) and the calibration round-trip is a third, so
    the acquisition, the permission prompt and the error vocabulary move here rather

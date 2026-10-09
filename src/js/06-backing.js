@@ -112,7 +112,7 @@ function compStrum(base, ivs, when, vel, spread){
 
 /* schedule one bar of the band (bass + groove) for a given chord at bar-start `when`.
    Called from loopStrum / seqStrumStep (no `force` → follows the user's bass/drums
-   toggles) and from the Phase 5c comping drill (`force` true → always lays the bed,
+   toggles) and from the comping drill (`force` true → always lays the bed,
    since comping NEEDS something to play over, without flipping the global toggles). */
 function scheduleBand(pc, qi, when, force){
   const b=beat(), p=pulseSec(), m=curMeter(), fifth=fifthInterval(qi), bassRoot=36+pc, bOn=force||bassOn, gOn=force||grooveOn;
@@ -201,7 +201,7 @@ function loopToggle(){
   const btn=document.getElementById('g-loop');
   if(loopClock){ removeClock(loopClock); loopClock=null; clearVisualQ(); stopLoopVisual();
     btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); setLoopLabel(); return; }
-  if(typeof seqStop==='function') seqStop();
+  seqStop();
   loopMode = (currentTab==='harmony' && hView==='triads') ? 'triad' : 'chord';
   audio();
   loopClock={ interval:()=>barSec(), tick:(time)=>loopStrum(time) };
@@ -212,7 +212,7 @@ function stopLoop(){ if(!loopClock) return; removeClock(loopClock); loopClock=nu
   const b=document.getElementById('g-loop'); if(b){ b.classList.remove('active'); b.setAttribute('aria-pressed','false'); } setLoopLabel(); }
 function setLoopLabel(){ const b=document.getElementById('g-loop'); if(!b) return; b.innerHTML=(loopClock?'&#9632; ':'&#8635; ')+t('b_loop'); b.setAttribute('aria-label', t(loopClock?'b_loop_stop_tip':'b_loop_tip')); b.title=t(loopClock?'b_loop_stop_tip':'b_loop_tip'); updateGlobalTransport(); }
 
-/* Stop everything the reference transport owns (Phase 10/A1).
+/* Stop everything the reference transport owns.
    Entering Practice used to leave the loop / progression / metronome running, on the
    theory that the transport bar "acts as a backing track, like it does across tabs".
    Across tabs that holds — the subject is the same. Across MODES it doesn't: a drill
@@ -241,18 +241,18 @@ function pulseTransport(strong){
   d.classList.add(strong?'bp-strong':'bp');
 }
 function enqueueBeats(when){ const p=pulseSec(), n=barBeats(), starts=meterGroupStarts(); for(let k=0;k<n;k++) enqueueVisual(when+k*p, ()=>pulseTransport(k===0 || starts.has(k))); }
-function loopChordLabel(){ return loopMode==='triad' ? gRootLbl+TRIADS[trQual].short : gRootLbl+QUALITIES[chQual].short; }
+function loopChordLabel(){ return noteTxt(gRootLbl)+(loopMode==='triad' ? TRIADS[trQual].short : QUALITIES[chQual].short); }
 function updateGlobalTransport(){
   const wrap=document.getElementById('tb-transport'); if(!wrap) return;
   const label=document.getElementById('tb-transport-label');
   const stop=document.getElementById('tb-stop');
   stop.innerHTML='&#9632; '+t('tb_stop'); stop.setAttribute('aria-label', t('tb_stop'));
-  if(seqClock){ label.textContent=t('tb_now_seq')+' · '+gRootLbl+QUALITIES[chQual].short; wrap.hidden=false; }
+  if(seqClock){ label.textContent=t('tb_now_seq')+' · '+noteTxt(gRootLbl)+QUALITIES[chQual].short; wrap.hidden=false; }
   else if(loopClock){ label.textContent=t('tb_now_loop')+' · '+loopChordLabel(); wrap.hidden=false; }
   else { wrap.hidden=true; }
   // B3's "Jam over this" is a play/stop toggle over the same two clocks, so it follows
   // the transport from here — including when something else (or a mode switch) stops it
-  if(typeof renderJamBtn==='function') renderJamBtn();
+  renderJamBtn();
   syncWakeLock();
 }
 
@@ -298,11 +298,11 @@ let seq=[], seqClock=null, seqLoopOn=true, seqBar=0, seqStepIdx=-1, seqBarMap=[]
 
 function syncChordButtons(){
   const rc=document.getElementById('g-roots');
-  if(rc){ [...rc.children].forEach(b=>{ const pc=FLAT_ROOTS[b.textContent]!==undefined?FLAT_ROOTS[b.textContent]:NOTES.indexOf(b.textContent); const on=pc===gRoot; b.classList.toggle('active',on); b.setAttribute('aria-pressed', on?'true':'false'); }); }
+  if(rc){ [...rc.children].forEach(b=>{ const on=+b.dataset.pc===gRoot; b.classList.toggle('active',on); b.setAttribute('aria-pressed', on?'true':'false'); }); }
   buildChQuals();
 }
 function setChord(pc,lbl,qi){ gRoot=pc; gRootLbl=lbl; chQual=qi; syncChordButtons(); renderChords(); }
-function seqChordName(st){ return st.lbl + QUALITIES[st.qi].short; }
+function seqChordName(st){ return noteTxt(st.lbl) + QUALITIES[st.qi].short; }
 function renderSeq(){
   const strip=document.getElementById('seq-strip'); if(!strip) return;
   if(!seq.length){ strip.innerHTML=`<span class="seq-empty">${t('seq_empty')}</span>`; return; }

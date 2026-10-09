@@ -1,11 +1,11 @@
-/* ===================== Drill: Subdivision & timing (Phase 7a) =====================
+/* ===================== Drill: Subdivision & timing =====================
    The Foundations coach that serves BOTH pillars — subdivision command. Pick a
    subdivision (quarters → 8ths → triplets → 16ths) + tempo; an accented click grid
    ticks it out (bar downbeat > beat > subdivision), a visual grid pulses each slot,
    and the current key's scale (SCALES[scIdx] rooted at gRoot, spine #1) is WALKED
    note-by-note across the grid in one Phase-2 box so there's something to play. A
    smart visual metronome. Two tiers: a screen-only coach, and — with the mic on —
-   a scored run via the shared 13-scored.js layer (Phase 8/F1). A practiced run
+   a scored run via the shared 13-scored.js layer. A practiced run
    (≥1 full bar) lands a session in the learner's ring buffer (13) so Practice
    progress reflects it, minting no per-item SRS.
 
@@ -24,16 +24,16 @@ const SUBDIVS = [
   { id:'sixteenth', div:4, en:'Sixteenths',    uk:'Шістнадцятки' },
 ];
 function sdSubName(s){ return lang==='en'?s.en:s.uk; }
-const SD_BEATS = 4;   // 4/4 for now — meters (3/4, 6/8…) land with Phase 7b (time signatures)
+const SD_BEATS = 4;   // the grid is always one 4/4 bar — it does not follow the time signature
 
 let sdSub = 1;        // index into SUBDIVS (default eighths — the workhorse subdivision)
-let sdPos = 1;        // neck box (1–5, Phase 2 boxWindow) the scale is walked inside
+let sdPos = 1;        // neck box (1–5, boxWindow) the scale is walked inside
 let sdNotes = true;   // walk a scale note per tick (off = pure metronome grid)
 let sd = null;
 let sdLit = null;     // the currently-lit board dot (so we can clear it next tick)
 // sd = { playing, clock, count, bars, div, path, pathIdx }
 
-/* Phase 8/F1 scored tier (13-scored.js). Every grid tick is a slot you're expected
+/* Scored tier (13-scored.js). Every grid tick is a slot you're expected
    to play, so the tolerance is half a subdivision — matching wider than that would
    start stealing the neighbouring slot's note. */
 const sdScore = scoredRun({
@@ -85,26 +85,26 @@ function exitTiming(){
   sd=null; sdLit=null;
   const home=document.getElementById('practice-home'), area=document.getElementById('sd-area');
   if(area) area.hidden=true; if(home) home.hidden=false;
-  if(typeof renderPractice==='function') renderPractice();
+  renderPractice();
 }
 function sdToggle(){ if(sd && sd.playing) sdStop(); else sdPlay(); }
 function sdPlay(){
   if(!sd || sd.playing) return;
   audio();
-  if(typeof stopLoop==='function') stopLoop();   // don't fight the reference loop / progression
-  if(typeof seqStop==='function') seqStop();
+  stopLoop();   // don't fight the reference loop / progression
+  seqStop();
   drillRunStarted();                             // B2: fold the setup — the run owns the screen
   sd.playing=true; sd.count=0; sd.bars=0; sd.pathIdx=0;
   sd.div=SUBDIVS[sdSub].div; sd.path=sdPath();
   sdScore.begin();                               // before the clock: a tick must not
   sd.clock={ interval:()=>beat()/sd.div, tick:(time,count)=>sdTick(time,count) };
-  if(typeof addClock==='function') addClock(sd.clock);       // ...land in a run we then reset
+  addClock(sd.clock);       // ...land in a run we then reset
   renderTiming();
 }
 function sdStop(){
   if(!sd || !sd.playing) return;
-  if(sd.clock){ if(typeof removeClock==='function') removeClock(sd.clock); sd.clock=null; }
-  if(typeof clearVisualQ==='function') clearVisualQ();
+  if(sd.clock){ removeClock(sd.clock); sd.clock=null; }
+  clearVisualQ();
   sd.playing=false;
   if(sdLit){ sdLit.classList.remove('on'); sdLit=null; }
   document.querySelectorAll('#sd-grid .sd-cell.on').forEach(c=>c.classList.remove('on'));
@@ -113,11 +113,11 @@ function sdStop(){
     // The session value stays "bars played" so pre-F1 history keeps the same shape
     // and the progress card doesn't have to know two kinds of timing session. The
     // score is a richer read-out of the run, not a different record — so as of
-    // Phase 10/B1 it rides ALONGSIDE as `err` instead of being shown once and
+    // it rides ALONGSIDE as `err` instead of being shown once and
     // discarded, which is what "the timing trend in milliseconds" needs to exist.
     recordSession('timing:'+SUBDIVS[sdSub].id, sd.bars, undefined, scoredErr(sc));
     saveState();
-    if(typeof renderPractice==='function') renderPractice();
+    renderPractice();
   }
   renderTiming();
 }
@@ -125,11 +125,11 @@ function sdStop(){
    the accumulated bar count, so tweaking mid-run doesn't reset your session. */
 function sdRestart(){
   if(!sd || !sd.playing) return;
-  if(sd.clock && typeof removeClock==='function') removeClock(sd.clock);
-  if(typeof clearVisualQ==='function') clearVisualQ();
+  if(sd.clock) removeClock(sd.clock);
+  clearVisualQ();
   sd.div=SUBDIVS[sdSub].div; sd.path=sdPath(); sd.pathIdx=0;
   sd.clock={ interval:()=>beat()/sd.div, tick:(time,count)=>sdTick(time,count) };
-  if(typeof addClock==='function') addClock(sd.clock);
+  addClock(sd.clock);
 }
 function sdTick(when, count){
   if(!sd) return;
@@ -153,7 +153,7 @@ function renderTiming(){
   if(!sd) return;
   segButtons('sd-subs', SUBDIVS.map(s=>({label:sdSubName(s)})), sdSub, i=>{ sdSub=i; renderSdGrid(); sdRestart(); renderTiming(); });
   segButtons('sd-pos', ['1','2','3','4','5'].map(label=>({label})), sdPos-1, i=>{ sdPos=i+1; sdPaintScale(); sdRestart(); });
-  const tt=document.getElementById('sd-title'); if(tt) tt.textContent=gRootLbl+' · '+sName(SCALES[scIdx]);
+  const tt=document.getElementById('sd-title'); if(tt) tt.textContent=noteTxt(gRootLbl)+' · '+sName(SCALES[scIdx]);
   const nb=document.getElementById('sd-notes'); if(nb){ nb.textContent=t('sd_notes'); nb.classList.toggle('active', sdNotes); nb.setAttribute('aria-pressed', sdNotes?'true':'false'); }
   renderSdGrid();
   const pb=document.getElementById('sd-play'); if(pb){ pb.innerHTML=(sd.playing?'&#9632; ':'&#9654; ')+t(sd.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', sd.playing); pb.setAttribute('aria-pressed', sd.playing?'true':'false'); }
@@ -199,11 +199,11 @@ function sdPaintScale(){
 function sdLightNote(si, f){
   if(sdLit) sdLit.classList.remove('on');
   const d=document.querySelector('#sd-board .sd-dot[data-si="'+si+'"][data-f="'+f+'"]');
-  if(d){ d.classList.add('on'); if(typeof rippleDot==='function') rippleDot(d); }
+  if(d){ d.classList.add('on'); rippleDot(d); }
   sdLit=d||null;
 }
 /* The private tempo stepper this drill used to carry lived here (sdSetTempo), together
-   with the code that kept the header slider in sync with it. Phase 10/A1 collapsed the
+   with the code that kept the header slider in sync with it. That collapsed into the
    two controls into one: the drill declares `tempo:true` below and the shell's
    #drill-ctx stepper drives the shared setTempo(). */
 // re-localize an in-flight timing drill on a language switch (called from applyLang)

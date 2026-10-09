@@ -1,4 +1,4 @@
-/* ===================== CHROMATIC MIC TUNER (Phase 8 / F0) =====================
+/* ===================== CHROMATIC MIC TUNER =====================
    Play any note; see which note it is and how many cents sharp or flat.
 
    This is the de-risking slice of the mic phase, and it is deliberately the
@@ -226,7 +226,7 @@ function micClose(){
 }
 
 /* re-localize a panel that's already open when the language flips (called from
-   applyLang in 11-notes-circle-lang.js, guarded so load order can't bite). */
+   applyLang in 11-notes-circle-lang.js). */
 function micRefreshLang(){
   micSyncButtons(!!mt);
   if(!mt) micPaintIdle();

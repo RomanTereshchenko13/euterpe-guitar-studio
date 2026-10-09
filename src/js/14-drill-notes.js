@@ -1,4 +1,4 @@
-/* ===================== Drill: fretboard note-naming (Phase 3c) =====================
+/* ===================== Drill: fretboard note-naming =====================
    The first Practice drill and the first WRITER to the learner model (13-learner.js):
    the app names a note, you tap every instance of it on the neck. Reuses the shared
    board paint (renderBoard/renderNums, 07) on the drill's OWN board element inside the
@@ -58,7 +58,7 @@ function exitDrill(){
   drill=null;
   const home=document.getElementById('practice-home'), area=document.getElementById('drill-area');
   if(area) area.hidden=true; if(home) home.hidden=false;
-  if(typeof renderPractice==='function') renderPractice();
+  renderPractice();
 }
 
 function nextPrompt(){
@@ -99,7 +99,7 @@ function finishDrill(){
   const acc=drill.total ? drill.correctPrompts/drill.total : 0;
   recordSession('notes', Math.round(acc*100));
   saveState();
-  if(typeof renderPractice==='function') renderPractice();
+  renderPractice();
   renderDrillSummary(elapsed, acc);
 }
 
@@ -118,12 +118,12 @@ function clearDrillMarks(){
   document.querySelectorAll('#drill-board .dot.quiz').forEach(d=>{ d.classList.remove('hit','miss'); d.textContent=''; });
 }
 function setPromptUI(){
-  const p=document.getElementById('drill-prompt'); if(p) p.innerHTML=t('drill_find_pre')+' <span class="drill-target">'+NOTES[drill.targetPc]+'</span>';
+  const p=document.getElementById('drill-prompt'); if(p) p.innerHTML=t('drill_find_pre')+' <span class="drill-target">'+noteTxt(NOTES[drill.targetPc])+'</span>';
   const c=document.getElementById('drill-count'); if(c) c.textContent=Math.min(drill.done+1, drill.total)+' / '+drill.total;
 }
 function markDrillDot(si,f,kind){
   const d=document.querySelector('#drill-board .dot.quiz[data-si="'+si+'"][data-f="'+f+'"]'); if(!d) return;
-  if(kind==='hit'){ d.classList.add('hit'); d.textContent=NOTES[(OPEN_MIDI[si]+f)%12]; rippleDot(d); }
+  if(kind==='hit'){ d.classList.add('hit'); d.textContent=noteTxt(NOTES[(OPEN_MIDI[si]+f)%12]); rippleDot(d); }
   else { d.classList.remove('hit'); d.classList.add('miss'); setTimeout(()=>{ if(d) d.classList.remove('miss'); }, 480); }
 }
 function renderDrillSummary(elapsed, acc){

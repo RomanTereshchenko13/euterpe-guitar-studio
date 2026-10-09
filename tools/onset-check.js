@@ -118,7 +118,7 @@ function runCase(spec) {
       const port = server.address().port;
       const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'onset-prof-'));
       const child = spawn(browser, [
-        '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+        '--headless=new', '--disable-gpu', '--disable-extensions', '--disable-sync', '--no-first-run', '--no-default-browser-check',
         '--enable-logging=stderr', '--v=0',
         '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream',
         '--use-file-for-fake-audio-capture=' + wav,

@@ -31,8 +31,8 @@ When unsure, prefer patch — see the project's "small changes = patch" rule.
    - **`en` and `uk` arrays must have the same number of bullets** and say the
      same thing. Write for users (what changed for them), not commits.
 3. `PLAN.md` — update the `_Shipping: vX.Y.Z_` line at the top.
-4. Leave `package.json` `version` alone unless the user asks — it is *not* the
-   source of truth and is intentionally allowed to lag.
+4. `package.json` deliberately has **no** `version` field (the package is private and
+   never published) — don't add one; `APP_VERSION` is the only version.
 
 ## 3. Build + verify
 

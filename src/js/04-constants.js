@@ -13,7 +13,7 @@ const FRETS = 22;
 const DOTS = [3,5,7,9,12,15,17,19,21];
 
 /* Alternate tunings, defined by MIDI note per string (high -> low). The last
-   entry is the user-editable Custom tuning (Phase 2): it carries no fixed `midi`,
+   entry is the user-editable Custom tuning: it carries no fixed `midi`,
    reading the mutable `customTuning` below instead, so any per-string tuning works
    without a new preset. The board/highlight math is already tuning-driven, so a
    custom MIDI per string just flows through applyTuning like any preset. */
@@ -48,7 +48,7 @@ let fretRangeIdx = 0;
 function FRET_LO(){ return FRET_RANGES[fretRangeIdx].lo; }
 function FRET_HI(){ return FRET_RANGES[fretRangeIdx].hi; }
 
-/* capo (Phase 2): a movable nut at fret `capo` (0 = none). A capo doesn't move
+/* capo: a movable nut at fret `capo` (0 = none). A capo doesn't move
    pitches — it moves your hand — so the note at every physical fret is unchanged
    and the highlighting math stays untouched. The board only dims the frets behind
    the capo and draws the capo bar, so a shape reads as "playable from here up". */
@@ -58,7 +58,7 @@ let capo = 0;
 let tempo = 90;
 function beat(){ return 60/tempo; }
 
-/* time signature / meter (Phase 7b): beats per bar + the note value that gets the
+/* time signature / meter: beats per bar + the note value that gets the
    pulse. 4/4 is the default and reproduces the old hard-wired bar math EXACTLY (the
    backing band, sequencer and metronome were all `beat()*4` / `count%4`). A pulse is
    a note of value `unit`, so a quarter (unit 4) = beat(), an eighth (unit 8) = beat()/2.
@@ -94,7 +94,7 @@ let toolbarOpen = false;
 let backingOpen = false;
 /* the chord-shape voicing cards (right rail) are collapsible + persisted, default open */
 let shapesOpen = true;
-/* accessibility prefs (Phase 9 feel pass): a colour-blind-safe (Okabe–Ito) palette
+/* accessibility prefs: a colour-blind-safe (Okabe–Ito) palette
    and distinct per-function dot shapes, so note roles (root/3rd/5th/7th/ext) read
    without relying on hue. Off by default; applied as body classes by applyA11y()
    and persisted via saveState()/loadState(). */
@@ -109,8 +109,11 @@ function mod(n,m){ return ((n%m)+m)%m; }
 /* dev-only diagnostic: surfaces errors that were previously swallowed silently,
    without breaking playback for the user. No effect on the shipped behaviour. */
 function devWarn(){ try{ if(typeof console!=='undefined' && console.warn) console.warn.apply(console, ['[GuitarStudio]'].concat([].slice.call(arguments))); }catch(_){} }
-function noteName(pc, flat){ return (flat && FLAT_MAP[pc]) ? FLAT_MAP[pc] : NOTES[pc]; }
-function useFlatFor(label){ return FLAT_ROOTS[label] !== undefined || label === 'F'; }
+/* Note labels stay ASCII in data — saves, share links and session ids all hold 'Eb' /
+   'C#' — and are spelled with ♭/♯ only where they reach the screen, here. */
+function noteTxt(lbl){ return String(lbl).replace('#','♯').replace(/^([A-G])b/,'$1♭'); }
+function noteName(pc, flat){ return noteTxt((flat && FLAT_MAP[pc]) ? FLAT_MAP[pc] : NOTES[pc]); }
+function useFlatFor(label){ return /^[A-G][b♭]/.test(label) || label === 'F'; }
 
 /* note spelling by scale degree: gives correct letter+accidental (Cm -> Eb, not D#),
    distinguishes ♯4 vs ♭5, and falls back to a simple enharmonic name to avoid double accidentals */

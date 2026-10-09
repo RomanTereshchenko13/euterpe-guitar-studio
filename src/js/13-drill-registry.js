@@ -8,7 +8,7 @@
    drill on a language / meter change. Before this, each of those was an inline
    list in 15-wiring-init.js / 11-notes-circle-lang.js that had to be edited by
    hand for every new drill. Two of those four lists had already drifted (the
-   Phase 7a timing drill was missing from both, so re-entering Practice while it
+   timing drill was missing from both, so re-entering Practice while it
    ran painted the home view on top of the running drill).
 
    Now each drill file calls registerDrill() at load and the shell iterates
@@ -26,7 +26,7 @@
        onMic:fn|undefined,         // optional: the shared mic button was pressed (B2)
        tracks:[...] }              // what this drill teaches + how its result is measured
 
-   TRACKS (Phase 10/B1). A drill is not the unit the learner model cares about — a
+   TRACKS. A drill is not the unit the learner model cares about — a
    *track* is. Over-the-changes is one drill with two tracks (comping and chord-tone
    targeting, different metrics, opened from different cards); ear training is one
    drill with three. And the note drill has both kinds at once: per-item recall AND a
@@ -97,7 +97,7 @@ function quitDrill(){
    same path, and a session that ended itself every time it changed drill would be a
    session of exactly one drill. */
 function drillShellLeft(){
-  if(typeof sessionInterrupt==='function') sessionInterrupt();
+  sessionInterrupt();
   setCurTrack(null); applyDrillCtx();
 }
 
@@ -111,7 +111,7 @@ function drillKeyChanged(){
   if(d && typeof d.onKey==='function'){ try{ d.onKey(); }catch(_){} }
 }
 
-/* ---- THE DRILL SHELL (Phase 10/B2) ----
+/* ---- THE DRILL SHELL ----
    Which track is running. The practice cards, the review router, the seams and the
    timed session all open a drill through startTrack(), so the shell always knows what
    the player asked for — which is how the header can finally say WHICH DRILL THIS IS.
@@ -122,7 +122,7 @@ function drillKeyChanged(){
    "Over the changes" is not what the player pressed. */
 let curTrack = null;
 function setCurTrack(id){ curTrack = id || null; }
-function curTrackObj(){ return curTrack && typeof trackById==='function' ? trackById(curTrack) : null; }
+function curTrackObj(){ return curTrack ? trackById(curTrack) : null; }
 
 /* The setup disclosure's open state, and the hint's. Neither is per-drill state, since
    one drill runs at a time; both are re-derived on every start (drillShellEnter). */
@@ -137,11 +137,11 @@ let drillSeen = {};
    (you are about to configure a run), and the hint opens only if this track is new. */
 function drillShellEnter(){
   // a drill is starting, so whatever the last timed session reported has been read (B3)
-  if(typeof sessionClearReport==='function') sessionClearReport();
+  sessionClearReport();
   drillSetupOpen = true;
   const tr = curTrack;
   drillHintOpen = !(tr && drillSeen[tr]);
-  if(tr && !drillSeen[tr]){ drillSeen[tr]=1; if(typeof saveState==='function') saveState(); }
+  if(tr && !drillSeen[tr]){ drillSeen[tr]=1; saveState(); }
   applyDrillCtx();
 }
 /* Called by a drill when its run actually begins (Play, or the timed run's Start). The
@@ -159,7 +159,7 @@ function drillRunStarted(){
    re-derive from the key, so showing them a key picker would be a control that
    adjusts nothing. Derived from the registry, so a drill opts in by having onKey.
 
-   Tempo (Phase 10/A1) works the same way and for the same reason: four of the nine
+   Tempo works the same way and for the same reason: four of the nine
    drills ride the shared scheduler and five don't, so `tempo:true` opts a drill into
    the stepper rather than the shell hard-coding which drills are timed.
 
@@ -179,11 +179,11 @@ function applyDrillCtx(){
      where one group ends and the next begins. */
   // the stepper's readout is only painted here, so it can't go stale behind a
   // tempo change made from the header slider while a drill is open
-  if(tmp && typeof setTempo==='function') setTempo(tempo);
+  if(tmp) setTempo(tempo);
 
   // the name — from the track the player opened, not from the drill that hosts it
   const nm=document.getElementById('drill-ctx-name');
-  if(nm){ const tr=curTrackObj(); nm.textContent = tr && tr.label && typeof t==='function' ? t(tr.label) : ''; }
+  if(nm){ const tr=curTrackObj(); nm.textContent = tr && tr.label ? t(tr.label) : ''; }
 
   /* the setup handle. Only for a drill that HAS a setup: the note-naming, ear and
      call-and-response drills configure nothing, and a disclosure over an empty box is
@@ -193,7 +193,7 @@ function applyDrillCtx(){
   const sb=document.getElementById('drill-ctx-setup');
   if(sb){
     sb.hidden=!hasSetup;
-    if(hasSetup && typeof t==='function'){
+    if(hasSetup){
       sb.textContent=t('drill_setup')+(drillSetupOpen?' ▴':' ▾');
       sb.classList.toggle('active', drillSetupOpen);
       sb.setAttribute('aria-expanded', drillSetupOpen?'true':'false');
@@ -224,7 +224,7 @@ function applyDrillCtx(){
   /* the timed session's two header controls (B3) — the block counter and Next. Painted
      by the session module for the same reason the mic's label is 13-scored.js's: only
      the running session knows whether there is one. */
-  if(typeof sessionPaint==='function') sessionPaint();
+  sessionPaint();
 }
 // the shared mic button was pressed → hand it to whichever drill is running
 function drillMicToggle(){
@@ -235,7 +235,7 @@ function drillMicToggle(){
 function drillSetupToggle(){ drillSetupOpen=!drillSetupOpen; applyDrillCtx(); }
 function drillHintToggle(){ drillHintOpen=!drillHintOpen; applyDrillCtx(); }
 
-/* ---- tracks (Phase 10/B1): the learner model's view of the registry ----
+/* ---- tracks: the learner model's view of the registry ----
    Flat list of every declared track, each carrying a back-ref to its drill. Read
    lazily (never cached) because drills register at load slot 14, after this file. */
 function drillTracks(){
@@ -249,7 +249,7 @@ function trackByItems(ns){ return drillTracks().find(tr => tr.items===ns) || nul
 function trackBySess(ns){ return drillTracks().find(tr => tr.sess===ns) || null; }
 // a track by its own id — what the review router is handed
 function trackById(id){ return drillTracks().find(tr => tr.id===id) || null; }
-/* What tier a track offers, as a badge key (Phase 10/B4). The practice cards used to
+/* What tier a track offers, as a badge key. The practice cards used to
    carry this in prose — five of the ten subtitles ended "· coach", three of them
    untruthfully, because F1 shipped mic scoring underneath them and nobody went back to
    the string. A badge derived from the registry cannot go stale the same way: the drill

@@ -221,8 +221,8 @@ function visualDrain(){
 /* Timing calibration (the tap-test + stored latency offset) lived here. It was
    built ahead of the scored/mic tier that would consume it, and that tier never
    arrived — calOffsetSec() had no callers, so the toolbar carried a control that
-   adjusted nothing. Removed; bring it back with Phase 8/F1 mic scoring, which is
-   the first thing that can actually use an offset. */
+   adjusted nothing. Removed; latency calibration now lives in 14-calibration.js,
+   which measures the round trip instead of a tap. */
 
 /* ---- cue sounds (cue bus): short synthesized UI feedback. The metronome uses
    the cue bus; correct / wrong / count-in are foundation primitives consumed by

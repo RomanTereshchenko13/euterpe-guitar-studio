@@ -1,4 +1,4 @@
-/* ===================== Drill: Over the changes (Phase 5c + 6a/6b/6c, merged) =====================
+/* ===================== Drill: Over the changes =====================
    One machine, two things to practise over a looping progression: COMP it (play the right
    chord at the right time — the Rhythm pillar) or play its CHORD TONES (aim at the tones of
    the chord that is sounding — the Lead pillar). A chosen progression cycles with a forced
@@ -14,7 +14,7 @@
                Records comp:<progression> scored by bars comped. Coach tier.
      tones   — a lighter comp so your line sits on top, chord NAMES in NOW/NEXT, and a
                tappable neck whose lit dots are the current chord's tones. Position windows
-               them to one arpeggio box (6b, Phase 2's boxWindow); Target narrows them to a
+               them to one arpeggio box (boxWindow); Target narrows them to a
                single degree (6c). Records target:<progression> scored by accuracy.
 
    Both session namespaces are kept, so progress recorded before the merge still reads.
@@ -22,7 +22,7 @@
    Honest framing (roadmap): with no mic, `tones` trains WHERE the chord tones are — a
    location/recognition game, not soloing. Tap input is scored on ACCURACY (right tones vs
    wrong notes), never on timing (touch latency corrupts timing — the coach-tier rule); real
-   "play your guitar and get scored" waits on Phase 8/F2. Neither mode mints per-item SRS —
+   "play your guitar and get scored" is PLAN step 9. Neither mode mints per-item SRS —
    the looping shape derives from the sessions ring buffer, so the pinned learner item shape
    (spine #3) stays untouched.
 
@@ -33,7 +33,7 @@ let tgIdx = 1;          // selected progression (default I–V–vi–IV)
 let tgMode = 'tones';   // 'chords' (comp it) | 'tones' (play its chord tones)
 let tgDrill = null;
 
-/* Phase 8/F1 scored tier — `chords` mode only (13-scored.js).
+/* Scored tier — `chords` mode only (13-scored.js).
    WHAT IT SCORES, and why it isn't every strum: comping is your own rhythm. The
    drill has no business telling you how many times to hit the chord inside a bar,
    so it scores the thing the exercise is actually about — LANDING THE CHANGE. The
@@ -54,7 +54,7 @@ function tgScorable(){ return !tgTones(); }
 // tgDrill = { presetIdx, bars:[{pc,qi}…], bar, cycles, clock, playing, hits, misses,
 //             targetPcs:Set(pc), chordPcs:Set(pc), degMap:{pc:lab}, found:Set("si:f"), win:[lo,hi]|null }
 
-let tgPos = 0;         // 0 = whole neck; 1–5 = one arpeggio box (6b, reuses Phase 2 boxWindow)
+let tgPos = 0;         // 0 = whole neck; 1–5 = one arpeggio box (reuses boxWindow)
 let tgDeg = 0;         // 0 = all chord tones; else a target degree (6c: land on ONE tone through the changes)
 // target-degree families → the labClass they match (index = tgDeg): root / third / fifth / seventh
 const TG_DEG_CLASS = [null, 'd-root', 'd-third', 'd-fifth', 'd-sev'];
@@ -104,26 +104,26 @@ function exitTarget(){
   tgDrill=null;
   const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
   if(area) area.hidden=true; if(home) home.hidden=false;
-  if(typeof renderPractice==='function') renderPractice();
+  renderPractice();
 }
 function targetToggle(){ if(tgDrill && tgDrill.playing) targetStop(); else targetPlay(); }
 function targetPlay(){
   if(!tgDrill || tgDrill.playing) return;
   audio();
-  if(typeof stopLoop==='function') stopLoop();       // don't fight the reference loop / progression
-  if(typeof seqStop==='function') seqStop();
+  stopLoop();       // don't fight the reference loop / progression
+  seqStop();
   drillRunStarted();                                 // B2: fold the setup
   tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
   tgDrill.bar=0; tgDrill.cycles=0; tgDrill.hits=0; tgDrill.misses=0; tgDrill.found=new Set(); tgDrill.playing=true;
   tgScore.begin();                               // before the clock: a tick must not
   tgDrill.clock={ interval:()=>barSec(), tick:(time,count)=>targetTick(time,count) };
-  if(typeof addClock==='function') addClock(tgDrill.clock);   // ...land in a run we then reset
+  addClock(tgDrill.clock);   // ...land in a run we then reset
   renderTarget();
 }
 function targetStop(){
   if(!tgDrill || !tgDrill.playing) return;
-  if(tgDrill.clock){ if(typeof removeClock==='function') removeClock(tgDrill.clock); tgDrill.clock=null; }
-  if(typeof clearVisualQ==='function') clearVisualQ();
+  if(tgDrill.clock){ removeClock(tgDrill.clock); tgDrill.clock=null; }
+  clearVisualQ();
   tgDrill.playing=false;
   const sc=tgScore.end();
   const barsPlayed = tgDrill.cycles*tgDrill.bars.length + tgDrill.bar;
@@ -135,7 +135,7 @@ function targetStop(){
     if(tgTones()) recordSession('target:'+name, tgAccuracy());
     else recordSession('comp:'+name, barsPlayed, undefined, scoredErr(sc));
     saveState();
-    if(typeof renderPractice==='function') renderPractice();
+    renderPractice();
   }
   renderTarget();
 }
@@ -233,7 +233,7 @@ function renderTarget(){
   const toneRows=document.getElementById('tg-tone-rows'); if(toneRows) toneRows.hidden=!tones;
   const boardWrap=document.getElementById('tg-board-wrap'); if(boardWrap) boardWrap.hidden=!tones;
   if(tones){
-    // arpeggio-position picker (6b): All (whole neck) + boxes 1–5, reusing Phase 2's boxWindow
+    // arpeggio-position picker (6b): All (whole neck) + boxes 1–5, reusing boxWindow
     segButtons('tg-pos', [t('pos_all'),'1','2','3','4','5'].map(label=>({label})), tgPos,
       i=>{ tgPos=i; renderTarget(); });
     tgDrill.win = tgPos ? boxWindow(tgPos) : null;
@@ -262,7 +262,7 @@ function renderTarget(){
   if(tones){ const sc=document.getElementById('tg-score'); if(sc) sc.hidden=true;
              const stt=document.getElementById('tg-status'); if(stt) stt.hidden=true; }
 }
-function tgChordName(st){ return st ? ROOTS[st.pc]+QUALITIES[st.qi].short : ''; }
+function tgChordName(st){ return st ? noteTxt(ROOTS[st.pc])+QUALITIES[st.qi].short : ''; }
 /* comping shows the SHAPE (you have to fret it); targeting shows the NAME (you're finding
    its tones yourself, and a diagram would just answer the question). */
 function renderTargetStage(cur, nxt){

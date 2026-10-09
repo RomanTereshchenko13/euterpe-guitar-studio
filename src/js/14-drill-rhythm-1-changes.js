@@ -1,11 +1,11 @@
-/* ===================== Drill: Chord-change fluency (Phase 5a) =====================
+/* ===================== Drill: Chord-change fluency =====================
    The RHYTHM pillar's table-stakes coach tier — the famous "one-minute changes":
    pick a chord pair, the timer runs, and you switch between the two shapes as cleanly
    as you can, tapping the big counter on each clean change. At the end: changes made,
    changes per minute, and your personal best for that pair.
 
    Honest framing (roadmap): this is a COACH tier, not scored training — the app
-   counts YOUR taps, it can't hear your guitar (mic scoring waits on Phase 8 / F1).
+   counts YOUR taps; it doesn't listen to your guitar.
    That's no compromise here: counting yourself and beating your record IS the
    authentic form of this exercise, so the reward (a per-pair personal best) needs no
    mic. Reuses the chord diagrams (chordBoxSVG, 08), the cue bus for the count-in +
@@ -42,7 +42,7 @@ function cmPairId(i){ const p=CM_PAIRS[i]; return 'changes:'+cmChord(p[0]).lbl+'
 
 /* Personal best (max changes-per-minute) for a pair. This used to scan the sessions
    ring buffer by hand, which meant the best silently reset once 50 sessions across
-   nine drills pushed this pair's runs off the end. Phase 10/B1 made the best a
+   nine drills pushed this pair's runs off the end. The learner model made the best a
    stored, per-id fact for exactly that reason — one helper, every track. */
 function cmPairBest(i){
   const b=learnerBest(cmPairId(i));
@@ -62,7 +62,7 @@ function exitChanges(){
   cmDrill=null;
   const home=document.getElementById('practice-home'), area=document.getElementById('cm-area');
   if(area) area.hidden=true; if(home) home.hidden=false;
-  if(typeof renderPractice==='function') renderPractice();
+  renderPractice();
 }
 function cmBegin(){
   if(!cmDrill) return;
@@ -88,7 +88,7 @@ function finishChanges(){
   recordSession(cmPairId(cmDrill.pairIdx), cpm);
   saveState();
   if(cmDrill.newBest) playCue('correct');
-  if(typeof renderPractice==='function') renderPractice();
+  renderPractice();
   renderCm();
 }
 
@@ -102,12 +102,12 @@ function cmStartClocks(){
   cmDrill.ticker=setInterval(cmCountdown, 1000);
   if(cmClick){ audio();
     cmDrill.clock={ interval:()=>beat(), tick:(time,count)=>metroClick(time, count%4===0) };
-    if(typeof addClock==='function') addClock(cmDrill.clock);
+    addClock(cmDrill.clock);
   }
 }
 function cmStopClocks(){
   if(cmDrill && cmDrill.ticker){ clearInterval(cmDrill.ticker); cmDrill.ticker=null; }
-  if(cmDrill && cmDrill.clock){ if(typeof removeClock==='function') removeClock(cmDrill.clock); cmDrill.clock=null; }
+  if(cmDrill && cmDrill.clock){ removeClock(cmDrill.clock); cmDrill.clock=null; }
 }
 function cmCountdown(){
   if(!cmDrill || cmDrill.phase!=='run') return;

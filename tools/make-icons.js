@@ -52,7 +52,7 @@ for (const j of jobs) {
     '<body><div id="i">' + s + '</div></body></html>');
   const out = path.join(outDir, j.name);
   execFileSync(browser, [
-    '--headless=new', '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=1',
+    '--headless=new', '--disable-gpu', '--disable-extensions', '--disable-sync', '--hide-scrollbars', '--force-device-scale-factor=1',
     '--default-background-color=00000000', '--virtual-time-budget=1500',
     '--screenshot=' + out, '--window-size=' + j.size + ',' + j.size, fileUrl(page),
   ], { stdio: 'ignore' });

@@ -1,4 +1,4 @@
-/* ===================== ONSET DETECTION (Phase 8 / F1) =====================
+/* ===================== ONSET DETECTION =====================
    "When did you play?" — attack detection on the mic signal. This is the first
    SCORING feature in the app: everything before it was a coach that couldn't hear
    you. Hand-rolled, per the dependency policy — unlike pitch (where re-deriving

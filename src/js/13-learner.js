@@ -1,5 +1,5 @@
 /* ===================== Learner model (spine #3) =====================
-   Phase 3b. The app's memory of what you know: per-item history + an SM-2-lite
+   The app's memory of what you know: per-item history + an SM-2-lite
    spaced-repetition queue, plus a bounded ring buffer of recent sessions. Every
    later practice phase mints items into this same shape — it grows by ADDING id
    namespaces (e.g. "note:E:str6", "interval:P5"), never by reshaping. A `v` bump
@@ -15,7 +15,7 @@
 const LEARNER_V = 2;
 const SRS_EASE_MIN = 1.3, SRS_EASE_MAX = 3.0, SRS_EASE_START = 2.5;
 const DAY_MS = 86400000;
-/* Retention (Phase 10/B1). SESS_MAX was one global cap of 50 across nine tracks — so
+/* Retention. SESS_MAX was one global cap of 50 across nine tracks — so
    roughly five entries each, and a drill practised daily evicted the history of one
    practised weekly. A trend needs its own runway, so the cap is now PER SESSION ID
    (newest kept), with the global figure demoted to a safety ceiling against a
@@ -112,7 +112,7 @@ function pruneSessions(){
    changes-per-minute best is the highest, a timing error the lowest), defaulting to
    "higher is better" so an undeclared track still records something sane. */
 function learnerNoteBest(id, s){
-  const tr = (typeof trackBySess==='function') ? trackBySess(sessNs(id)) : null;
+  const tr = trackBySess(sessNs(id));
   const low = !!(tr && tr.better==='low');
   const cur = learner.best[id];
   if(!cur){
@@ -128,7 +128,7 @@ function learnerNoteBest(id, s){
 // the stored personal best for one session id, or null
 function learnerBest(id){ return learner.best[String(id)] || null; }
 
-/* ---- the trend (Phase 10/B1) ----
+/* ---- the trend ----
    The ring buffer has always been a time series and nothing ever read it as one:
    learnerStats() returned five all-time aggregates, so the app could not say "your
    timing error went from 45 ms to 28 ms over six sessions" — which is the sentence
@@ -147,7 +147,7 @@ function learnerTrend(idOrNs, now){
   let runs = learner.sessions.filter(s => s.drill===key);
   const exact = runs.length>0;
   if(!exact) runs = learner.sessions.filter(s => sessNs(s.drill)===key);
-  const tr = (typeof trackBySess==='function') ? trackBySess(exact ? sessNs(key) : key) : null;
+  const tr = trackBySess(exact ? sessNs(key) : key);
   const low = !!(tr && tr.better==='low');
   const out = { id:key, n:runs.length, unit:(tr&&tr.unit)||'', better:low?'low':'high',
                 last:null, lastT:0, best:null, bestErr:null, lastErr:null,
@@ -189,7 +189,7 @@ function learnerStats(){
    drills already bias toward due items internally; this surfaces the count so the
    loop closes back to the user ("N due — review now").
 
-   Phase 10/B1 — this used to open with `const REVIEW_NS = ['note','interval',
+   This used to open with `const REVIEW_NS = ['note','interval',
    'chordq','rhythm']`, four strings that were the app's entire answer to "what
    should I practise next?". Six of the nine tracks were not ranked low by it; they
    were absent from its vocabulary, because a performance track has no SM-2 date to
@@ -200,7 +200,7 @@ function learnerStats(){
    `due` is the ordered queue (recall first — an overdue SRS item is a fact, a cold
    drill is a suggestion). `total`/`by`/`top` keep their old meaning for the card. */
 function reviewNamespaces(){
-  return (typeof drillTracks==='function' ? drillTracks() : [])
+  return drillTracks()
     .filter(tr => tr.kind==='recall' && tr.items).map(tr => tr.items);
 }
 function learnerReview(now){
@@ -219,7 +219,7 @@ function learnerReview(now){
   nss.slice().sort((a,b)=>by[b]-by[a]).forEach(ns=>{
     if(by[ns]>0){ const tr=trackByItems(ns); due.push({ track:tr?tr.id:ns, ns, kind:'recall', n:by[ns], reason:'due' }); }
   });
-  (typeof drillTracks==='function' ? drillTracks() : []).forEach(tr=>{
+  drillTracks().forEach(tr=>{
     if(tr.kind!=='perf' || !tr.sess) return;
     const tn=learnerTrend(tr.sess, now);
     if(!tn.n){ due.push({ track:tr.id, ns:tr.sess, kind:'perf', n:0, reason:'new' }); return; }
@@ -231,21 +231,21 @@ function learnerReview(now){
 /* Open a track by id — the registry's own `start`, so the shell no longer carries a
    hand-written ns → starter map that quietly covered four of nine tracks. */
 function startTrack(id){
-  const tr = (typeof trackById==='function') ? trackById(id) : null;
+  const tr = trackById(id);
   if(!tr || typeof tr.start!=='function') return false;
-  /* Phase 10/B2 — this is now the ONE door into a drill: the practice cards, the
+  /* This is the ONE door into a drill: the practice cards, the
      review button, the reference seams and the timed session all come through here,
      which is what lets the shared header name the drill you actually opened. A drill's
      own start() stays callable directly (the tests do that), it just leaves the header
      unnamed — so the door records the choice, not the drill. */
-  if(typeof setCurTrack==='function') setCurTrack(tr.id);
+  setCurTrack(tr.id);
   tr.start();
   return true;
 }
-/* ---- the progress readout (Phase 10/B4) ----
+/* ---- the progress readout ----
    What this replaced: five all-time tiles — items tracked, accuracy, best streak,
    active days, sessions — none of which is a *story*. The app has held a per-track
-   time series since Phase 3b and a personal best since B1, and rendered neither, so
+   time series and a personal best, and rendered neither, so
    a player who had cut their timing error from 45 ms to 28 ms over six runs was shown
    "23 sessions" and had to take the improvement on faith. B1 built learnerTrend for
    exactly this; this is the thing that finally reads it.
@@ -290,7 +290,7 @@ function renderProgressInto(hostId){
       '<button type="button" class="btn play pp-review-btn" data-review="'+esc(rev.top)+'">'+t('prog_review')+'</button></div>';
   } else {
     const nxt=(rev.due||[]).find(d=>d.kind==='perf');
-    const tr=nxt && typeof trackById==='function' ? trackById(nxt.track) : null;
+    const tr=nxt ? trackById(nxt.track) : null;
     if(tr && tr.label){
       html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_next')+' · '+esc(t(tr.label))+'</span>'+
         '<button type="button" class="btn play pp-review-btn" data-review="'+esc(tr.id)+'">'+t('prog_start')+'</button></div>';
@@ -301,7 +301,7 @@ function renderProgressInto(hostId){
      track with no history is left out rather than listed as a zero: the practice list
      below is where you go to start something new, and a card is a better invitation
      than an empty row. */
-  const rows=(typeof drillTracks==='function' ? drillTracks() : [])
+  const rows=drillTracks()
     .filter(tr=>tr.sess)
     .map(tr=>({ tr, tn:learnerTrend(tr.sess) }))
     .filter(x=>x.tn.n>0)
@@ -356,11 +356,11 @@ function lClampNum(v, lo, hi, def){ return (typeof v==='number' && isFinite(v)) 
 function normalizeLearner(raw){
   const out = newLearner();
   if(!raw || typeof raw!=='object') return out;
-  /* Version gate. v1 → v2 (Phase 10/B1) is the model's first migration, and it is
+  /* Version gate. v1 → v2 is the model's first migration, and it is
      PURELY ADDITIVE: `items` and `sessions` carry over untouched, and `best` — the
      one field that can't be derived once its history rolls off — is rebuilt from the
      sessions we still hold. Nothing a player did is lost, which is the whole bar
-     Phase 3 set for a `v` bump. Anything older or newer than we know still degrades
+     set for a `v` bump. Anything older or newer than we know still degrades
      to a fresh model rather than guessing. */
   if(raw.v !== LEARNER_V && raw.v !== 1) return out;
   if(raw.items && typeof raw.items==='object'){

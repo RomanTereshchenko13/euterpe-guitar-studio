@@ -15,8 +15,8 @@ function renderActiveContext(){
    there is one repaint, not four things to remember to call. */
 function renderPractice(){
   renderProgressInto('practice-progress');                                  // 13-learner.js
-  if(typeof renderSessionCard==='function') renderSessionCard();            // B3
-  if(typeof applySessionViews==='function') applySessionViews();
+  renderSessionCard();            // B3
+  applySessionViews();
   paintDrillBadges();                                                       // B4
 }
 /* The practice cards' 🎤 Scored / Scored / Coach badge, from the registry's own `scored`
@@ -27,7 +27,7 @@ function renderPractice(){
 function paintDrillBadges(){
   document.querySelectorAll('#practice-home .drill-card[data-track]').forEach(card=>{
     const slot=card.querySelector('.dc-badge'); if(!slot) return;
-    const tr=(typeof trackById==='function') ? trackById(card.dataset.track) : null;
+    const tr=trackById(card.dataset.track);
     if(!tr){ slot.textContent=''; return; }
     const key=trackBadge(tr);
     slot.textContent=t(key);
@@ -100,7 +100,7 @@ document.getElementById('sv-scale').onclick=()=>setScView('scale');
 document.getElementById('sv-notes').onclick=()=>setScView('notes');
 
 function applyContextBar(){
-  // Phase 10/A1 — the bar shows wherever any of its groups still has a job. It used
+  // The bar shows wherever any of its groups still has a job. It used
   // to be hidden outright on Circle, which took the ROOT PICKER with it: the app's
   // single most important piece of state (spine #1) simply had no control on one of
   // its three reference tabs, and you set the key by knowing to click the wheel. The
@@ -295,7 +295,7 @@ function selectTab(name){
   // as a backing track. The global transport chip lets you stop it from anywhere.
   currentTab=name;
   document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active', x.id==='panel-'+name));
-  if(typeof applyNav==='function') applyNav();   // A2: the one nav follows the state, however it changed
+  applyNav();   // A2: the one nav follows the state, however it changed
   applyAsideState();
   applyContextBar();
   applyBoardRegion();
@@ -304,14 +304,14 @@ function selectTab(name){
   renderActiveContext();
   saveState();
 }
-// Phase 3a — the mode axis. Orthogonal to selectTab (the reference sub-axis): body
-// classes drive the show/hide CSS, so reference content is untouched. Phase 4 added
+// The mode axis. Orthogonal to selectTab (the reference sub-axis): body
+// classes drive the show/hide CSS, so reference content is untouched. The old Ear mode added
 // a third mode for ear training; it turned out to be a Practice pillar rather than a
 // mode (same home shell, same progress card, same learner model), so it folded back
 // in and the axis is Reference vs Practice again. Leaving Practice ends the running
 // drill.
 //
-// Phase 10/A1 — playback no longer persists across MODES. It still persists across
+// Playback does not persist across MODES. It still persists across
 // tabs, where it makes sense (same subject, same board, the transport genuinely acts
 // as a backing track). A mode switch is different: a drill brings its own click, its
 // own bed and its own scheduler, so a surviving reference loop just strummed the
@@ -322,7 +322,7 @@ function setMode(mode){
   currentMode = mode==='practice' ? 'practice' : 'reference';
   document.body.classList.toggle('mode-reference', currentMode==='reference');
   document.body.classList.toggle('mode-practice', currentMode==='practice');
-  if(typeof applyNav==='function') applyNav();   // A2: one strip, painted from the live state
+  applyNav();   // A2: one strip, painted from the live state
   if(currentMode==='reference'){
     // leaving Practice ends whatever was running. Registry-driven
     // (13-drill-registry.js): every drill self-registers, so this can't go stale
@@ -339,7 +339,7 @@ function setMode(mode){
   updateGlobalPlay();
   saveState();
 }
-/* One navigation surface (Phase 10/A2). Four destinations, four panels: three
+/* One navigation surface. Four destinations, four panels: three
    reference subjects and Practice. `navTo` is the only entry point — it sets the mode
    the destination belongs to and, for a reference destination, the tab. Practice's
    panel is a real sibling section (#panel-practice), so all four are genuine tabpanels
@@ -382,8 +382,8 @@ function applyNav(){
   });
   applyNav();
 })();
-/* ---- "Drill this" — the seam, honoured (spine #2 · Phase 10/B3) ----
-   The app has claimed a reference→practice seam since Phase 1c and kept it in exactly
+/* ---- "Drill this" — the seam, honoured (spine #2) ----
+   The app long claimed a reference→practice seam and kept it in exactly
    ONE of its seven reference views (Notes). All seven have it now, with one label, one
    listener and one map: a view is a thing you are looking at, a track is the drill that
    is about that thing, and only a person can say which is which — so this map is the
@@ -473,7 +473,7 @@ document.getElementById('tb-frets').onchange=function(){ fretRangeIdx=+this.valu
    beat grid), so re-paint the running drill via the registry rather than naming
    one drill here — the old call reached for the timing drill only. */
 { const mt=document.getElementById('tb-meter'); if(mt) mt.onchange=function(){ setMeter(+this.value); refreshDrillsLang(); saveState(); }; }
-/* accessibility toggles (Phase 9 feel pass): a colour-blind-safe palette + distinct
+/* accessibility toggles: a colour-blind-safe palette + distinct
    per-function dot shapes. Both are pure body-class switches — the CSS does the work
    (see styles.css), so there's nothing to repaint — and both persist. */
 function applyA11y(){
@@ -486,7 +486,7 @@ function applyA11y(){
 { const p=document.getElementById('tb-cbpalette'); if(p) p.onclick=function(){ cbPalette=!cbPalette; applyA11y(); saveState(); };
   const s=document.getElementById('tb-shapes');    if(s) s.onclick=function(){ fnShapes=!fnShapes;  applyA11y(); saveState(); }; }
 
-/* ---- share a deep link (Phase 9 distribution) ----
+/* ---- share a deep link ----
    Copy a URL whose hash encodes the current key / scale / chord view; opening it
    lands a new visitor on that exact context (applyShareHash on load). */
 function shareFallback(){ try{ location.hash=encodeShareState(); }catch(e){ /* ignore */ } }
@@ -505,7 +505,7 @@ function shareFallback(){ try{ location.hash=encodeShareState(); }catch(e){ /* i
    track the queue named; the drills already prefer due items, so this just opens the
    right one.
 
-   Phase 10/B1 — this was a hand-written `if(ns==='note') … else if(ns==='interval'
+   This was a hand-written `if(ns==='note') … else if(ns==='interval'
    …)` that covered four of the nine tracks, the second of the three lists that
    encoded the same knowledge incompletely. It now goes through the registry's own
    `start`, so a track is routable the moment it is declared. */
@@ -572,13 +572,13 @@ function closeKbd(){ const o=document.getElementById('kbd-overlay'); if(!o) retu
 function showWelcome(){ const o=document.getElementById('welcome-overlay'); if(!o) return; o.hidden=false; o.classList.add('open');
   const f=document.getElementById('wc-go-look'); if(f) try{ f.focus(); }catch(_){} }
 function dismissWelcome(){ const o=document.getElementById('welcome-overlay'); if(!o||o.hidden) return; o.classList.remove('open'); o.hidden=true; welcomeSeen=true; saveState(); }
-/* "Tune the guitar" (Phase 10/A4). Two tuners exist and they are different tools —
+/* "Tune the guitar". Two tuners exist and they are different tools —
    the mic one listens, the reference one plays a pitch at you — so route to whichever
    is actually available. 14-mic-tuner.js REMOVES #tb-mic when there's no secure
    context, which makes the button's presence the honest support test; without it,
    open Settings on the reference-tone tuner, the tool that still works there. */
 function welcomeTune(){
-  if(document.getElementById('tb-mic') && typeof micOpen==='function'){ micOpen(); return; }
+  if(document.getElementById('tb-mic')){ micOpen(); return; }
   const tb=document.getElementById('toolbar'), tg=document.getElementById('tb-toggle');
   if(tb && tb.classList.contains('collapsed') && tg) tg.click();
   const row=document.querySelector('.tb-tuner'); if(row) try{ row.scrollIntoView({block:'nearest'}); }catch(_){}
@@ -613,7 +613,7 @@ document.addEventListener('keydown',e=>{
   if(!document.getElementById('cl-overlay').hidden || !document.getElementById('kbd-overlay').hidden) return;
   { const mo=document.getElementById('mic-overlay'); if(mo && !mo.hidden) return; }
   const k=e.key;
-  // Phase 10/A1 — Space / L / M drive the REFERENCE transport, which is scoped out of
+  // Space / L / M drive the REFERENCE transport, which is scoped out of
   // Practice. Without this guard they'd still reach it from a drill screen: an
   // invisible metronome beating against the drill's own click, with no control on
   // screen to stop it. The shortcut follows the control it stands for.
@@ -673,7 +673,7 @@ ntRoot=gRootLbl;   // Notes highlight follows the shared root (#4); keep them in
 applyTuning();
 applyLang();
 selectTab(currentTab);
-setMode(currentMode);   // Phase 3a: apply the restored mode axis after the reference shell is up
+setMode(currentMode);   // apply the restored mode axis after the reference shell is up
 markScrollables();
 // re-measure swipe-group overflow when the viewport changes (rotate / resize), and once
 // the webfont has loaded — button widths shift on the font swap, so a measure taken with
@@ -692,7 +692,7 @@ applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
   const dq=document.getElementById('drill-ctx-quit');
   if(dq) dq.onclick=quitDrill; }
 /* Every drill starts from inside #practice-home — a drill card, or the progress
-   card's Review button. Phase 10/B2 made that ONE listener instead of ten: each card
+   card's Review button. That is ONE listener instead of ten: each card
    carries `data-track`, and startTrack() (13-learner.js) opens the registry's own
    starter. The eight per-drill `card.onclick=startX` lines that used to live in the
    drill files are gone with it, and — because the shell now knows which TRACK was
@@ -702,7 +702,7 @@ applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
 { const ph=document.getElementById('practice-home');
   if(ph) ph.addEventListener('click', e=>{
     const card=e.target.closest('[data-track]');
-    if(card && typeof startTrack==='function') startTrack(card.dataset.track);
+    if(card) startTrack(card.dataset.track);
     applyDrillCtx();
   }); }
 /* the drill header's own controls (B2). The mic is routed to the running drill rather
@@ -725,9 +725,9 @@ applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
   const s=document.getElementById('sess-start'); if(s) s.onclick=()=>sessionStart(sessMins);
   const r=document.getElementById('session-report');
   if(r) r.addEventListener('click', e=>{ if(e.target.closest('#sess-close')) sessionDismiss(); }); }
-// Deep link (Phase 9): if the URL hash carries a shared context, apply it over the
+// Deep link: if the URL hash carries a shared context, apply it over the
 // restored state now that the shell + setters are up, then strip the hash.
-const fromShare = (typeof applyShareHash==='function') && applyShareHash();
+const fromShare = applyShareHash();
 document.getElementById('app-ver').textContent = 'v' + APP_VERSION;
 // First-run onboarding: only a genuinely first visit (no saved state) leaves
 // welcomeSeen false — returning users are grandfathered in loadState(). A visitor
@@ -743,38 +743,38 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
   window.__GS_TEST__ = {
     APP_VERSION, I18N, QUALITIES, TRIADS, SCALES, COF, FRET_RANGES, SEQ_PRESETS,
     fifthInterval, spellNote, rootParts, simpleName,
-    diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey,
+    diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey, noteTxt,
     identifyChord, nearChords, scalesOverChord, triadQi, currentHarmonyChord, renderIdentify,
     setIdSel:(arr)=>{ idSel=arr.slice(); },
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
     schedAdvance, clocks, beat,
-    // custom tuning (Phase 2)
+    // custom tuning
     TUNINGS, applyTuning, tuningMidi, TUNE_LO, TUNE_HI,
     getOpenMidi:()=>OPEN_MIDI.slice(), getCustomTuning:()=>customTuning.slice(),
     setCustomTuning:(arr)=>{ customTuning=arr.slice(); }, setTuningIdx:(i)=>{ tuningIdx=i; applyTuning(); },
     // learner review + activity (spine #3)
     learnerReview, learnerActivity, startReview,
-    // shareable deep links (Phase 9)
+    // shareable deep links
     encodeShareState, applyShareHash, shareURL,
     // drill registry (13): the one list the shell iterates instead of naming drills
     DRILLS, activeDrill, showDrillHome, exitAllDrills, refreshDrillsLang, drillKeyChanged, applyDrillCtx,
-    // one drill shell (Phase 10/B2)
+    // one drill shell
     drillSetupToggle, drillHintToggle, drillMicToggle, drillRunStarted, setCurTrack, quitDrill,
     getCurTrack:()=>curTrack, getDrillSeen:()=>drillSeen, setDrillSeen:(o)=>{ drillSeen=o||{}; },
-    // one practice model (Phase 10/B1)
+    // one practice model
     drillTracks, trackById, trackBySess, trackByItems, sessNs, startTrack, learnerTrend, learnerBest, scoredErr,
-    /* the timed session + the seams (Phase 10/B3). Every step takes `now`, so the whole
+    /* the timed session + the seams. Every step takes `now`, so the whole
        flow is drivable with no timers: plan → start → tick → end → report. */
     SESSION_MINS, sessionPlan, sessionQueue, sessionStart, sessionAdvance, sessionTick,
     sessionEnd, sessionActive, sessionDismiss, sessionClock, renderSessionCard,
     getSession:()=>psess, getSessReport:()=>sessLast,
     getSessMins:()=>sessMins, setSessMins:(m)=>{ sessMins=m; },
     SEAM_TRACKS, jamToggle, jamActive, renderJamBtn,
-    // progress narrative + card badges (Phase 10/B4)
+    // progress narrative + card badges
     trackBadge, paintDrillBadges, renderProgressInto, renderPractice, trendScore,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
-    // one function, one home (Phase 10/A1)
+    // one function, one home
     setTempo, getTempo:()=>tempo, stopReferenceTransport, transportActive, applyContextBar, updateGlobalPlay,
     renderAllBoards,
     // learner model (spine #3, 3b)
@@ -787,45 +787,45 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     resetSaveFailShown:()=>{ saveFailShown=false; },
     // note-naming drill (3c)
     startDrill, drillAnswer, drillTargetsFor, exitDrill, DRILL_LEN, getDrill:()=>drill,
-    // ear-training drills (Phase 4)
+    // ear-training drills
     startEar, earAnswer, earNext, earReplay, exitEar, getEar:()=>ear,
     earChoices:()=>(ear?ear.cfg.choices(ear.cur):[]), INTERVALS, EAR_QUAL_IDX, RHYTHMS,
-    // chord-change fluency drill (Phase 5a)
+    // chord-change fluency drill
     startChanges, cmBegin, cmTap, cmUntap, finishChanges, exitChanges, getCm:()=>cmDrill,
     CM_PAIRS, CM_DURS, cmPairId, cmPairBest,
     setCmPair:(i)=>{ cmPairIdx=i; if(cmDrill) cmDrill.pairIdx=i; }, setCmDur:(i)=>{ cmDurIdx=i; if(cmDrill) cmDrill.dur=CM_DURS[i]; },
-    // strumming & feel lab (Phase 5b + 5d, merged)
+    // strumming & feel lab
     startStrum, spPlay, spStop, spToggle, exitStrum, getSp:()=>spDrill,
     STRUM_PATTERNS, setSpPattern:(i)=>{ spIdx=i; if(spDrill) spDrill.patIdx=i; },
     SP_SWINGS, setSpSwing:(i)=>{ spSwing=i; }, setSpAccent:(v)=>{ spAccent=!!v; },
     setSpMute:(v)=>{ spMute=!!v; }, setSpBand:(v)=>{ spBand=!!v; },
-    // over-the-changes drill (Phase 5c + 6a/6b/6c, merged) — one machine, two modes
+    // over-the-changes drill — one machine, two modes
     startOverChanges, startComp, startTarget, getOcMode:()=>tgMode,
     setOcMode:(m)=>{ tgMode = (m==='chords') ? 'chords' : 'tones'; },
     targetPlay, targetStop, targetToggle, targetAnswer, exitTarget, getTg:()=>tgDrill,
     tgBuildBars, tgAccuracy, setTargetProg:(i)=>{ tgIdx=i; if(tgDrill){ tgDrill.presetIdx=i; tgDrill.bars=tgBuildBars(SEQ_PRESETS[i]); } },
     setTargetPos:(i)=>{ tgPos=i; if(tgDrill) tgDrill.win = i ? boxWindow(i) : null; },
     setTargetDeg:(i)=>{ tgDeg=i; if(tgDrill){ const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); } },
-    // call & response drill (Phase 6c)
+    // call & response drill
     startCallResp, crAnswer, crReplay, exitCallResp, getCr:()=>cr, CR_ROUNDS, crPool, crMakeMotif,
     crToResponse:()=>{ if(cr){ cr.phase='response'; cr.respIdx=0; cr.wrongNote=0; } }, setCrPos:(i)=>{ crPos=i; },
     crNextRoundNow:()=>{ if(cr) crNewRound(); },   // test hook: skip the inter-round wait
-    // subdivision & timing drill (Phase 7a)
+    // subdivision & timing drill
     startTiming, sdToggle, exitTiming, getSd:()=>sd, SUBDIVS, SD_BEATS, sdPath,
     setSdSub:(i)=>{ sdSub=i; }, setSdPos:(i)=>{ sdPos=i; }, setSdNotes:(v)=>{ sdNotes=!!v; },
     sdTickNow:(t,c)=>sdTick(t,c),
     CAGED_BY_POS, isCAGEDScale,
     setFret:(i)=>{ fretRangeIdx=i; },
     setCapo:(i)=>{ capo=i; }, getCapo:()=>capo,
-    // time signature / meter (Phase 7b)
+    // time signature / meter
     METERS, setMeter, curMeter, barBeats, pulseSec, barSec, midPulseSec,
     meterGroupStarts:()=>[...meterGroupStarts()], getMeterIdx:()=>meterIdx,
-    // chromatic mic tuner (Phase 8 / F0). The pitch→readout maths is pure and
+    // chromatic mic tuner. The pitch→readout maths is pure and
     // assertable here; the getUserMedia half needs a real browser (tools/mic-check.js).
     micSupported, micMidiFromHz, micCentsOff, micNearestString,
     micOpen, micClose, micStatus, micPaint, micPaintIdle, getMic:()=>mt,
     MT_FFT, MT_CLARITY, MT_IN_TUNE, MT_HZ_LO, MT_HZ_HI,
-    // shared mic layer (13-mic.js) + onset detection & scoring (Phase 8 / F1).
+    // shared mic layer (13-mic.js) + onset detection & scoring.
     // The matching/scoring maths is pure, so it is asserted directly — the capture
     // half needs a real browser (tools/onset-check.js).
     micAcquire, micRelease, micReleaseAll, micLive, micErrKey,
@@ -841,7 +841,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     // scoring end-to-end with no microphone attached.
     scoredRun, SC_TOL_MAX,
     sdScore, spScore, tgScore,
-    // accessibility + onboarding (Phase 9 feel pass)
+    // accessibility + onboarding
     applyA11y, showWelcome, dismissWelcome,
     setCbPalette:(v)=>{ cbPalette=!!v; }, setFnShapes:(v)=>{ fnShapes=!!v; }, setWelcomeSeen:(v)=>{ welcomeSeen=!!v; },
     getA11y:()=>({ cbPalette, fnShapes, welcomeSeen }),

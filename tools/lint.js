@@ -110,6 +110,26 @@ function deadResourceReport() {
     });
   });
 
+  /* ---- no guards that can't fail. Every module shares one script scope, so a
+     top-level `function X(){}` exists from the first line of the bundle, whatever
+     slot declares it: `typeof X==='function'` is always true and only suggests a
+     load-order hazard that isn't there (90 of these were removed in one pass).
+     A load-order problem is a `let`/`const` in the TDZ, which no typeof guard of a
+     FUNCTION catches anyway. */
+  const topFns = new Set();
+  jsFiles.forEach(f => {
+    const re = /^function\s+([A-Za-z_$][\w$]*)\s*\(/gm; let m;
+    const s = fs.readFileSync(path.join(jsDir, f), 'utf8');
+    while ((m = re.exec(s))) topFns.add(m[1]);
+  });
+  jsFiles.filter(f => !/^00-vendor/.test(f)).forEach(f => {
+    fs.readFileSync(path.join(jsDir, f), 'utf8').split('\n').forEach((ln, k) => {
+      const re = /typeof\s+([A-Za-z_$][\w$]*)\s*[!=]==?\s*['"]function['"]/g; let m;
+      while ((m = re.exec(ln))) if (topFns.has(m[1]))
+        problems.push(`src/js/${f}:${k + 1} typeof ${m[1]}==='function' can never fail — ${m[1]} is a top-level function in the shared scope; call it directly`);
+    });
+  });
+
   // ---- i18n symmetry (the smoke suite enforces it too; failing here is faster)
   const uk = i18nBlock(i18nSrc, 'uk'), en = i18nBlock(i18nSrc, 'en');
   if (uk && en) {

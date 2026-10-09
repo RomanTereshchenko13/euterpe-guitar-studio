@@ -35,6 +35,11 @@
   select { touch-action: manipulation; }
   .cof-node:focus { outline: none; }
   .cof-node:focus-visible circle { stroke: #fff; stroke-width: 2.6; }
+  /* `hidden` always wins. Any author `display` rule outranks the UA's
+     [hidden]{display:none}, so without this every element styled with a display AND
+     toggled with .hidden needed its own escape hatch — and jsdom, which reads the
+     attribute rather than the cascade, reports success either way. */
+  [hidden] { display: none !important; }
   /* respect users who prefer less motion */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
@@ -64,7 +69,6 @@
   .install-btn { align-self: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #07203a; background: var(--accent); border: none; border-radius: 7px; padding: 5px 11px; cursor: pointer; transition: opacity 0.12s; }
   .install-btn:hover { opacity: 0.88; }
   .toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 200; display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 24px); background: var(--bg-panel-2); border: 1px solid var(--border-strong); border-radius: 12px; padding: 10px 12px 10px 16px; box-shadow: 0 12px 36px rgba(0,0,0,0.5); animation: toast-in 0.22s ease; }
-  .toast[hidden] { display: none; }
   .toast .toast-msg { font-size: 13px; color: var(--text); }
   .toast .toast-act { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #07203a; background: var(--accent); border: none; border-radius: 7px; padding: 6px 12px; cursor: pointer; }
   .toast .toast-x { font-size: 13px; line-height: 1; color: var(--text-dim); background: transparent; border: 1px solid var(--border-strong); border-radius: 6px; padding: 5px 8px; cursor: pointer; }
@@ -77,7 +81,7 @@
   .langbtn { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; padding: 5px 11px; border: none; background: transparent; color: var(--text-dim); border-radius: 6px; cursor: pointer; transition: all 0.12s; }
   .langbtn:hover:not(.active) { color: var(--text); }
   .langbtn.active { background: var(--accent); color: #07203a; }
-  /* ONE navigation surface (Phase 10/A2): four destinations in one strip, replacing
+  /* ONE navigation surface: four destinations in one strip, replacing
      the mode pills stacked above the tab underline. Keeps the tab strip's visual
      language (it was the quieter of the two) — the destinations are peers, so they
      read as peers. */
@@ -95,7 +99,7 @@
      minmax(0,1fr) keeps the wide neck from blowing the row out — it scrolls inside its
      own .scroll instead.
 
-     BOARD-FIRST (Phase 10/A3): the neck now leads. It used to sit in the SECOND row,
+     BOARD-FIRST: the neck now leads. It used to sit in the SECOND row,
      under the context bar AND the whole active panel — heading, control rows and the
      info readout — which on a 1280x800 laptop put the top of the fretboard 645px down a
      708px viewport: six bands of chrome, and 63px of the app's centrepiece visible
@@ -137,7 +141,6 @@
   /* full-width collapsible chord-shape row below the neck (the neck keeps the full
      width above it); reordered above the suggester on a phone via the area maps */
   #shapes-card { grid-area: shapes; align-self: start; margin-top: 26px; }
-  #shapes-card[hidden] { display: none; }
   /* Stacked single column on a phone; the suggester slots between the board and
      the chord reference (cards + sequencer) rather than landing at the very end. */
   @media (max-width: 940px) {
@@ -169,9 +172,9 @@
   .ph-help.on, .drill-help.on { background: var(--accent); color: #07203a; border-color: var(--accent); }
   body.help-open .panel.active .panel-head p { display: block; margin-top: 6px; }
 
-  /* ===== Mode axis (Phase 3a): Reference · Practice =====
+  /* ===== Mode axis: Reference · Practice =====
      Still the mode axis in CODE — body.mode-practice drives everything below — but
-     as of Phase 10/A2 it is no longer a second navigation strip: Practice is the
+     it is not a second navigation strip: Practice is the
      fourth button in .mainnav, beside the three reference subjects. */
 
   /* The Practice panel is a sibling of the reference panels inside .main, hidden
@@ -184,13 +187,6 @@
      NOT — derived from the home's own [hidden] rather than managed by every drill's
      start/exit, which is what the six duplicated per-drill key rows used to cost. */
   #practice-home:not([hidden]) ~ #drill-ctx { display: none; }
-  /* The key half of that row is hidden for drills that don't declare onKey (see
-     applyDrillCtx). #drill-ctx-key is a .group, whose display:flex outranks the UA
-     [hidden]{display:none} — the same trap the toolbar groups hit below — so the
-     two parts need an explicit rule or the picker stays on screen. */
-  #drill-ctx-keylbl[hidden], #drill-ctx-key[hidden] { display: none; }
-  /* same trap, same fix, for the scoped tempo half (Phase 10/A1) */
-  #drill-ctx-tlbl[hidden], #drill-ctx-tempo[hidden] { display: none; }
   /* In Practice, collapse the reference shell: hide the active reference panel, the
      context bar, the shared board (+ meta), harmony extras, suggester, shapes card
      and the reference sub-tab strip. This used to key off a `mode-activity` class
@@ -208,7 +204,7 @@
      was a SECOND navigation axis that made no sense inside Practice. A2 merged it into
      the one nav, where Practice is simply the fourth destination, so there is nothing
      left to hide: the nav stays put and is how you leave. */
-  /* ...and the reference TRANSPORT with it (Phase 10/A1). This list used to stop at the
+  /* ...and the reference TRANSPORT with it. This list used to stop at the
      content, so a drill screen carried Listen · Loop · Tempo · Backing at the top while
      the drill's own Play, click and tempo sat at the bottom: two Play buttons, two
      metronome concepts and two tempo controls on one screen, and the top Listen strummed
@@ -227,7 +223,7 @@
     grid-template-columns: minmax(0,1fr); grid-template-areas: "main";
   }
   .practice-soon { color: var(--text-dim); font-size: 15px; max-width: 620px; }
-  /* Drill cards wrap into a grid (Phase 10/A3) instead of stacking one per row. Ten
+  /* Drill cards wrap into a grid instead of stacking one per row. Ten
      1200px-wide cards holding two short strings each is a phone layout that was never
      told the viewport got wider; a pillar's cards now read as a set, side by side.
      The li lost its box: this list began as the Phase-3a "coming soon" text stub, and
@@ -240,20 +236,13 @@
   /* Progress readout (3b) + the session starter (B3): the two cards of the top block. */
   .practice-progress-card, .practice-session-card { padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); }
   .ps-lead { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
-  /* INVERTED (Phase 10/B4). A3 set the progress card BESIDE the ten drill cards; B4 puts
+  /* INVERTED. A3 set the progress card BESIDE the ten drill cards; B4 puts
      it and the session starter ON TOP, because "what should I do now?" is the question
      this screen exists to answer. The two share a row on a desktop viewport (the session
      is the narrower of them — it is four chips and a button) and stack below 940px. */
   #ph-top-block { display: grid; gap: 14px; margin-bottom: 8px; }
-  #ph-top-block[hidden], .ph-drills[hidden] { display: none; }
   @media (min-width: 941px) {
     #ph-top-block { grid-template-columns: 340px minmax(0,1fr); align-items: start; }
-    /* THE [hidden] TRAP (see #drill-ctx-key above): an author display rule outranks the
-       UA [hidden]{display:none}, so without this the home stays on screen behind every
-       running drill — and jsdom's .hidden reports success the whole time, because it
-       reads the attribute, not the cascade. Every author display rule on an element
-       something toggles with .hidden needs its own [hidden] escape hatch. */
-    #practice-home[hidden] { display: none; }
     .ph-drills { min-width: 0; }
   }
   .pp-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; margin-bottom: 14px; }
@@ -269,7 +258,7 @@
   .pp-review { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 14px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
   .pp-review-n { font-size: 13.5px; color: var(--text-dim); }
   .pp-review-btn { margin-left: auto; }
-  /* ---- the progress NARRATIVE (Phase 10/B4) ----
+  /* ---- the progress NARRATIVE ----
      One row per drill you have actually run: latest score, direction of travel, personal
      best and — for the mic tiers — the timing error B1 started keeping. Each row is a
      real <button> carrying data-track, so it is also a door (the delegated listener on
@@ -283,7 +272,7 @@
   .pp-dir.up { color: var(--root); }
   .pp-dir.down { color: var(--ext); }
   .pp-dir.flat { color: var(--text-dim); }
-  /* ---- the session report (Phase 10/B3): the closing screen of the ritual ---- */
+  /* ---- the session report: the closing screen of the ritual ---- */
   .session-report { padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); max-width: 620px; }
   .sr-lead { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; color: var(--text-dim); margin-bottom: 12px; }
   .sr-row { display: flex; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border); }
@@ -295,7 +284,7 @@
   .drill-card:hover { border-color: var(--accent); background: var(--bg-panel-2); }
   .dc-name { font-size: 16px; font-weight: 600; }
   .dc-meta { font-size: 12.5px; color: var(--text-dim); }
-  /* What tier the drill offers (Phase 10/B4), painted from the registry's own `scored`.
+  /* What tier the drill offers, painted from the registry's own `scored`.
      Five of the ten subtitles used to end "· coach" and three of those had been false
      since F1 shipped mic scoring underneath them — a card that never states its drill's
      tier in prose cannot drift from it. */
@@ -305,7 +294,7 @@
   .dc-badge:empty { display: none; }
   .seam-btn { border-color: var(--accent); color: var(--accent); }
 
-  /* ---- THE ONE DRILL SHELL (Phase 10/B2) ----
+  /* ---- THE ONE DRILL SHELL ----
      Nine drills each hand-rolled their own layout; .drill-head was the closest thing to
      a shared part and it only ever held a counter. The parts below are the shell, and a
      drill fills them in: header (#drill-ctx) · setup · hint · stage · action bar · summary. */
@@ -320,9 +309,7 @@
   .drill-sess { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); }
   /* Quit is the way OUT, so it sits at the far end of the band rather than opening it. */
   #drill-ctx-quit { margin-left: auto; }
-  /* SETUP: a disclosure, open before the first Play and folded during the run. THE
-     [hidden] TRAP applies in reverse here — this is the author display rule, so the
-     drill's own hidden children (e.g. #tg-tone-rows) still need theirs. */
+  /* SETUP: a disclosure, open before the first Play and folded during the run. */
   body:not(.drill-setup-open) .drill-setup { display: none; }
   .drill-setup { margin-bottom: 4px; }
   /* HINT: collapsed behind the header's ?, revealed by itself the first time you open a
@@ -358,7 +345,7 @@
   .drill-done-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-bottom: 14px; }
   .drill-actions { display: flex; gap: 10px; margin-top: 18px; }
 
-  /* ---- ear-training drills (Phase 4) ---- */
+  /* ---- ear-training drills ---- */
   /* The prompt keeps its own weight but no longer centres itself: it shares the shell's
      .drill-stage-head with the round counter, and Replay moved to the shared .drill-bar
      (the old .ear-controls was this drill's private copy of one). */
@@ -385,12 +372,12 @@
   .ear-next-row { display: flex; justify-content: center; }
   .ear-next-row .btn.play { font-size: 14px; padding: 9px 26px; }
 
-  /* ---- practice home: drills grouped by pillar (Phase 5) ---- */
+  /* ---- practice home: drills grouped by pillar ---- */
   .practice-section { margin-top: 22px; }
   .ps-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
   .practice-section .practice-list { margin-top: 0; }
 
-  /* ---- chord-change fluency / one-minute changes (Phase 5a) ---- */
+  /* ---- chord-change fluency / one-minute changes ---- */
   .cm-best-line { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); margin: 12px 0; min-height: 18px; }
   #cm-setup .drill-actions { margin-top: 10px; }
   #cm-setup-note { max-width: 620px; }
@@ -416,7 +403,7 @@
      primary verb squeezed onto the right. It is .drill-bar now, and the hint moved out
      from under the button (B2). */
 
-  /* ---- strumming-pattern trainer (Phase 5b) ---- */
+  /* ---- strumming-pattern trainer ---- */
   .sp-name { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin: 6px 0; }
   /* the chord you are strumming over. It used to be the .drill-head's counter — which is
      where the drill's NAME belonged — so it moved down onto the stage with the grid. */
@@ -433,7 +420,7 @@
   .sp-cell.on .sp-dir.has { color: var(--root); }
   .sp-beat { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
 
-  /* ---- subdivision & timing (Phase 7a) ---- */
+  /* ---- subdivision & timing ---- */
   .sd-grid { display: grid; gap: 5px; max-width: 620px; margin: 12px 0 6px; }
   .sd-cell { display: flex; align-items: flex-end; justify-content: center; min-height: 34px; padding: 5px 0 4px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-panel); transition: border-color 0.08s, box-shadow 0.08s, background 0.08s; }
   .sd-cell.beat { background: var(--bg-panel-2); border-color: var(--border-strong); }
@@ -450,7 +437,7 @@
   .sd-dot.pal.on { background: var(--root); transform: scale(1.12); box-shadow: 0 0 0 3px rgba(107,165,58,0.3); }
   .sd-dot.on { opacity: 1; background: var(--root); }
 
-  /* ---- comp-the-progression (Phase 5c) ---- */
+  /* ---- comp-the-progression ---- */
   .co-stage { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 14px 0 6px; flex-wrap: wrap; }
   .co-slot { text-align: center; }
   .co-lab { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin-bottom: 6px; }
@@ -547,7 +534,7 @@
   .cell::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; transform: translateY(-50%); background: var(--line-string); z-index: 0; }
   /* position-marker inlay on the neck face, centred on the boundary above the row */
   .cell.inlay::after { content: ''; position: absolute; top: 0; left: 50%; width: 11px; height: 11px; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle at 38% 34%, rgba(247,233,202,0.32), rgba(214,194,154,0.13) 72%); z-index: 0; pointer-events: none; }
-  /* capo (Phase 2): frets behind the capo dim (unreachable); the capo fret wears
+  /* capo: frets behind the capo dim (unreachable); the capo fret wears
      a brass bar on its leading edge — a movable nut. The whole board is mirrored
      for lefty, so the bar lands on the correct side automatically. */
   .cell.subcapo, .ocell.subcapo { opacity: 0.24; }
@@ -606,7 +593,7 @@
   .sug-row .ctrl-label { display: block; margin-bottom: 4px; }
   .sug-scales { gap: 6px; }
   .sug-scales .btn { font-size: 12px; padding: 4px 9px; }
-  /* Circle of fifths (Phase 10/A3): the circle IS this tab's content — the equivalent
+  /* Circle of fifths: the circle IS this tab's content — the equivalent
      of the neck on the other two — so it grows with the viewport instead of sitting as a
      fixed 360px island in a 1193px panel with the right two-thirds empty. It's the only
      board-less tab, so nothing else here can use that width. Capped at 520px because the
@@ -639,11 +626,6 @@
      browser-zoom level; everything centres to the same 34px line. */
   .tb-bar > .btn, .tb-bar .tb-toggle, .tb-bar > .tb-group, .tb-bar > .tb-transport { min-height: 34px; }
   .tb-bar > .btn, .tb-bar .tb-toggle { display: inline-flex; align-items: center; justify-content: center; }
-  /* ...and re-assert [hidden] straight after it, same trap as the .tb-group rule below:
-     an author `display` beats the UA [hidden] rule whatever the specificity, so
-     updateGlobalPlay hiding Listen in the Notes / Identify views (nothing to listen to)
-     silently did nothing. Must sit AFTER the rule it corrects — equal specificity. */
-  .tb-bar > .btn[hidden] { display: none; }
   /* paired disclosure toggles (Settings + Backing) wrap as one unit so Backing can't
      orphan onto its own line */
   .tb-toggles { display: inline-flex; align-items: center; gap: 8px; }
@@ -678,9 +660,6 @@
     .tb-cluster > .tbc-label { flex-basis: 100%; }
   }
   .toolbar .tb-group, .tb-bar .tb-group { display: flex; align-items: center; gap: 7px; }
-  /* the display:flex above outranks the UA [hidden]{display:none}, so a hidden group
-     (e.g. the custom-tuning editor on a non-custom tuning) would still show — re-assert it */
-  .toolbar .tb-group[hidden], .tb-bar .tb-group[hidden] { display: none; }
   /* the two tb-bar groups wrap their controls in .tbg-inner so they can fold via grid-rows on
      mobile (see the condensing-header block); the inner keeps the original horizontal layout. */
   .tbg-inner { display: flex; align-items: center; gap: 7px; min-width: 0; }
@@ -702,7 +681,6 @@
   .audio-warn { font-size: 11px; color: var(--text-faint); align-self: center; }
   /* global transport: visible on every tab while the loop or progression plays */
   .tb-transport { display: inline-flex; align-items: center; gap: 8px; padding: 5px 8px 5px 11px; border: 1px solid var(--accent); border-radius: 9px; background: var(--bg-panel); }
-  .tb-transport[hidden] { display: none; }
   .tb-transport-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; }
   .tb-transport-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 var(--accent); }
   /* beat pulse (1d): the transport dot pumps on each scheduled beat — downbeat
@@ -716,25 +694,21 @@
   #tb-stop { padding: 4px 9px; }
   /* shared musical-context bar (root + display mode), contextual per tab */
   .context-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 18px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
-  .context-bar[hidden] { display: none; }
   .context-bar .ctx-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .context-bar .ctx-group[hidden] { display: none; }
   /* Each group except the leading view switch carries its own left separator (a
      border that hugs the group), so the bar reads as View · Root · Display — and
      when a group wraps to a new line the rule stays attached to it instead of
      orphaning a free-standing divider. The view group is always the first visible
      group, so it never needs one; root/display always follow one, so they always do. */
   .context-bar .ctx-group + .ctx-group { padding-left: 13px; border-left: 1px solid var(--border-strong); }
-  /* The view switch, as a lens on the board (Phase 10/A2). It sits inside
+  /* The view switch, as a lens on the board. It sits inside
      #board-region so it hides, moves and sticks with the neck it changes, instead of
      being a third navigation strip in the header that something else had to manage. */
   .board-lens { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
   .board-lens .lens-group { display: flex; flex-wrap: wrap; gap: 6px; }
-  .board-lens .lens-group[hidden] { display: none; }
   /* one shared fretboard (1b): a single board region below the active panel's
      controls, shown for Harmony + Scales, hidden on the Circle tab. */
   .board-region { margin-top: 4px; }
-  .board-region[hidden] { display: none; }
   /* sticky neck (3rd mobile-shell step): in the single-column layout the board is a
      direct child of the .layout grid, so it can stay pinned at the top while the
      suggester + sequencer below scroll — tap a chord card / suggester chip and see
@@ -847,7 +821,6 @@
   }
   /* chord-tones reference (voicing cards + sequencer) sits below the board */
   #harmony-extras { margin-top: 26px; }
-  #harmony-extras[hidden] { display: none; }
 
   /* chord-quality picker, chunked into labelled tiers (basic / sevenths / extended)
      so 21 qualities read as organised sections rather than one wall of buttons */
@@ -879,7 +852,6 @@
   .chordbox .cb-name { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; margin-bottom: 8px; color: var(--text); }
   .chordbox svg { display: block; }
   .chordbox .cb-cap { font-size: 11px; color: var(--text-faint); margin-top: 7px; max-width: 160px; }
-  .chordbox[hidden] { display: none; }
   /* "More / Fewer shapes" toggle below the shape cards — its own line, low-key */
   .cd-more { margin-top: 2px; font-size: 12px; padding: 6px 12px; }
   .cd-string { stroke: var(--line-string); stroke-width: 1.3; }
@@ -1031,7 +1003,7 @@
   .kbd-open-btn kbd { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--text-dim); background: var(--bg-panel-2); border: 1px solid var(--border-strong); border-radius: 5px; padding: 1px 6px; }
   @media (min-width: 941px) { .kbd-hint-bar { display: block; margin-top: 12px; } }
 
-  /* ===================== Accessibility (Phase 9 feel pass) =====================
+  /* ===================== Accessibility =====================
      The note-function colours (root / 3rd / 5th / 7th / ext) carry meaning by hue
      alone. Two opt-in body classes, toggled in Settings (applyA11y), close that gap:
        .cb-palette — swap the function colours for the Okabe–Ito CVD-safe set
@@ -1061,14 +1033,14 @@
   .wc-modal { max-width: 440px; }
   .wc-body { padding: 14px 20px 20px; }
   .wc-lead { font-size: 14px; color: var(--text-dim); margin-bottom: 13px; }
-  /* The three answers (Phase 10/A4) reuse the Practice home's .drill-card pattern
+  /* The three answers reuse the Practice home's .drill-card pattern
      rather than defining a parallel one — so the very first card a visitor taps looks
      like the cards they meet the moment they arrive anywhere. */
   .wc-choices { display: grid; gap: 10px; margin-bottom: 16px; }
   .wc-actions { display: flex; justify-content: flex-end; }
   .wc-actions .btn { font-size: 13px; }
 
-  /* ---- chromatic mic tuner (Phase 8 / F0) — reuses the .cl-overlay / .cl-modal look ----
+  /* ---- chromatic mic tuner — reuses the .cl-overlay / .cl-modal look ----
      Everything here is sized to be read at arm's length with a guitar in your hands,
      so the note is deliberately huge and the needle track spans the full panel. */
   .mt-modal { max-width: 420px; }
@@ -1096,7 +1068,6 @@
   .mt-gauge:not(.live) { opacity: 0.45; }
   .mt-string { text-align: center; font-size: 12px; color: var(--text-dim); min-height: 17px; }
   .mt-status { font-size: 12.5px; line-height: 1.5; color: var(--seventh); text-align: center; }
-  .mt-status[hidden] { display: none; }
   .mt-actions { display: flex; justify-content: center; }
   .mt-actions .btn { font-size: 14px; padding: 9px 24px; }
   .mt-hint { font-size: 11px; line-height: 1.5; color: var(--text-faint); text-align: center; }
@@ -1104,19 +1075,16 @@
      two-row string grid beside it on a phone; nowrap keeps "🎤 Mic" on one line. */
   .btn.tuner-mic { padding: 5px 9px; white-space: nowrap; align-self: center; }
 
-  /* ---- latency calibration row (Phase 8 / F1) ---- */
+  /* ---- latency calibration row ---- */
   .tb-cal { flex-wrap: wrap; }
   .tb-cal input[type="range"] { width: 96px; }
   .cal-status, .bk-status { font-size: 11px; line-height: 1.45; color: var(--text-dim); max-width: 260px; }
-  .cal-status[hidden], .bk-status[hidden] { display: none; }
 
-  /* ---- scored timing readout (Phase 8 / F1) ----
+  /* ---- scored timing readout ----
      Deliberately quiet until there is something real to say: the panel only renders
      after a scored run, so the coach tier never shows an empty scoreboard. */
   .scored-status { font-size: 12px; line-height: 1.5; color: var(--seventh); margin-top: 10px; }
-  .scored-status[hidden] { display: none; }
   .scored-panel { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: 11px; background: var(--bg-panel); display: flex; flex-direction: column; gap: 5px; }
-  .scored-panel[hidden] { display: none; }
   .sc-main { font-family: 'JetBrains Mono', monospace; }
   .sc-main b { font-size: 30px; color: var(--text); }
   .sc-main span { font-size: 12px; color: var(--text-dim); margin-left: 5px; }

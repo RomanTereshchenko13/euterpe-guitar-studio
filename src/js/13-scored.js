@@ -1,4 +1,4 @@
-/* ===================== SCORED RUNS (Phase 8 / F1, shared) =====================
+/* ===================== SCORED RUNS =====================
    One scoring tier, three drills. F1 shipped this machinery inside the subdivision
    coach (7a); the Rhythm pillar tiers (5b strum, 5c comp) need exactly the same
    five things, so it moved here rather than being pasted twice more — the same
@@ -30,9 +30,9 @@
 const SC_TOL_MAX = 0.12;    // s — past this a "hit" stops meaning the slot you aimed at
 const SC_MAX_MARKS = 512;   // ring cap per run, so a long session can't grow without bound
 
-/* The `extra` a scored drill hands recordSession (Phase 10/B1): the run's mean
+/* The `extra` a scored drill hands recordSession: the run's mean
    absolute error in ms, or undefined when there is nothing honest to record — no
-   mic tier, no hits, a run the self-hearing guard refused, or (Phase 10/A4) a run
+   mic tier, no hits, a run the self-hearing guard refused, or a run
    measured against a latency nobody has established. Recording a refused run's error
    would poison the trend with the app's own click, which is exactly the number
    onsetSelfHeard exists to keep off the screen — and an uncalibrated run poisons it
@@ -41,8 +41,8 @@ const SC_MAX_MARKS = 512;   // ring cap per run, so a long session can't grow wi
    would be charting a device change as if it were progress. */
 function scoredErr(score){
   if(!score || !score.n || !isFinite(score.meanAbsMs)) return undefined;
-  if(typeof onsetSelfHeard==='function' && onsetSelfHeard(score)) return undefined;
-  if(typeof calMeasured==='function' && !calMeasured()) return undefined;
+  if(onsetSelfHeard(score)) return undefined;
+  if(!calMeasured()) return undefined;
   return { err: score.meanAbsMs };
 }
 
@@ -54,7 +54,7 @@ function scoredErr(score){
 function scoredRun(cfg){
   const st = { on:false, live:false, grid:[], heard:[], off:null, score:null };
 
-  function available(){ return typeof onsetSupported === 'function' && onsetSupported(); }
+  function available(){ return onsetSupported(); }
 
   function status(key){
     const el = document.getElementById(cfg.statusId); if(!el) return;
@@ -78,7 +78,7 @@ function scoredRun(cfg){
   }
   function unlisten(){
     if(st.off){ st.off(); st.off = null; }
-    if(typeof onsetStop === 'function') onsetStop();
+    onsetStop();
   }
 
   /* Latency-corrected: a detected onset is late by the whole round trip, so
@@ -86,7 +86,7 @@ function scoredRun(cfg){
      on earth reads as dragging by the buffer size. */
   function compute(){
     if(!st.on || !st.grid.length || !st.heard.length) return null;
-    const offSec = (typeof calOffsetSec === 'function') ? calOffsetSec() : 0;
+    const offSec = calOffsetSec();
     const actual = st.heard.map(x => x - offSec);
     const tol = Math.min(cfg.tol ? cfg.tol() : SC_TOL_MAX, SC_TOL_MAX);
     return onsetScore(onsetMatch(st.grid, actual, tol));
@@ -103,7 +103,7 @@ function scoredRun(cfg){
       box.innerHTML = `<div class="sc-verdict sc-warn">${t('on_selfheard')}</div>`;
       return;
     }
-    /* Uncalibrated (Phase 10/A4). Until the round trip is measured, calOffsetSec() is
+    /* Uncalibrated. Until the round trip is measured, calOffsetSec() is
        0 — and 0 is not a latency, it is the absence of a measurement. Every absolute
        reading is therefore shifted by the whole audio stack, so "18 ms off · dragging"
        would be a statement about the buffer size wearing the player's name. That is
@@ -112,7 +112,7 @@ function scoredRun(cfg){
        between hits, and shifting every hit by the same amount cannot change it. So
        report the half we can stand behind, name the half we can't, and point at the
        one action that unlocks it. */
-    if(typeof calMeasured === 'function' && !calMeasured()){
+    if(!calMeasured()){
       box.innerHTML = [
         `<div class="sc-main"><b>±${Math.round(s.spreadMs)}</b> <span>${t('on_ms')}</span></div>`,
         `<div class="sc-verdict">${t('on_evenness')}</div>`,
@@ -142,7 +142,7 @@ function scoredRun(cfg){
        result can't be judged is worth much less than telling them beforehand. */
     toggle(){
       st.on = !st.on; st.score = null;
-      status(st.on && typeof calMeasured === 'function' && !calMeasured() ? 'on_needcal' : null);
+      status(st.on && !calMeasured() ? 'on_needcal' : null);
       if(!st.on) unlisten();
     },
     setOn(v){ st.on = !!v; },
@@ -156,7 +156,7 @@ function scoredRun(cfg){
     release(){ st.live = false; unlisten(); },
     score: () => st.score,
     clearScore(){ st.score = null; status(null); },
-    /* The mic button is the SHELL's now (Phase 10/B2) — one #drill-ctx-mic in the drill
+    /* The mic button is the SHELL's now — one #drill-ctx-mic in the drill
        header instead of the identical #sd-mic / #sp-mic / #tg-mic in three drills'
        control rows. So this paints its label and pressed state (only the running
        scoredRun knows whether it is listening) and leaves VISIBILITY to

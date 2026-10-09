@@ -1,4 +1,4 @@
-/* ===================== LATENCY CALIBRATION (Phase 8 / F1) =====================
+/* ===================== LATENCY CALIBRATION =====================
    Restores the offset that shipped in v2.5.0 and was cut in v2.11.0 for having no
    caller. It has one now: F1 scores you against scheduled times, and a detected
    onset arrives late by however long the whole audio stack takes. Without this,
@@ -108,7 +108,7 @@ function calMedian(a){ const s=a.slice().sort((x,y)=>x-y); const n=s.length;
 
 /* Bounds-checked everywhere it can be set (test result, slider, restored state) —
    same discipline as the rest of the persisted catalogue.
-   `known` (Phase 10/A4) records whether this number was ever ESTABLISHED, as opposed
+   `known` records whether this number was ever ESTABLISHED, as opposed
    to being the 0 it starts at. Nothing could tell those two apart before, and they are
    not the same claim: 0 means "the round trip is instant", which is true of no device
    ever made. A player who has not measured was being scored against an offset of zero
@@ -119,7 +119,7 @@ function calMedian(a){ const s=a.slice().sort((x,y)=>x-y); const n=s.length;
 function calSetMs(ms, known){
   calMs = Math.max(0, Math.min(CAL_MAX_MS, Math.round(Number(ms)||0)));
   if(known !== undefined) calKnown = !!known;
-  if(typeof saveState==='function') saveState();
+  saveState();
   calRender();
 }
 /* Has the round trip actually been established? Consumed by 13-scored.js. */
