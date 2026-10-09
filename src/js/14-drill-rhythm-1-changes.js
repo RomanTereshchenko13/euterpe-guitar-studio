@@ -1,20 +1,11 @@
 /* ===================== Drill: Chord-change fluency =====================
-   The RHYTHM pillar's table-stakes coach tier — the famous "one-minute changes":
-   pick a chord pair, the timer runs, and you switch between the two shapes as cleanly
-   as you can, tapping the big counter on each clean change. At the end: changes made,
-   changes per minute, and your personal best for that pair.
+   One-minute changes: pick a chord pair, the timer runs, switch between the shapes as
+   cleanly as you can and tap the counter on each clean change. At the end: changes,
+   changes per minute, and your best for that pair. It counts your taps, not your guitar
+   — and counting yourself to beat your record is the exercise. */
 
-   Honest framing (roadmap): this is a COACH tier, not scored training — the app
-   counts YOUR taps; it doesn't listen to your guitar.
-   That's no compromise here: counting yourself and beating your record IS the
-   authentic form of this exercise, so the reward (a per-pair personal best) needs no
-   mic. Reuses the chord diagrams (chordBoxSVG, 08), the cue bus for the count-in +
-   a new-best fanfare (05), an optional metronome on its own scheduler clock
-   (metroClick, 06), and the learner model's sessions ring buffer (13) — the best
-   per pair is DERIVED by scanning sessions, so the pinned item shape is untouched. */
-
-/* Classic open-chord change pairs, each [[pc,qi],[pc,qi]] (qi: 0=major, 1=minor).
-   Only natural roots, so ROOTS[pc] labels stay clean (C/D/E/G/A). */
+/* Classic open-chord pairs, [[pc,qi],[pc,qi]] (qi 0 = major, 1 = minor); natural roots
+   only, so the labels stay clean. */
 const CM_PAIRS = [
   [[9,0],[2,0]],   // A  – D
   [[9,0],[4,0]],   // A  – E
@@ -30,7 +21,7 @@ const CM_PAIRS = [
 const CM_DURS = [30, 60, 90];   // selectable session lengths (seconds)
 
 let cmDurIdx = 1;        // default 60 s
-let cmPairIdx = 0;       // selected preset pair (in-session preference)
+let cmPairIdx = 0;       // selected pair
 let cmClick = false;     // optional metronome reference during the run
 let cmDrill = null;
 // cmDrill = { phase:'setup'|'run'|'done', pairIdx, dur, count, remaining, startT,
@@ -40,10 +31,8 @@ function cmChord(spec){ const [pc,qi]=spec, q=QUALITIES[qi]; return { pc, qi, q,
 function cmPairName(i){ const p=CM_PAIRS[i]; return cmChord(p[0]).lbl+' ↔ '+cmChord(p[1]).lbl; }
 function cmPairId(i){ const p=CM_PAIRS[i]; return 'changes:'+cmChord(p[0]).lbl+'-'+cmChord(p[1]).lbl; }   // stable session id
 
-/* Personal best (max changes-per-minute) for a pair. This used to scan the sessions
-   ring buffer by hand, which meant the best silently reset once 50 sessions across
-   nine drills pushed this pair's runs off the end. The learner model made the best a
-   stored, per-id fact for exactly that reason — one helper, every track. */
+/* The best changes-per-minute for a pair: a stored per-id best, so it outlives the
+   history it came from. */
 function cmPairBest(i){
   const b=learnerBest(cmPairId(i));
   return b ? b.score : 0;
@@ -54,7 +43,7 @@ function startChanges(){
   cmDrill={ phase:'setup', pairIdx:cmPairIdx, dur:CM_DURS[cmDurIdx] };
   const home=document.getElementById('practice-home'), area=document.getElementById('cm-area');
   if(home) home.hidden=true; if(area) area.hidden=false;
-  drillShellEnter();          // B2
+  drillShellEnter();
   renderCm();
 }
 function exitChanges(){
@@ -117,7 +106,7 @@ function cmCountdown(){
 }
 function cmFmtTime(s){ s=Math.max(0,s|0); const m=Math.floor(s/60), ss=s%60; return m+':'+(ss<10?'0':'')+ss; }
 
-/* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
+/* ---- DOM paint ---- */
 function renderCm(){
   if(!cmDrill) return;
   const setup=document.getElementById('cm-setup'), active=document.getElementById('cm-active'), sum=document.getElementById('cm-summary');
@@ -178,13 +167,12 @@ function renderCmSummary(){
   const ag=document.getElementById('cm-again'); if(ag){ ag.innerHTML='&#9654; '+t('drill_again'); ag.onclick=cmBegin; }
   const dn=document.getElementById('cm-done');  if(dn){ dn.textContent=t('drill_done'); dn.onclick=exitChanges; }
 }
-// re-localize an in-flight changes drill on a language switch (called from applyLang)
+// re-localize an in-flight drill on a language switch
 function refreshChangesLang(){ if(cmDrill) renderCm(); }
 
-/* card starter + in-drill controls — wired once at load (guarded so a missing panel
-   never throws, mirroring initDrill / initEar). */
-registerDrill({ id:'changes', area:'cm-area', tempo:true,   // the optional beat-reference click rides pulseSec()
-                // the one genuinely unscored track left: it counts YOUR taps, not your guitar
+/* in-drill controls, wired once at load */
+registerDrill({ id:'changes', area:'cm-area', tempo:true,   // the optional click rides pulseSec()
+                // the one coach track: it counts YOUR taps, not your guitar
                 tracks:[{ id:'changes', kind:'perf', sess:'changes', label:'drill_changes',
                           better:'high', unit:'cpm', start:startChanges }],
                 isActive:()=>!!cmDrill, exit:exitChanges, refreshLang:refreshChangesLang });

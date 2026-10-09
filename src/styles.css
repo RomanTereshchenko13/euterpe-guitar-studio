@@ -5,21 +5,17 @@
     --line-string: rgba(220, 200, 160, 0.35); --line-fret: rgba(180, 160, 120, 0.5);
     --text: #f0ebe0; --text-dim: #a39c8a; --text-faint: #6f6857;
     --border: rgba(220, 200, 160, 0.14); --border-strong: rgba(220, 200, 160, 0.3);
-    /* UI accent is a cool teal, deliberately distinct from the musical "fifth"
-       blue below — selection/focus chrome must never be mistaken for a note role */
+    /* UI accent: a teal kept distinct from the "fifth" blue — chrome must never read as a note role */
     --accent: #2DB6A6; --root: #6BA53A; --third: #E0962B; --fifth: #4A9EE8; --seventh: #D14E7E;
     --ext: #9B7BE0; --sc-other: #b3a989;
     --natural: #4A9EE8; --sharp: #C98426; --radius: 10px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  /* overscroll-behavior (mobile shell): kill accidental pull-to-refresh / scroll
-     chaining so an over-pull during a jam or (later) a timed drill can't reload the app. */
+  /* no pull-to-refresh: an over-pull mid-jam must not reload the app */
   body { background: var(--bg); color: var(--text); font-family: 'Hanken Grotesk', system-ui, sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; padding: 0 0 4rem; overscroll-behavior-y: contain; }
-  /* The condensing sticky header changes the height of its normal-flow box, which sits above the
-     viewport once you've scrolled. Without this, the browser's scroll anchoring nudges scrollY to
-     keep content visually put — and that nudge moves the viewport past the condense trigger again,
-     which re-fires the toggle, which re-anchors… an endless flip-flop in one spot (caught by
-     tools/scroll-check.js). Opting out keeps scrollY where the user left it. */
+  /* The condensing sticky header changes height above the viewport; with scroll
+     anchoring on, the browser's correction re-crosses the condense trigger and the
+     header flip-flops in place (tools/scroll-check.js). */
   html { overflow-anchor: none; }
 
   /* keyboard accessibility: visible focus on every interactive control */
@@ -27,30 +23,24 @@
   .aside-toggle:focus-visible, .tb-toggle:focus-visible, .cl-close:focus-visible,
   input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .dot:focus-visible { outline: 2px solid #fff; outline-offset: 2px; z-index: 7; }
-  /* touch: kill the 300ms tap delay and double-tap-zoom on tappable controls so
-     rapid note tapping feels instant on phones */
+  /* no tap delay or double-tap zoom on controls, so rapid note tapping is instant */
   .btn, .navbtn, .langbtn, .ver, .tb-toggle, .aside-toggle, .cl-close,
   .chordbox, .cd-dot, .cof-node, .seq-chip .nm, .seq-chip .bars, .seq-chip .x,
   .install-btn, .toast-act, .toast-x,
   select { touch-action: manipulation; }
   .cof-node:focus { outline: none; }
   .cof-node:focus-visible circle { stroke: #fff; stroke-width: 2.6; }
-  /* `hidden` always wins. Any author `display` rule outranks the UA's
-     [hidden]{display:none}, so without this every element styled with a display AND
-     toggled with .hidden needed its own escape hatch — and jsdom, which reads the
-     attribute rather than the cascade, reports success either way. */
+  /* `hidden` always wins: any author `display` rule outranks the UA's [hidden], and
+     jsdom (which reads the attribute) would report success either way. */
   [hidden] { display: none !important; }
   /* respect users who prefer less motion */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
   }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
-  /* Installed-PWA / notched-phone polish: with viewport-fit=cover the OS hands us
-     the display cutouts via env(safe-area-inset-*). Keep content clear of the
-     notch, rounded corners and home indicator. max(...) never shrinks the existing
-     spacing (insets are 0 on a normal screen), and the whole block is gated on
-     @supports env() so jsdom — which can't parse env() — falls back to the base
-     rules above, keeping the responsive-overflow test measuring today's values. */
+  /* Notched phones / installed PWA: keep content clear of env(safe-area-inset-*).
+     max() never shrinks the normal spacing; gated on @supports so jsdom, which can't
+     parse env(), measures the base rules. */
   @supports (padding: max(0px, env(safe-area-inset-left))) {
     .wrap { padding-left: max(24px, env(safe-area-inset-left)); padding-right: max(24px, env(safe-area-inset-right)); }
     header { padding-top: max(28px, env(safe-area-inset-top)); }
@@ -64,8 +54,7 @@
   .brand .ver { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; color: var(--text-faint); border: 1px solid rgba(45, 182, 166, 0.4); border-radius: 6px; padding: 2px 7px; align-self: center; cursor: pointer; background: transparent; transition: all 0.12s; }
   .brand .ver:hover { color: var(--accent); border-color: var(--accent); }
   .lang { margin-left: auto; display: flex; gap: 2px; align-self: center; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 8px; padding: 2px; }
-  /* PWA install CTA (header) + update toast (bottom). Hidden until the browser /
-     service worker signal them (14-pwa.js). */
+  /* PWA install button (header) + update toast (bottom), hidden until signalled (16-pwa.js) */
   .install-btn { align-self: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #07203a; background: var(--accent); border: none; border-radius: 7px; padding: 5px 11px; cursor: pointer; transition: opacity 0.12s; }
   .install-btn:hover { opacity: 0.88; }
   .toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 200; display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 24px); background: var(--bg-panel-2); border: 1px solid var(--border-strong); border-radius: 12px; padding: 10px 12px 10px 16px; box-shadow: 0 12px 36px rgba(0,0,0,0.5); animation: toast-in 0.22s ease; }
@@ -81,34 +70,16 @@
   .langbtn { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; padding: 5px 11px; border: none; background: transparent; color: var(--text-dim); border-radius: 6px; cursor: pointer; transition: all 0.12s; }
   .langbtn:hover:not(.active) { color: var(--text); }
   .langbtn.active { background: var(--accent); color: #07203a; }
-  /* ONE navigation surface: four destinations in one strip, replacing
-     the mode pills stacked above the tab underline. Keeps the tab strip's visual
-     language (it was the quieter of the two) — the destinations are peers, so they
-     read as peers. */
+  /* the one navigation: three reference subjects + Practice, as peers */
   .mainnav { display: flex; gap: 4px; margin-top: 22px; flex-wrap: wrap; }
   .navbtn { font-family: inherit; font-size: 14px; font-weight: 500; background: transparent; color: var(--text-dim); border: none; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0; padding: 10px 16px 12px; cursor: pointer; transition: color 0.15s, border-color 0.15s, background 0.15s; }
   .navbtn:hover:not(.active) { color: var(--text); background: var(--bg-panel); }
   .navbtn.active { color: var(--text); border-bottom-color: var(--accent); }
 
-  /* Desktop grid (#5): the fretboard — the centrepiece — spans the FULL width, with
-     the board-meta and chord reference following full-width too. This reclaims the
-     tall empty right rail the old sticky-suggester layout left, and hands the reclaimed
-     ~264px to the neck (availW() measures the board's own column, so the cells grow to
-     fill it). Named areas (not source order) place the pieces, so on a phone the same
-     DOM reflows to put the suggester under the board (mobile override).
-     minmax(0,1fr) keeps the wide neck from blowing the row out — it scrolls inside its
-     own .scroll instead.
-
-     BOARD-FIRST: the neck now leads. It used to sit in the SECOND row,
-     under the context bar AND the whole active panel — heading, control rows and the
-     info readout — which on a 1280x800 laptop put the top of the fretboard 645px down a
-     708px viewport: six bands of chrome, and 63px of the app's centrepiece visible
-     without scrolling. The order is now "in what key" (context) -> the answer (neck +
-     its legend) -> "how it's built" (the view's own controls + info) -> the reference
-     rows. Same DOM, three area maps. The suggester rides beside the controls, where it
-     reads as commentary on them; the neck keeps the full width above (see
-     prioritize-fretboard-width — controls compact into a horizontal rail, never a
-     vertical one stealing the neck's columns). */
+  /* Desktop grid: the neck leads and spans the full width — context bar → neck +
+     legend → the view's controls (with the suggester beside them) → reference rows.
+     Named areas, not source order, so phones reflow the same DOM. minmax(0,1fr)
+     keeps the wide neck from blowing out the row; it scrolls in its own .scroll. */
   .layout {
     display: grid;
     grid-template-columns: minmax(0,1fr) 234px;
@@ -123,34 +94,28 @@
     align-items: start;
     padding-top: 30px;
   }
-  /* the suggester only shows on Harmony; on Scales / Circle drop the empty column
-     so the board + controls use the full width (toggled in applyAsideState) */
+  /* no suggester off Harmony: drop its column (applyAsideState) */
   .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "ctx" "board" "boardmeta" "main" "shapes" "extras"; }
   #context-bar { grid-area: ctx; }
-  /* .main follows the neck now, so it needs the air the board used to get from the
-     context bar's own margin-bottom. Not a row-gap on .layout: the areas are optional
-     (no board on Circle, no aside off Harmony) and a gap would show as a hole. */
+  /* .main follows the neck and needs air above it. Not a row-gap: the areas are
+     optional, and a gap would show as a hole. */
   .main { grid-area: main; min-width: 0; margin-top: 22px; }
-  /* Practice hides the board, the meta and the context bar, so .main is the first
-     thing under the header again and the clearance above would read as a dead band. */
+  /* Practice has no board or context bar above .main, so no clearance either */
   body.mode-practice .main { margin-top: 0; }
   #board-region { grid-area: board; }
   .board-meta { grid-area: boardmeta; }
   #harmony-extras { grid-area: extras; }
   .aside { grid-area: aside; align-self: start; }
-  /* full-width collapsible chord-shape row below the neck (the neck keeps the full
-     width above it); reordered above the suggester on a phone via the area maps */
+  /* the collapsible chord-shape row below the neck */
   #shapes-card { grid-area: shapes; align-self: start; margin-top: 26px; }
-  /* Stacked single column on a phone; the suggester slots between the board and
-     the chord reference (cards + sequencer) rather than landing at the very end. */
+  /* phone: one column; shapes and the suggester sit between the board and the
+     chord reference rather than at the very end */
   @media (max-width: 940px) {
     .layout, .layout.no-aside {
       grid-template-columns: minmax(0,1fr);
       grid-template-areas: "ctx" "board" "boardmeta" "main" "shapes" "aside" "extras";
     }
-    /* shapes + suggester follow the legend in flow on a phone; give each air so it
-       doesn't crowd the row directly above it. Shapes sit FIRST ("how to fret this"
-       before "what to play over it"), via the grid area order above. */
+    /* air between the stacked cards; shapes ("how to fret this") before the suggester */
     .aside { position: static; margin-top: 22px; }
     #shapes-card { margin-top: 22px; }
   }
@@ -162,37 +127,24 @@
   .panel-head h2 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 22px; letter-spacing: -0.01em; margin-bottom: 4px; }
   .panel-head p { display: none; font-size: 14px; color: var(--text-dim); max-width: 680px; }
   .ph-top { display: flex; align-items: center; gap: 9px; }
-  /* Help toggle: a ? button by each panel heading. By default the view's description
-     AND the board's playing-hint are collapsed behind it — on EVERY viewport now (was
-     phone-only) — so the controls + neck sit higher and the default screen reads clean;
-     tap ? to reveal the explanatory text. A body-level .help-open drives both, since the
-     description (.main) and the hint (.board-meta) live in different subtrees. */
+  /* ? by each panel heading: the view's description and the board hint are folded by
+     default. A body class drives both — they live in different subtrees. */
   .ph-help, .drill-help { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 22px; height: 22px; padding: 0; line-height: 1; border: 1px solid var(--border-strong); border-radius: 50%; background: var(--bg-panel); color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; cursor: pointer; }
   .ph-help:hover, .drill-help:hover { color: var(--text); border-color: var(--text-faint); }
   .ph-help.on, .drill-help.on { background: var(--accent); color: #07203a; border-color: var(--accent); }
   body.help-open .panel.active .panel-head p { display: block; margin-top: 6px; }
 
-  /* ===== Mode axis: Reference · Practice =====
-     Still the mode axis in CODE — body.mode-practice drives everything below — but
-     it is not a second navigation strip: Practice is the
-     fourth button in .mainnav, beside the three reference subjects. */
+  /* ===== Mode axis: Reference · Practice (body.mode-practice) ===== */
 
-  /* The Practice panel is a sibling of the reference panels inside .main, hidden
-     until its mode is active — kept OFF the .panel/.panel.active machinery so the
-     two navigation axes never fight. */
+  /* the Practice panel sits beside the reference panels but stays off the
+     .panel/.panel.active machinery */
   .practice-panel { display: none; animation: fade 0.25s ease; }
   body.mode-practice .practice-panel { display: block; }
-  /* The drills' one shared key row sits between the practice home and the drill areas.
-     It belongs to whichever drill is running, so it's visible exactly when the home is
-     NOT — derived from the home's own [hidden] rather than managed by every drill's
-     start/exit, which is what the six duplicated per-drill key rows used to cost. */
+  /* the drill header shows exactly when the practice home doesn't — derived from the
+     home's own [hidden] */
   #practice-home:not([hidden]) ~ #drill-ctx { display: none; }
-  /* In Practice, collapse the reference shell: hide the active reference panel, the
-     context bar, the shared board (+ meta), harmony extras, suggester, shapes card
-     and the reference sub-tab strip. This used to key off a `mode-activity` class
-     that existed only to cover Practice AND Ear with one list; with Ear folded into
-     Practice there is one activity mode, so it keys off that. Reference is the
-     untouched default. */
+  /* Practice collapses the reference shell: the reference panel, context bar, board,
+     extras, suggester and shapes card. */
   body.mode-practice .panel.active,
   body.mode-practice #context-bar,
   body.mode-practice #board-region,
@@ -200,46 +152,28 @@
   body.mode-practice #harmony-extras,
   body.mode-practice .aside,
   body.mode-practice #shapes-card { display: none; }
-  /* `#tabs` was in this list — the reference sub-tab strip had to be hidden because it
-     was a SECOND navigation axis that made no sense inside Practice. A2 merged it into
-     the one nav, where Practice is simply the fourth destination, so there is nothing
-     left to hide: the nav stays put and is how you leave. */
-  /* ...and the reference TRANSPORT with it. This list used to stop at the
-     content, so a drill screen carried Listen · Loop · Tempo · Backing at the top while
-     the drill's own Play, click and tempo sat at the bottom: two Play buttons, two
-     metronome concepts and two tempo controls on one screen, and the top Listen strummed
-     the reference chord over the running drill. Each of these is a REFERENCE verb — it
-     acts on the reference board, which isn't on screen here — so in Practice they have no
-     subject. The one genuinely shared control, tempo, moves to #drill-ctx where the drill
-     that uses it is. #g-play/#g-loop need the id (a `.tb-bar > .btn` display rule outranks
-     even their own [hidden]); the panels need it to beat `.toolbar`. */
+  /* ...and the reference transport: Listen, Loop, Backing and Settings' tempo act on the
+     reference board, which isn't here; tempo lives in the drill header. #g-play/#g-loop
+     need the id to beat `.tb-bar > .btn`; the panels need it to beat `.toolbar`. */
   body.mode-practice #g-play,
   body.mode-practice #g-loop,
   body.mode-practice .tb-bar .tb-tempo,
   body.mode-practice #backing-toggle,
   body.mode-practice #backing-panel { display: none; }
-  /* with the board + suggester gone, let .main use the full width */
+  /* no board or suggester: .main takes the full width */
   body.mode-practice .layout, body.mode-practice .layout.no-aside {
     grid-template-columns: minmax(0,1fr); grid-template-areas: "main";
   }
   .practice-soon { color: var(--text-dim); font-size: 15px; max-width: 620px; }
-  /* Drill cards wrap into a grid instead of stacking one per row. Ten
-     1200px-wide cards holding two short strings each is a phone layout that was never
-     told the viewport got wider; a pillar's cards now read as a set, side by side.
-     The li lost its box: this list began as the Phase-3a "coming soon" text stub, and
-     when real .drill-card buttons moved in nobody removed the li's own background +
-     border, so every card rendered as a bordered box INSIDE a bordered box. The li is
-     now a bare cell (flex, so the card fills the row's height and cards in a row line
-     up); the card is the only box. */
+  /* drill cards wrap into a grid; the li is a bare flex cell, so the card is the only
+     box and cards in a row line up */
   .practice-list { list-style: none; margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
   .practice-list li { display: flex; }
-  /* Progress readout (3b) + the session starter (B3): the two cards of the top block. */
+  /* the progress card and the session starter */
   .practice-progress-card, .practice-session-card { padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); }
   .ps-lead { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
-  /* INVERTED. A3 set the progress card BESIDE the ten drill cards; B4 puts
-     it and the session starter ON TOP, because "what should I do now?" is the question
-     this screen exists to answer. The two share a row on a desktop viewport (the session
-     is the narrower of them — it is four chips and a button) and stack below 940px. */
+  /* the session starter and progress share a row on desktop ("what now?" first), and
+     stack below 940px */
   #ph-top-block { display: grid; gap: 14px; margin-bottom: 8px; }
   @media (min-width: 941px) {
     #ph-top-block { grid-template-columns: 340px minmax(0,1fr); align-items: start; }
@@ -252,17 +186,11 @@
   .pp-val { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: var(--text); }
   .pp-lab { font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
   .pp-stats { margin-top: 16px; }
-  /* due-for-review row (spine #3): surfaces the SRS queue + a one-tap Review CTA.
-     B4 moved it to the TOP of the card — it is the answer to the only question the
-     screen is asked — so its rule is a bottom border rather than a top one. */
+  /* what's-next row, at the top of the progress card */
   .pp-review { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 14px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
   .pp-review-n { font-size: 13.5px; color: var(--text-dim); }
   .pp-review-btn { margin-left: auto; }
-  /* ---- the progress NARRATIVE ----
-     One row per drill you have actually run: latest score, direction of travel, personal
-     best and — for the mic tiers — the timing error B1 started keeping. Each row is a
-     real <button> carrying data-track, so it is also a door (the delegated listener on
-     #practice-home opens it); a line that names a drill and cannot open it is a tease. */
+  /* ---- the progress rows: one per drill you have run; each is a button into it ---- */
   .pp-sec { font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin: 14px 0 6px; }
   .pp-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 10px; width: 100%; text-align: left; padding: 8px 10px; background: none; border: 1px solid transparent; border-radius: var(--radius); color: var(--text); font-family: inherit; cursor: pointer; }
   .pp-row:hover { border-color: var(--border-strong); background: var(--bg-panel-2); }
@@ -272,58 +200,47 @@
   .pp-dir.up { color: var(--root); }
   .pp-dir.down { color: var(--ext); }
   .pp-dir.flat { color: var(--text-dim); }
-  /* ---- the session report: the closing screen of the ritual ---- */
+  /* ---- the session report ---- */
   .session-report { padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); max-width: 620px; }
   .sr-lead { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; color: var(--text-dim); margin-bottom: 12px; }
   .sr-row { display: flex; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border); }
   .sr-name { flex: 1 1 auto; font-size: 14px; }
   .sr-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); }
 
-  /* ---- note-naming drill (3c) ---- */
+  /* ---- note-naming drill ---- */
   .drill-card { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; padding: 15px 18px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); color: var(--text); cursor: pointer; font-family: inherit; transition: border-color 0.15s, background 0.15s; }
   .drill-card:hover { border-color: var(--accent); background: var(--bg-panel-2); }
   .dc-name { font-size: 16px; font-weight: 600; }
   .dc-meta { font-size: 12.5px; color: var(--text-dim); }
-  /* What tier the drill offers, painted from the registry's own `scored`.
-     Five of the ten subtitles used to end "· coach" and three of those had been false
-     since F1 shipped mic scoring underneath them — a card that never states its drill's
-     tier in prose cannot drift from it. */
+  /* a drill's tier, painted from the registry */
   .dc-badge { align-self: flex-start; margin-top: 2px; padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.03em; border: 1px solid var(--border-strong); color: var(--text-dim); }
   .dc-badge.b-mic { border-color: var(--accent); color: var(--accent); }
   .dc-badge.b-acc { border-color: var(--border-strong); color: var(--text); }
   .dc-badge:empty { display: none; }
   .seam-btn { border-color: var(--accent); color: var(--accent); }
 
-  /* ---- THE ONE DRILL SHELL ----
-     Nine drills each hand-rolled their own layout; .drill-head was the closest thing to
-     a shared part and it only ever held a counter. The parts below are the shell, and a
-     drill fills them in: header (#drill-ctx) · setup · hint · stage · action bar · summary. */
+  /* ---- the drill shell: header (#drill-ctx) · setup · hint · stage · action bar · summary ---- */
   .drill-ctx { flex-wrap: wrap; row-gap: 8px; }
-  /* the panel's own <h2>Практика</h2> is the wrong heading once a drill names itself */
+  /* the panel's own heading is redundant once the drill header names the drill */
   body.drill-running .practice-panel .panel-head { display: none; }
-  /* the drill's NAME — the thing nine drill screens never said */
-  /* the title band: full width, so the twelve-button key picker below can wrap without
-     stranding Quit on a line by itself */
+  /* the title band is full width, so the 12-key picker below can wrap without stranding Quit */
   .drill-ctx-lead { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .drill-name { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin-right: 2px; }
   .drill-sess { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); }
-  /* Quit is the way OUT, so it sits at the far end of the band rather than opening it. */
+  /* Quit sits at the far end */
   #drill-ctx-quit { margin-left: auto; }
-  /* SETUP: a disclosure, open before the first Play and folded during the run. */
+  /* SETUP: open before the first Play, folded during the run */
   body:not(.drill-setup-open) .drill-setup { display: none; }
   .drill-setup { margin-bottom: 4px; }
-  /* HINT: collapsed behind the header's ?, revealed by itself the first time you open a
-     given drill (drillShellEnter) — collapsing it outright would strand a first-timer,
-     for whom that paragraph is the only instruction on the screen. */
+  /* HINT: folded behind ?, opened by itself the first time you meet a drill */
   body:not(.drill-help-open) .drill-hint { display: none; }
   .drill-hint { font-size: 13.5px; color: var(--text-dim); margin: 4px 0 14px; max-width: 620px; }
-  /* STAGE head: the prompt, with the counter pushed to the far end. */
+  /* stage head: the prompt, with the counter at the far end */
   .drill-stage-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
   .drill-count { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text-dim); }
   .drill-prompt { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; display: flex; align-items: center; gap: 12px; }
   .drill-target { font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 700; color: var(--accent); }
-  /* ACTION BAR: the drill's primary verb, which used to sit BELOW a 3–6 line hint —
-     the longest thing on the screen — in every drill that had one. */
+  /* action bar: the drill's primary verb */
   .drill-bar { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 14px auto 0; max-width: 620px; }
   .drill-sub { font-size: 13.5px; color: var(--text-dim); margin: 4px 0 16px; }
   /* blank tappable quiz dots; a hit reveals the note in green, a wrong tap flashes red */
@@ -337,12 +254,9 @@
   .drill-actions { display: flex; gap: 10px; margin-top: 18px; }
 
   /* ---- ear-training drills ---- */
-  /* The prompt keeps its own weight but no longer centres itself: it shares the shell's
-     .drill-stage-head with the round counter, and Replay moved to the shared .drill-bar
-     (the old .ear-controls was this drill's private copy of one). */
   .ear-prompt { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; }
   .drill-bar .btn.play { font-size: 14px; padding: 9px 22px; }
-  /* answer grid — big tappable targets in the thumb zone */
+  /* answer grid — big targets in the thumb zone */
   .ear-choices { display: grid; gap: 10px; max-width: 620px; margin: 0 auto; }
   .ear-choices.ear-interval { grid-template-columns: repeat(4, 1fr); }
   .ear-choices.ear-chordq { grid-template-columns: repeat(4, 1fr); }
@@ -383,21 +297,17 @@
   .cm-count-lab { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
   .cm-tally.bump .cm-count-val { animation: cmBump 0.18s ease; }
   @keyframes cmBump { 0% { transform: scale(1); } 40% { transform: scale(1.16); } 100% { transform: scale(1); } }
-  /* .cm-active-foot was the drill footer three drills copied — hint on the left, the
-     primary verb squeezed onto the right. It is .drill-bar now, and the hint moved out
-     from under the button (B2). */
 
   /* ---- strumming-pattern trainer ---- */
   .sp-name { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin: 6px 0; }
-  /* the chord you are strumming over. It used to be the .drill-head's counter — which is
-     where the drill's NAME belonged — so it moved down onto the stage with the grid. */
+  /* the chord you are strumming over */
   .sp-chord { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); }
   .btn.sp-pat { font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; }
   .sp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; max-width: 620px; margin: 12px 0 4px; }
   .sp-cell { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 0; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); transition: border-color 0.1s, box-shadow 0.1s, background 0.1s; }
   .sp-cell.beat { background: var(--bg-panel-2); border-color: var(--border-strong); }
   .sp-cell.on { border-color: var(--root); box-shadow: 0 0 0 2px rgba(107,165,58,0.4); }
-  /* backbeat (2 & 4) when the accent toggle is on — see the emphasis, not just hear it */
+  /* backbeat (2 & 4) when the accent is on — seen, not just heard */
   .sp-cell.accent { border-color: var(--third); }
   .sp-dir { font-size: 23px; font-weight: 700; line-height: 1; min-height: 25px; color: var(--text); }
   .sp-dir.none { color: var(--text-faint); }
@@ -412,8 +322,7 @@
   .sd-cell.on { border-color: var(--root); box-shadow: 0 0 0 2px rgba(107,165,58,0.4); }
   .sd-lab { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); line-height: 1; }
   .sd-cell.on .sd-lab { color: var(--root); }
-  /* the scoped tempo stepper. Named for what it is, not for the one drill that used to
-     own it — it lives in #drill-ctx now and serves every tempo-driven drill (A1). */
+  /* the drill header's tempo stepper, for every tempo-driven drill */
   .tempo-group { display: inline-flex; align-items: center; gap: 8px; }
   .tempo-bpm { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); min-width: 62px; text-align: center; }
   .sd-dot { opacity: 0.22; transition: opacity 0.1s, transform 0.1s; }
@@ -433,16 +342,11 @@
   .co-beats { display: flex; justify-content: center; gap: 12px; margin: 10px 0; }
   .co-beat { width: 13px; height: 13px; border-radius: 50%; background: var(--bg-panel-2); border: 1px solid var(--border-strong); transition: background 0.06s, box-shadow 0.06s; }
   .co-beat.on { background: var(--root); border-color: var(--root); box-shadow: 0 0 0 3px rgba(107,165,58,0.3); }
-  /* groove (5d): a backbeat-accented beat reads bigger so 2 & 4 stand out */
+  /* a backbeat-accented beat reads bigger */
   .co-beat.accent { width: 17px; height: 17px; border-color: var(--text-faint); }
 
-  /* Mobile: the nav becomes a fixed bottom bar in the thumb zone (the roadmap's
-     thumb-zone home). It escapes the sticky/condensing header — which is top-anchored
-     — by being position:fixed (sticky ancestors don't form a containing block for it),
-     so its DOM location inside the header is irrelevant here.
-     A2: this was a 2-item mode bar with a separate scrolling tab strip up in the
-     header; it is now the conventional 4-item bottom nav, which is what the labels
-     were shortened for. */
+  /* Phone: the nav is a fixed bottom bar in the thumb zone. position:fixed escapes the
+     sticky header (sticky ancestors don't contain it), so its DOM place doesn't matter. */
   @media (max-width: 940px) {
     .mainnav {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
@@ -459,7 +363,7 @@
     }
     .navbtn:hover:not(.active) { background: transparent; }
     .navbtn.active { background: transparent; color: var(--accent); border-bottom-color: transparent; box-shadow: inset 0 2px 0 var(--accent); }
-    /* clear the fixed bar so the footer / last controls aren't hidden behind it */
+    /* clear the fixed bar so the last controls aren't hidden behind it */
     body { padding-bottom: calc(58px + env(safe-area-inset-bottom)); }
   }
 
@@ -501,8 +405,8 @@
   .info .sub { color: var(--text-dim); margin-top: 5px; font-size: 13px; font-family: 'JetBrains Mono', monospace; }
 
   .scroll { overflow-x: auto; padding-bottom: 10px; }
-  /* fade the right edge only when the neck actually overflows, hinting more frets
-     off-screen; the left stays opaque so the string-name labels never dim */
+  /* fade the right edge only when the neck overflows; the left stays opaque for the
+     string names */
   .scroll.scrollable { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent); }
   .scroll::-webkit-scrollbar { height: 8px; }
   .scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
@@ -512,15 +416,13 @@
   .ocell { width: 30px; height: 100%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; position: relative; }
   .ocell::before { content: ''; position: absolute; top: 50%; right: 0; width: 55%; height: 1.6px; transform: translateY(-50%); background: var(--line-string); z-index: 0; }
   .nut { width: 7px; background: #d8cba8; flex-shrink: 0; height: 100%; border-radius: 1px; }
-  /* fret wire: a vertical metallic line — top-lit highlight fading to a darker
-     base gives the flat separator a rounded, nickel-silver sheen */
+  /* fret wire: a top-lit metallic line */
   .cell { flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; border-right: 2px solid var(--line-fret); border-image: linear-gradient(180deg, rgba(255,244,212,0.55) 0%, var(--line-fret) 42%, rgba(60,46,28,0.6) 100%) 1; }
   .cell::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; transform: translateY(-50%); background: var(--line-string); z-index: 0; }
-  /* position-marker inlay on the neck face, centred on the boundary above the row */
+  /* inlay, centred on the boundary above the row */
   .cell.inlay::after { content: ''; position: absolute; top: 0; left: 50%; width: 11px; height: 11px; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle at 38% 34%, rgba(247,233,202,0.32), rgba(214,194,154,0.13) 72%); z-index: 0; pointer-events: none; }
-  /* capo: frets behind the capo dim (unreachable); the capo fret wears
-     a brass bar on its leading edge — a movable nut. The whole board is mirrored
-     for lefty, so the bar lands on the correct side automatically. */
+  /* capo: the frets behind it dim, and its fret wears a brass bar — a movable nut. The
+     lefty mirror puts the bar on the right side by itself. */
   .cell.subcapo, .ocell.subcapo { opacity: 0.24; }
   .cell.capo-at { box-shadow: inset 4px 0 0 0 #caa14a; }
   .srow:nth-child(1) .cell::before { height: 1px; }
@@ -541,15 +443,12 @@
   .d-natural { background: var(--natural); color: #07203a; }
   .d-sharp { background: var(--sharp); color: #1f1405; }
   .d-dim { background: rgba(220,200,160,0.22); color: rgba(240,235,224,0.6); box-shadow: none; }
-  /* board-change stagger (1d): on a context/chord/scale re-render the dots fade
-     in with a small left-to-right delay so the swap reads as a transition, not a
-     hard cut. Opacity only — never transform — so the lefty mirror and the
-     .playing scale are untouched. The `.anim` class is applied only on a genuine
-     re-render (not on Identify taps); per-dot delay is set in renderBoard. */
+  /* board-change stagger: dots fade in left to right on a re-render. Opacity only, never
+     transform, so the lefty mirror and the .playing scale are untouched; the per-dot
+     delay is set in renderBoard. */
   .board.anim .dot { animation: dot-in 0.2s ease both; }
   @keyframes dot-in { from { opacity: 0; } to { opacity: 1; } }
-  /* pluck ripple (1d): a one-shot halo expanding from a tapped dot, so a pluck
-     reads as sound emanating. Added in JS on real plucks (gated on motionOK). */
+  /* pluck ripple: a one-shot halo from a tapped dot (JS adds it, gated on motionOK) */
   .dot .ripple { position: absolute; left: 50%; top: 50%; width: 100%; height: 100%; border-radius: 50%; transform: translate(-50%,-50%); border: 2px solid #fff; opacity: 0.6; pointer-events: none; z-index: 5; animation: dot-ripple 0.6s ease-out forwards; }
   @keyframes dot-ripple { to { transform: translate(-50%,-50%) scale(2.7); opacity: 0; } }
   .fretnums { display: flex; margin-left: 67px; padding-left: 7px; }
@@ -559,7 +458,7 @@
   .leg { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--text-dim); }
   .leg-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; align-self: center; }
   .leg-deg { color: var(--text-faint); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
-  /* the board's playing-hint is collapsed by default and revealed with the ? toggle (see .ph-help) */
+  /* the board hint is folded by default (see .ph-help) */
   .hint { display: none; font-size: 13px; color: var(--text-dim); margin-top: 18px; padding: 12px 15px; background: var(--bg-panel); border-radius: var(--radius); border-left: 2px solid var(--accent); }
   body.help-open .hint { display: block; }
 
@@ -567,89 +466,67 @@
   .aside-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .aside-head span { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
   .aside-toggle { background: transparent; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; line-height: 1; padding: 0 4px; }
-  /* chord-shape cards inside the rail card: the pick-hint reads as a caption above the
-     diagrams; drop the diagram's standalone bottom margin (the card already pads it) */
+  /* inside the shapes card the pick-hint is a caption, and the card supplies the padding */
   #shapes-body .cd-hint { display: block; font-size: 11px; color: var(--text-faint); font-style: italic; margin-bottom: 11px; }
   #shapes-body .chorddia { margin: 0; }
-  /* "Play over this" suggester (1c) */
+  /* "Play over this" suggester */
   .sug-chord { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; margin-bottom: 8px; }
   .sug-row { font-size: 13px; color: var(--text); margin-bottom: 8px; line-height: 1.5; }
   .sug-row .ctrl-label { display: block; margin-bottom: 4px; }
   .sug-scales { gap: 6px; }
   .sug-scales .btn { font-size: 12px; padding: 4px 9px; }
-  /* Circle of fifths: the circle IS this tab's content — the equivalent
-     of the neck on the other two — so it grows with the viewport instead of sitting as a
-     fixed 360px island in a 1193px panel with the right two-thirds empty. It's the only
-     board-less tab, so nothing else here can use that width. Capped at 520px because the
-     circle also has to clear the fold vertically, and it stops being easier to read past
-     roughly that size; the reading pane takes whatever is left. flex-basis (not a fixed
-     width) keeps the phone behaviour untouched — below ~940px the two panes wrap and the
-     circle falls back to full width, which is what it already did. */
+  /* The circle is this tab's content, as the neck is the others', so it grows with the
+     viewport — capped at 520px to clear the fold. flex-basis keeps phones as they were:
+     below ~940px the panes wrap and the circle is full width. */
   .cof-layout { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
   .cof-wrap { flex: 1 1 340px; max-width: 520px; min-width: 0; }
-  /* capped too, or the reading pane stretches to the viewport edge and the key readout
-     — monospace, ~70 characters — trails a dead strip of panel behind it */
+  /* capped, or the monospace key readout trails a dead strip behind it */
   .cof-side { flex: 1 1 340px; min-width: 250px; max-width: 620px; }
   #cof-svg { width: 100%; max-width: 100%; height: auto; display: block; }
   .cof-node { cursor: pointer; }
   .cof-node circle { transition: fill 0.15s, stroke 0.15s; }
   .cof-node:hover circle { stroke: var(--text); }
   .cof-node text { font-family: 'JetBrains Mono', monospace; font-weight: 700; pointer-events: none; }
-  /* circle relationship motion (1d): the subdominant→tonic→dominant arc draws in
-     on key selection, turning a static recolor into a visible harmonic relation.
-     Neutralized (drawn instantly) under prefers-reduced-motion by the global reset. */
+  /* the subdominant → tonic → dominant arc draws in on a key change */
   .cof-arc { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; stroke-dasharray: 320; stroke-dashoffset: 320; animation: cof-draw 0.55s ease forwards; pointer-events: none; }
   @keyframes cof-draw { to { stroke-dashoffset: 0; } }
   #cof-info .sub b { font-weight: 700; }
 
-  /* ---- timing bar (always visible: tempo + metronome) + collapsible instrument toolbar ---- */
+  /* ---- timing bar (tempo + transport) + collapsible settings ---- */
   .tb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 16px; }
   .tb-bar .tb-group { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 9px; padding: 6px 11px; }
-  /* uniform control height so the timing-bar controls — which carry slightly
-     different paddings — line up cleanly in each (possibly wrapped) row at any
-     browser-zoom level; everything centres to the same 34px line. */
+  /* one control height, so mixed paddings line up in each wrapped row at any zoom */
   .tb-bar > .btn, .tb-bar .tb-toggle, .tb-bar > .tb-group, .tb-bar > .tb-transport { min-height: 34px; }
   .tb-bar > .btn, .tb-bar .tb-toggle { display: inline-flex; align-items: center; justify-content: center; }
-  /* paired disclosure toggles (Settings + Backing) wrap as one unit so Backing can't
-     orphan onto its own line */
+  /* the Settings + Backing toggles wrap as one unit */
   .tb-toggles { display: inline-flex; align-items: center; gap: 8px; }
-  /* Settings flows inline after the playback controls. It used to be pushed to
-     the far right (margin-left:auto), but when the bar wrapped that stranded it
-     alone on a second line — so it now wraps tidily next to the others instead. */
   .tb-toggle { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--bg-panel); color: var(--text-dim); cursor: pointer; transition: all 0.12s; }
   .tb-toggle:hover { color: var(--text); border-color: var(--text-faint); }
   .tb-toggle.open { background: var(--bg-panel-2); color: var(--text); }
-  /* the Backing toggle tints green while the metronome / bass / drums are running,
-     so an active backing is visible without expanding the (collapsed) panel */
+  /* the Backing toggle tints while the metronome / bass / drums run */
   .tb-toggle.on { color: var(--root); border-color: var(--root); }
   .tb-toggle .chev { transition: transform 0.18s; font-size: 10px; }
   .tb-toggle.open .chev { transform: rotate(180deg); }
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
   .toolbar.collapsed { display: none; }
-  /* Settings reads as three labelled clusters (instrument / neck+meter / app) instead of
-     one eleven-control wrap-flow. Each cluster wraps internally, so a narrow viewport
-     stacks the clusters rather than interleaving unrelated controls on one line. */
+  /* Settings as labelled clusters; each wraps internally, so narrow screens stack
+     clusters instead of interleaving unrelated controls */
   .tb-cluster { display: flex; align-items: baseline; gap: 10px; flex: 1 1 auto; min-width: 0; }
   .tbc-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); white-space: nowrap; flex-shrink: 0; }
   .tbc-items { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
-  /* On a phone the cluster label takes its own line. .tbc-label is `nowrap` +
-     `flex-shrink: 0` by design (a wrapped 10px caption reads as noise), which means a
-     long one cannot give way — it just pushes the first control group past the
-     viewport edge, and the page scrolls sideways. A4's longer headings found that:
-     the label length was load-bearing, silently. Giving it its own row makes any
-     label in any language safe, and matches how .context-bar un-boxes on phones —
-     caption above its controls, not competing with them for one line. */
+  /* Phone: the cluster label gets its own line. It is nowrap + flex-shrink:0 on purpose,
+     so a long label would push the controls past the viewport edge. */
   @media (max-width: 700px) {
     .tb-cluster { flex: 1 1 100%; flex-wrap: wrap; }
     .tb-cluster > .tbc-label { flex-basis: 100%; }
   }
   .toolbar .tb-group, .tb-bar .tb-group { display: flex; align-items: center; gap: 7px; }
-  /* the two tb-bar groups wrap their controls in .tbg-inner so they can fold via grid-rows on
-     mobile (see the condensing-header block); the inner keeps the original horizontal layout. */
+  /* .tbg-inner lets the tb-bar groups fold via grid-rows on a phone; it keeps the
+     horizontal layout */
   .tbg-inner { display: flex; align-items: center; gap: 7px; min-width: 0; }
   .toolbar .tb-label, .tb-bar .tb-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
   .toolbar select { font-size: 12px; padding: 5px 9px; }
-  /* custom-tuning editor: six compact per-string selects on one wrapping row */
+  /* custom tuning: six compact selects on one wrapping row */
   .custom-strings { display: flex; flex-wrap: wrap; gap: 4px; }
   .toolbar .custom-str { font-size: 11px; padding: 3px 5px; }
   .toolbar .divider { height: 20px; }
@@ -661,75 +538,53 @@
   .btn.band.active { background: var(--ext); color: #11071f; border-color: var(--ext); font-weight: 700; }
   .btn[disabled], .btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
   .audio-warn { font-size: 11px; color: var(--text-faint); align-self: center; }
-  /* global transport: visible on every tab while the loop or progression plays */
+  /* the transport chip: on every tab while the loop or progression plays */
   .tb-transport { display: inline-flex; align-items: center; gap: 8px; padding: 5px 8px 5px 11px; border: 1px solid var(--accent); border-radius: 9px; background: var(--bg-panel); }
   .tb-transport-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; }
   .tb-transport-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 var(--accent); }
-  /* beat pulse (1d): the transport dot pumps on each scheduled beat — downbeat
-     stronger — driven by the scheduler's visual queue, so tempo is *seen*, locked
-     to the sound. Replaces the old free-running ripple. Neutralized under
-     prefers-reduced-motion by the global reset. */
+  /* beat pulse: the transport dot pumps on each scheduled beat, downbeat stronger */
   .tb-transport-dot.bp { animation: tb-beat 0.32s ease-out; }
   .tb-transport-dot.bp-strong { animation: tb-beat-strong 0.36s ease-out; }
   @keyframes tb-beat { 0% { transform: scale(1.7); } 100% { transform: scale(1); } }
   @keyframes tb-beat-strong { 0% { transform: scale(2.3); box-shadow: 0 0 0 0 rgba(45,182,166,0.55); } 70% { box-shadow: 0 0 0 7px rgba(45,182,166,0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(45,182,166,0); } }
   #tb-stop { padding: 4px 9px; }
-  /* shared musical-context bar (root + display mode), contextual per tab */
+  /* the context bar: root + display */
   .context-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 18px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
   .context-bar .ctx-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  /* Each group except the leading view switch carries its own left separator (a
-     border that hugs the group), so the bar reads as View · Root · Display — and
-     when a group wraps to a new line the rule stays attached to it instead of
-     orphaning a free-standing divider. The view group is always the first visible
-     group, so it never needs one; root/display always follow one, so they always do. */
+  /* each group after the first carries its own left rule, so a wrapped group keeps it
+     instead of orphaning a free-standing divider */
   .context-bar .ctx-group + .ctx-group { padding-left: 13px; border-left: 1px solid var(--border-strong); }
-  /* The view switch, as a lens on the board. It sits inside
-     #board-region so it hides, moves and sticks with the neck it changes, instead of
-     being a third navigation strip in the header that something else had to manage. */
+  /* the view switch is a lens on the board: it hides, moves and sticks with the neck */
   .board-lens { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
   .board-lens .lens-group { display: flex; flex-wrap: wrap; gap: 6px; }
-  /* one shared fretboard (1b): a single board region below the active panel's
-     controls, shown for Harmony + Scales, hidden on the Circle tab. */
+  /* the one shared fretboard (Harmony + Scales) */
   .board-region { margin-top: 4px; }
-  /* sticky neck (3rd mobile-shell step): in the single-column layout the board is a
-     direct child of the .layout grid, so it can stay pinned at the top while the
-     suggester + sequencer below scroll — tap a chord card / suggester chip and see
-     the neck update without scrolling back up. Desktop (two-column) is untouched. */
+  /* sticky neck (phone): pinned while the cards below scroll, so a tap shows its result */
   @media (max-width: 940px) {
     #board-region { position: sticky; top: var(--hdr-h, 0px); z-index: 5; background: var(--bg); padding-top: 6px; box-shadow: 0 8px 14px -10px rgba(0,0,0,0.7); }
   }
-  /* condensing sticky header (mobile shell): on the single-column layouts the header
-     pins and slims once you scroll past the brand — tabs + play/transport stay reachable,
-     the tempo/backing groups fold away (scroll up for them). The sticky board offsets
-     directly below it via --hdr-h, kept in sync with the live header height in JS. */
+  /* condensing sticky header (phone): pins and slims past the brand, tempo/backing fold
+     away; the board offsets below it via --hdr-h, kept in sync by JS */
   @media (max-width: 940px) {
     header { position: sticky; top: 0; z-index: 20; }
-    /* Condense by animating every height-contributing property — padding, font-size, margins,
-       and a height collapse instead of display:none — so the header glides between its two
-       sizes rather than snapping. The sticky board is pinned to --hdr-h, which the ResizeObserver
-       re-measures every frame, so it tracks the moving header height smoothly. (Neutralized under
-       prefers-reduced-motion by the global reset.) */
+    /* every height-contributing property animates (no display:none), so the header glides;
+       the board tracks it because --hdr-h is re-measured every frame */
     header, header .brand h1, header .brand-desc, header .mainnav, header .tb-bar, header .tb-bar .tb-group {
       transition: padding 0.22s ease, font-size 0.22s ease, margin 0.22s ease, max-height 0.22s ease, grid-template-rows 0.22s ease, opacity 0.16s ease, border-width 0.22s ease;
     }
-    /* While the header height animates, every block below it is repositioned each frame. On a
-       phone, the layout engine recursing into the fretboard / card grid / sequencer is what
-       drops frames ("stutters" on Android Chrome). contain:layout isolates each section's
-       internal layout so a reposition is a cheap translate, not a full re-layout. (layout only —
-       NOT paint/size — so shadows, the neck's edge-fade and auto-sizing are untouched.) */
+    /* contain:layout makes each section's reposition cheap during the header animation
+       (it stuttered on Android Chrome). Layout only — paint/size containment would clip
+       shadows and the neck's edge fade. */
     #board-region, .board-meta, #harmony-extras, .aside, .main { contain: layout; }
-    .brand-desc { max-height: 1.2em; overflow: hidden; }   /* single line — a tight cap is safe and keeps the collapse linear */
-    /* The tempo/backing groups fold with the grid-rows 1fr→0fr trick: it animates to their
-       real content height, so the collapse is linear with no guessed max-height to clip the
-       controls. .tbg-inner carries the original horizontal flex layout + overflow:hidden. */
-    /* flex-basis:100% puts the tempo group on its OWN row, so the condense-fold
-       (grid-rows 1fr→0fr) collapses an empty full-width line — it can never leave a
-       horizontal gap stranding the toggles beside it (the prior scroll bug). */
+    .brand-desc { max-height: 1.2em; overflow: hidden; }
+    /* the groups fold by grid-rows 1fr → 0fr: animates to the real content height, no
+       guessed max-height */
+    /* the tempo group gets its own row, so its fold collapses a whole empty line */
     .tb-bar .tb-group { display: grid; grid-template-rows: 1fr; flex-basis: 100%; }
-    .tb-bar .tbg-inner { min-height: 0; overflow: hidden; }   /* flex layout comes from the global .tbg-inner rule */
+    .tb-bar .tbg-inner { min-height: 0; overflow: hidden; }
     header.scrolled { padding-top: 8px; }
     header.scrolled .brand-desc { max-height: 0; opacity: 0; }
-    header.scrolled .brand .ver { display: none; }   /* height-neutral on the baseline row (h1 is taller) — fine to drop outright */
+    header.scrolled .brand .ver { display: none; }
     header.scrolled .brand h1 { font-size: 19px; }
     header.scrolled .mainnav { margin-top: 10px; }
     header.scrolled .tb-bar { margin-top: 8px; }
@@ -738,16 +593,11 @@
   @supports (top: max(0px, env(safe-area-inset-top))) {
     @media (max-width: 940px) { header.scrolled { padding-top: max(8px, env(safe-area-inset-top)); } }
   }
-  /* ---- landscape phones (wide but very short viewport) ----
-     The portrait mobile shell (max-width:940) pins a 250–320px condensing header above a sticky
-     board; on a ~390px-tall landscape phone that buries the neck entirely (the reported "unusable
-     in landscape"). Here the header goes static (the condense + magnetic-neck JS gate off below
-     this height, so nothing fights the scroll) and the page becomes a TWO-PANE split: the controls,
-     cards and progression scroll in the left column while the neck stays pinned on the right, always
-     in view — landscape's wide-short shape suits a split far better than one tall scroll. The split
-     is gated with :has() so it only applies when a board is actually shown (Harmony / Scales); the
-     Circle tab has no board, so it falls through to the single column from the portrait block above
-     and uses the full width. Lives after the portrait block so these rules win. */
+  /* ---- landscape phones (wide, very short) ----
+     The portrait shell would bury the neck under the header. Here the header is static
+     (the condense and magnetic-neck JS stand down below this height) and the page splits:
+     controls scroll on the left, the neck stays pinned on the right. Gated with :has() to
+     views that show a board; after the portrait block so it wins. */
   @media (max-width: 940px) and (max-height: 500px) {
     header { position: static; padding-top: max(10px, env(safe-area-inset-top)); }
     .brand-desc { display: none; }
@@ -757,9 +607,8 @@
     .toolbar { margin-top: 8px; padding: 8px 12px; }
     .layout:has(#board-region:not([hidden])) {
       grid-template-columns: minmax(0,1fr) minmax(300px, 46%);
-      /* left column scrolls (main → shapes → suggester → chord reference), matching
-         the portrait stacking order; the board pins in the right column. #shapes-card
-         needs an explicit slot here or it auto-places to the very bottom out of order. */
+      /* the left column keeps the portrait order; #shapes-card needs an explicit slot or it
+         auto-places to the end */
       grid-template-areas:
         "ctx       board"
         "main      board"
@@ -770,52 +619,42 @@
       column-gap: 16px;
       padding-top: 12px;
     }
-    /* ...but NOT in Practice, which has no neck (found in B4's orientation pass).
-       `applyBoardRegion` sets #board-region's `hidden` from the TAB, not the mode — in
-       Practice the board is hidden by a body.mode-practice CSS rule instead — so
-       `:has(#board-region:not([hidden]))` still matched there, and because an id inside
-       :has() outranks `body.mode-practice .layout`, landscape Practice was laid out in
-       two columns with the right 46% permanently empty. The mode's own single-column
-       collapse has to be restated at this specificity to win it back. */
+    /* ...but not in Practice: #board-region's [hidden] follows the TAB, and an id inside
+       :has() outranks `body.mode-practice .layout`, so the single column is restated here
+       at that specificity */
     body.mode-practice .layout:has(#board-region:not([hidden])) {
       grid-template-columns: minmax(0,1fr);
       grid-template-areas: "main";
       column-gap: 0;
     }
-    /* pin the neck to the top of the right column; header is static here so it offsets from 8px,
-       not --hdr-h. align-self:start keeps it from stretching down its (tall) grid cell. */
+    /* pinned to the top of the right column (static header, so 8px, not --hdr-h) */
     .layout:has(#board-region:not([hidden])) #board-region {
       position: sticky; top: 8px; align-self: start;
       background: var(--bg); z-index: 5; box-shadow: none; padding-top: 0;
     }
     .aside { position: static; }
-    /* the changelog modal's 60px vertical padding leaves no room on a short screen */
+    /* the changelog modal's padding leaves no room on a short screen */
     .cl-overlay { padding: 16px; }
     .cl-modal { max-height: calc(100vh - 32px); }
-    /* Landscape phone is the tuner's worst case — you're most likely to prop the
-       phone sideways while tuning, and it's the shortest viewport we support. Shrink
-       the oversized note and tighten the stack so the whole readout fits without
-       scrolling; the needle is what has to stay visible, not the typography. */
+    /* the tuner is most likely used with the phone propped sideways: shrink the note so the
+       needle fits without scrolling */
     .mt-body { padding: 12px 20px 14px; gap: 8px; }
     .mt-note-wrap { min-height: 40px; }
     .mt-note { font-size: 38px; }
     .mt-mic .mt-hint { display: none; }
   }
-  /* chord-tones reference (voicing cards + sequencer) sits below the board */
+  /* chord-tones reference rows below the board */
   #harmony-extras { margin-top: 26px; }
 
-  /* chord-quality picker, chunked into labelled tiers (basic / sevenths / extended)
-     so 21 qualities read as organised sections rather than one wall of buttons */
+  /* the quality picker in labelled tiers (basic / sevenths / extended) */
   .row-quals { margin-bottom: 13px; }
-  /* section header line: the CHORD label on the left, the disclosure toggle anchored
-     on the right — so the toggle reads as part of the section, never floating loose
-     after the buttons (the old placement looked like stray debris on mobile). */
+  /* the CHORD label left, the "more" toggle right on the same line */
   .quals-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
   .quals-head .ctrl-label { margin-right: 0; }
   #ch-quals, #arp-quals { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-start; }
   .qual-grp { display: flex; flex-direction: column; gap: 5px; }
   .qual-grp-lab { font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
-  /* progressive-disclosure toggle (#1/#2): reveals the seventh + extended tiers */
+  /* the "more" toggle for the seventh + extended tiers */
   .qual-more { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--text-dim); background: transparent; border: 1px solid var(--border-strong); border-radius: 7px; padding: 4px 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.12s; }
   .qual-more:hover { color: var(--text); border-color: var(--text-faint); }
   .qual-more[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
@@ -834,7 +673,7 @@
   .chordbox .cb-name { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; margin-bottom: 8px; color: var(--text); }
   .chordbox svg { display: block; }
   .chordbox .cb-cap { font-size: 11px; color: var(--text-faint); margin-top: 7px; max-width: 160px; }
-  /* "More / Fewer shapes" toggle below the shape cards — its own line, low-key */
+  /* "More / Fewer shapes", low-key on its own line */
   .cd-more { margin-top: 2px; font-size: 12px; padding: 6px 12px; }
   .cd-string { stroke: var(--line-string); stroke-width: 1.3; }
   .cd-fret { stroke: var(--line-fret); stroke-width: 1.3; }
@@ -858,14 +697,10 @@
   .fretnums.lefty .fretnum { transform: scaleX(-1); }
 
   /* ---- desktop board scale-up ----
-     Cell WIDTH already adapts to the screen (cellW() in render-shared grows each fret to fill
-     .main, up to 200px), but the board's VERTICAL size is fixed in CSS — so on a wide screen the
-     neck stretches into a thin strip with small dots floating in wide cells. Here we grow the
-     string spacing (.srow height), the dots and the labels with the viewport, so the neck reads as
-     a substantial instrument that rewards the room. Vertical + dot size only — the fixed 30px
-     slabel/ocell widths stay put (leftFixed() hardcodes 67/30 for board↔fretnum alignment), and
-     dots stay ≤33px so they still breathe inside the CELL_MIN=34 "All frets" cell. Two tiers give a
-     progressive feel; both are min-width so they never touch the phone/landscape shells above. */
+     Cell width already grows with the screen (cellW()), but the vertical size is CSS, so a
+     wide screen would get a thin strip. These tiers grow string spacing, dots and labels.
+     The 30px slabel/ocell widths stay (leftFixed() hardcodes them for alignment), and dots
+     stay ≤33px to fit the CELL_MIN=34 "All frets" cell. min-width only, so phones are untouched. */
   @media (min-width: 941px) {
     .srow { height: 46px; }
     .dot { width: 30px; height: 30px; font-size: 11px; }
@@ -878,11 +713,8 @@
   }
 
   /* ---- mobile ---- */
-  /* phone declutter — applies to BOTH portrait phones (narrow) and landscape phones
-     (short, which are wider than 600px and so miss the portrait block below): compact
-     the note-colour legend to one tidy row, drop the degree hints, and hide the
-     "tap a card" pick-hint, so the two orientations read the same. (max-height:500px
-     is the same short-viewport proxy the landscape board-shell above uses.) */
+  /* phones, portrait (narrow) and landscape (short): a one-row legend without degree
+     hints, and no "tap a card" hint, so both orientations read the same */
   @media (max-width: 600px), (max-height: 500px) {
     .legend { gap: 12px; margin-top: 13px; }
     .leg { font-size: 11.5px; gap: 5px; }
@@ -893,29 +725,21 @@
   @media (max-width: 600px) {
     .wrap { padding: 0 14px; }
     .brand h1 { font-size: 25px; }
-    /* un-box the View / Root / Display bar on phones: the desktop "horizontal context
-       bar" panel becomes a tall, heavy box once it wraps. Drop the border/background
-       and stack each control as a clean labelled row (label on its own line, buttons
-       below) — consistent with the panel rows underneath, not a competing card. */
+    /* the context bar un-boxes on phones: each control a labelled row, like the panel rows */
     .context-bar { flex-direction: column; align-items: stretch; gap: 13px; padding: 0; margin-bottom: 16px; border: none; background: transparent; border-radius: 0; }
     .context-bar .ctx-group { width: 100%; gap: 7px 8px; }
     .context-bar .ctx-group + .ctx-group { padding-left: 0; border-left: none; }
     .context-bar .ctrl-label { width: 100%; margin: 0; }
-    /* (the description + board-hint help toggle is now global — see .ph-help above) */
-    /* control strips swipe instead of wrapping into tall blocks (2nd mobile-shell
-       step). Scoped to panel-row groups — the shared context-bar root picker keeps
-       wrapping so all 12 roots stay visible. */
+    /* panel control rows swipe instead of wrapping into tall blocks; the root pickers keep
+       wrapping so all 12 roots stay visible */
     .row > .group { flex-wrap: nowrap; overflow-x: auto; min-width: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
     .row > .group::-webkit-scrollbar { display: none; }
-    /* the in-drill key pickers (comp/strum/groove) keep wrapping so all 12 roots stay
-       visible, matching the reference root picker rather than swiping off-screen. */
+    /* the drill header's key picker wraps too */
     .row > .group.root-row { flex-wrap: wrap; overflow-x: visible; }
-    /* the tiered chord/arp quality pickers: stack the basic/seventh/extended tiers
-       vertically, each tier's buttons swiping horizontally, instead of one tall wrap */
+    /* the quality picker: tiers stacked, each swiping horizontally */
     #ch-quals, #arp-quals { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 10px; overflow: visible; }
     #ch-quals .group, #arp-quals .group { flex-wrap: nowrap; overflow-x: auto; min-width: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
-    /* right-edge fade on a swipe group ONLY when it actually overflows (JS toggles
-       .scrollable, like the tab strip + neck), hinting the clipped buttons swipe → */
+    /* fade the right edge only when a swipe group overflows (.scrollable, set by JS) */
     .row > .group.scrollable, #ch-quals .group.scrollable, #arp-quals .group.scrollable {
       -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
       mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
@@ -923,25 +747,19 @@
     #ch-quals .group::-webkit-scrollbar, #arp-quals .group::-webkit-scrollbar { display: none; }
     .toolbar { gap: 8px 10px; }
     input[type="range"] { width: 92px; }
-    /* tighten the transport bar so Listen · Loop · Settings · Backing fit one row (tempo
-       then owns the row below) — fewer, cleaner lines on a phone */
+    /* a tighter transport bar: Listen · Loop · Settings · Backing on one row, tempo below */
     .tb-bar { gap: 7px 8px; }
     .tb-bar .btn.play { padding: 7px 10px; }
     .tb-bar .tb-toggle { padding: 6px 10px; }
     .tb-toggles { gap: 6px; }
-    /* the lone tempo control owns its row on a phone — let the slider stretch to fill it
-       so the row reads as intentional, not a short control floating in empty space */
+    /* the tempo row's slider stretches to fill it */
     .tb-bar .tb-tempo .tbg-inner { width: 100%; }
     .tb-bar .tb-tempo input[type="range"] { flex: 1; width: auto; min-width: 0; }
-    /* finger-sized touch targets: dots are the app's primary verb (tap to hear),
-       so on a phone they grow rather than shrink; the 5-fret window has the room */
+    /* finger-sized dots: tapping a dot is the app's primary verb */
     .dot { width: 33px; height: 33px; font-size: 11px; }
     .btn { padding: 8px 12px; }
     .langbtn { padding: 7px 12px; }
     .seq-chip .x { padding: 4px 6px; opacity: 0.85; }
-    /* A2: the horizontally-scrolling tab strip (with its edge-fade "more →" hint and
-       the JS that toggled it) lived here. At this width the nav is now a fixed 4-item
-       bottom bar, so there is nothing to scroll and nothing to fade. */
   }
   footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-faint); }
 
@@ -964,13 +782,12 @@
   .cl-rel ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
   .cl-rel li { position: relative; padding-left: 16px; font-size: 13px; color: var(--text-dim); line-height: 1.45; }
   .cl-rel li::before { content: '—'; position: absolute; left: 0; color: var(--text-faint); }
-  /* only the newest releases ship in the bundle (build.js slices them); this links
-     out to the full history rather than shipping 15% dead weight to every visitor. */
+  /* only the newest releases ship (build.js); this links to the full history */
   .cl-older { padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; }
   .cl-older a { color: var(--text-faint); text-decoration: none; }
   .cl-older a:hover, .cl-older a:focus-visible { color: var(--accent); text-decoration: underline; }
 
-  /* ---- keyboard-shortcuts cheat-sheet (desktop) ---- */
+  /* ---- keyboard-shortcuts cheat-sheet ---- */
   .kbd-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.62); display: none; align-items: center; justify-content: center; padding: 24px; z-index: 100; }
   .kbd-overlay.open { display: flex; animation: fade 0.18s ease; }
   .kbd-modal { background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 14px; max-width: 430px; width: 100%; box-shadow: 0 18px 50px rgba(0,0,0,0.5); }
@@ -978,7 +795,7 @@
   .kbd-row { display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--text-dim); }
   .kbd-keys { display: flex; align-items: center; gap: 4px; flex: 0 0 104px; }
   .kbd-row kbd { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--text); background: var(--bg-panel-2); border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 6px; padding: 3px 7px; min-width: 22px; text-align: center; line-height: 1.2; }
-  /* the desktop affordance below the footer; hidden on phones (no physical keyboard) */
+  /* the desktop link below the footer; no keyboard on phones */
   .kbd-hint-bar { display: none; }
   .kbd-open-btn { display: inline-flex; align-items: center; gap: 8px; font-family: inherit; font-size: 12px; color: var(--text-faint); background: transparent; border: none; cursor: pointer; padding: 4px 0; transition: color 0.12s; }
   .kbd-open-btn:hover { color: var(--text-dim); }
@@ -986,65 +803,53 @@
   @media (min-width: 941px) { .kbd-hint-bar { display: block; margin-top: 12px; } }
 
   /* ===================== Accessibility =====================
-     The note-function colours (root / 3rd / 5th / 7th / ext) carry meaning by hue
-     alone. Two opt-in body classes, toggled in Settings (applyA11y), close that gap:
-       .cb-palette — swap the function colours for the Okabe–Ito CVD-safe set
-       .fn-shapes  — give each function a distinct dot silhouette, so the neck reads
-                     from shape even when the colours can't be told apart
-     Both are pure CSS — nothing repaints when they toggle. */
+     The note-function colours carry meaning by hue alone, so two opt-in body classes
+     (Settings, applyA11y), pure CSS:
+       .cb-palette — the Okabe–Ito colour-blind-safe set
+       .fn-shapes  — a distinct dot silhouette per function */
   body.cb-palette {
     --root: #0072B2; --third: #E69F00; --fifth: #009E73; --seventh: #D55E00;
     --ext: #CC79A7; --sc-other: #9b9486; --natural: #56B4E9; --sharp: #E69F00;
   }
-  /* the new root/seventh fills are dark — flip those dots (and the few accent chips
-     that fill with var(--root)) to white text for contrast; the other functions
-     keep their dark text on lighter fills */
+  /* the dark root/seventh fills get white text */
   body.cb-palette .d-root, body.cb-palette .d-sev,
   body.cb-palette .dot.quiz.hit, body.cb-palette .ear-choice.correct,
   body.cb-palette .seq-chip.active, body.cb-palette .btn.metro.active,
   body.cb-palette .co-beat.on { color: #fff; }
-  /* distinct per-function dot shapes. clip-path changes only the silhouette, so the
-     scale (hover/playing) and lefty-mirror transforms and the layout are untouched.
-     Root stays the circle (the home shape). */
+  /* clip-path changes only the silhouette, so transforms and layout are untouched; the
+     root stays the circle */
   body.fn-shapes .dot.d-third { border-radius: 4px; }                                                    /* square */
   body.fn-shapes .dot.d-fifth { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }                  /* diamond */
   body.fn-shapes .dot.d-sev   { clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); } /* hexagon */
   body.fn-shapes .dot.d-ext   { clip-path: polygon(50% 0, 100% 100%, 0 100%); }                          /* triangle */
 
-  /* ---- first-run welcome card (onboarding) — reuses the .cl-overlay / .cl-modal look ---- */
+  /* ---- first-run welcome (the .cl-overlay look) ---- */
   .wc-modal { max-width: 440px; }
   .wc-body { padding: 14px 20px 20px; }
   .wc-lead { font-size: 14px; color: var(--text-dim); margin-bottom: 13px; }
-  /* The three answers reuse the Practice home's .drill-card pattern
-     rather than defining a parallel one — so the very first card a visitor taps looks
-     like the cards they meet the moment they arrive anywhere. */
+  /* its answers are .drill-cards, like the ones a visitor meets next */
   .wc-choices { display: grid; gap: 10px; margin-bottom: 16px; }
   .wc-actions { display: flex; justify-content: flex-end; }
   .wc-actions .btn { font-size: 13px; }
 
-  /* ---- chromatic mic tuner — reuses the .cl-overlay / .cl-modal look ----
-     Everything here is sized to be read at arm's length with a guitar in your hands,
-     so the note is deliberately huge and the needle track spans the full panel. */
+  /* ---- the tuner (the .cl-overlay look): read at arm's length, guitar in hand ---- */
   .mt-modal { max-width: 420px; }
-  /* overflow-y matches .cl-body: the modal is max-height capped, so without this the
-     content clips instead of scrolling on a short screen (landscape phone). */
+  /* the modal is height-capped, so it scrolls on a short screen instead of clipping */
   .mt-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
   .mt-readout { text-align: center; }
   .mt-note-wrap { display: flex; align-items: baseline; justify-content: center; gap: 2px; min-height: 62px; }
   .mt-note { font-family: 'Fraunces', serif; font-size: 58px; line-height: 1; font-weight: 500; color: var(--text); }
   .mt-oct { font-family: 'JetBrains Mono', monospace; font-size: 19px; color: var(--text-faint); }
   .mt-cents { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--text-dim); min-height: 19px; }
-  /* ±50 cents of travel. The needle is positioned by `left` in %, so the track
-     must be the positioning context and the needle offset by half its own width. */
+  /* ±50 cents; the needle is placed by `left` %, offset by half its width */
   .mt-track { position: relative; height: 42px; border-radius: 8px; background: var(--bg-panel-2); border: 1px solid var(--border); overflow: hidden; }
   .mt-tick { position: absolute; top: 0; width: 1px; height: 11px; background: var(--border-strong); }
   .mt-tick-mid { height: 100%; width: 2px; background: var(--border-strong); }
-  /* the in-tune target band: ±5 cents == ±5% of a ±50 track */
+  /* the in-tune band: ±5 cents = ±5% of the track */
   .mt-zone { position: absolute; left: 45%; width: 10%; top: 0; bottom: 0; background: color-mix(in srgb, var(--root) 16%, transparent); }
   .mt-needle { position: absolute; top: 4px; bottom: 4px; left: 50%; width: 4px; margin-left: -2px; border-radius: 3px; background: var(--text); transition: left 0.08s linear, background 0.18s ease; }
   .mt-scale { display: flex; justify-content: space-between; margin-top: 5px; font-size: 10.5px; color: var(--text-faint); font-family: 'JetBrains Mono', monospace; }
-  /* State is carried by colour AND by the ♭/♯ glyph the scale row already shows,
-     so the reading never depends on hue alone (same rule as the dot palette). */
+  /* state is colour AND the ♭/♯ of the scale row, never hue alone */
   .mt-gauge.in-tune .mt-needle { background: var(--root); box-shadow: 0 0 12px color-mix(in srgb, var(--root) 70%, transparent); }
   .mt-gauge[data-dir] .mt-needle { background: var(--third); }
   .mt-gauge:not(.live) { opacity: 0.45; }
@@ -1065,16 +870,14 @@
   .tb-cal input[type="range"] { width: 96px; }
   .cal-status, .bk-status { font-size: 11px; line-height: 1.45; color: var(--text-dim); max-width: 260px; }
 
-  /* ---- scored timing readout ----
-     Deliberately quiet until there is something real to say: the panel only renders
-     after a scored run, so the coach tier never shows an empty scoreboard. */
+  /* ---- scored timing readout: rendered only after a scored run ---- */
   .scored-status { font-size: 12px; line-height: 1.5; color: var(--seventh); margin-top: 10px; }
   .scored-panel { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: 11px; background: var(--bg-panel); display: flex; flex-direction: column; gap: 5px; }
   .sc-main { font-family: 'JetBrains Mono', monospace; }
   .sc-main b { font-size: 30px; color: var(--text); }
   .sc-main span { font-size: 12px; color: var(--text-dim); margin-left: 5px; }
   .sc-verdict { font-size: 13px; font-weight: 600; color: var(--root); }
-  /* the self-hearing refusal is a caution, not a result — it must not read like a grade */
+  /* the self-hearing refusal is a caution, not a grade */
   .sc-verdict.sc-warn { color: var(--seventh); font-weight: 500; line-height: 1.5; }
   .sc-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); }
   .sc-row b { font-family: 'JetBrains Mono', monospace; color: var(--text); }

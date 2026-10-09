@@ -2,9 +2,7 @@
 const I18N = {
   uk: {
     brand:'Euterpe', brand_desc:'гітарна студія',
-    // A2: one 4-item nav, so these are single words that fit a phone bottom bar.
-    // `mode_reference` went with the merge — "Reference" was a container label for
-    // three destinations that are now listed by name.
+    // a 4-item nav: single words that fit a phone bottom bar
     tab_scales:'Гами', tab_circle:'Коло квінт', mode_practice:'Практика',
     practice_h:'Практика', practice_intro:'Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.',
     ear_intervals:'Інтервали на слух', ear_intervals_meta:'Почуй дві ноти · назви інтервал',
@@ -13,18 +11,17 @@ const I18N = {
     ear_replay:'Ще раз', ear_next:'Далі', ear_right:'Правильно!', ear_wrong:'Не зовсім', ear_got:'Правильно',
     drill_notes:'Назви ноти на грифі', drill_notes_meta:'Грифознавство · рахунок за точністю',
     drill_quit:'Вийти', drill_find_pre:'Знайди всі', drill_find_sub:'Познач усі такі ноти на грифі',
-    // one drill shell: the header's setup handle, and the ear drills' hint
+    // the drill header's setup handle, and the ear drills' hint
     drill_setup:'Параметри', ear_hint:'Послухай приклад і обери відповідь. «Ще раз» — скільки завгодно; помилка повернеться до тебе раніше.',
     drill_complete:'Сесію завершено', drill_score:'Рахунок', drill_clean:'Чисто', drill_misses:'Помилки', drill_time:'Час', drill_again:'Ще раз', drill_done:'Готово',
-    // B3: one seam label for all seven reference views (was seam_drill_notes, which
-    // only ever existed because Notes was the only view that kept the promise)
+    // one "drill this" label for every reference view
     seam_drill:'Тренувати це →', seam_jam:'Джем над цим', seam_jam_stop:'Зупинити джем',
-    // B3: the timed practice session — the ritual the app had no notion of
+    // the timed practice session
     sess_title:'Заняття', sess_lead:'Скажи, скільки маєш часу — застосунок збере вправи, які варто повторити, відлічить час і підсумує.',
     sess_len:'Тривалість', sess_min:'хв', sess_start:'Почати заняття', sess_next:'Далі →',
     sess_done_h:'Заняття завершено', sess_none:'Цього разу нічого не зараховано — але час на інструменті все одно зарахований.',
     sess_drills:'Вправ', sess_norun:'без результату',
-    // B4: what tier a drill offers, so the subtitle no longer has to say it in prose
+    // what tier a drill offers (the card badge)
     badge_mic:'🎤 З мікрофоном', badge_acc:'З оцінкою', badge_coach:'Коуч',
     practice_grp_fretboard:'Гриф', practice_grp_rhythm:'Ритм', practice_grp_ear:'Слух',
     drill_changes:'Зміна акордів за хвилину', drill_changes_meta:'Скільки чистих змін встигаєш за хвилину',
@@ -45,7 +42,7 @@ const I18N = {
     tg_prog:'Прогресія', tg_pos:'Позиція',
     prog_title:'Прогрес', prog_empty:'Ще немає практики — статистика з’явиться, щойно почнеш вправи.',
     prog_accuracy:'Точність', prog_streak:'Найкраща серія', prog_sessions:'Сесій',
-    // B4: the narrative the ring buffer could always tell and nobody ever read
+    // the progress card
     prog_yours:'Твої вправи', prog_best:'рекорд', prog_runs:'спроб', prog_timing:'таймінг',
     unit_bars:'тактів', unit_cpm:'/хв',
     tab_harmony:'Акорди', lbl_view:'Вид', view_chords:'Тони акорду',
@@ -126,7 +123,7 @@ const I18N = {
     a11y_palette:'Палітра для дальтоніків', a11y_shapes:'Форми на нотах',
     tun_custom:'Власний стрій',
       prog_active:'Активних днів', prog_due:'До повтору', prog_review:'Повторити',
-      // B1: when nothing is due for review, the queue names a cold or slipping drill
+      // with nothing due, the queue names a cold or slipping drill
       prog_next:'Наступне', prog_start:'Почати',
     // progress backup (13-backup.js)
     tbc_progress:'Прогрес', bk_export:'Експорт', bk_import:'Імпорт…',

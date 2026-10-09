@@ -1,16 +1,12 @@
-/* ===================== BACKING BAND (Phase C) =====================
-   Turns the loop / sequencer into a jam-along bed: a synthesized bass plays
-   root + fifth under the chord, the guitar comp is humanized (velocity accent +
-   micro-timing) with a softer push on beat 3, and an optional filtered-noise
-   groove (kick on 1 & 3, 8th-note hats) supplies the pulse. Everything is
-   scheduled per-bar from inside loopStrum / seqStrumStep, so it shares the bar
-   start time and current chord and stays perfectly aligned to Phase B's clock —
-   no separate drifting timer. Enabling bass/groove while idle auto-starts the
-   single-chord loop so they always have a bar to ride (see bassToggle). */
+/* ===================== BACKING BAND =====================
+   Turns the loop / sequencer into a jam-along bed: bass on root + fifth, a humanized
+   guitar comp with a softer push mid-bar, and an optional groove (kick, snare, hats).
+   Everything is scheduled per bar from loopStrum / seqStrumStep, so it shares the bar
+   start and the chord and can't drift. */
 let bassOn=false, grooveOn=false;
 
-/* the chord's actual fifth, derived from its degree map: perfect (7) for most,
-   flat-5 (6) for dim / dim7 / m7b5, sharp-5 (8) for aug — so the bass never clashes. */
+/* the chord's actual fifth — perfect, ♭5 (dim / dim7 / m7♭5) or ♯5 (aug) — so the
+   bass never clashes */
 function fifthInterval(qi){ const q=QUALITIES[qi]; const k=q.deg.indexOf(5); return k>=0 ? q.iv[k] : 7; }
 
 /* short white-noise buffer, cached, for the hi-hat */
@@ -19,8 +15,8 @@ function noiseBuf(){ if(_noiseBuf) return _noiseBuf;
   const n=Math.floor(actx.sampleRate*0.1), b=actx.createBuffer(1,n,actx.sampleRate), d=b.getChannelData(0);
   for(let i=0;i<n;i++) d[i]=Math.random()*2-1; _noiseBuf=b; return b; }
 
-/* bass voice: triangle fundamental + a quieter sine sub an octave down, through a
-   plucky lowpass that opens with velocity then closes — rounded, felt-not-heard. */
+/* bass: triangle + a quieter sine an octave down, through a plucky low-pass that opens
+   with velocity then closes */
 function bassNote(when, midi, dur, vel){
   const ctx=audio(); if(!ctx) return;
   vel=Math.max(0.2, Math.min(1, vel==null?0.9:vel));
@@ -39,9 +35,8 @@ function bassNote(when, midi, dur, vel){
   tri.connect(lp); sub.connect(subG); subG.connect(lp); lp.connect(g); g.connect(bass);
   tri.start(when); tri.stop(when+dur+0.2); sub.start(when); sub.stop(when+dur+0.2);
 }
-/* kick: a sine that drops in pitch with a fast amp decay, plus a short high-passed
-   noise "beater click" so the attack reads on small speakers (the realism pass — a
-   synthesized stand-in for the deferred CC0 one-shot; needs an ear check). */
+/* kick: a sine dropping in pitch with a fast decay, plus a short high-passed noise
+   click so the attack reads on small speakers */
 function kickHit(when, vel){
   const ctx=audio(); if(!ctx) return; vel=vel==null?1:vel;
   const o=ctx.createOscillator(); o.type='sine';
@@ -58,8 +53,7 @@ function kickHit(when, vel){
   cg.gain.exponentialRampToValueAtTime(0.0001, when+0.02);
   click.connect(chp).connect(cg).connect(groove); click.start(when); click.stop(when+0.03);
 }
-/* snare: a noise crack (bandpassed white noise) over a short tonal body — the
-   backbeat on 2 & 4 is what turns the kick+hat pulse into something that grooves. */
+/* snare: bandpassed noise over a short tonal body, the backbeat */
 function snareHit(when, vel){
   const ctx=audio(); if(!ctx) return; vel=vel==null?0.9:vel;
   const src=ctx.createBufferSource(); src.buffer=noiseBuf();
@@ -69,7 +63,7 @@ function snareHit(when, vel){
   ng.gain.exponentialRampToValueAtTime(0.5*vel, when+0.002);
   ng.gain.exponentialRampToValueAtTime(0.0001, when+0.13);
   src.connect(bp).connect(ng).connect(groove); src.start(when); src.stop(when+0.16);
-  // a second, brighter high-passed noise layer for "snap" (realism pass)
+  // a brighter high-passed noise layer for snap
   const src2=ctx.createBufferSource(); src2.buffer=noiseBuf();
   const hp2=ctx.createBiquadFilter(); hp2.type='highpass'; hp2.frequency.value=3500;
   const ng2=ctx.createGain();
@@ -89,7 +83,7 @@ function hatHit(when, vel){
   const ctx=audio(); if(!ctx) return; vel=vel==null?0.6:vel;
   const src=ctx.createBufferSource(); src.buffer=noiseBuf();
   const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7200;
-  const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=10000; bp.Q.value=1.1;   // metallic edge, less pure-white (realism pass)
+  const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=10000; bp.Q.value=1.1;   // metallic edge, less pure white
   const g=ctx.createGain();
   g.gain.setValueAtTime(0.0001, when);
   g.gain.exponentialRampToValueAtTime(0.22*vel, when+0.002);
@@ -99,8 +93,8 @@ function hatHit(when, vel){
   src.start(when); src.stop(when+0.08);
 }
 
-/* humanized chord comp: micro-timing jitter + per-note velocity variation and a
-   slight roll-off down the strum, so repeated bars don't sound machine-stamped. */
+/* humanized comp: micro-timing jitter, per-note velocity and a roll-off down the strum,
+   so repeated bars don't sound machine-stamped */
 function compStrum(base, ivs, when, vel, spread){
   const bs=barSec();
   ivs.forEach((iv,i)=>{
@@ -110,10 +104,9 @@ function compStrum(base, ivs, when, vel, spread){
   });
 }
 
-/* schedule one bar of the band (bass + groove) for a given chord at bar-start `when`.
-   Called from loopStrum / seqStrumStep (no `force` → follows the user's bass/drums
-   toggles) and from the comping drill (`force` true → always lays the bed,
-   since comping NEEDS something to play over, without flipping the global toggles). */
+/* One bar of the band (bass + groove) for a chord at bar start `when`. The loop and
+   the sequencer follow the user's bass/drums toggles; a drill passes `force` to
+   always lay the bed — comping needs something to play over — without flipping them. */
 function scheduleBand(pc, qi, when, force){
   const b=beat(), p=pulseSec(), m=curMeter(), fifth=fifthInterval(qi), bassRoot=36+pc, bOn=force||bassOn, gOn=force||grooveOn;
   if(bOn){
@@ -152,16 +145,12 @@ function metroToggle(){
   btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setMetroLabel(); setBackingToggle(); syncWakeLock();
 }
 function setMetroLabel(){ const b=document.getElementById('tb-metro'); b.innerHTML=(metroClock?'&#9632; ':'&#9654; ')+t(metroClock?'tb_metro_on':'tb_metro_off'); b.setAttribute('aria-label', t('tb_metro_off')); }
-/* Reflect "any backing active" on the collapsed Backing toggle (tints it green), so a
-   running metronome / bass / drums is visible without opening the panel. */
+/* tint the collapsed Backing toggle while anything in it is running */
 function setBackingToggle(){ const b=document.getElementById('backing-toggle'); if(b) b.classList.toggle('on', !!metroClock || bandActive()); }
-/* ---- backing band toggles (bass + groove) ----
-   Self-starting, to match the metronome: turning Bass or Drums on while nothing
-   is playing kicks off the single-chord loop so you immediately hear a backing
-   over the current chord (otherwise the band has no bar engine to ride). Turning
-   them off does NOT stop that loop — the chord keeps strumming; Stop / the Loop
-   button end it. While a loop or progression already runs, they just join on the
-   next bar (scheduleBand reads bassOn/grooveOn live). Persist across reloads. */
+/* ---- bass + drums toggles ----
+   Turning one on while nothing plays starts the single-chord loop, so the band has a
+   bar to ride; turning it off leaves the loop running (Stop or Loop ends it). While
+   something plays they join on the next bar. Persisted. */
 function ensureBacking(){ if(!loopClock && !seqClock) loopToggle(); }   // loopToggle starts when idle
 function setBandLabels(){
   const bb=document.getElementById('tb-bass');
@@ -172,16 +161,14 @@ function setBandLabels(){
 function bassToggle(){ audio(); bassOn=!bassOn; if(bassOn) ensureBacking(); setBandLabels(); setBackingToggle(); saveState(); }
 function drumsToggle(){ audio(); grooveOn=!grooveOn; if(grooveOn) ensureBacking(); setBandLabels(); setBackingToggle(); saveState(); }
 
-/* ---- single-chord / single-triad loop: re-strums the current voicing at the top
-   of every bar. loopMode is captured at start (chord vs triad) but the voicing is
-   read live, so changing root, quality, the selected card, or the triad
-   inversion/string set mid-loop follows along. Bar interval read live; dots ride
-   the audio-clock queue. The strum sweeps low->high rather than stacking. */
+/* ---- single-chord / single-triad loop: re-strums the current voicing every bar ----
+   loopMode (chord vs triad) is captured at start, but the voicing is read live, so a
+   change of root, quality, card or triad shape mid-loop follows along. */
 let loopClock=null, loopMode='chord';
 function loopStrum(when){
   const ctx=audio(); if(!ctx) return;
   const bs=barSec();
-  let midis, pcs, boardId='board', pc, qi;     // one shared board (1b)
+  let midis, pcs, boardId='board', pc, qi;
   if(loopMode==='triad' && chTriadIdx()>=0){   // the chord may have lost its triad mid-loop (sus)
     const v=currentTriadVoicing();
     midis=v.midis; pcs=v.pcs; pc=gRoot; qi=TRI_TO_QUAL[chTriadIdx()];
@@ -192,7 +179,7 @@ function loopStrum(when){
   strumMidi(midis, when, 0.9, 0.026, +1);                 // humanized downstrum
   if(bandActive()) strumMidi(midis, when+midPulseSec(), 0.55, 0.02, +1);   // softer push mid-bar (beat 3 in 4/4)
   scheduleBand(pc, qi, when);                             // bass + groove bed (no-op if both off)
-  enqueueBeats(when);                                     // 1d: transport beat pulse
+  enqueueBeats(when);                                     // transport beat pulse
   enqueueVisual(when, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, true)); updateGlobalTransport(); });
   enqueueVisual(when+bs*0.85, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, false)); });
 }
@@ -212,29 +199,18 @@ function stopLoop(){ if(!loopClock) return; removeClock(loopClock); loopClock=nu
   const b=document.getElementById('g-loop'); if(b){ b.classList.remove('active'); b.setAttribute('aria-pressed','false'); } setLoopLabel(); }
 function setLoopLabel(){ const b=document.getElementById('g-loop'); if(!b) return; b.innerHTML=(loopClock?'&#9632; ':'&#8635; ')+t('b_loop'); b.setAttribute('aria-label', t(loopClock?'b_loop_stop_tip':'b_loop_tip')); b.title=t(loopClock?'b_loop_stop_tip':'b_loop_tip'); updateGlobalTransport(); }
 
-/* Stop everything the reference transport owns.
-   Entering Practice used to leave the loop / progression / metronome running, on the
-   theory that the transport bar "acts as a backing track, like it does across tabs".
-   Across tabs that holds — the subject is the same. Across MODES it doesn't: a drill
-   brings its own click and its own bed on its own scheduler, so what you actually got
-   was the reference chord strumming over the drill, and a second metronome beating
-   against the drill's. One home for what is sounding — the transport in Reference,
-   the drill in Practice. metroToggle() is the metronome's only stop, so it's called
-   as one (it flips off when a clock is running). */
+/* Stop everything the reference transport owns, on entering Practice: a drill brings
+   its own click and bed on its own scheduler, and the reference loop would play over
+   it. metroToggle() is the metronome's only stop, so it's called as one. */
 function stopReferenceTransport(){
   if(seqClock) seqStop();
   stopLoop();
   if(metroClock) metroToggle();
 }
 
-/* ---- global transport chip (timing bar) ----
-   Mirrors whatever is currently sounding (single-chord/triad loop or progression)
-   so it can be read and stopped from any tab. The Listen/Loop controls now
-   live together in the timing bar; the progression Play stays with its strip. */
-/* beat pulse (1d): pump the transport dot on each scheduled beat (downbeat
-   stronger), driven from the same per-bar enqueue as the dot-lighting, so the
-   tempo is *seen*, locked to the scheduler. CSS-only motion → neutralized under
-   prefers-reduced-motion by the global reset. */
+/* ---- global transport chip: what is sounding, readable and stoppable from any tab ---- */
+/* beat pulse: pump the transport dot on each scheduled beat, from the same per-bar
+   enqueue as the dot-lighting, so the tempo is seen in step with the sound */
 function pulseTransport(strong){
   const d=document.querySelector('.tb-transport-dot'); if(!d) return;
   d.classList.remove('bp','bp-strong'); void d.offsetWidth;     // restart the animation
@@ -250,18 +226,14 @@ function updateGlobalTransport(){
   if(seqClock){ label.textContent=t('tb_now_seq')+' · '+noteTxt(gRootLbl)+QUALITIES[chQual].short; wrap.hidden=false; }
   else if(loopClock){ label.textContent=t('tb_now_loop')+' · '+loopChordLabel(); wrap.hidden=false; }
   else { wrap.hidden=true; }
-  // B3's "Jam over this" is a play/stop toggle over the same two clocks, so it follows
-  // the transport from here — including when something else (or a mode switch) stops it
+  // the Jam buttons follow the transport, including when something else stops it
   renderJamBtn();
   syncWakeLock();
 }
 
-/* ---- screen wake lock (mobile shell) ----
-   Hold the screen awake while anything is sounding (metronome, single-chord loop, or
-   progression) so a phone doesn't sleep mid-jam. Synced from updateGlobalTransport
-   (loop/seq) and metroToggle (metronome); re-acquired on return to visibility, since
-   the browser drops the lock when the page is hidden. Silently degrades where the API
-   is missing (iOS < 16.4, insecure context, jsdom). */
+/* ---- screen wake lock ----
+   Keep a phone awake while anything sounds; re-acquired on return to visibility (the
+   browser drops it when hidden). Silently absent where the API is (iOS < 16.4, http). */
 let _wakeLock=null, _wakeReq=false;
 function transportActive(){ return !!(metroClock || loopClock || seqClock); }
 function syncWakeLock(){
@@ -283,10 +255,9 @@ if(typeof document!=='undefined'){
 }
 
 /* ---- chord progression sequencer ----
-   A progression is a list of steps {pc,lbl,qi,bars}. On play it walks the steps
-   bar by bar (re-strumming each bar), follows the active chord on the fretboard,
-   highlights the active chip, and optionally cycles. Shares the loop's visual
-   timer pool and is mutually exclusive with the single-chord loop. */
+   Steps {pc,lbl,qi,bars}, walked bar by bar: re-strums each bar, follows the chord on
+   the fretboard, highlights the chip, optionally cycles. Mutually exclusive with the
+   single-chord loop. */
 const SEQ_PRESETS = [
   { name:'ii–V–I',     steps:[[2,8,1],[7,6,1],[0,7,2]] },                 // Dm7 · G7 · Cmaj7
   { name:'I–V–vi–IV',  steps:[[0,0,1],[7,0,1],[9,1,1],[5,0,1]] },         // C · G · Am · F
@@ -322,12 +293,11 @@ function seqStrumStep(i, when){
   compStrum(base, ivs, when, 0.9, 0.028);                 // humanized downbeat strum
   if(bandActive()) compStrum(base, ivs, when+midPulseSec(), 0.55, 0.022);   // softer push mid-bar (beat 3 in 4/4)
   scheduleBand(st.pc, st.qi, when);                       // bass + groove follow the step's chord
-  enqueueBeats(when);                                     // 1d: transport beat pulse
+  enqueueBeats(when);                                     // transport beat pulse
   const pcs=ivs.map(iv=>mod(base+iv,12));
   enqueueVisual(when, ()=>{
-    // chord changed → follow on board + chip. Suppress the board-change stagger
-    // (1d): this is playback-driven, not a user edit, so the neck shouldn't
-    // re-fade its dots every bar.
+    // chord changed → follow on board + chip, without the board-change stagger:
+    // this is playback, not a user edit
     if(i!==seqStepIdx){ seqStepIdx=i; _boardStagger=false; setChord(st.pc, st.lbl, st.qi); _boardStagger=true; renderSeq(); updateGlobalTransport(); }
     const b=document.getElementById('board'); pcs.forEach(pc=>setDotPlaying(b, pc, true));
   });
@@ -363,9 +333,8 @@ function seqRebuild(){ if(seqClock){ seqBuildMap(); if(seqBar>=seqBarMap.length)
 function seqLoopToggle(){ seqLoopOn=!seqLoopOn; setSeqTransport(); saveState(); }
 function seqClear(){ seq=[]; if(seqClock) seqStop(); seqStepIdx=-1; renderSeq(); saveState(); }
 function setSeqTransport(){
-  // Scope tooltips (#3): the toolbar's Listen/Loop act on the CURRENT selection,
-  // these act on the whole PROGRESSION — name that on hover/AX so the two transport
-  // pairs read as distinct rather than duplicate.
+  // these act on the whole PROGRESSION, the header's Listen/Loop on the current chord —
+  // the tooltips say so
   const p=document.getElementById('seq-play'); if(p){ p.innerHTML=(seqClock?'&#9632; ':'&#9654; ')+t('seq_play'); p.setAttribute('aria-label', t('seq_play_tip')); p.title=t('seq_play_tip'); p.classList.toggle('active', !!seqClock); }
   const l=document.getElementById('seq-loopbtn'); if(l){ l.innerHTML='&#8635; '+t('seq_loop'); l.setAttribute('aria-label', t('seq_loop_tip')); l.title=t('seq_loop_tip'); l.classList.toggle('active', seqLoopOn); l.setAttribute('aria-pressed', seqLoopOn?'true':'false'); }
   updateGlobalTransport();

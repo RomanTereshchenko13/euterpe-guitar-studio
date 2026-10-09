@@ -1,22 +1,14 @@
 /* ===================== Drill: Ear training =====================
-   The EAR pillar: recognition by sound. Two multiple-choice drills sharing one
-   engine — hear a prompt on the audio buses, pick the answer, get cue feedback,
-   scored on accuracy and recorded to the learner model (13-learner.js):
+   Recognition by sound, two multiple-choice drills on one engine: hear a prompt, pick
+   the answer, get cue feedback.
      • interval — two notes played melodically; name the interval.
      • chordq   — a chord arpeggiated then strummed; name its quality.
+   A multiple-choice answer, never a timing window, so it is scored on accuracy. Each
+   prompt is a learner item (interval:P5 / chordq:m7), so due items come back first. */
 
-   These are RECOGNITION drills — a multiple-choice answer, never a timing window —
-   so they are legitimately scored on accuracy.
-   Each prompt writes one learner item (interval:P5 / chordq:m7), so
-   Ear feeds the SAME spaced-repetition model as the fretboard drills (spine #3):
-   due items resurface first, the session score lands in the ring buffer, and the
-   global progress card counts ear items alongside notes. Depends on nothing but
-   the audio buses (pluck on `backing`, blips on `cue`) — no new engine. */
-
-/* The twelve ascending intervals within an octave. `name` (m2…P8) is the compact,
-   language-neutral button label + the stable id tail (interval:P5); en/uk carry the
-   full name for the title/aria + the feedback line, inline like SCALES/QUALITIES so
-   the i18n symmetry check only ever guards the I18N dict. */
+/* The twelve ascending intervals. `name` (m2…P8) is the button label and the stable id
+   tail (interval:P5); en/uk carry the full name, inline so the i18n check only guards
+   the I18N table. */
 const INTERVALS = [
   {st:1,  name:'m2', en:'Minor 2nd',   uk:'Мала секунда'},
   {st:2,  name:'M2', en:'Major 2nd',   uk:'Велика секунда'},
@@ -33,14 +25,12 @@ const INTERVALS = [
 ];
 function earIvName(iv){ return lang==='en' ? iv.en : iv.uk; }
 
-/* The chord qualities the ear drill recognizes: the four triads + four common
-   sevenths, by index into QUALITIES (08-chords.js). The id uses the short symbol
-   ('maj' for the empty major suffix) so it stays stable + readable. */
+/* The qualities recognized, by index into QUALITIES. The id uses the short symbol
+   ('maj' for the empty major suffix). */
 const EAR_QUAL_IDX = [0, 1, 10, 12, 6, 7, 8, 9];   // maj · m · dim · aug · 7 · maj7 · m7 · m7♭5
 function earQualKey(qi){ const q=QUALITIES[qi]; return 'chordq:'+(q.short||'maj'); }
 
-/* per-type config: how a prompt is built, played, and answered. The engine below
-   is type-agnostic — it just reads cfg.pool/make/play/choices/prompt. */
+/* per-type config; the engine below only reads cfg.pool/make/play/choices/prompt */
 const EAR = {
   interval: {
     len:8, sess:'ear-interval', prompt:()=>t('ear_int_prompt'),
@@ -65,9 +55,7 @@ let ear = null;
 //         startT, finished, cur, answered }
 
 function earShuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=a[i]; a[i]=a[j]; a[j]=tmp; } return a; }
-// SRS-weighted session queue: due items first (what you've missed resurfaces),
-// then the rest, each block shuffled, capped at the drill's length. Mirrors the
-// note drill's buildQueue (14-drill-notes.js).
+// SRS-weighted queue: due items first, then the rest, each shuffled, capped at the length
 function buildEarQueue(keys, len){
   const now=Date.now();
   const due=keys.filter(k=>((learner.items[k]||{due:0}).due)<=now);
@@ -82,7 +70,7 @@ function startEar(type){
   const home=document.getElementById('practice-home'), area=document.getElementById('ear-area'),
         act=document.getElementById('ear-active'), sum=document.getElementById('ear-summary');
   if(home) home.hidden=true; if(area) area.hidden=false; if(act) act.hidden=false; if(sum) sum.hidden=true;
-  drillShellEnter();          // B2
+  drillShellEnter();
   nextEarPrompt();
 }
 function exitEar(){
@@ -101,8 +89,7 @@ function nextEarPrompt(){
 }
 function earReplay(){ if(ear && ear.cur){ audio(); ear.cfg.play(ear.cur); } }
 
-// one answer (single guess): score, record to the learner, reveal the correct
-// choice + a Next button. earNext advances; the last Next finishes the session.
+// one guess: score it, record it, reveal the answer + Next; the last Next finishes
 function earAnswer(key){
   if(!ear || ear.finished || ear.answered) return;
   ear.answered=true;
@@ -131,16 +118,11 @@ function earAnswerLabel(){
   return '';
 }
 
-/* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
-/* The shared progress readout lives in 13-learner.js: it had lived here
-   since the Ear home was its own duplicate mode, and by B4 it reads eight things off the
-   learner model and nothing at all off `ear`. renderProgressInto() is still the entry
-   point; only its address changed. */
+/* ---- DOM paint ---- */
 function renderEarPrompt(){
   const p=document.getElementById('ear-prompt'); if(p) p.textContent=ear.cfg.prompt();
   const c=document.getElementById('ear-count'); if(c) c.textContent=Math.min(ear.done+1, ear.total)+' / '+ear.total;
-  // B2: every drill wears the same shell, and part of that shell is an instruction the
-  // first-timer gets and the regular doesn't have to look at
+  // the first-run instruction, folded behind ? for a regular
   const h=document.getElementById('ear-hint'); if(h) h.textContent=t('ear_hint');
   const rp=document.getElementById('ear-replay'); if(rp){ rp.innerHTML='&#9654; '+t('ear_replay'); rp.setAttribute('aria-label', t('ear_replay')); }
   const fb=document.getElementById('ear-feedback'); if(fb){ fb.textContent=''; fb.className='ear-feedback'; }
@@ -184,17 +166,13 @@ function renderEarSummary(elapsed, acc){
   const ag=document.getElementById('ear-again'); if(ag){ ag.textContent=t('drill_again'); ag.onclick=()=>startEar(type); }
   const dn=document.getElementById('ear-done');  if(dn){ dn.textContent=t('drill_done');  dn.onclick=exitEar; }
 }
-// re-localize an in-flight prompt on a language switch (called from applyLang)
+// re-localize an in-flight prompt on a language switch
 function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPrompt(); }
 
-/* drill-card starters + the in-drill controls — wired once at load (guarded so a
-   missing panel never throws, mirroring initDrill in 14-drill-notes.js). */
-/* one entry for both ear drills — they share the `ear` state and one area */
+/* in-drill controls, wired once at load */
 registerDrill({ id:'ear', area:'ear-area',
                 isActive:()=>!!ear, exit:exitEar, refreshLang:refreshEarLang,
-                /* Two tracks behind one entry — one drill shell, two skills with
-                   independent SRS queues. Items are "interval:P5"; the session ids
-                   keep their historic `ear-` prefix. */
+                /* two tracks, two SRS queues; session ids keep their historic `ear-` prefix */
                 tracks:[
                   { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', scored:'acc', start:()=>startEar('interval') },
                   { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    scored:'acc', start:()=>startEar('chordq') }
@@ -203,8 +181,6 @@ registerDrill({ id:'ear', area:'ear-area',
 (function initEar(){
   const area=document.getElementById('ear-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  // the cards go through startTrack() — one door, so the shared header can name
-  // which ear skill you opened
   wire('ear-replay', earReplay);
   wire('ear-next',   earNext);
   const ch=document.getElementById('ear-choices');

@@ -1,34 +1,21 @@
 /* ===================== ONSET DETECTION =====================
-   "When did you play?" — attack detection on the mic signal. This is the first
-   SCORING feature in the app: everything before it was a coach that couldn't hear
-   you. Hand-rolled, per the dependency policy — unlike pitch (where re-deriving
-   McLeod badly is a real risk, hence the vendored detector), energy-based onset
-   detection is genuinely the light lift, and a strum's transient is a big obvious
-   event rather than a subtle one.
+   "When did you play?" — energy-based attack detection on the mic signal. Hand-rolled:
+   a strum's transient is a big, obvious event (unlike pitch, which is vendored).
 
-   WHY AN AudioWorklet, when the tuner is happy on the main thread: a tuner needle
-   only has to be *approximately* live, but a timing score IS the timestamp. A
-   requestAnimationFrame loop samples at ~16.7 ms and stalls under layout, which
-   would put ±16 ms of pure harness noise into a measurement whose whole job is to
-   tell "tight" from "rushing" — at 120 BPM a sixteenth is 125 ms, so that noise is
-   an eighth of the grid. The worklet sees every 128-sample block (2.7 ms at 48k)
-   on the audio thread and timestamps against the audio clock, so what we report is
-   the player's error, not the browser's.
+   An AudioWorklet, not rAF: a timing score IS the timestamp, and a rAF loop samples
+   at ~16.7 ms and stalls under layout — at 120 BPM that is an eighth of a sixteenth's
+   window in pure noise. The worklet sees every 128-sample block on the audio thread
+   and timestamps against the audio clock. Where AudioWorklet is missing, a
+   ScriptProcessor (still audio-thread driven) stands in, never rAF.
 
-   The single-file guarantee survives: AudioWorklet.addModule needs a URL, so the
-   processor source below is turned into a Blob URL at runtime. That is an
-   in-memory object URL, NOT a network fetch — the app still ships as one file and
-   still works offline. Where AudioWorklet is missing we fall back to a ScriptProcessor
-   (deprecated but universally present, and still audio-thread-driven) rather than
-   rAF, so onset TIMES stay honest even on the fallback path.
+   addModule needs a URL, so the processor source becomes a Blob URL at runtime — an
+   in-memory object, not a fetch; the app stays one offline file.
 
-   Scoring rule the whole phase rests on: a detected time is only meaningful after
-   the round-trip latency is subtracted (13-mic.js → 14-calibration.js). Raw onset
-   times measure the audio stack, not the player. */
+   A detected time means something only after the round-trip latency is subtracted
+   (14-calibration.js); raw times measure the audio stack, not the player. */
 
-/* Detector constants. Tuned for a plucked/strummed steel string in a room, and
-   deliberately conservative: a missed onset costs one unscored note, a false
-   onset corrupts the score of a note you played correctly. */
+/* Tuned for a steel string in a room, and conservative: a missed onset costs one
+   unscored note, a false one corrupts the score of a note you played right. */
 const ON_REFRACTORY = 0.055;   // s — two picks closer than this are one attack (>16ths at 200bpm)
 const ON_RATIO = 2.6;          // attack when fast envelope exceeds the slow baseline by this factor
 const ON_FLOOR = 0.004;        // absolute RMS floor, so room tone can't trigger anything
@@ -36,9 +23,8 @@ const ON_FAST_MS = 3;          // fast envelope: tracks the attack itself
 const ON_SLOW_MS = 180;        // slow envelope: the adaptive baseline the attack must beat
 const ON_MAX_EVENTS = 512;     // ring cap, so a long run can't grow without bound
 
-/* The worklet processor, as source text. Kept as a string because it has to be
-   compiled in a *different global scope* (AudioWorkletGlobalScope) — it cannot see
-   anything in this file, so everything it needs is baked in below. */
+/* The worklet processor as source text: it compiles in AudioWorkletGlobalScope and
+   can't see anything in this file, so everything it needs is baked in. */
 function onsetProcessorSrc(){
   return `
 class OnsetDetector extends AudioWorkletProcessor {
@@ -103,9 +89,8 @@ function onsetSupported(){
   return micSupported() && typeof AudioWorkletNode !== 'undefined';
 }
 
-/* Register a live listener. Returns an unsubscribe fn. Listeners get the RAW
-   audio-clock time; correcting for latency is the scorer's job, because only the
-   scorer knows whether it's comparing against a scheduled time. */
+/* Register a live listener; returns an unsubscribe fn. Listeners get the RAW audio-clock
+   time — only the scorer knows what to correct it against. */
 function onOnset(fn){
   onsetListeners.push(fn);
   return ()=>{ onsetListeners = onsetListeners.filter(f=>f!==fn); };
@@ -117,8 +102,8 @@ function onsetPush(t, level){
   onsetListeners.slice().forEach(fn=>{ try{ fn(t, level); }catch(e){ devWarn('onset listener failed', e); } });
 }
 
-/* Start listening. Gesture-gated (it acquires the mic). Resolves
-   { ok:true } or { ok:false, key } with an i18n key the caller can display. */
+/* Start listening (gesture-gated: it acquires the mic). Resolves { ok:true } or
+   { ok:false, key } with an i18n key to display. */
 async function onsetStart(){
   if(onsetOn) return { ok:true };
   const ctx=audio();
@@ -141,9 +126,8 @@ async function onsetStart(){
       if(!onsetNode){ micRelease(); return { ok:false, key:'mic_unsupported' }; }
     }
     got.src.connect(onsetNode);
-    // A node with no downstream connection may never be pulled by the graph, so
-    // park it behind a silent gain. Zero gain means nothing reaches the speakers —
-    // routing the mic to the output would be a feedback loop, not a monitor.
+    // a node with no downstream connection may never be pulled, so park it behind a
+    // silent gain — never the speakers, which would be a feedback loop
     onsetSink = ctx.createGain();
     onsetSink.gain.value = 0;
     onsetNode.connect(onsetSink);
@@ -158,9 +142,8 @@ async function onsetStart(){
   }
 }
 
-/* ScriptProcessor fallback. Deprecated, but it still runs off the audio graph with
-   real block timestamps, which rAF does not — so timing stays trustworthy where
-   AudioWorklet is missing. Same detector maths as the worklet, main-thread copy. */
+/* ScriptProcessor fallback: deprecated, but it runs off the audio graph with real block
+   timestamps. Same detector maths as the worklet. */
 function onsetFallbackNode(ctx, o){
   if(!ctx.createScriptProcessor) return null;
   const node = ctx.createScriptProcessor(256, 1, 1);
@@ -200,16 +183,12 @@ function onsetActive(){ return onsetOn; }
 function onsetRecent(){ return onsetEvents.slice(); }
 function onsetClear(){ onsetEvents = []; }
 
-/* ---- scoring helpers (pure — asserted directly by the harness) -------------
-   These are deliberately free of any DOM or audio dependency: the whole point of
-   F1 is that the numbers are defensible, so they have to be testable without a
-   microphone in the room. */
+/* ---- scoring helpers (pure, so the numbers are testable with no microphone) ---- */
 
-/* Match detected times to expected grid times. Greedy nearest-match within
-   `tol` seconds, each expected slot claimed at most once — a flam of two picks
-   around one beat scores as one hit plus one extra, not two hits.
-   Returns { hits:[{expected, actual, err}], missed:[expected…], extra:[actual…] }
-   where err is SIGNED: negative = early (rushing), positive = late (dragging). */
+/* Match detected times to expected grid times: greedy nearest-match within `tol` s,
+   each slot claimed once — a flam around one beat is one hit plus one extra.
+   Returns { hits:[{expected, actual, err}], missed:[expected…], extra:[actual…] };
+   err is SIGNED: negative = early (rushing), positive = late (dragging). */
 function onsetMatch(expected, actual, tol){
   const hits=[], missed=[], usedActual=new Set();
   expected.forEach(e=>{
@@ -226,13 +205,11 @@ function onsetMatch(expected, actual, tol){
   return { hits, missed, extra };
 }
 
-/* Turn a match into the numbers a player can act on.
+/* The numbers a player can act on:
      meanAbsMs — how tight you are, the headline
-     biasMs    — signed: are you consistently early or late? (rushing vs dragging)
-     spreadMs  — standard deviation: evenness, independent of bias. A player who is
-                 40 ms late on EVERY note is even but mis-calibrated; one who is
-                 ±40 ms at random is not. Those need different advice, so they are
-                 reported separately rather than collapsed into one number.
+     biasMs    — signed: consistently early or late?
+     spreadMs  — standard deviation: evenness. 40 ms late on EVERY note is even but
+                 mis-calibrated, ±40 ms at random is not; they need different advice.
      hitRate   — fraction of expected slots actually played */
 function onsetScore(match){
   const errs=match.hits.map(h=>h.err*1000);
@@ -246,45 +223,33 @@ function onsetScore(match){
            hitRate: total ? n/total : 0, extra:match.extra.length };
 }
 
-/* The verdict band. Thresholds are deliberately honest about what the measurement
-   can support: the worklet timestamps to ~2.7 ms and the round-trip calibration
-   resolves to a few ms, so a "tight" band below ~15 ms would be claiming precision
-   the setup doesn't have. ~20 ms is also roughly where a listener starts to hear
-   a note as displaced, which is the thing the player actually cares about. */
+/* The verdict bands. The setup resolves a few ms, so "tight" below ~15 ms would claim
+   precision it doesn't have; ~20 ms is about where a listener hears a note as displaced. */
 function onsetVerdict(scoreObj){
   if(!scoreObj.n) return 'on_none';
   if(scoreObj.meanAbsMs <= 20) return 'on_tight';
   if(scoreObj.meanAbsMs <= 45) return 'on_close';
   return 'on_loose';
 }
-/* Rushing / dragging only reads as a real tendency once the bias is bigger than a
-   sensible slice of the spread — otherwise it's noise with a sign. */
+/* Rushing / dragging is a real tendency only when the bias is a sensible slice of the
+   spread — otherwise it is noise with a sign. */
 function onsetFeel(scoreObj){
   if(!scoreObj.n) return null;
   if(Math.abs(scoreObj.biasMs) < 12 || Math.abs(scoreObj.biasMs) < scoreObj.spreadMs*0.6) return null;
   return scoreObj.biasMs < 0 ? 'on_rushing' : 'on_dragging';
 }
 
-/* THE SELF-HEARING GUARD — the honesty hole at the centre of mic scoring.
+/* THE SELF-HEARING GUARD.
+   On speakers the mic hears the app's own click, comp and band, which land on the grid
+   EXACTLY — after the latency correction they read as a flawless hit on every slot, so
+   a player who put the guitar down would score "Tight · 32/32". Timing can't separate
+   the two: a perfect note is supposed to arrive with the guide.
 
-   On speakers the microphone hears the app: the click, the guide comp, the band.
-   And those land on the grid EXACTLY, because they were scheduled there and the
-   round-trip calibration measures precisely that path — so after the correction
-   the app's own click reads as a flawless hit on every slot. A player who puts
-   the guitar down would score "Tight · 32/32". Timing cannot separate the two
-   signals, because a perfectly played note is *supposed* to arrive at the same
-   instant as the guide it follows; there is no offset left to discriminate on.
-
-   What the app's own sound is NOT is human. Nobody plays thirty notes within a
-   few milliseconds of the grid every time — trained musicians sit around ±10–20 ms
-   of spread, and the machine sits at ~0. So the guard is a plausibility floor
-   rather than a detector: essentially every slot hit, AND a spread tighter than
-   any hand achieves, means the mic is listening to the speakers. We refuse to
-   dress that up as a score and say what to do about it (headphones).
-
-   Deliberately conservative — a false accusation here is worse than a missed one,
-   because it calls a good player a liar. Both conditions must hold, over a run
-   long enough that a short lucky streak can't trip it. */
+   But nobody plays thirty notes within a few ms of the grid; trained hands sit around
+   ±10–20 ms, the machine at ~0. So: essentially every slot hit AND a spread tighter
+   than any hand, over a long enough run, means the mic is hearing the speakers — refuse
+   the score and suggest headphones. Conservative, because a false accusation calls a
+   good player a liar. */
 const ON_HUMAN_MS = 6;         // tightest spread a human hand plausibly sustains
 const ON_SELF_HITRATE = 0.95;  // ...while also hitting essentially every slot
 const ON_SELF_MIN_N = 8;       // ...over a run long enough to mean something

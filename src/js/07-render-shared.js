@@ -1,7 +1,6 @@
 /* ===================== SHARED ===================== */
-/* Feel pass (1d): JS-driven motion must check reduced-motion explicitly (the
-   global CSS reset only neutralizes CSS-declared animation). Returns false where
-   matchMedia is unavailable (e.g. the jsdom harness), so motion is skipped there. */
+/* JS-driven motion checks reduced-motion itself (the CSS reset only covers CSS
+   animation). False where matchMedia is missing (jsdom), so motion is skipped there. */
 function motionOK(){
   if(typeof window==='undefined' || typeof window.matchMedia!=='function') return false;
   try{ return !window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return true; }
@@ -20,18 +19,13 @@ function renderNums(el){
   el.style.minWidth = boardWidth()+'px';
   el.classList.toggle('lefty', lefty);
 }
-/* Responsive fret sizing (Phase C+): derive the fret-cell width from the width
-   actually available to the board, with a readable floor. A windowed range
-   (≤5 frets) then fits the viewport with no horizontal scroll; only the wide
-   "All frets" view falls below the floor and keeps the .scroll fallback.
-   Both .board and .fretnums are sized from boardWidth(), so dot/number
-   alignment is preserved exactly — only the per-cell pixel width adapts. */
+/* Fret-cell width comes from the width actually available, with a readable floor: a
+   ≤5-fret window fits with no horizontal scroll, and only "All frets" falls below the
+   floor and scrolls. .board and .fretnums share boardWidth(), so dots and numbers
+   stay aligned. */
 const CELL_MIN = 34, CELL_MAX = 200;
-/* Width available to the neck. Measured from the board's OWN scroll container (#5):
-   the board spans a different column than the controls now (full width on desktop,
-   the right pane in landscape), so sizing off `.main` would mis-fit it. `.scroll`
-   always reflects the board's real column in every layout; fall back to `.main`
-   then the viewport for the jsdom harness, where clientWidth is 0. */
+/* Measured from the board's own .scroll container (the board's column differs from
+   the controls' between layouts); .main, then the viewport, for jsdom. */
 function availW(){
   if(typeof document==='undefined') return 976;
   const el=document.querySelector('.board-region .scroll') || document.querySelector('.main');
@@ -49,7 +43,7 @@ function renderBoard(boardEl, cellFn){
   clearPlayHighlights();
   boardEl.innerHTML='';
   const lo=FRET_LO(), hi=FRET_HI(), showOpen=lo<=1, stag=_boardStagger;
-  const delay=col=>Math.min(col*12,150)+'ms';        // 1d: left-to-right change-stagger
+  const delay=col=>Math.min(col*12,150)+'ms';        // left-to-right change-stagger
   SNAMES.forEach((sn,si)=>{
     const row=document.createElement('div'); row.className='srow';
     const lab=document.createElement('div'); lab.className='slabel'; lab.textContent=sn; row.appendChild(lab);
@@ -63,11 +57,10 @@ function renderBoard(boardEl, cellFn){
     for(let f=lo; f<=hi; f++){
       const pc=(OPEN[si]+f)%12;
       const cell=document.createElement('div'); cell.className='cell';
-      // capo: dim the frets behind it (unreachable) and mark its fret as the new
-      // nut — pitches are unchanged, so the lit chord/scale tones stay put.
+      // capo: dim the frets behind it and mark its fret as the new nut — pitches don't move,
+      // so the lit tones stay put
       if(capo>0){ if(f<capo) cell.classList.add('subcapo'); else if(f===capo) cell.classList.add('capo-at'); }
-      // position-marker inlays on the neck face: single dot between the centre
-      // strings (G/D, si 3), double dot straddling the centre at fret 12/24
+      // inlays: a single dot between the centre strings, a double one at 12/24
       if(INLAY_DOUBLE.has(f)){ if(si===2||si===4) cell.classList.add('inlay'); }
       else if(INLAY_SINGLE.has(f)){ if(si===3) cell.classList.add('inlay'); }
       const dot=cellFn(pc,si,f);
@@ -82,24 +75,18 @@ function renderBoard(boardEl, cellFn){
 }
 const INLAY_SINGLE = new Set(DOTS.filter(f=>f!==12&&f!==24));
 const INLAY_DOUBLE = new Set([12,24]);
-/* swipe affordance (mobile): on a phone the control rows + tiered quality pickers
-   swipe sideways instead of wrapping. When one actually overflows its track, fade its
-   right edge so the clipped buttons read as "more — swipe →" (the same cue the tab
-   strip and the neck already use). A no-op where groups wrap (desktop / wide), since
-   wrapped content never overflows — so this is safe to call on any viewport. Re-run
-   after a context change rebuilds these groups (see the call sites in wiring). */
+/* swipe affordance (phone): a control row that overflows its track fades its right
+   edge so the clipped buttons read as "more — swipe →". A no-op where groups wrap.
+   Re-run after a context change rebuilds the groups. */
 function markScrollables(){
   if(typeof document==='undefined') return;
   document.querySelectorAll('.row > .group, #ch-quals .group, #arp-quals .group').forEach(g=>{
     g.classList.toggle('scrollable', g.scrollWidth > g.clientWidth + 1);
   });
 }
-/* Heuristic fingering for a fretted shape. `frets` is indexed by display column
-   (null = muted, 0 = open → no finger). Returns {colIndex: 1..4}. A genuine
-   index-barre is detected when the lowest fret is played on 2+ strings AND a
-   higher fret sits above it; otherwise fingers ascend by fret then string. This
-   lands the standard fingerings for the open / E-shape / A-shape voicings the
-   app generates, and a sensible ascending guess for computed jazz voicings. */
+/* Heuristic fingering for a fretted shape (`frets` by display column; null = muted,
+   0 = open). An index barre when the lowest fret is played on 2+ strings with a higher
+   fret above it; otherwise fingers ascend by fret, then string. Returns {col: 1..4}. */
 function chordFingers(frets){
   const fretted=frets.map((fr,i)=>({i,fr})).filter(o=>o.fr!=null&&o.fr>0)
                      .sort((a,b)=> a.fr-b.fr || a.i-b.i);
@@ -117,13 +104,10 @@ function chordFingers(frets){
   }
   return map;
 }
-/* Shared chord/triad diagram scaffold: the SVG frame + fret/string lines, the nut
-   (drawn when the box starts at fret 1), and the "Nfr" position label, for a box of
-   `cols` strings. Returns the opening markup plus the coordinate helpers and the
-   resolved baseFret/rows/padTop so each caller draws its own dots — chord boxes mark
-   open/muted strings and colour by funcMap; triad cards draw only the three set
-   strings and colour by triad function. `dims.span` fixes the row count (chord boxes
-   use a constant 4); omit it to fit the rows to the shape (triad cards). */
+/* Chord/triad diagram scaffold: the SVG frame, fret and string lines, the nut (when
+   the box starts at fret 1) and the "Nfr" label for `cols` strings. Returns the markup
+   plus coordinate helpers so each caller draws its own dots. `dims.span` fixes the row
+   count (chord boxes: 4); omit it to fit the shape (triad cards). */
 function fretGrid(frets, cols, dims){
   const played=frets.filter(x=>x!=null && x>0);
   const minF=played.length?Math.min(...played):0;
@@ -146,8 +130,7 @@ function makeDot(cls,text,midi){
   d.setAttribute('aria-label',text);
   return d;
 }
-/* pluck ripple (1d): a one-shot expanding halo from a tapped dot. Gated on
-   motionOK so it is skipped under reduced motion (and in the jsdom harness). */
+/* pluck ripple: a one-shot halo from a tapped dot, skipped under reduced motion */
 function rippleDot(d){
   if(!d || !motionOK()) return;
   const r=document.createElement('span'); r.className='ripple';
@@ -159,12 +142,10 @@ function wirePlay(boardEl){
   boardEl.addEventListener('click',e=>{ trigger(e.target.closest('.dot')); });
   boardEl.addEventListener('keydown',e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const d=e.target.closest('.dot'); if(d&&d.dataset.midi!=null){ e.preventDefault(); trigger(d); } });
 }
-/* ---- one shared board (1b) ----
-   Every board-bearing mode (chord tones / triads / scale / notes) paints into a
-   single #board. isBoardMode() tells each render function whether IT owns the
-   board right now (so the cross-view render passes only paint once); paintBoard()
-   does the actual board + numbers + legend + hint draw. Legends are mode-specific
-   text, generated here so the shared legend slot can switch with the mode. */
+/* ---- one shared board ----
+   Every board view paints into #board. isBoardMode() says whether a render function
+   owns it right now (so cross-view passes paint once); paintBoard() draws the board,
+   numbers, legend and hint. */
 function isBoardMode(mode){
   if(mode==='chords')   return currentTab==='harmony' && hView==='chords' && !triadsOn();
   if(mode==='triads')   return currentTab==='harmony' && hView==='chords' && triadsOn();
@@ -179,9 +160,8 @@ function paintBoard(cellFn, legendHTML, hintHTML){
   document.getElementById('legend').innerHTML = legendHTML || '';
   document.getElementById('hint').innerHTML = hintHTML || '';
 }
-/* A legend chip: colour swatch + name, plus an optional degree detail (e.g. "3 / ♭3").
-   The degree sits in its own span so it can be dropped on phones where the legend
-   must fit one line (see the 600px block in styles.css) while desktop keeps it. */
+/* A legend chip: swatch + name + an optional degree ("3 / ♭3") in its own span, which
+   phones drop so the legend fits one line. */
 function legChip(varName, key, deg){ return `<div class="leg"><span class="leg-dot" style="background:var(${varName})"></span><span class="leg-nm">${t(key)}</span>${deg?`<span class="leg-deg">${deg}</span>`:''}</div>`; }
 function chordLegendHTML(){ return legChip('--root','leg_root','1')+legChip('--third','leg_third','3 / ♭3')+legChip('--fifth','leg_fifth','5')+legChip('--seventh','leg_seventh','7 / ♭7')+legChip('--ext','leg_ext','6 · 9 · 11 · 13'); }
 function triadLegendHTML(){ return legChip('--root','leg_root','1')+legChip('--third','leg_third','3 / ♭3')+legChip('--fifth','leg_fifth','5'); }
@@ -206,11 +186,8 @@ function buildRootBtns(container, current, onPick){
     container.appendChild(b);
   });
 }
-/* Shared segmented-button row: one `.btn` per item with the active index marked
-   (`active` class + aria-pressed) and each wired to onPick(i). `items` are
-   {label, title?, aria?} — title/aria are set only when provided, so callers that
-   want a bare button (just aria-pressed) match their old markup exactly. Backs the
-   arp-position, triad quality/string-set/inversion, and scale-position pickers. */
+/* Segmented buttons: one .btn per item, the active one marked (class + aria-pressed),
+   each wired to onPick(i). title/aria are set only when given. */
 function segButtons(containerId, items, activeIdx, onPick){
   const c=document.getElementById(containerId); if(!c) return; c.innerHTML='';
   items.forEach((it,i)=>{

@@ -15,16 +15,12 @@ function buildToolbar(){
   const vv=document.getElementById('tb-vol-val'); if(vv) vv.textContent=Math.round(masterVol*100)+'%';
   buildTuner();
   const lb=document.getElementById('tb-lefty'); lb.classList.toggle('active', lefty); lb.setAttribute('aria-pressed', lefty);
-  applyA11y();   // keep the accessibility toggles in sync after a rebuild (e.g. language switch)
+  applyA11y();   // keep the accessibility toggles in sync after a rebuild (language switch)
   applyToolbarState();
 }
 /* ---- tempo: one setter, every readout ----
-   `tempo` is one global that two controls display — the header slider and the drill
-   strip's stepper — so it needs one place that clamps it and repaints both. Before
-   this the timing drill kept a private copy of exactly this function, which is how the
-   app ended up with two tempo controls that each knew how to sync the other. Callers
-   pass BPM; the clamp mirrors the slider's own min/max so the stepper can't walk past
-   what the slider allows. Returns nothing — read `tempo`. */
+   Two controls show `tempo` (the header slider and the drill header's stepper), so one
+   place clamps it — to the slider's own range — and repaints both. */
 function setTempo(bpm){
   tempo = Math.max(40, Math.min(200, Math.round(bpm)));
   const r=document.getElementById('tb-tempo');  if(r) r.value=tempo;
@@ -38,10 +34,8 @@ function applyToolbarState(){
   tg.classList.toggle('open', toolbarOpen);
   tg.setAttribute('aria-expanded', toolbarOpen);
 }
-/* custom tuning: six per-string note selects (high → low, matching the
-   board's top-to-bottom string order), shown only when the Custom tuning is picked.
-   Each option is a MIDI pitch labelled note+octave; the board/highlight math is
-   already tuning-driven, so changing one rebuilds customTuning and re-applies. */
+/* custom tuning: six per-string selects (high → low, like the board), shown only for
+   the Custom tuning; each option is a MIDI pitch labelled note + octave. */
 function midiLabel(m){ return NOTES[mod(m,12)].replace('#','♯') + (Math.floor(m/12)-1); }
 function buildCustomTuning(){
   const host=document.getElementById('tb-custom-strings'); if(!host) return;
@@ -57,8 +51,7 @@ function applyBackingPanel(){
   if(p) p.classList.toggle('collapsed', !backingOpen);
   if(tg){ tg.classList.toggle('open', backingOpen); tg.setAttribute('aria-expanded', backingOpen); }
 }
-/* collapsible chord-shape card in the right rail; mirrors the suggester's inline
-   show/hide but its open/closed state is persisted (shapesOpen) */
+/* the chord-shape card's open/closed state is persisted (shapesOpen) */
 function applyShapesPanel(){
   const body=document.getElementById('shapes-body'), tg=document.getElementById('shapes-toggle');
   if(body) body.style.display = shapesOpen ? '' : 'none';
@@ -68,18 +61,13 @@ function applyAsideState(){
   const show = ASIDE_TABS.includes(currentTab);
   const aside=document.querySelector('.aside');
   if(aside) aside.style.display = show ? '' : 'none';
-  // drop the reserved suggester column on tabs that don't use it (1e), so the
-  // board + controls take the full width instead of leaving a 234px gap
+  // drop the suggester column on tabs that don't use it, so the board takes the width
   const layout=document.querySelector('.layout'); if(layout) layout.classList.toggle('no-aside', !show);
 }
-/* Repaint every board-bearing view after a tuning / fret-range / capo / lefty
-   change. Delegates to renderContextViews — the ONE complete fan-out — so a
-   newly-added view can never be left off this list. */
+/* Repaint every board-bearing view after a tuning / fret-range / capo / lefty change,
+   via the ONE complete fan-out, so no view can be left off. */
 function renderAllBoards(){ renderContextViews(); }
-/* A2: syncTabsScroll() lived here — it faded the right edge of the mobile tab
-   strip while more tabs sat off-screen. The strip is gone: at that width the nav is
-   a fixed 4-item bottom bar with nothing to scroll. */
-/* re-fit responsive fret cells when the viewport width changes (rotation/resize) */
+/* re-fit the fret cells when the viewport width changes */
 if(typeof window!=='undefined'){
   let _rzT=null, _rzW=window.innerWidth;
   window.addEventListener('resize', ()=>{
@@ -89,20 +77,17 @@ if(typeof window!=='undefined'){
   });
 }
 
-/* Timestamp of the last header condense/expand. The magnetic neck (below) reads it so it
-   doesn't fire its own scroll nudge while the header is still animating between sizes —
-   otherwise that nudge lands ~110ms after a condense as a second, separate little jump. */
+/* When the header last condensed or expanded: the magnetic neck waits for that
+   animation, or its own nudge lands as a second little jump. */
 let _hdrToggleAt=0;
 
-/* magnetic neck (mobile shell): the board is sticky in the single-column layout.
-   When a scroll comes to rest with the neck just *barely* unpinned — its top only a
-   few px below the pin line — gently settle it back into the pinned position, so a
-   small scroll doesn't drop it (it "unpins too easily" otherwise). Acts only within a
-   narrow band, so a deliberate scroll up to the controls is never trapped. */
+/* magnetic neck (phone portrait): when a scroll comes to rest with the sticky neck
+   just barely unpinned, settle it back into place. Only within a narrow band, so a
+   deliberate scroll up to the controls is never trapped. */
 if(typeof window!=='undefined'){
   let _magT=null;
   const magnetNeck=()=>{
-    if(window.innerWidth>940 || window.innerHeight<=500) return;   // portrait single-column only (landscape un-pins the neck, see CSS)
+    if(window.innerWidth>940 || window.innerHeight<=500) return;   // portrait single-column only (landscape un-pins the neck)
     if(Date.now()-_hdrToggleAt < 400) return;                  // don't nudge over a header condense/expand transition
     const br=document.getElementById('board-region');
     if(!br || br.hidden) return;
@@ -113,21 +98,14 @@ if(typeof window!=='undefined'){
   window.addEventListener('scroll', ()=>{ clearTimeout(_magT); _magT=setTimeout(magnetNeck, 110); }, {passive:true});
 }
 
-/* condensing sticky header (mobile shell): once you scroll past the brand the header
-   slims (CSS .scrolled, ≤940 only) so tabs + transport stay reachable. The sticky board
-   pins directly below it, so we keep --hdr-h in sync with the live header height — and as
-   the header *animates* between sizes the ResizeObserver fires every frame, so the pinned
-   board tracks it smoothly instead of snapping. */
+/* condensing sticky header (phone): past the brand the header slims (.scrolled) so the
+   nav stays reachable, and --hdr-h tracks its live height every frame so the board
+   pinned below it follows smoothly. */
 if(typeof window!=='undefined'){
   const hdr=document.querySelector('header');
-  // A bottom spacer holds the *total document height constant* as the header condenses. This
-  // is what finally kills the "loops between two states in one spot" jitter: the header is
-  // position:sticky, so shrinking it shortens the page, and near the page bottom that clamps
-  // the scroll position — and because the header now animates, the clamp drags scrollY back
-  // across the trigger every frame, sustaining a condense/expand loop a dead-band can't outrun
-  // (the height delta is far larger than any sane band). Backfilling exactly the height the
-  // header gives up means the scroll range never moves, so a toggle can't reposition the scroll
-  // under itself, and the trigger only ever fires from a real, deliberate scroll.
+  // A bottom spacer keeps the total page height constant as the header condenses.
+  // Without it, shrinking the sticky header shortens the page; near the bottom that
+  // clamps scrollY back across the trigger and the header flaps between states.
   let spacer=null, baseH=0;
   if(hdr){
     spacer=document.createElement('div');
@@ -141,49 +119,41 @@ if(typeof window!=='undefined'){
     document.documentElement.style.setProperty('--hdr-h', h+'px');   // sticky board offsets below the live header height
     if(spacer) spacer.style.height=Math.max(0, baseH-h)+'px';        // backfill the condensed delta → constant page height
   };
-  // Two sentinels at fixed document offsets give a hysteresis dead-band (condense past ~64px,
-  // expand only back under ~16px) so a tiny scroll near the line can't flap the state. They are
-  // anchored to the document, not window.scrollY, so the header resizing never moves the trigger.
-  // baseH (the full, expanded height) is captured at the instant we condense, while the header
-  // is still static — never mid-animation — so the spacer always backfills against the real
-  // expanded size rather than a transitional one.
+  // Two sentinels at fixed document offsets give hysteresis (condense past ~64px, expand
+  // under ~16px), and resizing the header never moves them. baseH is captured at the
+  // moment of condensing, while the header is still at its full height.
   if(hdr && typeof IntersectionObserver!=='undefined'){
     const mk=h=>{ const s=document.createElement('div'); s.setAttribute('aria-hidden','true');
       s.style.cssText='position:absolute;top:0;left:0;width:1px;height:'+h+'px;pointer-events:none;';
       document.body.appendChild(s); return s; };
     new IntersectionObserver(es=>{ if(!es[0].isIntersecting && !hdr.classList.contains('scrolled') && window.innerHeight>500){
-      baseH=hdr.offsetHeight; hdr.classList.add('scrolled'); _hdrToggleAt=Date.now(); setHdrH();   // capture expanded height, then condense (portrait only — landscape header scrolls away static)
+      baseH=hdr.offsetHeight; hdr.classList.add('scrolled'); _hdrToggleAt=Date.now(); setHdrH();   // capture the expanded height, then condense (portrait only)
     } }, {threshold:0}).observe(mk(64));
     new IntersectionObserver(es=>{ if(es[0].isIntersecting && hdr.classList.contains('scrolled')){
       hdr.classList.remove('scrolled'); _hdrToggleAt=Date.now();
     } }, {threshold:0}).observe(mk(16));
   }
   window.addEventListener('resize', ()=>{
-    // Rotating into a short (landscape) viewport: drop any condensed state so the now-static
-    // header expands back and the spacer resets to 0 — otherwise a condense from portrait would
-    // leave a phantom bottom gap (the spacer backfill no longer has a sticky header to offset).
+    // rotating into landscape: expand and reset the spacer, or a portrait condense would
+    // leave a phantom gap at the bottom
     if(window.innerHeight<=500 && hdr && hdr.classList.contains('scrolled')){ hdr.classList.remove('scrolled'); _hdrToggleAt=Date.now(); }
     setHdrH();
   });
-  // Use the entry's reported size rather than reading offsetHeight — the latter forces a
-  // synchronous reflow on every animation frame as the header condenses (mobile jank); the
-  // entry already carries the new size, so the per-frame path stays layout-thrash-free.
+  // the entry's size, not offsetHeight: reading that would force a reflow every frame
   if(typeof ResizeObserver!=='undefined' && hdr) new ResizeObserver(es=>{
     const box=es[0].borderBoxSize && es[0].borderBoxSize[0];
     setHdrH(box ? box.blockSize : undefined);
   }).observe(hdr);
-  if(hdr) baseH=hdr.offsetHeight;   // expanded height at load (until the first condense recaptures it)
+  if(hdr) baseH=hdr.offsetHeight;   // expanded height at load (recaptured on each condense)
   setHdrH();
 }
 
 const LS_KEY='guitarStudio.v1';
 let currentTab='harmony';
-// the primary navigation axis (mode), orthogonal to currentTab. Reference
-// nests Harmony/Scales/Circle; Practice is its own surface. Defaults to reference so
-// older saves (no `mode`) and the existing reference behaviour are untouched.
+// the mode axis, orthogonal to currentTab; a save with no `mode` opens on Reference
 let currentMode='reference';
 /* The one list of what is saved. Export (13-backup.js) reads the same snapshot, so a
-   backup file can't drift from what the browser actually keeps. */
+   backup file can't drift from what the browser keeps. */
 function snapshotState(){ return {
   lang, mode:currentMode, tab:currentTab, tuningIdx, customTuning, fretRangeIdx, tempo, meterIdx, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
   cbPalette, fnShapes, welcomeSeen,
@@ -194,13 +164,12 @@ function snapshotState(){ return {
   ntRoot, ntFilter,
   seq, seqLoopOn,
   bassOn, grooveOn,
-  calMs, calKnown,   // round-trip latency + whether it was ever established
-  drillSeen,         // tracks already run once — drives the first-run hint reveal
+  calMs, calKnown,   // round-trip latency + whether it was ever measured
+  drillSeen,         // tracks already run once — the first-run hint reveal
   sessMins,          // how long your practice session usually is
-  learner   // spine #3: learner model (13-learner.js); saved verbatim, restored via normalizeLearner
+  learner   // learner model: saved verbatim, restored via normalizeLearner
 }; }
-/* Set by an import just before it reloads: the in-memory state is the OLD progress, and
-   any save between the write and the reload would put it straight back. */
+/* Set by an import just before it reloads, so no save can put the old progress back. */
 let saveBlocked=false;
 function saveState(){ if(saveBlocked) return;
   try{ localStorage.setItem(LS_KEY, JSON.stringify(snapshotState())); }
@@ -208,9 +177,7 @@ function saveState(){ if(saveBlocked) return;
 function loadState(){ try{
   const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(!s) return false;
   if(s.lang==='uk'||s.lang==='en') lang=s.lang;
-  // mode axis — default reference. The old 'ear' mode folded into Practice,
-  // so an older save that pinned it lands on Practice rather than falling back to
-  // Reference: the ear drills are still right there, one group down.
+  // an old save pinned to the retired 'ear' mode opens on Practice, where the ear drills live
   if(s.mode==='practice'||s.mode==='ear') currentMode='practice';
   else if(s.mode==='reference') currentMode='reference';
   if(Number.isInteger(s.tuningIdx)&&TUNINGS[s.tuningIdx]) tuningIdx=s.tuningIdx;
@@ -218,13 +185,11 @@ function loadState(){ try{
   if(Number.isInteger(s.fretRangeIdx)&&FRET_RANGES[s.fretRangeIdx]) fretRangeIdx=s.fretRangeIdx;
   if(Number.isInteger(s.capo)&&s.capo>=0&&s.capo<=11) capo=s.capo;
   if(typeof s.tempo==='number'&&s.tempo>=40&&s.tempo<=200) tempo=s.tempo;
-  if(Number.isInteger(s.meterIdx)&&METERS[s.meterIdx]) meterIdx=s.meterIdx;   // 7b time signature
+  if(Number.isInteger(s.meterIdx)&&METERS[s.meterIdx]) meterIdx=s.meterIdx;
   if(typeof s.masterVol==='number'&&s.masterVol>=0&&s.masterVol<=1) masterVol=s.masterVol;
-  // F1 round-trip latency. Bounded by the same ceiling the measurement itself
-  // rejects above, so a hand-edited or corrupted save can't skew every timing score.
+  // bounded by the measurement's own ceiling, so a corrupted save can't skew every score
   if(typeof s.calMs==='number'&&s.calMs>=0&&s.calMs<=CAL_MAX_MS) calMs=s.calMs;
-  // A save predating the flag but carrying a non-zero latency was measured by the
-  // old build — grandfather it in rather than re-prompt someone already calibrated.
+  // a save from before calKnown with a real latency was measured: don't re-prompt it
   calKnown = (typeof s.calKnown==='boolean') ? s.calKnown : (calMs>0);
   if(typeof s.lefty==='boolean') lefty=s.lefty;
   if(typeof s.toolbarOpen==='boolean') toolbarOpen=s.toolbarOpen;
@@ -232,13 +197,9 @@ function loadState(){ try{
   if(typeof s.shapesOpen==='boolean') shapesOpen=s.shapesOpen;
   if(typeof s.cbPalette==='boolean') cbPalette=s.cbPalette;
   if(typeof s.fnShapes==='boolean') fnShapes=s.fnShapes;
-  // grandfather existing users: a save with no welcomeSeen field is a returning
-  // visitor (predates onboarding), so don't pop the welcome at them — only a
-  // genuinely first visit (no saved state at all) leaves welcomeSeen false.
+  // a save with no welcomeSeen predates onboarding — a returning visitor, so no welcome
   welcomeSeen = (typeof s.welcomeSeen==='boolean') ? s.welcomeSeen : true;
-  /* Which drills the player has already met (B2). Rebuilt key-by-key rather than
-     assigned, so a tampered or stale blob can't put a non-track key in front of the
-     hint logic — and bounded for the same reason the learner model's tables are. */
+  /* rebuilt key by key and bounded, so a tampered blob can't inject arbitrary keys */
   if(s.drillSeen && typeof s.drillSeen==='object' && !Array.isArray(s.drillSeen)){
     const out={}; let n=0;
     for(const k of Object.keys(s.drillSeen)){
@@ -247,21 +208,21 @@ function loadState(){ try{
     }
     drillSeen=out;
   }
-  // B3: the session length you last chose, restored only if it is still one we offer
+  // restored only if it is still a length we offer
   if(typeof SESSION_MINS!=='undefined' && SESSION_MINS.indexOf(s.sessMins)>=0) sessMins=s.sessMins;
   if(Number.isInteger(s.gRoot)&&s.gRoot>=0&&s.gRoot<12){ gRoot=s.gRoot; if(typeof s.gRootLbl==='string') gRootLbl=s.gRootLbl; }
   if(s.gMode==='names'||s.gMode==='deg') gMode=s.gMode;
   if(s.hView==='chords'||s.hView==='arp') hView=s.hView;
   if(s.scView==='scale'||s.scView==='notes') scView=s.scView;
   if(typeof s.tab==='string'){
-    if(s.tab==='chords'||s.tab==='triads') currentTab='harmony';          // migrate old merged tabs
-    else if(s.tab==='notes'){ currentTab='scales'; scView='notes'; }      // 1b: Notes folded into Scales
+    if(s.tab==='chords'||s.tab==='triads') currentTab='harmony';          // old Chords / Triads tabs merged into Harmony
+    else if(s.tab==='notes'){ currentTab='scales'; scView='notes'; }      // Notes became a view of Scales
     else currentTab=s.tab;
   }
-  // ---- working musical state (added in 1.6.1) ----
+  // ---- working musical state ----
   if(Number.isInteger(s.chQual)&&QUALITIES[s.chQual]) chQual=s.chQual;
   if(Number.isInteger(s.arpPos)&&s.arpPos>=0&&s.arpPos<=5) arpPos=s.arpPos;
-  if(Number.isInteger(s.chVoicing)&&s.chVoicing>=0&&s.chVoicing<6) chVoicing=s.chVoicing;  // clamped again at render against the actual list length
+  if(Number.isInteger(s.chVoicing)&&s.chVoicing>=0&&s.chVoicing<6) chVoicing=s.chVoicing;  // clamped again at render against the real list length
   if(Number.isInteger(s.scIdx)&&SCALES[s.scIdx]) scIdx=s.scIdx;
   if(Number.isInteger(s.scPos)&&s.scPos>=0&&s.scPos<=5) scPos=s.scPos;
   if(s.scOverlay&&typeof s.scOverlay==='object'&&Number.isInteger(s.scOverlay.rootPc)&&Array.isArray(s.scOverlay.iv)&&typeof s.scOverlay.tag==='string')
@@ -269,19 +230,16 @@ function loadState(){ try{
   if(Number.isInteger(s.trSet)&&STRING_SETS[s.trSet]) trSet=s.trSet;
   if(Number.isInteger(s.trInv)&&s.trInv>=0&&s.trInv<=3) trInv=s.trInv;
   if(typeof s.chTriads==='boolean') chTriads=s.chTriads;
-  /* v2.17.0: Triads stopped being a view of its own and became a toggle on Chord
-     tones, whose chord now picks the triad. A save that was looking at triads opens on
-     Chord tones with triads on, on the triad quality it had picked (trQual). */
+  /* Triads became a toggle on Chord tones (v2.17.0): a save that was on the Triads view
+     opens on Chord tones with triads on, on the triad it had picked (trQual). */
   if(s.hView==='triads' || s.tab==='triads'){
     hView='chords'; chTriads=true; chVoicing=0;
     if(Number.isInteger(s.trQual)&&TRIADS[s.trQual]) chQual=TRI_TO_QUAL[s.trQual];
   }
-  // circle selection is no longer persisted — it is derived from the context
-  // (gRoot + scIdx) at render time (1a). Older saves with cofSel/cofMinor are
-  // simply ignored.
+  // the circle's selection is derived from gRoot + scIdx; old cofSel/cofMinor are ignored
   if(s.ntFilter==='all'||s.ntFilter==='nat') ntFilter=s.ntFilter;
   if(s.ntRoot===''||NAT.includes(s.ntRoot)||SHARP.includes(s.ntRoot)||FLAT.includes(s.ntRoot)) ntRoot=s.ntRoot;
-  learner = normalizeLearner(s.learner);   // spine #3: bounds-checked restore (garbage → fresh model)
+  learner = normalizeLearner(s.learner);   // bounds-checked restore (garbage → fresh model)
   if(typeof s.seqLoopOn==='boolean') seqLoopOn=s.seqLoopOn;
   if(typeof s.bassOn==='boolean') bassOn=s.bassOn;
   if(typeof s.grooveOn==='boolean') grooveOn=s.grooveOn;
@@ -293,8 +251,8 @@ function loadState(){ try{
 }catch(e){ devWarn('saved state could not be restored; using defaults', e); return false; } return true; }
 
 /* ---- old share links ----
-   Share links (#k=…&t=…) were cut in v2.17.0. An old link still opens the app: the
-   hash is ignored and cleared, so it never pins or breaks anything. */
+   Cut in v2.17.0. An old #k=…&t=… link still opens the app: the hash is ignored and
+   cleared, so it never pins or breaks anything. */
 function clearOldShareHash(){
   if(typeof location==='undefined') return;
   const h=(location.hash||'').replace(/^#/, ''); if(!h) return;

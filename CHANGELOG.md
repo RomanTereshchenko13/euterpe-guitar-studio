@@ -10,34 +10,27 @@ _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
 ## v2.16.0 — 2026-10-08
 
-- Your progress can leave the browser and come back. Settings ▸ Progress has Export, which saves your practice history and preferences as a file on your device, and Import, which brings one back — on a new phone, after clearing the browser, or simply as a backup. Nothing is uploaded anywhere. Before it replaces anything, Import tells you how many sessions are on this device and how many are in the file, and it refuses a file from a newer version of the app rather than reading it as empty.
-- Euterpe now asks the browser to keep its storage once you have finished a practice session. Some browsers — Safari above all — otherwise clear a site's data after a week without a visit, and your history with it.
-- If this browser cannot save at all (private mode, storage full), you are now told so once, with a button to export what you have, instead of finding out the next time you open the app.
+- Settings ▸ Progress can export your practice history and preferences to a file on your device and import it back, on a new phone or after clearing the browser.
+- After your first finished session Euterpe asks the browser to keep its storage, so Safari and others do not clear your history after a week away.
+- If the browser cannot save at all (private mode, storage full), you are told once, with a button to export what you have.
 
 ## v2.15.0 — 2026-08-03
 
-- Practice sessions. Say how long you have — five minutes to twenty — and Euterpe lines up what you are actually due to work on, runs the clock, moves you from one drill to the next, ends by itself, and tells you what the session was. Until now every drill was an endless loop you left by hand, and the app had no notion of a day's practice at all.
-- "Drill this" from anywhere. Every reference view now has a one-tap route into the drill that is about what is on your screen: a chord into comping it in time, an arpeggio into targeting those tones over the changes, a scale into echoing phrases built from it, the circle into changing between the key's chords. It was a promise the app had been making since the beginning and keeping in exactly one place.
-- "Jam over this". Playing along to the harmony on screen used to take five steps — pick a key, pick a chord, open Backing, switch on bass and drums, press Loop. It is one button now, sitting next to the panel that already tells you what to play over this.
-- Progress that tells you something. The five all-time numbers are replaced by the story your practice actually has: a line per drill with your latest result, which way it is heading, your personal best, and — for the drills that listen — your best timing error in milliseconds. The app has been keeping all of that and showing none of it. Each line is also a way straight back into that drill.
-- One screen for every drill. All nine used to render under the same heading and never say which drill you were in; there is now a single drill header that names it, holds the key, the tempo, the microphone and the way out, and folds its setup away once you start playing. The practice home leads with what to do next instead of ten cards, and each card is badged with what it does — scored with the microphone, scored on accuracy, or a coach.
-- One navigation bar instead of three stacked strips, and the fretboard now sits above the controls that change it rather than below them. Settings are sorted by what you do with them, with the tuner and the latency measurement gathered under Tools. On a phone the four destinations are a bottom bar in the thumb zone.
-- Honest labels throughout: every string that still promised a shipped feature was "coming later" has been retired. Three drills gained microphone scoring in the last release and their own descriptions had not been told.
+- Practice sessions: say how long you have and Euterpe lines up what is due, runs the clock, moves between drills and sums up at the end.
+- Every reference view can open the drill about what is on screen, and "Jam over this" starts the band under the chord or progression in one tap.
+- The progress card shows each drill's latest result, trend and best, and one drill header names the drill and holds its key, tempo, mic and Quit.
 
 ## v2.14.0 — 2026-08-02
 
-- Mic scoring reaches the Rhythm drills. Strumming & feel now grades the pattern you play — every strum is timed against the pattern's own slots, swing included, so a correctly swung player is not marked late. Over the changes grades the thing comping is actually about: landing each chord change in time. What you strum between the changes is your own rhythm and is left alone.
-- Fixed something important about the scored tier: on speakers the microphone also hears the app, and because the click was scheduled on the grid it lands there perfectly — so a run where you never touched the guitar could come back "Tight, 32/32". Euterpe now recognises a reading that is too machine-even to be human and says so instead of printing a flattering score. Headphones are the clean fix, and every scored drill now says so.
-- In the scored Rhythm drills the guide guitar goes quiet — it was landing on exactly the beats being measured, so the app would have been scoring itself. That is also the better lesson: mic off and you hear the pattern played for you, mic on and you play it. The click and band stay, so you always have something to lock to.
-- One scoring engine now serves all three scored drills, so a fix to any of them is a fix to all of them.
+- Strumming & feel and Comp the progression can now score you through the microphone, timing your strums and your chord changes.
+- A run that only hears the app's own click through the speakers is recognised and refused instead of scored; headphones avoid it.
+- In scored runs the guide guitar goes quiet so the app never scores its own sound, while the click and band keep playing.
 
 ## v2.13.0 — 2026-08-02
 
-- Euterpe can now hear you play. Turn the microphone on in Subdivision & timing and the drill stops being a metronome you follow and becomes one that grades you: every note you pick is timed against the grid, and at the end you get your average error in milliseconds, how tight your spread is, and how many grid slots you actually hit.
-- It also tells you *which way* you are off — rushing or dragging — but only when the lean is real. If your notes are scattered rather than consistently early or late, it says so instead of inventing a tendency out of noise. A drill that flatters you is not a coach.
-- New in Settings ▸ Instrument: Audio latency. Your device takes time to get sound out of the speaker and back in through the mic, and without measuring it every player on earth would be told they drag. Press Measure, keep the guitar quiet for a few seconds and let it click — it plays a click, listens for it, and takes the middle of several readings so one stray noise can not skew it. On headphones there is nothing for the mic to hear, so it says so plainly and leaves you the manual slider.
-- The timing you are scored on is measured on the audio thread, not the animation frame, so the number is the note you played rather than how busy the browser was. Without the mic the drill works exactly as before — the coach tier is unchanged, the scored tier is opt-in.
-- As with the tuner, your audio never leaves the browser: the microphone runs only while you are in a scored run or measuring latency, and nothing is recorded or sent anywhere.
+- Subdivision & timing can listen through the microphone and score your timing: average error in milliseconds, spread, and whether you rush or drag.
+- Settings ▸ Tools ▸ Latency measures your device's audio delay so the timing score measures you, not the device.
+- Your audio never leaves the browser: the mic runs only during a scored run or a latency measurement, and nothing is recorded or sent.
 
 ## v2.12.0 — 2026-08-01
 

@@ -52,17 +52,16 @@ function triadCells(){
   });
   return {cells, iv, pats};
 }
-/* shift a triad pattern up by octaves until it is a fully-fretted movable block
-   (every fret >= 1). This drops open strings — matching the "movable shape"
-   teaching of the triad view — and keeps card display and playback identical. */
+/* shift a triad pattern up by octaves until every fret is ≥ 1 — a movable block, no
+   open strings — so cards and playback match */
 function normalizeTriPat(notes){
   let mn=Math.min(...notes.map(n=>n.fr)), sh=0;
   while(mn+sh<1) sh+=12;
   return notes.map(n=>({si:n.si, fr:n.fr+sh, o:n.o}));
 }
 const TRI_TO_QUAL=[0,1,10,12];   // triad index -> QUALITIES index (maj/m/dim/aug) for the bass's true fifth
-/* the triad voicing the transport should sound: the selected inversion (root
-   position when "all" is shown), in its real register on the current tuning. */
+/* the triad the transport sounds: the selected inversion (root position when "all" is
+   shown), in its real register */
 function currentTriadVoicing(){
   const {pats}=triadCells();
   const p = (trInv===0) ? (pats.find(x=>x.inv===0)||pats[0]) : pats[0];
@@ -70,8 +69,7 @@ function currentTriadVoicing(){
   const midis=notes.map(n=>OPEN_MIDI[n.si]+n.fr).sort((a,b)=>a-b);   // low -> high
   return {midis, pcs:[...new Set(midis.map(m=>mod(m,12)))]};
 }
-/* one compact 3-string triad block. Dots carry data-midi so a click sounds the
-   note; colours follow the chord function (root/third/fifth). */
+/* one compact 3-string triad card; dots carry data-midi so a click sounds them */
 function triadCardSVG(notes, iv){
   const frets=notes.map(n=>n.fr);
   const {svg, x, y, gh, baseFret, rows}=fretGrid(frets, 3, {W:82,H:120,padX:15,padTop:22,padBot:14,posDX:8});
@@ -107,13 +105,11 @@ function buildTrInvs(){
 }
 function renderTriads(){
   const {cells,iv}=triadCells(), tri=curTriad(), set=STRING_SETS[trSet];
-  // panel content
   const notes=iv.map(i=>spellNote(gRootLbl,mod(gRoot+i,12),DEG_OF[i])).join(' – ');
   const invDesc=[t('inv_all_desc'),t('inv_root_desc'),t('inv_1st_desc'),t('inv_2nd_desc')][trInv];
   document.getElementById('tr-info').innerHTML=
     `<div class="big">${noteTxt(gRootLbl)}${tri.short} · ${qName(tri)} · ${t('strings_word')} ${set.label}: ${notes}</div><div class="sub">${invDesc}</div>`;
   renderTriadCards();
-  // shared board
   if(isBoardMode('triads')){
     paintBoard((pc,si,f)=>{
       const o=cells[si+'_'+f]; if(o===undefined) return null;

@@ -37,14 +37,12 @@ function sigText(sig){
   const a=-sig; return a+' ♭ — '+FLAT_ORDER.slice(0,a).map(x=>x+'♭').join(' ');
 }
 function buildDia(rootPc, sc, flat){
-  // One diatonic source (1a): the circle spells each chord by key signature.
+  // the shared diatonicTriads(); the circle spells each chord by key signature
   return diatonicTriads(rootPc, sc).map(c=> noteName(c.rootPc, flat)+c.suf);
 }
-/* Circle as a projection of the one musical context (1a): instead of its own
-   selection state, the wheel shows the current key. The major/minor ring is
-   derived from the mode (major-third family → outer ring), and the highlighted
-   node is the COF entry whose major (or relative-minor) note is the context
-   root. Circle clicks set the context via setKey(); these never persist. */
+/* The wheel shows the current key instead of keeping its own selection: the ring
+   comes from the mode (major third → outer ring), the node from the root. Clicks go
+   through setKey(); nothing here persists. */
 function ctxCofMinor(){ return !isMajorFamily(scIdx); }
 function ctxCofSel(){ const minor=ctxCofMinor(); const i=COF.findIndex(c=>(minor?c.minPc:c.majPc)===gRoot); return i<0?0:i; }
 function pcToRootLabel(pc){ const i=ROOTS.findIndex(r=> (FLAT_ROOTS[r]!==undefined?FLAT_ROOTS[r]:NOTES.indexOf(r))===pc ); return ROOTS[i]; }
@@ -54,8 +52,8 @@ function renderCircle(){
   const cofSel=ctxCofSel(), cofMinor=ctxCofMinor();
   const RO=132, RI=85, rMaj=27, rMin=21, dom=(cofSel+1)%12, sub=(cofSel+11)%12;
   let s=`<circle cx="180" cy="180" r="${RO}" fill="none" stroke="var(--border)" stroke-width="1"/><circle cx="180" cy="180" r="${RI}" fill="none" stroke="var(--border)" stroke-width="1"/>`;
-  // 1d: a connecting arc through subdominant → tonic → dominant (drawn behind the
-  // nodes), animated on each render so a key change reads as a visible relation.
+  // an arc through subdominant → tonic → dominant, behind the nodes, animated on each
+  // render so a key change reads as a visible relation
   const arcR=cofMinor?RI:RO;
   const [asx,asy]=cofXY(sub,arcR), [atx,aty]=cofXY(cofSel,arcR), [adx,ady]=cofXY(dom,arcR);
   s+=`<path class="cof-arc" d="M ${asx.toFixed(1)} ${asy.toFixed(1)} L ${atx.toFixed(1)} ${aty.toFixed(1)} L ${adx.toFixed(1)} ${ady.toFixed(1)}"/>`;
@@ -116,21 +114,19 @@ function applyLang(){
   buildSeqPresets(); renderSeq(); setSeqTransport();
   { const o=document.getElementById('cl-overlay'); if(o && !o.hidden) renderChangelog(); }
   renderChords(); renderArp(); renderScales(); renderNotes(); renderCircle();
-  renderPractice();   // 3b: re-localize the progress chips
-  refreshDrillsLang();   // re-localize whatever drill is in flight (13-drill-registry.js)
-  // ...and the shared drill header with it (B2): the drill's NAME and the setup handle
-  // are painted from i18n there, not from a data-i18n attribute the sweep above sees.
+  renderPractice();
+  refreshDrillsLang();   // re-localize the drill in flight, and the drill header, whose name and setup handle
+  // are painted from i18n, not data-i18n
   applyDrillCtx();
   setHView(hView); setScView(scView); updateGlobalPlay();
   applyAudioAvailability();
-  micRefreshLang();   // F0: re-localize a live tuner readout
-  calRefreshLang();   // F1: ...and the calibration row
+  micRefreshLang();
+  calRefreshLang();
   activateRoot(document.getElementById('g-roots'), gRoot);
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));
-  /* A2: the view switch became a lens on the board and lost its visible "Вид" label —
-     the buttons name themselves next to the neck they change. The group still needs
-     naming for a screen reader, which is what that string is now for. */
+  /* the view switch has no visible label (its buttons name themselves next to the
+     neck), so the group is named for screen readers */
   { const bl=document.getElementById('board-lens'); if(bl) bl.setAttribute('aria-label', t('lbl_view')); }
 }
 

@@ -1,25 +1,18 @@
-/* ===================== Learner model (spine #3) =====================
-   The app's memory of what you know: per-item history + an SM-2-lite
-   spaced-repetition queue, plus a bounded ring buffer of recent sessions. Every
-   later practice phase mints items into this same shape — it grows by ADDING id
-   namespaces (e.g. "note:E:str6", "interval:P5"), never by reshaping. A `v` bump
-   + migration in normalizeLearner() is the only sanctioned way the shape changes.
+/* ===================== Learner model =====================
+   What you know: per-item history + an SM-2-lite spaced-repetition queue, plus a
+   bounded buffer of recent sessions. It grows by ADDING id namespaces ("note:E",
+   "interval:P5"), never by reshaping; a `v` bump + migration in normalizeLearner()
+   is the only way the shape changes.
 
-   Persistence rides saveState()/loadState() (12-toolbar-state.js): saved verbatim,
-   restored through normalizeLearner() with the same bounds-checked discipline as
-   the rest of the state — a tampered/garbage blob degrades to a fresh model, never
-   throws. No UI of its own beyond the small progress readout in the Practice panel
-   (rendered by renderPractice() in wiring-init); the note-naming drill (3c) is the
-   first writer. */
+   Saved verbatim by saveState() and restored through normalizeLearner(), which
+   bounds-checks everything — a tampered or garbage blob degrades to a fresh model,
+   never throws. */
 
 const LEARNER_V = 2;
 const SRS_EASE_MIN = 1.3, SRS_EASE_MAX = 3.0, SRS_EASE_START = 2.5;
 const DAY_MS = 86400000;
-/* Retention. SESS_MAX was one global cap of 50 across nine tracks — so
-   roughly five entries each, and a drill practised daily evicted the history of one
-   practised weekly. A trend needs its own runway, so the cap is now PER SESSION ID
-   (newest kept), with the global figure demoted to a safety ceiling against a
-   tampered store. */
+/* Retention is PER SESSION ID (newest kept), so a drill practised daily can't evict
+   the history of one practised weekly; the global cap is only a safety ceiling. */
 const SESS_MAX = 300;       // global safety ceiling (newest last)
 const SESS_PER_ID = 20;     // per-session-id history depth — what a trend reads
 const PERF_STALE_DAYS = 5;  // a performance track goes "due" when it's this cold
@@ -29,8 +22,7 @@ const IDS_MAX = 400;        // ditto for the per-id best table
 const ID_MAX = 64;          // max stable-id length
 
 function newLearner(){ return { v: LEARNER_V, items: {}, sessions: [], best: {} }; }
-// The single mutable learner instance. loadState() reassigns it from storage
-// (normalized) at boot; until then it's an empty, valid model.
+// loadState() replaces this with the normalized saved model at boot
 let learner = newLearner();
 
 // fetch-or-create the per-item record for a stable id
@@ -40,18 +32,16 @@ function learnerItem(id){
   return it;
 }
 
-// SM-2-lite interval from the current streak + ease: 1d, 6d, then ×ease each rep.
-// Derived from streak+ease (not a stored interval) so the {seen,correct,streak,
-// ease,due} shape stays as pinned.
+// SM-2-lite interval: 1d, 6d, then ×ease each rep. Derived from streak + ease rather
+// than stored, so the item shape stays {seen,correct,streak,ease,due}.
 function srsInterval(streak, ease){
   if(streak<=1) return DAY_MS;
   if(streak===2) return 6*DAY_MS;
   return Math.round(6*DAY_MS * Math.pow(ease, streak-2));
 }
 
-// Record one attempt on an item; returns the updated record. `correct` drives the
-// SRS: a hit grows ease + pushes `due` out by the interval; a miss zeroes the
-// streak, nudges ease down, and re-queues the item to relearn within the minute.
+// Record one attempt. A hit grows ease and pushes `due` out by the interval; a miss
+// zeroes the streak, lowers ease and re-queues the item within the minute.
 function recordAttempt(id, correct, now){
   now = (typeof now==='number') ? now : Date.now();
   const it = learnerItem(id);
@@ -68,8 +58,7 @@ function recordAttempt(id, correct, now){
   return it;
 }
 
-// ids that are due now (optionally namespaced by id prefix), most-overdue first —
-// the queue the drills read to decide what to resurface next.
+// ids due now (optionally by id prefix), most overdue first
 function dueItems(now, prefix){
   now = (typeof now==='number') ? now : Date.now();
   return Object.keys(learner.items)
@@ -78,11 +67,8 @@ function dueItems(now, prefix){
 }
 
 /* Append a finished session (newest last), update the personal best, then prune.
-   `extra` carries anything the session number itself can't: today that is `err`, the
-   scored tiers' mean absolute timing error in ms. The count and the error are two
-   different measurements of one run — `score` stays "bars played" so pre-F1 history
-   keeps meaning what it meant, and the mic result rides alongside instead of being
-   computed, displayed once and thrown away (which is what happened until B1). */
+   `extra.err` is a scored run's mean absolute timing error in ms, kept alongside the
+   score rather than replacing it, so `score` means the same thing in old history. */
 function recordSession(drill, score, now, extra){
   now = (typeof now==='number') ? now : Date.now();
   const id = String(drill);
@@ -94,8 +80,7 @@ function recordSession(drill, score, now, extra){
   pruneSessions();
   progressPersist();   // 13-backup.js: there is now something worth keeping
 }
-/* Keep the newest SESS_PER_ID of each session id, then trim oldest-first to the
-   global ceiling. Per-id, so a weekly drill's history isn't evicted by a daily one. */
+/* Keep the newest SESS_PER_ID of each session id, then trim to the global ceiling. */
 function pruneSessions(){
   const seen = {};
   const keep = [];
@@ -107,10 +92,8 @@ function pruneSessions(){
   keep.reverse();                                          // back to oldest → newest
   learner.sessions = keep.length > SESS_MAX ? keep.slice(-SESS_MAX) : keep;
 }
-/* The personal best has to be STORED, not derived: it is the one number that must
-   outlive the history it came from. Direction comes from the registry track (a
-   changes-per-minute best is the highest, a timing error the lowest), defaulting to
-   "higher is better" so an undeclared track still records something sane. */
+/* The personal best is STORED, not derived: it must outlive the history it came
+   from. Direction comes from the registry track, defaulting to "higher is better". */
 function learnerNoteBest(id, s){
   const tr = trackBySess(sessNs(id));
   const low = !!(tr && tr.better==='low');
@@ -129,16 +112,10 @@ function learnerNoteBest(id, s){
 function learnerBest(id){ return learner.best[String(id)] || null; }
 
 /* ---- the trend ----
-   The ring buffer has always been a time series and nothing ever read it as one:
-   learnerStats() returned five all-time aggregates, so the app could not say "your
-   timing error went from 45 ms to 28 ms over six sessions" — which is the sentence
-   the six unscored coach tiers were supposed to earn their keep on. This is the one
-   helper that turns a session id (or a whole namespace) into a story.
-
-   `dir` is the direction of travel: the mean of the last PERF_TREND_N runs against
-   the mean of the ones before them, oriented by the track's `better`. Below
-   TREND_EPS of the earlier mean it reads 'flat' rather than inventing a trend out of
-   noise — a 1% wobble is not improvement. */
+   Turns a session id (or a whole namespace) into: latest, best, timing error and
+   `dir` — the mean of the last PERF_TREND_N runs against the runs before them,
+   oriented by the track's `better`. Within TREND_EPS it reads 'flat': a 1% wobble is
+   not improvement. */
 const TREND_EPS = 0.03;
 function learnerTrend(idOrNs, now){
   now = (typeof now==='number') ? now : Date.now();
@@ -176,7 +153,7 @@ function learnerTrend(idOrNs, now){
   return out;
 }
 
-// aggregate readout for the Practice progress card (and tests)
+// aggregates for the progress card's footer
 function learnerStats(){
   const ids = Object.keys(learner.items);
   let seen=0, correct=0, bestStreak=0;
@@ -184,21 +161,14 @@ function learnerStats(){
   return { items: ids.length, seen, correct, accuracy: seen ? correct/seen : 0, bestStreak, sessions: learner.sessions.length };
 }
 
-/* Review queue summary for the progress card: how many items are due now, split by
-   id namespace (the prefix before ':'), plus the namespace with the most due. The
-   drills already bias toward due items internally; this surfaces the count so the
-   loop closes back to the user ("N due — review now").
-
-   This used to open with `const REVIEW_NS = ['note','interval',
-   'chordq','rhythm']`, four strings that were the app's entire answer to "what
-   should I practise next?". Six of the nine tracks were not ranked low by it; they
-   were absent from its vocabulary, because a performance track has no SM-2 date to
-   be overdue against. So the recall half is now derived from the registry, and the
-   performance half falls due on its own terms:
-     • STALENESS — it has been PERF_STALE_DAYS since you last ran it, or you never have.
+/* What to practise next. Recall namespaces come from the registry and count their
+   overdue items; a performance track has no SRS date, so it falls due on its own
+   terms:
+     • STALENESS — PERF_STALE_DAYS since you last ran it, or you never have.
      • SLIPPAGE  — the recent runs trend down against the ones before them.
-   `due` is the ordered queue (recall first — an overdue SRS item is a fact, a cold
-   drill is a suggestion). `total`/`by`/`top` keep their old meaning for the card. */
+   `due` is the ordered queue (recall first — an overdue item is a fact, a cold drill a
+   suggestion). Tracks no longer registered are skipped, so a cut drill's history stays
+   stored but is never offered. */
 function reviewNamespaces(){
   return drillTracks()
     .filter(tr => tr.kind==='recall' && tr.items).map(tr => tr.items);
@@ -228,36 +198,19 @@ function learnerReview(now){
   });
   return { total, by, top, due };
 }
-/* Open a track by id — the registry's own `start`, so the shell no longer carries a
-   hand-written ns → starter map that quietly covered four of nine tracks. */
+/* Open a track by id, via the registry's own `start`. */
 function startTrack(id){
   const tr = trackById(id);
   if(!tr || typeof tr.start!=='function') return false;
-  /* This is the ONE door into a drill: the practice cards, the
-     review button, the reference seams and the timed session all come through here,
-     which is what lets the shared header name the drill you actually opened. A drill's
-     own start() stays callable directly (the tests do that), it just leaves the header
-     unnamed — so the door records the choice, not the drill. */
+  /* The ONE door into a drill (cards, Review, seams, the session), so the header can
+     name what was opened. A drill's start() called directly just leaves it unnamed. */
   setCurTrack(tr.id);
   tr.start();
   return true;
 }
 /* ---- the progress readout ----
-   What this replaced: five all-time tiles — items tracked, accuracy, best streak,
-   active days, sessions — none of which is a *story*. The app has held a per-track
-   time series and a personal best, and rendered neither, so
-   a player who had cut their timing error from 45 ms to 28 ms over six runs was shown
-   "23 sessions" and had to take the improvement on faith. B1 built learnerTrend for
-   exactly this; this is the thing that finally reads it.
-
-   The card is now, in order: WHAT'S NEXT (the queue — the one question the home screen
-   exists to answer, so it goes first), then a row per track you have actually run —
-   latest, direction of travel, personal best, and for the mic tiers the timing error —
-   then the four aggregates, demoted to a footer where they belong.
-
-   It lives here rather than in 14-drill-ear.js, where it was born when the Ear home was
-   a duplicate mode of its own: every number in it now comes off the learner model and
-   none of it off `ear`. */
+   In order: WHAT'S NEXT (the queue), a row per track you have run — latest, direction,
+   best, and the timing error for mic tiers — then the aggregates as a footer. */
 
 // a track's latest score, in its own unit
 function trendScore(tn){
@@ -268,7 +221,7 @@ function trendScore(tn){
   if(tn.unit==='cpm') return v+t('unit_cpm');
   return String(v);
 }
-// ▲ / ▼ / → , oriented by the track's own `better` (learnerTrend already did that)
+// ▲ / ▼ / → , already oriented by the track's `better`
 function trendArrow(dir){ return dir==='up' ? '▲' : dir==='down' ? '▼' : '→'; }
 
 function renderProgressInto(hostId){
@@ -278,12 +231,8 @@ function renderProgressInto(hostId){
   const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   let html='';
 
-  /* WHAT'S NEXT. Close the loop (spine #3): when the SRS says items are due, surface
-     the count and a one-tap Review into the namespace with the most overdue items.
-     B1 — when nothing is due, fall through to the derived queue instead of showing
-     nothing: six of the ten tracks mint no SRS items at all, so on the old
-     four-namespace list this row was blank for anyone whose practice was rhythm or
-     lead. A performance track earns the row by being cold or by slipping. */
+  /* WHAT'S NEXT: overdue items lead with a Review button; with none due, the first
+     cold or slipping performance track takes the row. */
   const rev=learnerReview();
   if(rev.total>0 && rev.top){
     html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_due')+' · '+rev.total+'</span>'+
@@ -297,10 +246,8 @@ function renderProgressInto(hostId){
     }
   }
 
-  /* A ROW PER TRACK YOU HAVE RUN, most recently practised first — the narrative. A
-     track with no history is left out rather than listed as a zero: the practice list
-     below is where you go to start something new, and a card is a better invitation
-     than an empty row. */
+  /* a row per track you have run, most recent first; untouched tracks are left to the
+     cards below */
   const rows=drillTracks()
     .filter(tr=>tr.sess)
     .map(tr=>({ tr, tn:learnerTrend(tr.sess) }))
@@ -311,13 +258,11 @@ function renderProgressInto(hostId){
     html+=rows.map(({tr,tn})=>{
       const sub=[];
       if(tn.best!==null) sub.push(t('prog_best')+' '+trendScore({ last:tn.best, unit:tn.unit }));
-      // the mic tiers' timing error, kept by B1 and never shown until now. bestErr is
-      // the one to lead with: it is the number that says "this is what you can do".
+      // a mic tier's best timing error
       if(tn.bestErr!==null) sub.push(t('prog_timing')+' ±'+Math.round(tn.bestErr)+' '+t('on_ms'));
       sub.push(tn.n+' '+t('prog_runs'));
-      /* a real <button> carrying data-track, so the row is also a door: the delegated
-         listener on #practice-home already opens whatever carries one (B2), and a line
-         that names a drill and cannot open it is a tease. */
+      /* a real <button> with data-track, so the row opens its drill (the delegated
+         #practice-home listener handles it) */
       return '<button type="button" class="pp-row" data-track="'+esc(tr.id)+'">'+
         '<span class="pp-row-name">'+esc(t(tr.label))+'</span>'+
         '<span class="pp-row-val">'+esc(trendScore(tn))+
@@ -327,7 +272,6 @@ function renderProgressInto(hostId){
     }).join('');
   }
 
-  // the aggregates, demoted: still worth knowing, no longer the whole card
   const stat=(val,lab)=>'<div class="pp-stat"><div class="pp-val">'+val+'</div><div class="pp-lab">'+lab+'</div></div>';
   const act=learnerActivity();
   html+='<div class="pp-stats">'+
@@ -339,9 +283,7 @@ function renderProgressInto(hostId){
   host.innerHTML=html;
 }
 
-// recent-activity readout: distinct calendar days practised within the last `win`
-// days (default 7), from the sessions ring buffer — powers the "active days" stat
-// that makes the unscored coach tiers feel rewarding without a score.
+// distinct calendar days practised in the last `win` days (default 7)
 function learnerActivity(now, win){
   now=(typeof now==='number')?now:Date.now(); win=win||7;
   const cutoff=now-win*DAY_MS, days={};
@@ -349,19 +291,15 @@ function learnerActivity(now, win){
   return { days: Object.keys(days).length, window: win };
 }
 
-// ---- bounds-checked restore (mirrors loadState's defensive idiom) ----
+// ---- bounds-checked restore ----
 function lInt(v, def){ return (Number.isFinite(v) && Math.floor(v)===v) ? v : (def||0); }
 function lNum(v, def){ return (typeof v==='number' && isFinite(v)) ? v : (def||0); }
 function lClampNum(v, lo, hi, def){ return (typeof v==='number' && isFinite(v)) ? Math.min(hi, Math.max(lo, v)) : def; }
 function normalizeLearner(raw){
   const out = newLearner();
   if(!raw || typeof raw!=='object') return out;
-  /* Version gate. v1 → v2 is the model's first migration, and it is
-     PURELY ADDITIVE: `items` and `sessions` carry over untouched, and `best` — the
-     one field that can't be derived once its history rolls off — is rebuilt from the
-     sessions we still hold. Nothing a player did is lost, which is the whole bar
-     set for a `v` bump. Anything older or newer than we know still degrades
-     to a fresh model rather than guessing. */
+  /* Version gate: v1 → v2 is purely additive (see below); anything older or newer than
+     we know degrades to a fresh model rather than guessing. */
   if(raw.v !== LEARNER_V && raw.v !== 1) return out;
   if(raw.items && typeof raw.items==='object'){
     let n=0;
@@ -403,13 +341,10 @@ function normalizeLearner(raw){
       out.best[id] = o;
     }
   }
-  /* The v1 → v2 migration proper. A v1 store has no `best` table, so rebuild it from
-     the sessions that survived — learnerNoteBest only ever replaces a strictly better
-     number, so replaying every session is safe on a v2 store too (it heals a table
-     that predates a track's first run rather than clobbering it). The per-id
-     retention policy is applied on read for the same reason: a v1 store's flat
-     50-entry buffer lands in the shape every reader now expects.
-     Both write through the module-level `learner`, so swap it for the duration. */
+  /* v1 → v2: a v1 store has no `best` table, so rebuild it from the sessions that
+     survived. learnerNoteBest only replaces a strictly better number, so replaying is
+     safe on a v2 store too. Retention is applied on read for the same reason. Both
+     write through the module-level `learner`, so swap it for the duration. */
   const keep = learner;
   learner = out;
   try{

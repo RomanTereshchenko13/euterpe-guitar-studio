@@ -1,30 +1,16 @@
 /* ===================== Drill: Strumming & feel =====================
-   A coach LAB, not a quiz: a one-bar pattern of down/up strums on an 8th-note grid, looped
-   over the current context chord (spine #1) and highlighted slot-by-slot in time — so you SEE
-   and HEAR it and strum along. On top of the pattern sit the things that make a groove FEEL
-   right: swing (straight → shuffle), a backbeat accent, palm-mute dynamics, and an optional
-   drums+bass band.
+   A one-bar pattern of down/up strums on an 8th-note grid, looped over the context chord
+   and lit slot by slot, so you see and hear it and strum along. On top: swing, a
+   backbeat accent, palm muting and an optional drums + bass band.
 
-   This was two drills. "Strumming patterns" (5b) owned the pattern grid and an optional click;
-   "Groove & feel" (5d) owned swing/accent/mute over a fixed down-on-beats comp with a band.
-   They were one machine — same 8th-note clock, same context chord, same coach tier, same
-   session record — split across two cards, and neither could reach the other's half. Merged,
-   the combinations that were previously unreachable (a swung folk pattern, a palm-muted
-   "common one", any pattern over the band) just work.
+   With the mic on, a scored run (13-scored.js) whose expected slots are the pattern's
+   own strums, swing applied — where the drill actually put them. Scoring MUTES the
+   guide strum: it lands on exactly the slots being measured, so it would score the app
+   instead of you. Mic off, you hear the pattern played; mic on, you play it.
+   A run of ≥1 bar records a session. */
 
-   Two tiers: a coach that shows and plays the pattern, and — with the mic on —
-   a SCORED run through the shared 13-scored.js layer, where the expected slots are the
-   pattern's own strums (with swing applied, because that's where the drill actually put
-   them). Scoring MUTES the guide strum: the app's guitar lands on exactly the slots being
-   measured, so leaving it in would score the app instead of you. That is also the better
-   lesson — with the mic off you hear the pattern modelled, with it on you play it.
-   A practiced run (>=1 full bar) records a session in the learner's ring buffer (13) so
-   Practice progress reflects it, minting no per-item SRS.
-   Reuses the drum/bass primitives (hatHit/kickHit/snareHit/bassNote, 06), pluckAt (05) for a
-   mute-able strum, metroClick (06) for the beat reference, and the shared scheduler. */
-
-/* 8th-note slots over one bar (index 0..7 = 1 & 2 & 3 & 4 &): 'D' down, 'U' up, '' miss.
-   en/uk names inline (like INTERVALS) so the i18n symmetry check only guards I18N. */
+/* 8th-note slots over one bar (0..7 = 1 & 2 & 3 & 4 &): 'D' down, 'U' up, '' miss.
+   en/uk inline so the i18n check only guards I18N. */
 const STRUM_PATTERNS = [
   { id:'downs',   en:'Quarter downstrokes', uk:'Чвертки вниз',         seg:['D','','D','','D','','D',''] },
   { id:'eighths', en:'Eighth down-up',      uk:'Вісімки вниз-вгору',   seg:['D','U','D','U','D','U','D','U'] },
@@ -32,8 +18,7 @@ const STRUM_PATTERNS = [
   { id:'ddu_ddu', en:'Down, down-up ×2',    uk:'Вниз, вниз-вгору ×2',  seg:['D','','D','U','D','','D','U'] },
   { id:'folk',    en:'Folk / pop',          uk:'Фолк / поп',           seg:['D','','D','U','','U','','U'] },
 ];
-/* how far the off-beats are pushed late, as a fraction of an 8th — the difference between
-   a stiff pattern and one that grooves. */
+/* how far the off-beats are pushed late, as a fraction of an 8th */
 const SP_SWINGS = [
   { id:'straight', amt:0,    en:'Straight', uk:'Рівно' },
   { id:'swing',    amt:0.20, en:'Swing',    uk:'Свінг' },
@@ -42,7 +27,7 @@ const SP_SWINGS = [
 function spName(p){ return lang==='en'?p.en:p.uk; }
 function strumArrow(d){ return d==='D'?'↓':d==='U'?'↑':''; }   // ↓ / ↑
 
-let spIdx = 0;          // selected pattern (in-session preference)
+let spIdx = 0;          // selected pattern
 let spSwing = 0;        // index into SP_SWINGS — straight by default, so a pattern reads as written
 let spAccent = false;   // backbeat (2 & 4) accent
 let spMute = false;     // palm-mute the strum
@@ -51,8 +36,7 @@ let spClick = false;    // optional beat-reference click
 let spDrill = null;
 // spDrill = { patIdx, slot, bars, clock, playing }
 
-/* Scored tier (13-scored.js). The tolerance is half an 8th — the pattern's
-   own resolution — so a hit means "that strum", not the one next door. */
+/* Tolerance is half an 8th — the pattern's own resolution — so a hit means "that strum". */
 const spScore = scoredRun({
   micId:'drill-ctx-mic', statusId:'sp-status', scoreId:'sp-score', countKey:'on_played',
   tol:()=>beat()/4,
@@ -64,7 +48,7 @@ function startStrum(){
   spScore.clearScore();
   const home=document.getElementById('practice-home'), area=document.getElementById('sp-area');
   if(home) home.hidden=true; if(area) area.hidden=false;
-  drillShellEnter();          // B2
+  drillShellEnter();
   renderStrum();
 }
 function exitStrum(){
@@ -81,7 +65,7 @@ function spPlay(){
   audio();
   stopLoop();   // don't fight the reference loop / progression
   seqStop();
-  drillRunStarted();                             // B2: fold the setup
+  drillRunStarted();                             // fold the setup
   spDrill.patIdx=spIdx; spDrill.slot=-1; spDrill.bars=0; spDrill.playing=true;
   spScore.begin();                               // before the clock: a tick must not
   spDrill.clock={ interval:()=>beat()/2, tick:(time,count)=>spTick(time,count) };
@@ -94,12 +78,12 @@ function spStop(){
   clearVisualQ();
   spDrill.playing=false; spDrill.slot=-1;
   const sc=spScore.end();
-  // bars played stays the session score; the scored tier's timing error rides along (B1)
+  // bars played stays the score; a scored run's timing error rides along
   if(spDrill.bars>=1){ recordSession('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars, undefined, scoredErr(sc)); saveState(); renderPractice(); }
   renderStrum();
 }
-/* a strum that can be palm-muted (short, chunky) or open (ringing) — pluckAt lets us set
-   per-note duration, which strumMidi (05) doesn't expose. */
+/* a strum that can be palm-muted (short) or open — pluckAt sets per-note duration,
+   which strumMidi doesn't */
 function spStrum(midis, when, vel, dir, muted){
   if(!midis.length) return;
   const order = dir<0 ? midis.slice().reverse() : midis.slice();
@@ -117,12 +101,10 @@ function spTick(time, count){
   // guitar: only the pattern's slots sound — the empty ones are where the hand misses
   const dir=seg[slot];
   if(dir){
-    // F1: the expected strum is at time+swDelay — where the drill actually puts it,
-    // swing and all. Scoring against the un-swung slot would mark a correctly swung
-    // player late by the swing amount.
+    // the expected strum is at time+swDelay, swing and all: scoring the un-swung slot would
+    // mark a correctly swung player late
     if(spDrill.playing) spScore.mark(time+swDelay);
-    // Scored runs mute the guide: the app's own strum lands on precisely the slot
-    // being measured, so it would be scoring itself (see onsetSelfHeard).
+    // scored runs mute the guide, which lands on the very slot being measured (onsetSelfHeard)
     if(!spScore.on()){
       let vel = dir==='D' ? 0.9 : 0.72;          // upstrokes lighter
       if(spAccent && backbeat) vel += 0.12;
@@ -162,7 +144,7 @@ function renderStrum(){
   // the hint has to say which tier you're in — and that the guide guitar goes quiet
   const hint=document.getElementById('sp-hint'); if(hint) hint.textContent=t(spScore.on()?'sp_hint_scored':'sp_hint');
   spScore.render();
-  applyDrillCtx();     // B2: the shell owns the mic's visibility
+  applyDrillCtx();     // the shell owns the mic's visibility
 }
 function renderStrumGrid(){
   const g=document.getElementById('sp-grid'); if(!g) return;
@@ -177,7 +159,7 @@ function renderStrumGrid(){
 function spHighlightSlot(slot){
   document.querySelectorAll('#sp-grid .sp-cell').forEach(c=>c.classList.toggle('on', +c.dataset.i===slot));
 }
-// re-localize an in-flight strum trainer on a language switch (called from applyLang)
+// re-localize an in-flight drill on a language switch
 function refreshStrumLang(){ if(spDrill){ renderStrum(); spScore.refreshLang(); } }
 
 registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',   // the 8th-note clock is beat()-driven
@@ -185,14 +167,11 @@ registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',   // t
                           better:'high', unit:'bars', scored:'mic', start:startStrum }],
                 isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang,
                 mic:()=>spScore.available(),
-                // toggling the tier mid-run would change what's being measured under a score
-                // in progress, so it stops first and the next run is measured from bar one
+                // stop first: switching tiers mid-run would change what a score in progress measures
                 onMic:()=>{ if(spDrill&&spDrill.playing) spStop();
                             spScore.toggle();
-                            // Scoring mutes the guide guitar, so without the click or the
-                            // band there would be nothing left to play against — and a
-                            // timing score against silence is meaningless. Turn the click
-                            // on rather than let the drill become a staring contest.
+                            // scoring mutes the guide guitar, so with no click and no band there would be
+                            // nothing to play against — turn the click on
                             if(spScore.on() && !spClick && !spBand) spClick=true;
                             renderStrum(); },
                 // the loop reads currentChordVoicing() live, so a key change only needs a repaint

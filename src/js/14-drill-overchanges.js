@@ -1,20 +1,15 @@
 /* ===================== Drill: Comp the progression =====================
-   Comp a looping progression: play the right chord at the right time. A chosen
-   progression cycles with a forced backing band; a big NOW (chord diagram) + a NEXT
-   preview + a beat indicator land each change in time. Records comp:<progression>,
-   scored by bars comped — and, with the mic on, by the timing error of the changes.
-
-   The DOM ids stay `tg-*`: they're the shared vocabulary of the CSS and the smoke
-   suite. PLAN step 9 merges this drill with Strumming & feel into "Rhythm guitar". */
+   A progression loops with a backing band; NOW (chord diagram), NEXT and a beat
+   indicator land each change in time. Records comp:<progression>, scored by bars
+   comped and, with the mic on, by the timing of the changes. DOM ids stay `tg-*`. */
 
 let tgIdx = 1;          // selected progression (default I–V–vi–IV)
 let tgDrill = null;
 // tgDrill = { presetIdx, bars:[{pc,qi}…], bar, cycles, clock, playing }
 
-/* Scored tier (13-scored.js). Comping is your own rhythm, so the drill scores the
-   thing the exercise is about — LANDING THE CHANGE. The expected times are the bar
-   downbeats; strums in between are your feel and land in `extra`, unpenalised.
-   Tolerance is half a beat: a chord change is a coarser target than a 16th. */
+/* Comping is your own rhythm, so the score is about LANDING THE CHANGE: the expected
+   times are the bar downbeats; strums in between are your feel and go unpenalised.
+   Half a beat of tolerance — a chord change is a coarser target than a 16th. */
 const tgScore = scoredRun({
   micId:'drill-ctx-mic', statusId:'tg-status', scoreId:'tg-score', countKey:'on_changes',
   tol:()=>pulseSec()/2,
@@ -80,9 +75,8 @@ function targetTick(when, count){
   const cur=bars[i], nxt=bars[(i+1)%bars.length], p=pulseSec();
   const ivs=QUALITIES[cur.qi].iv, base=48+cur.pc;
   if(tgScore.on()){
-    // The change itself is the scored slot. The guide comp is muted: it lands exactly
-    // on the downbeat being measured, so the app would be scoring its own speakers
-    // (onsetSelfHeard). The band keeps the bar, which is what you comp against anyway.
+    // the change is the scored slot; the guide comp is muted because it lands exactly on
+    // the downbeat being measured (onsetSelfHeard). The band keeps the bar.
     if(tgDrill.playing) tgScore.mark(when);
   } else {
     compStrum(base, ivs, when, 0.9, 0.028);                  // guide comp on the downbeat
@@ -93,7 +87,7 @@ function targetTick(when, count){
   enqueueVisual(when, ()=>renderTargetStage(cur, nxt));
 }
 
-/* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
+/* ---- DOM paint ---- */
 function renderTarget(){
   if(!tgDrill) return;
   const chips=document.getElementById('tg-progs');
@@ -118,7 +112,7 @@ function renderTargetStage(cur, nxt){
 function tgPulseBeat(k){
   document.querySelectorAll('#tg-beats .co-beat').forEach(d=>d.classList.toggle('on', +d.dataset.k===k));
 }
-// re-localize an in-flight drill on a language switch (called from applyLang)
+// re-localize an in-flight drill on a language switch
 function refreshTargetLang(){ if(tgDrill){ renderTarget(); tgScore.refreshLang(); } }
 
 registerDrill({ id:'overchanges', area:'tg-area', tempo:true,   // bars ride barSec()
@@ -128,7 +122,7 @@ registerDrill({ id:'overchanges', area:'tg-area', tempo:true,   // bars ride bar
                 isActive:()=>!!tgDrill, exit:exitTarget, refreshLang:refreshTargetLang,
                 setup:'tg-setup',
                 mic:()=>tgScore.available(),
-                // stops first: flipping the tier mid-run would change what's being measured
+                // stop first: switching tiers mid-run would change what a score in progress measures
                 onMic:()=>{ if(tgDrill&&tgDrill.playing) targetStop(); tgScore.toggle(); renderTarget(); },
                 // the progression is stored resolved to the key, so a key change rebuilds the bars
                 onKey:()=>{ if(!tgDrill) return;

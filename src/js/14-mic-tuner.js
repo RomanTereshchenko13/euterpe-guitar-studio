@@ -1,74 +1,46 @@
-/* ===================== CHROMATIC MIC TUNER =====================
-   Play any note; see which note it is and how many cents sharp or flat.
+/* ===================== THE TUNER =====================
+   Play any note; see which note it is and how many cents sharp or flat. The same
+   panel plays a reference tone per open string (tunerTone, 05-audio.js) to tune by
+   ear — one tap away when the mic works, the whole panel when it doesn't.
 
-   This is the de-risking slice of the mic phase, and it is deliberately the
-   *easy* half: a sustained note, one string at a time. It needs no AudioWorklet
-   (a needle updating ~20x/s on the main thread is fine), no latency
-   compensation (nobody perceives 80 ms of lag on a tuner), no onset detection
-   and no polyphony. What it DOES buy is the whole plumbing layer the scored
-   tiers (F1 onset, F2 pitch) need anyway — gesture-gated permission, device and
-   in-use errors, a clean enable/disable lifecycle — plus the first honest test
-   of the vendored pitch detector against the gentlest possible input.
+   getUserMedia exists only on https / localhost, so on file:// and in jsdom the mic
+   half hides itself rather than offering a control that can only fail.
 
-   It is the app's ONE tuner: the same panel also plays a reference tone per open
-   string (tunerTone, 05-audio.js) to tune by ear — one tap away when the mic works,
-   and the whole panel when it doesn't.
+   Slot 14, not 17: applyLang (11) calls micRefreshLang and first runs from 15, and
+   `let mt` below is not hoisted — loaded after 15, that first call hits the TDZ. */
 
-   Secure-context rule: getUserMedia only exists on https / localhost. So, like
-   the PWA sidecar in 16-pwa.js, the mic half self-disables rather than throwing —
-   on a file:// dist copy and in jsdom it is hidden, because a control that can't
-   do anything shouldn't be on screen, and the panel opens on the by-ear strings.
-
-   LOAD ORDER — this is why it's slot 14 and not 17, next to the PWA sidecar it
-   otherwise resembles: applyLang (11) calls micRefreshLang, and applyLang first
-   runs from wiring-init (15). `let mt` below is NOT hoisted, so loading after 15
-   makes that first call throw on the temporal dead zone — the same trap that
-   pins the drill registry to slot 13, ahead of the slot-14 drills. Anything
-   wiring-init or applyLang reaches into has to be defined before them.  */
-
-/* Detection window. 2048 samples @44.1kHz ≈ 46 ms ≈ 3.8 periods of low E
-   (82.4 Hz) — MPM wants at least two periods of the lowest pitch you care
-   about, so this is the smallest power of two that still tracks a 6th string. */
+/* 2048 samples @44.1kHz ≈ 46 ms ≈ 3.8 periods of low E: MPM wants at least two
+   periods of the lowest pitch, and this is the smallest power of two that has them. */
 const MT_FFT = 2048;
-/* Gates. Clarity is MPM's own confidence: a clean plucked string sits ~0.95+,
-   while white noise measured ~0.41, so 0.9 rejects room noise without being
-   fussy. RMS additionally ignores near-silence between plucks. */
+/* Clarity is MPM's confidence: a clean string sits ~0.95+, white noise measured ~0.41.
+   RMS ignores near-silence between plucks. */
 const MT_CLARITY = 0.9, MT_RMS = 0.008;
-/* Guitar range with headroom: low E (82.4) down a tone to D (73), up to the
-   high e 12th fret and beyond. Anything outside is a harmonic or a mis-read. */
+/* guitar range with headroom (Drop D's 73 Hz up past the 12th fret); outside is a
+   harmonic or a mis-read */
 const MT_HZ_LO = 60, MT_HZ_HI = 1400;
-/* Readings kept for the median filter. At ~60 fps this is ~0.1 s of history —
-   long enough to kill a single-frame octave flip, short enough to feel live. */
+/* readings in the median filter: ~0.1 s, enough to kill a one-frame octave flip */
 const MT_HIST = 7;
-/* |cents| within this reads as in tune. ±5 is the standard tuner tolerance and
-   is well inside what the detector resolves (measured <0.05 cents on synthetic
-   tones), so the needle's honesty is limited by the guitar, not the maths. */
+/* |cents| within this reads as in tune — the standard ±5 */
 const MT_IN_TUNE = 5;
-/* Frames of silence before the readout clears, so it doesn't blank between
-   plucks (~0.7 s at 60 fps). */
+/* frames of silence before the readout clears (~0.7 s), so it doesn't blank between plucks */
 const MT_HOLD = 40;
 
 let mt = null;          // live session: { stream, src, analyser, detector, buf, raf, hist, quiet }
-/* Needle smoothing, kept OUTSIDE the session object on purpose: the readout is a
-   pure function of "a MIDI number arrived" plus this one easing value, so it can
-   be driven (and asserted) with no mic attached. null == no reading yet. */
+/* Needle smoothing lives outside the session, so the readout can be driven (and
+   tested) with no mic attached. null = no reading yet. */
 let mtCents = null;
-/* Set when Stop/close happens while an acquire is still awaiting the permission
-   prompt, so micStart() knows to give the reference back instead of starting. */
+/* Stop/close while an acquire is still awaiting the permission prompt: micStart()
+   gives the mic back instead of starting. */
 let mtClosing = false;
 
-/* Acquisition, permission and the error vocabulary live in 13-mic.js — F1 added a
-   second consumer (onset detection) and a third (the calibration round-trip), and
-   one microphone should mean one prompt and one recording indicator. This file is
-   now just "what the tuner does with a mic it was handed". */
+/* Acquisition, permission and errors live in 13-mic.js (one mic, one prompt, shared
+   with onset detection and calibration). */
 
 /* ---- pitch → musical readout ---------------------------------------------- */
 function micMidiFromHz(hz){ return 69 + 12*Math.log2(hz/440); }
 /* Cents off the nearest equal-tempered semitone, in [-50, +50). */
 function micCentsOff(midi){ return (midi - Math.round(midi))*100; }
-/* Nearest open string of the CURRENT tuning, so the hint re-labels itself for
-   Drop D / DADGAD / Open G exactly like the reference tuner does. Returns the
-   string index into OPEN_MIDI/SNAMES, not a fixed E-A-D-G-B-e assumption. */
+/* Nearest open string of the CURRENT tuning, so Drop D and the rest re-label. */
 function micNearestString(midi){
   let best=0, bestD=Infinity;
   for(let i=0;i<OPEN_MIDI.length;i++){ const d=Math.abs(midi-OPEN_MIDI[i]); if(d<bestD){ bestD=d; best=i; } }
@@ -76,9 +48,8 @@ function micNearestString(midi){
 }
 
 /* ---- the live loop -------------------------------------------------------- */
-/* Median of the recent MIDI readings. MPM's failure mode on a plucked string is
-   an occasional octave jump (it latches a harmonic for one frame); a median
-   discards that outright, where an average would smear it across the needle. */
+/* MPM sometimes latches a harmonic for one frame (an octave jump); a median drops it,
+   an average would smear it across the needle. */
 function micMedian(a){ const s=a.slice().sort((x,y)=>x-y); return s[(s.length-1)>>1]; }
 
 function micFrame(){
@@ -93,8 +64,7 @@ function micFrame(){
     if(mt.hist.length>MT_HIST) mt.hist.shift();
     micPaint(micMedian(mt.hist));
   } else if(mt.hist.length){
-    // Nothing usable this frame: hold the last reading briefly so the display
-    // doesn't strobe between plucks, then fall back to "play a string".
+    // nothing usable: hold the last reading briefly, then fall back to "play a string"
     if(++mt.quiet > MT_HOLD){ mt.hist.length=0; micPaintIdle(); }
   }
 }
@@ -114,8 +84,7 @@ function micPaintIdle(){
 
 function micPaint(midi){
   const near=Math.round(midi), cents=micCentsOff(midi);
-  // Ease the needle toward the new value so it glides instead of twitching;
-  // the NUMBER shows the smoothed value too, so readout and needle never disagree.
+  // ease the needle so it glides; the number shows the eased value too, so they agree
   mtCents = (mtCents==null) ? cents : mtCents + (cents-mtCents)*0.35;
   const shown=mtCents;
   const n=micEl('mt-note');
@@ -138,9 +107,8 @@ function micPaint(midi){
   }
 }
 
-/* One place for every "why isn't this working" line. The key is stashed on the
-   element so a language switch can re-render the message that's on screen
-   (micRefreshLang) without the caller having to remember what it said. */
+/* Every "why isn't this working" line. The key is kept on the element so a language
+   switch can re-render it (micRefreshLang). */
 function micStatus(key){
   const el=micEl('mt-status'); if(!el) return;
   if(key) el.dataset.key=key; else delete el.dataset.key;
@@ -149,28 +117,24 @@ function micStatus(key){
 }
 
 /* ---- lifecycle ------------------------------------------------------------ */
-/* Gesture-gated: only ever called from a click, never on load. */
+/* Gesture-gated: only ever called from a click. */
 async function micStart(){
   if(mt) return;
   if(!micSupported()){ micStatus('mic_unsupported'); return; }
   const ctx=audio();
   if(!ctx){ micStatus('mic_unsupported'); return; }
-  // Speaker → mic feedback is real, and the reference tone is the loudest thing
-  // this app can be doing while you tune. Silence it before we listen.
+  // the reference tone is the loudest thing the app can be playing — silence it first
   tunerStop();
   micStatus('mic_asking');
   mtClosing = false;               // a Stop/close from before this start doesn't count
   const got = await micAcquire();
   // no mic after all (denied, missing, busy): the by-ear strings are the way on
   if(!got.ok){ micStatus(got.key); micSyncButtons(false); tunerEarShow(true); return; }
-  // Re-entrancy: micAcquire awaits a permission prompt, and the user can hit Stop
-  // (or close the panel) while it's up. If we're no longer wanted, hand the
-  // reference straight back instead of starting a loop nobody asked for.
+  // the user may have hit Stop or closed the panel during the permission prompt
   if(mtClosing){ mtClosing=false; micRelease(); micSyncButtons(false); return; }
   const analyser=ctx.createAnalyser();
   analyser.fftSize=MT_FFT;
-  // Deliberately NOT connected to ctx.destination: routing the mic to the
-  // speakers is a feedback loop, not a monitor.
+  // NOT connected to the speakers: that would be a feedback loop, not a monitor
   got.src.connect(analyser);
   const detector=PitchDetector.forFloat32Array(analyser.fftSize);
   detector.minVolumeDecibels = 20*Math.log10(MT_RMS);
@@ -185,8 +149,7 @@ async function micStart(){
 
 function micStop(){
   if(!mt){
-    // Nothing running — but an acquire may be mid-prompt, so record the intent and
-    // let micStart() unwind when it resolves.
+    // an acquire may be mid-prompt: record the intent, micStart() unwinds on resolve
     mtClosing = true;
     micSyncButtons(false);
     return;
@@ -194,9 +157,8 @@ function micStop(){
   const s=mt;
   mt=null;
   if(s.raf) cancelAnimationFrame(s.raf);
-  // Disconnect OUR analyser only. The source node is shared (13-mic.js), so
-  // tearing it down here would cut the mic out from under a scored drill;
-  // micRelease() stops the device once the last consumer lets go.
+  // disconnect OUR analyser only: the source is shared (13-mic.js), and micRelease()
+  // stops the device once the last consumer lets go
   try{ s.analyser.disconnect(); }catch(_){}
   try{ s.src.disconnect(s.analyser); }catch(_){}
   micRelease();
@@ -211,9 +173,8 @@ function micSyncButtons(on){
 }
 
 /* ---- overlay open / close ------------------------------------------------- */
-/* The overlay chrome follows the changelog/help modals exactly: `hidden` for
-   assistive tech + the keyboard guard, `.open` for the CSS that actually shows
-   it. Both, always, or one of the two consumers is wrong. */
+/* Like the other modals: `hidden` for assistive tech and the keyboard guard, `.open`
+   for the CSS that shows it. Always both. */
 function micOpen(){
   const o=micEl('mic-overlay'); if(!o) return;
   o.hidden=false; o.classList.add('open');
@@ -231,10 +192,8 @@ function micClose(){
 }
 
 /* ---- tune by ear ----------------------------------------------------------- */
-/* One button per open string of the current tuning, low → high (E A D G B e in
-   standard), each holding a sustained reference pitch (tunerTone). Rebuilt from the
-   live OPEN_MIDI/SNAMES whenever the tuning changes, so a Drop-D switch re-labels.
-   OPEN_MIDI / SNAMES are stored high → low (string 1 first), hence the reverse. */
+/* One button per open string, low → high, each holding a reference pitch. Rebuilt
+   on a tuning change. OPEN_MIDI / SNAMES are stored high → low, hence the reverse. */
 function buildTuner(){
   const ts=micEl('mt-strings'); if(!ts) return;
   ts.innerHTML = OPEN_MIDI.map((m,i)=>({m, nm:SNAMES[i]})).reverse()
@@ -249,8 +208,7 @@ function tunerEarShow(on){
 }
 function tunerEarOpen(){ const b=micEl('mt-ear-body'); return !!b && !b.hidden; }
 
-/* re-localize a panel that's already open when the language flips (called from
-   applyLang in 11-notes-circle-lang.js). */
+/* re-localize an open panel on a language switch (from applyLang) */
 function micRefreshLang(){
   micSyncButtons(!!mt);
   if(!mt) micPaintIdle();
@@ -259,15 +217,14 @@ function micRefreshLang(){
   tunerEarShow(tunerEarOpen());
 }
 
-/* ---- wiring (self-contained, like the PWA sidecar) ------------------------- */
+/* ---- wiring --------------------------------------------------------------- */
 (function(){
   const open=micEl('tb-tuner'); if(open) open.onclick=micOpen;
   const close=micEl('mt-close'); if(close) close.onclick=micClose;
   const strings=micEl('mt-strings');
   // a reference tone with the mic listening would just move the needle, so it stops it
   if(strings) strings.addEventListener('click', e=>{ const b=e.target.closest('[data-midi]'); if(!b) return; if(mt) micStop(); tunerTone(+b.dataset.midi); });
-  // No secure context / no getUserMedia → hide the mic half rather than show a
-  // control that can only ever report an error; the panel is the by-ear strings.
+  // no mic path: hide the mic half; the panel is the by-ear strings
   if(!micSupported()){
     const m=micEl('mt-mic'); if(m) m.hidden=true;
   } else {
@@ -276,15 +233,13 @@ function micRefreshLang(){
   }
   tunerEarShow(false);
   const ov=micEl('mic-overlay');
-  // Click the backdrop (not the panel) to dismiss, matching the changelog overlay.
+  // click the backdrop (not the panel) to dismiss
   if(ov) ov.addEventListener('click', e=>{ if(e.target===ov) micClose(); });
   document.addEventListener('keydown', e=>{
     const o=micEl('mic-overlay');
     if(e.key==='Escape' && o && !o.hidden){ e.preventDefault(); micClose(); }
   });
-  // Never keep the mic open in a backgrounded tab. micReleaseAll (13-mic.js) is the
-  // hard release: "another feature still holds a reference" is not a good enough
-  // reason to keep a hidden tab listening, so the refcount is overridden here.
+  // never keep the mic open in a hidden tab — the hard release overrides the refcount
   document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ micStop(); micReleaseAll(); } });
   addEventListener('pagehide', ()=>{ micStop(); micReleaseAll(); });
 })();

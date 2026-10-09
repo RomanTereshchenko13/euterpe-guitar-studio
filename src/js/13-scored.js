@@ -1,44 +1,23 @@
 /* ===================== SCORED RUNS =====================
-   One scoring tier, three drills. F1 shipped this machinery inside the subdivision
-   coach (7a); the Rhythm pillar tiers (5b strum, 5c comp) need exactly the same
-   five things, so it moved here rather than being pasted twice more — the same
-   reason 13-mic.js exists once for three mic consumers.
+   The one scoring tier shared by the scored drills. It owns: the mic toggle (hidden
+   where onset detection can't run), the HEARD times from 14-onset.js, turning heard vs
+   expected into a latency-corrected score, and the panel, status line and toggle.
 
-   What a scored drill has to do, and what this owns:
-     1. a mic toggle that flips coach → scored (and hides itself where onset
-        detection can't run, instead of offering a control that can only fail),
-     2. collect the EXPECTED times — the drill knows those; it calls mark(when)
-        from its own tick with the time it scheduled the sound for,
-     3. collect the HEARD times off 14-onset.js,
-     4. turn the two into a score, latency-corrected,
-     5. render the panel, the status line and the toggle.
+   The drill keeps what is drill-specific: which slots you are expected to play, the
+   tolerance, and what the count row is called. Expected times come from the drill's
+   own tick (mark(when)), because only the scheduler knows when a sound was actually
+   scheduled — after swing, meter and any tempo change mid-run.
 
-   The drill keeps everything that is drill-specific: what counts as a slot you
-   are expected to play, how wide the tolerance is, and what the count row is
-   called ("played" for a grid, "changes" for a progression).
-
-   WHY THE EXPECTED TIMES COME FROM THE DRILL'S TICK and not from a formula: the
-   scheduler is the only place that knows when a sound was *actually* scheduled,
-   after swing, meter and any mid-run tempo change. Recomputing it later would
-   score the player against a grid the drill never played.
-
-   Load slot 13, before the slot-14 drills that use it — same rule as the drill
-   registry and the mic layer: function declarations hoist across the concatenated
-   scope, but `const SC_*` would be in the temporal dead zone if a drill file
-   loading earlier touched it at load time. */
+   Slot 13, before the slot-14 drills that use it: `const SC_*` would be in the TDZ
+   for a drill touching it at load time. */
 
 const SC_TOL_MAX = 0.12;    // s — past this a "hit" stops meaning the slot you aimed at
 const SC_MAX_MARKS = 512;   // ring cap per run, so a long session can't grow without bound
 
-/* The `extra` a scored drill hands recordSession: the run's mean
-   absolute error in ms, or undefined when there is nothing honest to record — no
-   mic tier, no hits, a run the self-hearing guard refused, or a run
-   measured against a latency nobody has established. Recording a refused run's error
-   would poison the trend with the app's own click, which is exactly the number
-   onsetSelfHeard exists to keep off the screen — and an uncalibrated run poisons it
-   just as effectively with the buffer size. Both are numbers the panel already
-   declines to show; the stored history must decline them too, or B4's "45 ms → 28 ms"
-   would be charting a device change as if it were progress. */
+/* The `extra` a scored drill hands recordSession: the run's mean absolute error in ms,
+   or undefined when there is nothing honest to record — no mic tier, no hits, a run the
+   self-hearing guard refused, or an uncalibrated run. Storing those would chart the
+   app's own click, or a device change, as progress. */
 function scoredErr(score){
   if(!score || !score.n || !isFinite(score.meanAbsMs)) return undefined;
   if(onsetSelfHeard(score)) return undefined;
@@ -46,11 +25,11 @@ function scoredErr(score){
   return { err: score.meanAbsMs };
 }
 
-/* Build a scored-run controller for one drill.
-     micId/statusId/scoreId — the drill's three DOM ids
+/* A scored-run controller for one drill.
+     micId/statusId/scoreId — the drill's DOM ids
      tol()                  — half a slot, in seconds, from the drill's own clock
      countKey               — i18n key for the hit-count row
-     onChange()             — repaint the drill (used when we turn ourselves off) */
+     onChange()             — repaint the drill (when we turn ourselves off) */
 function scoredRun(cfg){
   const st = { on:false, live:false, grid:[], heard:[], off:null, score:null };
 
@@ -63,8 +42,7 @@ function scoredRun(cfg){
     el.hidden = !key;
   }
 
-  /* Failure is never fatal: the drill drops back to the coach tier and says why,
-     because a metronome that still works beats an error page. */
+  /* Failure is never fatal: the drill drops back to the coach tier and says why. */
   function listen(){
     if(st.off) return;
     st.off = onOnset(when => { if(st.live && st.heard.length < SC_MAX_MARKS) st.heard.push(when); });
@@ -81,9 +59,8 @@ function scoredRun(cfg){
     onsetStop();
   }
 
-  /* Latency-corrected: a detected onset is late by the whole round trip, so
-     subtract it before comparing to the scheduled times — otherwise every player
-     on earth reads as dragging by the buffer size. */
+  /* a detected onset is late by the whole round trip: subtract it, or every player
+     reads as dragging by the buffer size */
   function compute(){
     if(!st.on || !st.grid.length || !st.heard.length) return null;
     const offSec = calOffsetSec();
@@ -97,21 +74,15 @@ function scoredRun(cfg){
     const s = st.score;
     if(!s || !s.n){ box.hidden = true; return; }
     box.hidden = false;
-    // A run the app scored against its own speakers is not a result. Say that
-    // instead of printing a flattering number — see onsetSelfHeard (14-onset.js).
+    // a run scored against the app's own speakers is not a result (onsetSelfHeard)
     if(onsetSelfHeard(s)){
       box.innerHTML = `<div class="sc-verdict sc-warn">${t('on_selfheard')}</div>`;
       return;
     }
-    /* Uncalibrated. Until the round trip is measured, calOffsetSec() is
-       0 — and 0 is not a latency, it is the absence of a measurement. Every absolute
-       reading is therefore shifted by the whole audio stack, so "18 ms off · dragging"
-       would be a statement about the buffer size wearing the player's name. That is
-       the same lie onsetSelfHeard exists to refuse, arriving by a different road.
-       What survives an unknown CONSTANT offset is the spread: evenness is a difference
-       between hits, and shifting every hit by the same amount cannot change it. So
-       report the half we can stand behind, name the half we can't, and point at the
-       one action that unlocks it. */
+    /* Uncalibrated: calOffsetSec() is 0, which is not a latency but the absence of one,
+       so every absolute reading is shifted by the audio stack. The spread survives an
+       unknown CONSTANT offset (it is a difference between hits), so report that, name
+       what can't be judged, and point at the measurement. */
     if(!calMeasured()){
       box.innerHTML = [
         `<div class="sc-main"><b>±${Math.round(s.spreadMs)}</b> <span>${t('on_ms')}</span></div>`,
@@ -135,11 +106,10 @@ function scoredRun(cfg){
   return {
     on: () => st.on,
     available,
-    /* Toggling mid-run would change the tier under a score in progress, so the
-       drill stops first and the next run is measured cleanly from its first tick. */
-    /* Switching the mic ON is also where the funnel says what's still missing, before
-       a note is played rather than after a run has been spent — telling someone their
-       result can't be judged is worth much less than telling them beforehand. */
+    /* switching tiers mid-run would change what a score in progress measures, so the
+       drill stops first */
+    /* switching the mic ON says what is still missing (calibration) before a note is
+       played, not after a run has been spent */
     toggle(){
       st.on = !st.on; st.score = null;
       status(st.on && !calMeasured() ? 'on_needcal' : null);
@@ -156,12 +126,9 @@ function scoredRun(cfg){
     release(){ st.live = false; unlisten(); },
     score: () => st.score,
     clearScore(){ st.score = null; status(null); },
-    /* The mic button is the SHELL's now — one #drill-ctx-mic in the drill
-       header instead of the identical #sd-mic / #sp-mic / #tg-mic in three drills'
-       control rows. So this paints its label and pressed state (only the running
-       scoredRun knows whether it is listening) and leaves VISIBILITY to
-       applyDrillCtx(), which asks the drill's own mic() predicate — a drill can offer
-       the tier in one mode and not another, which `hidden = !available()` could not say. */
+    /* The mic button is the drill header's; this paints its label and pressed state (only
+       the running scoredRun knows if it is listening). Visibility is applyDrillCtx()'s,
+       via the drill's mic(). */
     render(){
       const mb = document.getElementById(cfg.micId);
       if(mb){

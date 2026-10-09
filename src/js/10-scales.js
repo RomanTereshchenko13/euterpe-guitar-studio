@@ -15,11 +15,11 @@ const SCALES=[
   {iv:[0,2,3,5,7,9,11],en:'Melodic minor',uk:'Мелодичний мінор'},
 ];
 function sName(s){ return lang==='en'?s.en:s.uk; }
-/* mode family for the circle projection (1a): a major third (interval 4) puts a
-   scale on the circle's major ring, a minor third (3) on the minor ring. */
+/* mode family: a major third puts a scale on the circle's major ring, a minor third
+   on the minor ring */
 function isMajorFamily(i){ return SCALES[i].iv.includes(4); }
-/* scale-over-chord (1c): scale indices (rooted at rootPc) that contain every
-   chord tone — i.e. scales you can play over that chord. */
+/* indices of the scales (rooted at rootPc) that contain every chord tone — what you
+   can play over that chord */
 function scalesOverChord(rootPc, chordPcs){
   const need=chordPcs.map(pc=>mod(pc,12));
   const out=[];
@@ -29,10 +29,8 @@ function scalesOverChord(rootPc, chordPcs){
   });
   return out;
 }
-/* reverse seam (Scales/Circle → Harmony, 1c follow-up): map a diatonic triad's
-   interval set to the Harmony chord-quality index, so an overlaid scale chord (or
-   the circle's tonic) can open in the chord-tones view. Mirrors TRI_TO_QUAL
-   (maj/m/dim/aug → QUALITIES); non-tertian triads ('?') fall back to major. */
+/* a diatonic triad's intervals → the Harmony chord-quality index, so a scale chord or
+   the circle's tonic can open in Chord tones; a non-tertian triad ('?') reads as major */
 function triadQi(iv){
   const t3=iv[1], t5=iv[2];
   const tri = (t3===3&&t5===6) ? 2 : (t3===4&&t5===8) ? 3 : (t3===3) ? 1 : 0;
@@ -40,23 +38,18 @@ function triadQi(iv){
 }
 const MODE_OFF={1:2,2:4,3:5,4:7,5:9,6:11};
 const BOX_OFFSETS=[0,3,5,7,10];
-/* CAGED: the app's five scale positions cycle through the five movable
-   chord shapes. With positions anchored at (root−4)+BOX_OFFSETS, position 1..5
-   land on the E·D·C·A·G shapes going up the neck. This mapping is exact only for
-   the MAJOR scale (Ionian), where the scale root IS the parent-major root; for
-   modes the boxes anchor to the mode root, not the parent, so the letters would
-   be wrong — so CAGED labels are shown for Ionian only (isCAGEDScale). */
+/* CAGED: positions 1..5 land on the E·D·C·A·G shapes up the neck. Exact only for the
+   major scale — modes anchor the boxes to the mode root, not the parent major — so
+   the letters show for Ionian only (isCAGEDScale). */
 const CAGED_BY_POS=['E','D','C','A','G'];
 function isCAGEDScale(){ return scIdx===0; }
 function cagedShapeName(letter){ return lang==='en' ? letter+'-shape' : 'форма '+letter; }
 let scIdx=5, scPos=0, scOverlay=null;
-let scView='scale';   // Scales-tab sub-view: 'scale' | 'notes' (folded-in Notes mode, 1b)
+let scView='scale';   // Scales sub-view: 'scale' | 'notes'
 let diaList=[];
-/* Scale-degree coloring: paint the tonic-seventh skeleton (1·3·5·7) with the
-   app's semantic interval colors and leave the passing tones (2·4·6) neutral, so
-   the fifth keeps its blue instead of being swallowed by a generic "other" that
-   reused fifth-blue. The fifth is iv 7, or iv 6 only when no perfect-5 is present
-   (Locrian/blues ♭5 is the fifth; Lydian's ♯4 and any ♭6 stay passing tones). */
+/* Colour the 1·3·5·7 skeleton with the interval colours and leave 2·4·6 neutral. The
+   fifth is iv 7, or iv 6 only when there is no perfect fifth (Locrian, blues); Lydian's
+   ♯4 and any ♭6 stay passing tones. */
 function scClass(iv, ivs){
   if(iv===0) return 'd-root';
   if(iv===3||iv===4) return 'd-third';
@@ -67,8 +60,7 @@ function scClass(iv, ivs){
 function boxWindow(pos){ if(!pos) return null; const anchor=(gRoot-4+12)%12; const start=anchor+BOX_OFFSETS[pos-1]; return [start, start+4]; }
 function diatonic(){
   const iv=SCALES[scIdx].iv; if(iv.length!==7) return [];
-  // One diatonic source (1a): quality comes from the shared diatonicTriads()
-  // helper; the scales view spells each root by its diatonic degree.
+  // the shared diatonicTriads() gives quality; this view spells each root by degree
   return diatonicTriads(gRoot, iv).map(c=>({
     label: spellNote(gRootLbl, c.rootPc, c.deg+1)+c.suf,
     rootPc: c.rootPc, iv: c.iv, tag: 'dia'+c.deg
@@ -93,7 +85,7 @@ function renderScales(){
   if(scOverlay){ html+=`<div class="sub" style="color:var(--third)">${t('overlay_msg')} <button class="btn dia sc-open-harmony" type="button">${t('b_open_harmony')} →</button></div>`; }
   document.getElementById('sc-info').innerHTML=html;
   renderDiatonic();
-  // shared board: only when the Scale view is active
+  // the shared board, only in the Scale view
   if(isBoardMode('scale')){
     const win=boxWindow(scPos);
     let ovMap=null; if(scOverlay){ ovMap={}; scOverlay.iv.forEach(iv=>ovMap[(scOverlay.rootPc+iv)%12]=iv); }

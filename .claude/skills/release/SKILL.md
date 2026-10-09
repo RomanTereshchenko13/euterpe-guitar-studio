@@ -30,6 +30,9 @@ When unsure, prefer patch — see the project's "small changes = patch" rule.
    - `date` = today.
    - **`en` and `uk` arrays must have the same number of bullets** and say the
      same thing. Write for users (what changed for them), not commits.
+   - **At most 3 bullets, one sentence each.** Say what changed and where to find
+     it; no backstory, no "it used to". The modal ships the newest 5 releases, so
+     every word here is downloaded by every visitor.
 3. `PLAN.md` — update the `_Shipping: vX.Y.Z_` line at the top.
 4. `package.json` deliberately has **no** `version` field (the package is private and
    never published) — don't add one; `APP_VERSION` is the only version.

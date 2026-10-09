@@ -1,17 +1,12 @@
 /* ===================== CHORD TONES ===================== */
 const DEG_LABEL={0:'1',3:'♭3',4:'3',6:'♭5',7:'5',8:'♯5',10:'♭7',11:'7'};  // triad/overlay use (interval -> label)
-/* Chord qualities carry three parallel arrays so a single semitone interval can
-   mean different things in different chords (the interval-ambiguity problem):
+/* Three parallel arrays per quality, because one semitone interval means different
+   things in different chords:
      iv  — semitone offsets (octave-aware: 9=14, 11=17, 13=21) for highlighting + audio
-     lab — display label per tone ('1','♭3','♭7','9','♯9','13', …)
-     deg — diatonic letter degree (1-7) that drives correct spelling
-           (9→2nd letter, 11→4th, 13→6th, etc.)
-   Colour is derived from the label, not the raw interval, via labClass(). */
-/* `grp` chunks the vocabulary into the picker's three labelled tiers (basic
-   triads · sevenths & sixths · extended) so the row reads as organised sections
-   instead of one undifferentiated wall of buttons. The ARRAY ORDER is unchanged
-   — chQual indices are persisted and referenced by presets/tests, so grouping is
-   done at render time by reading `grp`, never by reordering this list. */
+     lab — display label per tone ('1','♭3','♭7','9','♯9','13', …); colour derives from it
+     deg — diatonic letter degree (1-7) that drives spelling (9→2nd letter, 11→4th …) */
+/* `grp` is the picker tier (basic · sevenths & sixths · extended). Never reorder this
+   list: chQual indices are saved and used by the presets. */
 const QUALITIES=[
   {short:'',     grp:'basic',   iv:[0,4,7],          lab:['1','3','5'],                deg:[1,3,5],         en:'Major',uk:'Мажор'},
   {short:'m',    grp:'basic',   iv:[0,3,7],          lab:['1','♭3','5'],               deg:[1,3,5],         en:'Minor',uk:'Мінор'},
@@ -36,7 +31,7 @@ const QUALITIES=[
   {short:'7♯9',  grp:'ext',     iv:[0,4,7,10,15],    lab:['1','3','5','♭7','♯9'],      deg:[1,3,5,7,2],     en:'7♯9 (Hendrix)',uk:'7♯9 (Гендрікс)'},
 ];
 function qName(q){ return lang==='en'?q.en:q.uk; }
-/* colour by degree label (label-driven, robust across the whole vocabulary) */
+/* colour by degree label */
 function labClass(lab){
   if(lab==='1') return 'd-root';
   if(lab==='3'||lab==='♭3') return 'd-third';
@@ -44,33 +39,20 @@ function labClass(lab){
   if(lab==='7'||lab==='♭7'||lab==='♭♭7') return 'd-sev';
   return 'd-ext';   // 2 · 4 · 6 · 9 · ♭9 · ♯9 · 11 · ♯11 · 13 · ♭13
 }
-/* =================== APP MUSICAL STATE (single catalogue) ===================
-   State guardrail (Phase C+): the persisted musical state is intentionally a
-   small set of top-level lets, each declared next to the view that owns it.
-   To stop later phases (Practice / ear / rhythm) from multiplying ad-hoc
-   globals, keep ALL persisted state in this catalogue and route it through
-   saveState()/loadState() with a bounds-checked restore. Current members:
+/* ---- the persisted musical state ----
+   A small set of top-level lets, each next to the view that owns it, all saved through
+   saveState()/loadState() with a bounds-checked restore:
      context   : gRoot, gRootLbl (root) + scIdx (mode)   (set via setKey)
-     display   : gMode (note-names vs degrees)     (this block)
-     view      : hView (chords|arp), scView (scale|notes)  (sub-view per tab)
-     chords    : chQual, chVoicing, chTriads       (this block)
-     triads    : trSet, trInv                      (~"TRIADS", the Chord-tones toggle)
-     scales    : scPos, scOverlay                  (~"SCALES view")
-     notes     : ntFilter, ntRoot                  (Notes sub-view of Scales, 1b)
-     circle    : (derived from context; not persisted)
+     display   : gMode (note-names vs degrees)
+     view      : hView (chords|arp), scView (scale|notes)
+     chords    : chQual, chVoicing, chTriads
+     triads    : trSet, trInv                      (the Chord-tones Triads toggle)
+     scales    : scPos, scOverlay
+     notes     : ntFilter, ntRoot
      transport : tempo, lefty, bassOn, grooveOn, seqLoopOn, seq[]
      ui        : lang, currentTab, tuningIdx, fretRangeIdx, toolbarOpen
-   New phases: add fields here (or in a `practice = {…}` object), then extend
-   saveState()/loadState() — do not introduce free-floating globals elsewhere.
-
-   The musical CONTEXT (spine #1, 1a) is the shared key center + mode that every
-   key-centric view reflects: gRoot/gRootLbl (root) + scIdx (mode = scale). It is
-   set in ONE place — setKey() — and Harmony, Scales, Circle and Notes all follow.
-   The circle's selection is DERIVED from (gRoot, scIdx), not stored.
-   ========================================================================== */
-/* shared musical context (the spine): one key center (gRoot/gRootLbl) + mode
-   (scIdx, in the scales block) across Harmony, Scales, Circle and Notes, set via
-   setKey(). gMode is the note-name/degree display toggle, not the musical mode. */
+   The circle's selection is derived from (gRoot, scIdx), never stored. */
+/* gMode is the note-name/degree display toggle, not the musical mode (that is scIdx) */
 let gRoot=9, gRootLbl='A', gMode='names';
 let chQual=1;
 let chVoicing=0;   // index of the selected voicing card (open / E-barre / A-barre / computed)
@@ -84,14 +66,9 @@ function chDegClass(iv){ if(iv===0)return'd-root'; if(iv===3||iv===4)return'd-th
 function currentHarmonyChord(){
   const q=QUALITIES[chQual]; return {rootPc:gRoot, rootLbl:gRootLbl, short:q.short, pcs:q.iv.map(iv=>mod(gRoot+iv,12))};
 }
-/* Progressive disclosure (#1/#2): the 20-quality vocabulary is a lot to meet on
-   first load — beginners want maj/min/7. So only the BASIC tier shows by default;
-   the seventh + extended tiers tuck behind a "more" toggle. This shortens the tall
-   pre-board control stack (esp. on a phone) and makes the picker less intimidating.
-   The advanced tiers auto-reveal whenever the active quality lives in one (e.g. a
-   restored maj7), so the current selection is never hidden behind the toggle.
-   `chQualsAdv` is a UI-only preference (not persisted) shared by the chord + arp
-   pickers, so revealing in one reveals in both. */
+/* Only the basic tier shows by default; sevenths and extensions sit behind "more".
+   They reveal themselves when the active quality lives in them, so the selection is
+   never hidden. chQualsAdv is UI-only (not saved) and shared by both pickers. */
 let chQualsAdv=false;
 function qualSeg(g, onPick, showLabel){
   const seg=document.createElement('div'); seg.className='qual-grp';
@@ -105,10 +82,7 @@ function qualSeg(g, onPick, showLabel){
   });
   seg.appendChild(wrap); return seg;
 }
-/* Build a tiered quality picker into `containerId`, driving the disclosure toggle
-   at `toggleId` — which lives on the section-header line beside the CHORD label, not
-   floating after the buttons. Tier sub-labels only appear once expanded; the lone
-   Basic tier needs no "BASIC" caption when collapsed. */
+/* Tier captions appear only once expanded — the lone Basic tier needs none. */
 function renderQualPicker(containerId, toggleId, onPick){
   const c=document.getElementById(containerId); if(!c) return; c.innerHTML='';
   const adv = chQualsAdv || QUALITIES[chQual].grp!=='basic';   // keep the active quality visible
@@ -122,14 +96,13 @@ function buildChQuals(){
 }
 function renderChords(){
   const q=QUALITIES[chQual];
-  // panel content (always current so a tab switch shows the latest)
   const notes=q.iv.map((iv,i)=>spellNote(gRootLbl,(gRoot+iv)%12,q.deg[i])).join(' – ');
   const degs=q.lab.join('  ');
   document.getElementById('ch-info').innerHTML=`<div class="big">${noteTxt(gRootLbl)}${q.short} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
   renderChordDiagram();
   renderChShape();
   if(triadsOn()) renderTriads();
-  // shared board: only when chord tones is the active mode
+  // the shared board, only when this is the active view
   if(isBoardMode('chords')){
     const map={}; q.iv.forEach((iv,i)=>{ map[(gRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
     paintBoard((pc,si,f)=>{
@@ -153,11 +126,8 @@ function renderChShape(){
 }
 
 /* ---- Arpeggios ----
-   The chord ↔ scale bridge: the same chord tones as the chord-tones view, but
-   framed as an arpeggio you run melodically up the neck (Listen plays it
-   ascending) and can isolate to one practice box. Shares the chord quality
-   (chQual) with the chord-tones view so switching views keeps the chord — that's
-   the bridge. Reuses the chord-tone board paint + the scale-view box window. */
+   The same chord tones framed as an arpeggio: Listen runs it up the neck, and it can
+   be isolated to one box. Shares chQual with Chord tones, so switching keeps the chord. */
 function buildArpQuals(){
   renderQualPicker('arp-quals','arp-quals-toggle', i=>{ chQual=i; chVoicing=0; chShapesExpanded=false; buildChQuals(); buildArpQuals(); renderArp(); saveState(); });
 }
@@ -183,9 +153,8 @@ function renderArp(){
   renderSuggester();
 }
 
-/* "Play over this" sidebar (1c): for the live harmony chord, the arpeggio (chord
-   tones) plus every scale that contains them — each a chip that jumps to Scales
-   on that root+scale (the reference → practice seam, spine #2). */
+/* "Play over this": the chord's arpeggio plus every scale that contains it, each a
+   chip that opens that scale on that root. */
 function renderSuggester(){
   const body=document.getElementById('suggest-body'); if(!body) return;
   const ch=currentHarmonyChord();
@@ -202,10 +171,8 @@ function renderSuggester(){
 }
 
 /* ---- Open / barre chord diagrams (standard-tuning reference) ----
-   Movable templates per quality, root on the 6th ("E") or 5th ("A") string.
-   Offsets are relative to the barre fret; null = muted string. We pick the
-   shape that sits lowest on the neck (and use an open shape when the barre
-   lands at fret 0). The result is the standard chord shape a guitarist learns. */
+   Movable templates per quality, root on the 6th ("E") or 5th ("A") string; offsets
+   from the barre fret, null = muted. The lowest-sitting shape wins, open at fret 0. */
 const CHORD_SHAPES = {
   '':     { E:[0,2,2,1,0,0], A:[null,0,2,2,2,0] },
   'm':    { E:[0,2,2,0,0,0], A:[null,0,2,2,1,0] },
@@ -230,12 +197,9 @@ const OPEN_OVERRIDES = {
 const STD_LOW6_MIDI = [40,45,50,55,59,64];   // E2 A2 D3 G3 B3 E4
 function voicingMidi(v){ const out=[]; v.frets.forEach((fr,s)=>{ if(fr!=null) out.push(STD_LOW6_MIDI[s]+fr); }); return out; }  // low -> high
 
-/* Canonical voicing set for a chord: the open shape (where one exists) plus the
-   E-shape (root on string 6) and A-shape (root on string 5) barre forms, deduped
-   by their resolved fret array so an open shape that equals a barre-at-fret-0
-   isn't drawn twice. Extended qualities with no template fall back to one
-   computed voicing. Ordered open-first, then by ascending barre fret. The render
-   and the Listen/Loop playback both read THIS list, so they always agree. */
+/* The voicing set for a chord: the open shape where one exists, plus the E- and A-shape
+   barres, deduped by fret array; qualities with no template get one computed voicing.
+   Rendering and Listen/Loop both read THIS list, so they always agree. */
 function chordVoicings(rootPc, short, ivs){
   const out=[], seen={};
   const add=(frets, barre, shape, generated)=>{
@@ -252,10 +216,8 @@ function chordVoicings(rootPc, short, ivs){
     if(tmpl.A){ const barre=mod(rootPc-9,12); add(tmpl.A.map(o=>o==null?null:barre+o), barre, barre===0?'open':'A', false); }
   }
   if(out.length===0){ const g=genVoicing(rootPc, ivs); if(g) add(g.frets, g.barre, 'computed', true); }
-  // Round out a sparse set with extra movable shapes found up the neck, so the
-  // shapes card shows several positions (CAGED-style) rather than just one or two.
-  // Triads/7ths only (≤4 chord tones) — extended chords have no neat movable form
-  // and keep their single computed voicing. Capped, and deduped by add().
+  // Add movable shapes found up the neck so the card shows several positions — triads
+  // and sevenths only; extended chords have no neat movable form.
   if(new Set(ivs.map(i=>mod(rootPc+i,12))).size<=4){
     for(const v of upNeckVoicings(rootPc, ivs)){
       if(out.length>=MAX_VOICINGS) break;
@@ -278,12 +240,9 @@ function currentChordVoicing(){
   const midis=voicingMidi(list[idx]);
   return {midis, pcs:[...new Set(midis.map(m=>mod(m,12)))], list, idx};
 }
-/* Scan one 4-fret window [base, base+3] for a root-in-bass voicing: on each string
-   take the lowest fret in the window that lands on a chord tone, then mute leading
-   strings until the bass note is the root. Returns the resolved frets (low6->high1)
-   with coverage stats {cov, count, span, width}, or null if no root sits in the
-   bass within this window. Shared by genVoicing (scores windows for the single best)
-   and upNeckVoicings (collects the playable ones) so the scan logic lives once. */
+/* One 4-fret window [base, base+3]: on each string the lowest fret that is a chord
+   tone, then leading strings muted until the bass is the root. Returns the frets
+   (low6→high1) with coverage stats, or null when no root reaches the bass. */
 function scanWindow(base, need, rootPc){
   const frets=[];                                   // index 0..5 = string6..string1 (low->high)
   for(let s=0;s<6;s++){
@@ -299,11 +258,8 @@ function scanWindow(base, need, rootPc){
   const width=span.length?Math.max(...span)-Math.min(...span):0;
   return {frets, cov, count, span, width};
 }
-/* Generalized voicing generator — removes the need to hand-curate a shape for
-   every quality. Scans 4-fret windows up the neck (scanWindow) and keeps the
-   single best by coverage, string count, compactness and low position. Every
-   sounded note is a real chord tone by construction. Used only when no curated
-   open/barre shape exists, and labelled as a computed voicing. */
+/* For qualities with no curated shape: the best window by coverage, string count,
+   compactness and low position. Every note is a chord tone by construction. */
 function genVoicing(rootPc, ivs){
   const need=[...new Set(ivs.map(i=>mod(rootPc+i,12)))];
   let best=null, bestScore=-1e9;
@@ -318,16 +274,12 @@ function genVoicing(rootPc, ivs){
   const played=best.frets.filter(x=>x!=null&&x>0);
   return {frets:best.frets, barre:played.length?Math.min(...played):0, generated:true};
 }
-/* Most shape cards to show for one chord (open + barres + a few movable forms up
-   the neck). Capped so the row stays tidy and the saved card index stays in range. */
+/* Most shape cards for one chord; also keeps the saved card index in range. */
 const MAX_VOICINGS = 6;
-/* How many shape cards show before the "More shapes" toggle; the rest stay hidden
-   until expanded, so the default view is a tidy starter set rather than the full library. */
+/* Cards shown before "More shapes". */
 const CHORD_SHAPES_COLLAPSED = 3;
-/* Movable voicings discovered by scanning 4-fret windows up the neck: one full,
-   playable shape per position (root in the bass, every chord tone present, ≥4 strings,
-   ≤3-fret span). Returned low-position-first; the caller dedupes them against the
-   curated open/E/A shapes so only genuinely new positions are added. */
+/* Full, playable shapes up the neck (root in the bass, every chord tone, ≥4 strings,
+   ≤3-fret span), low position first; the caller dedupes against the curated ones. */
 function upNeckVoicings(rootPc, ivs){
   const need=[...new Set(ivs.map(i=>mod(rootPc+i,12)))];
   const out=[], seen={};
@@ -342,9 +294,7 @@ function upNeckVoicings(rootPc, ivs){
   }
   return out.sort((a,b)=>a.barre-b.barre);
 }
-/* Draw one chord-box SVG. funcMap: pitch-class -> d-* class, so card dots are
-   coloured by their role in the chord (root/third/fifth/seventh/extension),
-   matching the fretboard. Each dot carries data-midi so a click sounds it. */
+/* One chord-box SVG; funcMap colours each dot by its role, like the fretboard. */
 function chordBoxSVG(v, funcMap){
   const frets=v.frets;                      // low6 .. high1
   const {svg, x, y, gh, baseFret, rows, padTop}=fretGrid(frets, 6, {W:120,H:140,padX:16,padTop:26,padBot:18,span:4,posDX:9});
@@ -380,11 +330,8 @@ function renderChordDiagram(){
   const list=chordVoicings(gRoot, short, q.iv);
   if(!list.length){ cont.innerHTML=`<div class="chordbox"><div class="cb-name">${noteTxt(gRootLbl)}${short}</div><div class="cb-cap">${t('cd_na')}</div></div>`; return; }
   if(chVoicing>list.length-1) chVoicing=0;             // clamp after a quality change
-  // Collapsed by default to a handful of shapes (the long up-the-neck tail reads as
-  // overwhelming on a phone); the "More shapes" toggle below reveals the rest.
-  // ...but never hide the currently-selected shape (e.g. one restored from saved
-  // state that lives in the tail), or its "selected" highlight would vanish while
-  // Listen / Loop still use it.
+  // A few shapes by default; "More shapes" reveals the rest — but the selected shape
+  // always shows, or its highlight would vanish while Listen / Loop still use it.
   const collapsed = !chShapesExpanded && list.length>CHORD_SHAPES_COLLAPSED && chVoicing<CHORD_SHAPES_COLLAPSED;
   cont.innerHTML = list.map((v,i)=>{
     const hide = collapsed && i>=CHORD_SHAPES_COLLAPSED;
@@ -394,8 +341,7 @@ function renderChordDiagram(){
   }).join('');
   const more=document.getElementById('cd-more');
   if(more){
-    // hidden when there's no tail to fold, or when a tail shape is selected (it's
-    // forced visible above, so collapsing can't apply and chShapesExpanded tracks the view)
+    // hidden when there's no tail, or when a tail shape is selected (forced visible above)
     if(list.length<=CHORD_SHAPES_COLLAPSED || chVoicing>=CHORD_SHAPES_COLLAPSED){ more.hidden=true; }
     else { more.hidden=false; more.textContent = chShapesExpanded ? t('cd_less') : `${t('cd_more')} (${list.length-CHORD_SHAPES_COLLAPSED})`; more.setAttribute('aria-expanded', String(chShapesExpanded)); }
   }

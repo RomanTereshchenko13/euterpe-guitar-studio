@@ -1,36 +1,22 @@
 /* ===================== The timed practice session =====================
-   The question a practice app exists to answer is "I have fifteen minutes — what do I
-   do?", and until now this one had no answer to it. Every drill is an infinite loop you
-   leave by hand: nothing picks what to play, nothing keeps time, nothing ends, and
-   nothing tells you afterwards what the fifteen minutes were. The session is the ritual
-   the app was missing, and it is deliberately thin — it owns no exercise of its own.
+   "I have fifteen minutes — what do I do?" Pick a length; the session picks the drills,
+   keeps time, ends by itself and reports. It owns no exercise of its own:
+     • WHAT to practise comes from learnerReview().due (overdue recall first, then cold
+       or slipping performance tracks);
+     • each block opens through startTrack(), so the header names it as usual;
+     • the report reads the sessions the drills recorded inside its window.
 
-   What it is made of is already here:
-     • WHAT to practise comes from B1's queue (learnerReview().due), which already ranks
-       overdue recall above cold or slipping performance tracks, over all ten tracks
-       rather than the four the old hardcoded list knew about.
-     • HOW to open it is startTrack() — the one door in (B2), so each block arrives with
-       the drill header naming the track the session chose, exactly as if you had picked
-       the card yourself.
-     • WHAT you did comes off the learner model's own ring buffer: the report reads the
-       sessions written between the session's start and its end, so it reports what was
-       actually recorded rather than a second tally kept in parallel.
+   Every function that reads the clock takes `now`, so the flow runs with no timers.
 
-   The clock is a plain interval, and every function that reads it takes `now` so the
-   whole flow is drivable with no timers at all — which is what the harness does.
-
-   Its one entanglement with the rest of the shell is deliberate: a session has to end
-   when the player abandons it, and the two ways to abandon one (the header's Quit, and
-   leaving Practice) both run through drillShellLeft() in the registry. So that calls
-   sessionInterrupt(), and the session guards its own chaining with `sessChaining` —
-   changing drill walks the same path, and a session that ended itself every time it
-   changed drill would be a session of exactly one drill. */
+   Quit and leaving Practice both run through drillShellLeft(), which calls
+   sessionInterrupt(); `sessChaining` keeps the session's own drill changes (the same
+   path) from ending it. */
 
 const SESSION_MINS = [5, 10, 15, 20];
 const SESSION_BLOCK_SEC = 300;     // roughly one drill per five minutes
 const SESSION_TICK_MS = 500;       // how often the header's countdown re-reads the clock
 
-let sessMins = 10;                 // the length you last chose (persisted, 12-toolbar-state.js)
+let sessMins = 10;                 // the length you last chose (persisted)
 let psess = null;                  // the running session, or null
 let sessLast = null;               // the report waiting to be read, or null
 let sessTimer = null;
@@ -38,11 +24,8 @@ let sessChaining = false;          // true only while the session itself changes
 
 function sessionActive(){ return !!psess; }
 
-/* The order to practise in. B1's queue first (it is already ranked), then everything
-   else from the registry — a brand-new player has an empty queue and still deserves a
-   full session, and someone who has practised everything recently has no due list at
-   all. Padding from the registry rather than repeating the queue also means a 20-minute
-   session never hands you the same drill twice. */
+/* The order to practise in: the due queue first, then every other registered track,
+   so a new player still gets a full session and no drill comes up twice. */
 function sessionQueue(now){
   const out=[];
   const push=id=>{ if(id && out.indexOf(id)<0 && trackById(id)) out.push(id); };
@@ -51,9 +34,8 @@ function sessionQueue(now){
   return out;
 }
 /* Pure: minutes in, blocks out. One block per SESSION_BLOCK_SEC, at least one, never
-   more than there are distinct tracks to fill them, and the time split evenly over
-   however many that turned out to be — so a 15-minute session on an app with two tracks
-   is two 7½-minute blocks rather than three blocks with a hole in it. */
+   more than there are tracks, the time split evenly — two tracks in 15 minutes make two
+   7½-minute blocks, not three with a hole. */
 function sessionPlan(mins, now){
   now=(typeof now==='number')?now:Date.now();
   const total=Math.max(1, mins)*60;
@@ -80,9 +62,8 @@ function sessionStart(mins, now){
   applySessionViews();
   return true;
 }
-/* Move to the next block (or finish). The previous drill is ended first: startTrack()
-   opens a drill, it does not close one, because until now nothing ever started a drill
-   while another was running. */
+/* Next block, or finish. The previous drill is ended first: startTrack() opens a
+   drill, it never closes one. */
 function sessionAdvance(now){
   if(!psess) return;
   now=(typeof now==='number')?now:Date.now();
@@ -97,9 +78,8 @@ function sessionAdvance(now){
   } finally { sessChaining=false; }
   applyDrillCtx();
 }
-/* One tick. A block ends on its own clock OR when the drill inside it ends by itself —
-   the note and ear drills are finite, and their summary screen keeps them active, so
-   this fires when you press Done on it and not before. */
+/* A block ends on its clock OR when its drill ends itself — the note and ear drills
+   are finite, and their summary keeps them active until you press Done. */
 function sessionTick(now){
   if(!psess) return;
   now=(typeof now==='number')?now:Date.now();
@@ -112,8 +92,7 @@ function sessionStartTimer(){
   if(sessTimer || typeof setInterval!=='function') return;
   sessTimer=setInterval(()=>{ try{ sessionTick(); }catch(_){} }, SESSION_TICK_MS);
 }
-/* End it and leave a report. `blocks` is what was actually reached, not what was
-   planned: quitting after two of four should not be reported as four. */
+/* End it and leave a report. `blocks` is what was reached, not what was planned. */
 function sessionEnd(reason, now){
   if(!psess) return null;
   const s=psess; psess=null;
@@ -129,7 +108,7 @@ function sessionEnd(reason, now){
   applyDrillCtx();
   return sessLast;
 }
-// the header's Quit, or leaving Practice — both arrive here through drillShellLeft()
+// the header's Quit, or leaving Practice (via drillShellLeft)
 function sessionInterrupt(){ if(psess && !sessChaining) sessionEnd('quit'); }
 // a drill started outside the session: whatever the last report said, it has been read
 function sessionClearReport(){ if(sessLast){ sessLast=null; applySessionViews(); } }
@@ -141,10 +120,8 @@ function sessionClock(sec){
   const m=Math.floor(sec/60), s=sec%60;
   return m+':'+(s<10?'0':'')+s;
 }
-/* The two header controls. Painted here for the same reason 13-scored.js still paints
-   the mic's label after B2 moved the button to the shell: only the running session
-   knows whether there is one. applyDrillCtx() calls this, so they follow every other
-   thing that repaints the header. */
+/* The header's block counter and Next: only the session knows whether there is one.
+   applyDrillCtx() calls this, so they repaint with the rest of the header. */
 function sessionPaint(){
   const chip=document.getElementById('drill-ctx-sess');
   if(chip){
@@ -156,11 +133,8 @@ function sessionPaint(){
   const skip=document.getElementById('drill-ctx-skip');
   if(skip){ skip.hidden=!psess; if(psess) skip.textContent=t('sess_next'); }
 }
-/* The report is EXCLUSIVE inside the practice home: it is the closing screen of a
-   ritual, and a summary competing for the screen with the picker that starts the next
-   thing is neither. Both blocks it replaces are toggled by `hidden` here rather than by
-   a body class, so there is no author display rule for the attribute to lose to — the
-   trap A3 fell into when #practice-home got a display:grid. */
+/* The report replaces the home's blocks while it is up — `hidden` here rather than a
+   body class, so no author display rule can override it. */
 function applySessionViews(){
   const rep=document.getElementById('session-report');
   const show=!!sessLast;
@@ -179,10 +153,8 @@ function renderSessionReport(){
   const host=document.getElementById('session-report'); if(!host || !sessLast) return;
   const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const mins=Math.max(1, Math.round((sessLast.to-sessLast.from)/60000));
-  /* What you did, read off the learner model rather than tallied in parallel: every
-     drill already writes a session when its run ends, so the honest report is "which of
-     those landed inside my window". A block with no entry played but finished nothing
-     — say so rather than inventing a zero. */
+  /* Read off the learner model: the sessions that landed inside this window. A block
+     with none was played but finished nothing — say so rather than invent a zero. */
   const runs=(typeof learner!=='undefined' && learner && Array.isArray(learner.sessions) ? learner.sessions : [])
     .filter(s=>s.t>=sessLast.from && s.t<=sessLast.to);
   const rows=sessLast.blocks.map(id=>{
@@ -199,9 +171,8 @@ function renderSessionReport(){
            '<span class="sr-val">'+esc(val)+'</span></div>';
   }).join('');
   host.innerHTML='<div class="pp-title">'+t('sess_done_h')+'</div>'+
-    /* "3 min · Drills: 2" rather than "2 drills": Ukrainian agrees a noun with its number
-       in three forms (1 вправа · 2 вправи · 5 вправ), and a label followed by a colon is the
-       one shape that is correct for every count without shipping a pluralizer. */
+    /* "3 min · Drills: 2", not "2 drills": Ukrainian has three plural forms (1 вправа ·
+       2 вправи · 5 вправ), and a label with a colon is correct for every count. */
     '<div class="sr-lead">'+mins+' '+t('sess_min')+' · '+t('sess_drills')+': '+sessLast.blocks.length+'</div>'+
     (runs.length ? rows : rows+'<div class="pp-empty">'+t('sess_none')+'</div>')+
     '<div class="drill-bar"><button type="button" class="btn play" id="sess-close">'+t('drill_done')+'</button></div>';

@@ -1,28 +1,22 @@
 /* ===================== AUDIO =====================
-   Plucked-string synthesis (Karplus-Strong): a short noise burst is fed
-   through a short delay line with a damping low-pass in the feedback loop.
-   This reproduces the inharmonic, brighter-then-mellowing decay of a real
-   string — high strings fade faster than low ones, just like the real thing.
-   Voices run through a shared bus: gentle compressor (keeps chords from
-   clipping) + a small convolution reverb for body/room. All offline. */
+   Karplus-Strong plucked strings: a noise burst through a short delay line with a
+   damping low-pass in the loop, so trebles fade faster than basses, like real strings.
+   Voices share a bus: a gentle compressor (chords don't clip) + a small convolution
+   reverb for body and room. All offline. */
 let actx, master, backing, leadTarget, cue, bass, groove, masterOut, busReady=false;
-/* user-facing master volume (whole-app output trim, 0..1). Persisted; read into
-   masterOut.gain when the bus is built (audio is lazy, created on first gesture). */
+/* master volume (0..1), persisted; read into masterOut.gain when the bus is built
+   (audio is created lazily on the first gesture) */
 let masterVol=1;
 function audio(){
   if(!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } setupBus(); }
   if(actx && actx.state==='suspended'){ actx.resume(); }
   return actx;
 }
-/* Room/body impulse response for the convolution reverb. Not flat white noise (that
-   fizzes and reads as "fake reverb") but a shaped space: a sparse cluster of early
-   reflections — the size/shape cue of a small wooden room — over a diffuse noise tail
-   that decays exponentially AND darkens over time via a progressive one-pole low-pass,
-   because air + surface absorption damp the highs first, like a real space. Early
-   reflections are sign-flipped + sample-skewed per channel for a natural stereo image.
-   `decay` is now the exponential rate (e-foldings across the IR), not a polynomial
-   exponent. The ConvolverNode normalizes by default, so this only shapes the colour —
-   the wet amount stays set by revGain. Built once at setup. */
+/* The reverb's impulse response: a shaped small wooden room, not flat white noise
+   (which fizzes): sparse early reflections over a diffuse tail that decays
+   exponentially and darkens as it goes, as air and surfaces damp the highs first.
+   Reflections are sign-flipped and skewed per channel for a stereo image. The
+   convolver normalizes, so this shapes colour only; revGain sets the wet amount. */
 function makeIR(dur, decay){
   const rate=actx.sampleRate, len=Math.max(1,Math.floor(rate*dur));
   const buf=actx.createBuffer(2,len,rate);
@@ -49,13 +43,12 @@ function setupBus(){
   comp.attack.value=0.003; comp.release.value=0.25;
   const rev=actx.createConvolver(); rev.buffer=makeIR(1.3, 5.5);   // ~1.3s small-room tail, exponential decay
   const revGain=actx.createGain(); revGain.gain.value=0.14;
-  // body resonance: fixed peaking modes color every note like a guitar box
-  // (air/Helmholtz ~100 Hz, top plate ~200 Hz, mid cluster ~430 Hz)
+  // body resonance: fixed peaking modes colour every note like a guitar box
+  // (air ~100 Hz, top plate ~200 Hz, mid cluster ~430 Hz)
   const body=[ [100,1.1,4.0], [200,1.6,3.0], [430,2.2,2.6] ].map(([f,q,g])=>{
     const b=actx.createBiquadFilter(); b.type='peaking'; b.frequency.value=f; b.Q.value=q; b.gain.value=g; return b;
   });
-  // user master volume, then a final brickwall limiter so a loud volume or a dense
-  // extended chord can't clip the output (the comp above glues, this one catches peaks).
+  // master volume, then a brickwall limiter so loud settings or dense chords can't clip
   masterOut=actx.createGain(); masterOut.gain.value=masterVol;
   const limiter=actx.createDynamicsCompressor();
   limiter.threshold.value=-1.5; limiter.knee.value=0; limiter.ratio.value=20;
@@ -63,31 +56,25 @@ function setupBus(){
   master.connect(body[0]); body[0].connect(body[1]); body[1].connect(body[2]);  // dry, through the body
   body[2].connect(comp); comp.connect(masterOut); masterOut.connect(limiter); limiter.connect(actx.destination);
   master.connect(revGain); revGain.connect(rev); rev.connect(comp);             // wet (room)
-  // Named buses (Phase B) so later features can balance/duck independently:
-  //   backing    — the guitar voice (plucks, loop, sequencer); gets body + room.
-  //   leadTarget — reserved for Practice-mode target tones; same colour as backing.
-  //   cue        — UI clicks/cues (metronome, count-in, correct/wrong). Skips the
-  //                guitar body + reverb so it stays dry and crisp, but shares the limiter.
+  // Named buses, so features can balance independently:
+  //   backing    — the guitar voice (plucks, loop, sequencer); body + room.
+  //   leadTarget — same colour as backing, kept separate for lead tones.
+  //   cue        — clicks and cues; skips body + reverb so it stays dry, shares the limiter.
   backing=actx.createGain();    backing.gain.value=1.0;    backing.connect(master);
   leadTarget=actx.createGain(); leadTarget.gain.value=1.0; leadTarget.connect(master);
   cue=actx.createGain();        cue.gain.value=0.9;        cue.connect(comp);
-  // Backing band (Phase C): bass + groove go straight to the limiter, skipping the
-  // guitar body resonance + room reverb so the low end stays tight and the drums dry.
+  // the band goes straight to the limiter, skipping body + room: tight low end, dry drums
   bass=actx.createGain();       bass.gain.value=0.9;       bass.connect(comp);
   groove=actx.createGain();     groove.gain.value=0.85;    groove.connect(comp);
 }
-/* stereo width: a guitar isn't a point source — spread the voice across the field by
-   register (low strings centred, trebles wider) so chords/scales gain width instead of
-   collapsing to mono. A tiny random jitter keeps repeated notes from stacking on one
-   spot. Degrades to mono where StereoPannerNode is missing (old browsers / jsdom). */
+/* stereo width by register (low strings centred, trebles wider), plus a little jitter
+   so repeated notes don't stack on one spot. Mono where StereoPannerNode is missing. */
 function makePanner(p){ if(!actx.createStereoPanner) return null; const n=actx.createStereoPanner(); n.pan.value=Math.max(-1,Math.min(1,p)); return n; }
 function panForMidi(midi){ return Math.max(-0.35, Math.min(0.35, (midi-57)/55)) + (Math.random()*0.06-0.03); }
-/* Karplus-Strong buffer, cached per (pitch, string character). Fixed long render;
-   the per-voice gain envelope decides how long each note actually rings.
-   Adds: pick-position comb on the excitation, a fractional-delay allpass in the
-   loop for accurate tuning across the register (integer delay alone goes ~10-20
-   cents flat up high), and a woundness bias so low/wound strings ring longer and
-   keep more harmonic energy (metallic) while trebles are rounder. */
+/* Karplus-Strong buffer, cached per (pitch, string character); the voice envelope
+   decides how long it rings. A pick-position comb on the excitation, a fractional-
+   delay allpass for tuning (integer delay alone goes 10–20 cents flat up high), and a
+   woundness bias: low wound strings ring longer and more metallic, trebles rounder. */
 const ksCache={};
 function ksBuffer(freq, wound){
   const rate=actx.sampleRate, key=Math.round(freq*10)+'_'+wound;
@@ -148,11 +135,9 @@ function pluckAt(midi, when, dur, vel){
   if(pan){ g.connect(pan); pan.connect(backing); } else { g.connect(backing); }
   src.start(now); src.stop(now+Math.min(dur+0.5, 2.7));
 }
-/* ---- tuner: a sustained reference tone per open string (no mic needed) ----
-   Plays the pitch of one open string of the current tuning so you can tune a real
-   guitar by ear against it. A clean triangle+sine with a soft attack/release, held
-   ~2.6 s, through the guitar bus so it shares the app's body/room colour and the
-   master volume. Mono-stable: a fresh tap fades out the previous tone (no pile-up). */
+/* ---- reference tone: one open string, to tune by ear ----
+   Triangle + sine with a soft attack and release, ~2.6 s, through the guitar bus so it
+   follows the master volume. A fresh tap fades out the previous tone. */
 let _tunerVoice=null;
 function tunerStop(){
   if(!_tunerVoice) return;
@@ -184,16 +169,13 @@ function setDotPlaying(boardEl, pc, on){ boardEl.querySelectorAll('.dot').forEac
 function flashAt(boardEl, pc, atMs){ playTimers.push(setTimeout(()=>setDotPlaying(boardEl,pc,true), atMs)); }
 function pulseAt(boardEl, pc, atMs, lenMs){ flashAt(boardEl,pc,atMs); playTimers.push(setTimeout(()=>setDotPlaying(boardEl,pc,false), atMs+lenMs)); }
 
-/* ===================== TRANSPORT SCHEDULER (Phase B) =====================
-   "Two clocks": a coarse setInterval wakes every SCHED_MS and *queues* audio
-   events up to LOOKAHEAD seconds ahead on the sample-accurate audio clock, so
-   the metronome / loop / sequencer no longer drift the way bare setInterval
-   playback does (worst on mobile and in background tabs). Each repeating job is
-   a "clock":  { interval():seconds, tick(time,count), next, count }.  interval()
-   is read live, so dragging the tempo slider glides instead of restarting.
-   Dot-lighting rides the same scheduled times through a requestAnimationFrame
-   queue that fires each event once the audio clock passes it — visuals stay
-   locked to the sound instead of to jittery setTimeouts. */
+/* ===================== TRANSPORT SCHEDULER =====================
+   "Two clocks": a coarse setInterval wakes every SCHED_MS and queues audio events up to
+   LOOKAHEAD seconds ahead on the sample-accurate audio clock, so nothing drifts the way
+   bare setInterval playback does (worst on mobile and in background tabs). A "clock" is
+   { interval():seconds, tick(time,count), next, count }; interval() is read live, so a
+   tempo change glides. Dot-lighting rides the same times through a rAF queue, so the
+   visuals stay locked to the sound. */
 const SCHED_MS=25, LOOKAHEAD=0.1, SCHED_LEAD=0.06;
 const clocks=new Set();
 let schedTimer=null;
@@ -218,15 +200,8 @@ function visualDrain(){
   if(visualQ.length || clocks.size) visRAF=requestAnimationFrame(visualDrain);
 }
 
-/* Timing calibration (the tap-test + stored latency offset) lived here. It was
-   built ahead of the scored/mic tier that would consume it, and that tier never
-   arrived — calOffsetSec() had no callers, so the toolbar carried a control that
-   adjusted nothing. Removed; latency calibration now lives in 14-calibration.js,
-   which measures the round trip instead of a tap. */
 
-/* ---- cue sounds (cue bus): short synthesized UI feedback. The metronome uses
-   the cue bus; correct / wrong / count-in are foundation primitives consumed by
-   Practice, Ear-training and Rhythm modes (roadmap phases D, E, G). ---- */
+/* ---- cue sounds (cue bus): short UI feedback — metronome, correct, wrong, count-in ---- */
 function cueBlip(when, freq, peak, len, type){
   const ctx=audio(); if(!ctx) return;
   const o=ctx.createOscillator(), g=ctx.createGain();
@@ -243,30 +218,27 @@ function playCue(kind, when){
   else { cueBlip(when, 1500, 0.24, 0.05, 'square'); }                                                                         // count-in tick
 }
 
-/* chord/triad: roll up, each note lights and stays lit so the shape builds, then clears */
+/* chord/triad: roll up, each note lights and stays lit, then clears */
 /* arpeggio + scale animations share the visual timer pool */
-/* PREVIEW_STEP: one-shot "Listen" previews arpeggiate at a fixed, pleasant rate
-   that is intentionally NOT tied to the practice tempo — Listen is "what does this
-   sound like", not part of the groove, so it shouldn't crawl when you slow the
-   metronome down. (Loop / progression Play DO follow the tempo: they're backings.) */
+/* Listen previews run at a fixed, pleasant rate, NOT the practice tempo: Listen is
+   "what does this sound like", so it shouldn't crawl when you slow the metronome.
+   Loop and progression Play do follow the tempo — they are backings. */
 const PREVIEW_STEP=0.15;
 function animRun(boardEl, base, ivs){
   clearPlayHighlights();
   const step=PREVIEW_STEP, dur=Math.min(0.5, step*1.6);
   ivs.forEach((iv,i)=>{ pluck(base+iv, i*step, dur); pulseAt(boardEl, mod(base+iv,12), i*step*1000, step*1000*0.96); });
 }
-/* Listen for an explicit voicing: arpeggiate the real MIDI notes (low->high) and
-   flash their pitch classes on the given board. Used by the selectable chord
-   cards and by the triad view, so Listen matches the shape on screen. */
+/* Listen for an explicit voicing: arpeggiate its real MIDI notes (low → high) and
+   flash them on the board, so Listen matches the card or triad on screen. */
 function animArpMidi(boardEl, midis){
   clearPlayHighlights();
   const step=PREVIEW_STEP;
   midis.forEach((m,i)=>{ pluck(m, i*step, 1.7); if(boardEl) flashAt(boardEl, mod(m,12), i*step*1000); });
   playTimers.push(setTimeout(clearPlayHighlights, ((Math.max(1,midis.length)-1)*step + 1.7)*1000));
 }
-/* directional strum of explicit MIDI notes: sweeps low->high (down) or high->low
-   (up) with a small inter-string delay, micro-timing jitter and a touch of
-   top-string emphasis on downstrokes, so a strum reads as a sweep, not a stack. */
+/* a strum sweeps low → high (down) or high → low (up), with a small inter-string delay,
+   jitter and a brighter top on downstrokes — a sweep, not a stack */
 function strumMidi(midis, when, vel, spread, dir){
   if(!midis.length) return;
   const order = dir<0 ? midis.slice().reverse() : midis.slice();

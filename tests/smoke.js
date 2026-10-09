@@ -74,6 +74,12 @@ const html = fs.readFileSync(htmlPath, 'utf8');
      ver && new RegExp('CHANGELOG\\s*=\\s*\\[\\s*\\{"v":"' + ver.replace(/\./g, '\\.') + '"').test(html),
      'sliced CHANGELOG does not lead with ' + ver);
   ok('changelog modal links to the full history', html.includes('cl-older'));
+  // the shipped entries stay short: at most 3 bullets, the same count in both languages
+  { const m = html.match(/const CHANGELOG = (\[.*\]);/);
+    const shipped = m ? JSON.parse(m[1]) : [];
+    ok('changelog: shipped entries have at most 3 bullets, EN and UK paired',
+       shipped.length > 0 && shipped.every(r => r.en.length <= 3 && r.en.length === r.uk.length),
+       shipped.filter(r => r.en.length > 3 || r.en.length !== r.uk.length).map(r => r.v).join(',')); }
 
   // The Loop button moved to the timing bar: the old per-row id must be gone,
   // the new contextual id must exist and be wired.
@@ -83,9 +89,37 @@ const html = fs.readFileSync(htmlPath, 'utf8');
   ok('g-loop is wired to loopToggle', /getElementById\(['"]g-loop['"]\)\.onclick\s*=\s*loopToggle/.test(html),
      'g-loop not wired');
 
-  // Responsive fix: the hard min-width must be gone from .board.
-  ok('responsive board: no hard min-width:1150px', !/\.board\s*\{[^}]*min-width:\s*1150px/.test(html),
-     'fixed 1150px min-width still on .board');
+  /* CSS rules jsdom can't verify (it applies no cascade), pinned in the bundle's CSS.
+     [what it guarantees, pattern, whether the pattern must match] */
+  [
+    ['[hidden] always wins: one global !important rule', /(^|[\s}])\[hidden\]\s*\{\s*display:\s*none\s*!important/m, true],
+    ['the board has no hard min-width (it fits a phone)', /\.board\s*\{[^}]*min-width:\s*1150px/, false],
+    ['drill setup is hidden when its body class is off', /body:not\(\.drill-setup-open\)\s*\.drill-setup\s*\{[^}]*display:\s*none/, true],
+    ['drill hint is hidden when its body class is off', /body:not\(\.drill-help-open\)\s*\.drill-hint\s*\{[^}]*display:\s*none/, true],
+    ['Practice hides Listen', /body\.mode-practice\s+#g-play/, true],
+    ['Practice hides Loop', /body\.mode-practice\s+#g-loop/, true],
+    ['Practice hides the header tempo (the drill header has its own)', /body\.mode-practice\s+\.tb-bar\s+\.tb-tempo/, true],
+    ['Practice hides the backing panel', /body\.mode-practice\s+#backing-panel/, true],
+    ['Practice hides the backing toggle', /body\.mode-practice\s+#backing-toggle/, true],
+    ['Practice keeps the nav (it is how you leave)', /body\.mode-practice\s+#mainnav/, false],
+    ['Practice keeps Settings', /body\.mode-practice[^{]*#toolbar\b/, false],
+    ['Practice keeps the Settings toggle', /body\.mode-practice[^{]*#tb-toggle\b/, false],
+    ['Practice keeps Tools', /body\.mode-practice[^{]*#tb-tools\b/, false],
+    ['context-bar groups are separated by an adjacent-sibling rule', /\.context-bar\s+\.ctx-group\s*\+\s*\.ctx-group[^{]*\{[^}]*border-left:\s*1px/, true],
+    ['...so no separator hangs off the front of the bar', /\.context-bar\s+\.ctx-group:not\(\.ctx-view\)/, false],
+    ['the context bar has its own grid area', /#context-bar\s*\{[^}]*grid-area:\s*ctx/, true],
+    ['.main clears the neck above it', /\.main\s*\{[^}]*margin-top:\s*22px/, true],
+    ['...and Practice takes that clearance back', /body\.mode-practice\s+\.main\s*\{[^}]*margin-top:\s*0/, true],
+    ['progress and the session starter share a row on desktop', /@media \(min-width: 941px\) \{\s*#ph-top-block \{[^}]*grid-template-columns: 340px minmax\(0,1fr\)/, true],
+    ['landscape Practice keeps one column (no empty neck gutter)', /body\.mode-practice \.layout:has\(#board-region:not\(\[hidden\]\)\) \{[^}]*grid-template-areas: "main"/, true],
+    ['drill cards wrap into a grid', /\.practice-list \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(auto-fill, minmax\(250px, 1fr\)\)/, true],
+    ['the card list li is a bare flex cell', /\.practice-list li \{ display: flex; \}/, true],
+    ['...with no box of its own', /\.practice-list li \{[^}]*background/, false],
+    ['the circle grows with its column', /#cof-svg \{ width: 100%/, true],
+    ['...up to a readable cap', /\.cof-wrap \{[^}]*flex: 1 1 340px;[^}]*max-width: 520px/, true],
+    ['the circle reading pane is capped too', /\.cof-side \{[^}]*max-width: 620px/, true],
+    ['a Settings cluster heading takes its own row on a phone', /@media \(max-width: 700px\) \{\s*\.tb-cluster \{[^}]*flex-wrap: wrap;[^}]*\}\s*\.tb-cluster > \.tbc-label \{ flex-basis: 100%; \}/, true],
+  ].forEach(([what, re, want]) => ok('css: ' + what, re.test(html) === want));
 
   // The "no silent catch(e){}" guardrail moved to tools/lint.js: it's a rule about
   // how src/ is written, and the bundle now ships with comments stripped, so the
@@ -671,13 +705,6 @@ if (T) {
     T.exitAllDrills();
     T.setMode('reference');
 
-    /* --- The disclosures are hidden by author rules keyed on body classes, not by the
-       `hidden` attribute; jsdom doesn't apply the cascade, so every assertion above
-       would pass on a stylesheet that shows the setup permanently. Check the rules exist. --- */
-    ok('B2: the setup is hidden by CSS when its body class is off',
-       /body:not\(\.drill-setup-open\)\s*\.drill-setup\s*\{[^}]*display:\s*none/.test(html));
-    ok('B2: the hint is hidden by CSS when its body class is off',
-       /body:not\(\.drill-help-open\)\s*\.drill-hint\s*\{[^}]*display:\s*none/.test(html));
   })();
 
   /* ---- Phase 10/B3: THE SESSION, AND THE SEAM -------------------------------
@@ -1515,11 +1542,6 @@ if (T) {
        fixed under PROGRESSION. The group labels do the separating. */
     ok('drill ctx: no stray vertical rules in the header',
        doc.querySelectorAll('#drill-ctx .divider').length === 0);
-    /* the .hidden property above is necessary but NOT sufficient: jsdom reads the
-       attribute, not the cascade, and #drill-ctx-key is a display:flex .group. What makes
-       it true in a browser is the one global [hidden] rule — pin that. */
-    ok('[hidden] always wins: one global !important rule',
-       /(^|[\s}])\[hidden\]\s*\{\s*display:\s*none\s*!important/m.test(html));
     T.exitEar();
     ok('drill ctx: returning to the home hides the key picker', !keyShown());
 
@@ -1597,13 +1619,6 @@ if (T) {
     ok('A1: and no untimed drill declares it',
        T.DRILLS.filter(d => d.tempo).length === timed.length);
 
-    /* --- the reference transport is a REFERENCE verb: it has no subject in Practice --- */
-    ok('A1: CSS scopes the reference transport out of Practice',
-       /body\.mode-practice\s+#g-play/.test(html) && /body\.mode-practice\s+#g-loop/.test(html)
-       && /body\.mode-practice\s+\.tb-bar\s+\.tb-tempo/.test(html)
-       && /body\.mode-practice\s+#backing-panel/.test(html)
-       && /body\.mode-practice\s+#backing-toggle/.test(html));
-
     /* --- entering Practice stops what the reference transport owns --- */
     T.setMode('reference');
     T.initAudio();
@@ -1642,13 +1657,6 @@ if (T) {
        doc.querySelector('.ctx-display').hidden === true);
     ok('A1: ...and with neither tab\'s view switch',
        doc.getElementById('ctx-view-harmony').hidden && doc.getElementById('ctx-view-scales').hidden);
-    /* No separator hanging off the front of the bar. A1 needed an explicit rule for
-       this (the view groups were still in the bar, just hidden); A2 moved them to the
-       board, so an adjacent-sibling rule covers it — the leading group, whichever it
-       is, has nothing before it to be divided from. */
-    ok('A1: ...and no separator hanging off the front of the bar',
-       /\.context-bar\s+\.ctx-group\s*\+\s*\.ctx-group[^{]*\{[^}]*border-left:\s*1px/.test(html)
-       && !/\.context-bar\s+\.ctx-group:not\(\.ctx-view\)/.test(html));
     T.selectTab('harmony');
     ok('A1: Harmony still gets its own view switch back',
        !doc.getElementById('ctx-view-harmony').hidden && doc.querySelector('.ctx-display').hidden === false);
@@ -1719,10 +1727,6 @@ if (T) {
        && doc.getElementById('board-lens').closest('#board-region') !== null);
     T.selectTab('harmony');
 
-    /* --- Practice is a destination, so the nav must survive there --- */
-    ok('A2: the nav is no longer hidden in Practice (it is how you leave)',
-       !/body\.mode-practice\s+#tabs/.test(html) && !/body\.mode-practice\s+#mainnav/.test(html));
-
     /* --- the number keys are the nav, in nav order --- */
     const press = k => doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: k, bubbles: true }));
     press('4');
@@ -1751,8 +1755,6 @@ if (T) {
     /* --- the bands above the neck --- */
     ok('A3: the context bar is its own grid item, not part of .main',
        !!doc.querySelector('.layout > #context-bar') && !doc.querySelector('.main #context-bar'));
-    ok('A3: ...with an area of its own to be placed into',
-       /#context-bar\s*\{[^}]*grid-area:\s*ctx/.test(html));
     /* Exactly one band stands between the header and the neck now. Counting the
        .layout children that precede #board-region is the durable form of "the neck
        leads": adding another band above it fails here, whatever it is called. */
@@ -1786,9 +1788,6 @@ if (T) {
        !!desktop && desktop[rowOf(desktop, 'board')].every(c => c === 'board'));
     ok('A3: the suggester rides beside the controls, not beside the neck',
        !!desktop && rowOf(desktop, 'aside') === rowOf(desktop, 'main'));
-    ok('A3: .main clears the neck above it, and Practice takes that clearance back',
-       /\.main\s*\{[^}]*margin-top:\s*22px/.test(html)
-       && /body\.mode-practice\s+\.main\s*\{[^}]*margin-top:\s*0/.test(html));
     ok('A3: Practice still collapses to the single-area shell',
        maps.some(m => m.length === 1 && m[0].join() === 'main'));
 
@@ -1808,35 +1807,8 @@ if (T) {
        && !drills.querySelector('.practice-progress-card'));
     ok('B4: ...and the whole top block comes BEFORE the picker in source order',
        [...home.children].indexOf(doc.getElementById('ph-top-block')) < [...home.children].indexOf(drills));
-    ok('B4: progress and the session starter share a row above the shell breakpoint',
-       /@media \(min-width: 941px\) \{\s*#ph-top-block \{[^}]*grid-template-columns: 340px minmax\(0,1fr\)/.test(html));
-    /* Found in B4's own orientation pass. applyBoardRegion() sets #board-region's `hidden`
-       from the TAB, not the mode, so in Practice the neck is hidden by a body class and the
-       element is NOT [hidden] — which left the landscape-phone `:has(#board-region:not(
-       [hidden]))` two-column map matching there, with the right 46% permanently empty. An id
-       inside :has() outranks `body.mode-practice .layout`, so the collapse has to be restated
-       at that specificity. jsdom resolves no cascade, so the rule is pinned in the CSS. */
-    ok('B4: landscape Practice keeps one column, with no empty neck gutter',
-       /body\.mode-practice \.layout:has\(#board-region:not\(\[hidden\]\)\) \{[^}]*grid-template-areas: "main"/.test(html));
-    // ...and it still disappears when a drill takes over: the global [hidden] rule
-    ok('A3: drill cards wrap into a grid instead of one card per row',
-       /\.practice-list \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(auto-fill, minmax\(250px, 1fr\)\)/.test(html));
-    /* The list began as the Phase-3a "coming soon" text stub; when real .drill-card
-       buttons moved in, the li kept its own background + border, so every card
-       rendered as a bordered box inside a bordered box. */
-    ok('A3: the li is a bare cell — the card is the only box',
-       /\.practice-list li \{ display: flex; \}/.test(html)
-       && !/\.practice-list li \{[^}]*background/.test(html));
-    ok('A3: all ten cards survived the reflow',
+    ok('A3: every card survived the reflow',
        home.querySelectorAll('.drill-card').length === T.drillTracks().length);
-
-    /* --- Circle: the circle IS the content, so it grows with the viewport --- */
-    ok('A3: the circle is no longer pinned to 360px in a 1193px panel',
-       /#cof-svg \{ width: 100%/.test(html) && !/#cof-svg \{[^}]*width: 360px/.test(html));
-    ok('A3: it grows with its column, up to a readable cap',
-       /\.cof-wrap \{[^}]*flex: 1 1 340px;[^}]*max-width: 520px/.test(html));
-    ok('A3: the reading pane is capped too, so no dead strip trails it',
-       /\.cof-side \{[^}]*max-width: 620px/.test(html));
   })();
 
   /* ---- Phase 10 / A4: tools, preferences, and the cold start ---- */
@@ -1899,19 +1871,6 @@ if (T) {
     ok('A4: the set-once controls sit together',
        ['tb-vol', 'tb-lefty', 'tb-cbpalette', 'tb-shapes']
          .every(id => doc.getElementById(id).closest('.tb-cluster') === clusters[2]));
-    /* A cluster heading is `nowrap` + `flex-shrink: 0` — it cannot give way — so on a
-       phone a long one pushes the first control group past the viewport edge and the
-       page scrolls sideways. A4's longer headings found that the label length had been
-       load-bearing all along. Its own row makes any label in any language safe. */
-    ok('A4: a cluster heading takes its own row on a phone, so its length cannot overflow',
-       /@media \(max-width: 700px\) \{\s*\.tb-cluster \{[^}]*flex-wrap: wrap;[^}]*\}\s*\.tb-cluster > \.tbc-label \{ flex-basis: 100%; \}/.test(html));
-    /* Reachable from Practice — a player being told their timing is off has to be able
-       to find the calibration that makes that claim mean anything, without leaving. */
-    ok('A4: nothing hides Settings or Tools in Practice',
-       !/body\.mode-practice[^{]*#toolbar\b/.test(html)
-       && !/body\.mode-practice[^{]*#tb-toggle\b/.test(html)
-       && !/body\.mode-practice[^{]*#tb-tools\b/.test(html));
-
     /* --- the mic funnel: an unmeasured latency is not a latency of zero --- */
     T.setCalKnown(false);
     ok('A4: latency starts UNKNOWN, which is not the same as zero',

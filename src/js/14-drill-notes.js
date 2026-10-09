@@ -1,19 +1,8 @@
 /* ===================== Drill: fretboard note-naming =====================
-   The first Practice drill and the first WRITER to the learner model (13-learner.js):
-   the app names a note, you tap every instance of it on the neck. Reuses the shared
-   board paint (renderBoard/renderNums, 07) on the drill's OWN board element inside the
-   Practice panel, the cue bus (playCue, 05) for correct/wrong feedback, and pluck()
-   so a correct tap also sounds the note.
-
-   Honest framing (roadmap): tap input → scored on ACCURACY (clean prompts), not on
-   timing precision — touch latency corrupts timing, so the elapsed time is shown as
-   pace info, never as the score. Latency calibration is deliberately NOT here: this
-   drill has no beat-locked scoring window, so it needs no offset; calibration lands
-   with the first windowed (rhythm/timing) drill that actually consumes it.
-
-   A session is DRILL_LEN note prompts, SRS-weighted (due notes first — what you've
-   missed resurfaces), each recorded to the learner; the session score (clean-prompt
-   accuracy) is pushed to the sessions ring buffer. */
+   The app names a note; you tap every instance of it on the neck. Scored on accuracy
+   (clean prompts), never timing — touch latency corrupts timing, so the elapsed time
+   is pace info only. A session is DRILL_LEN prompts, due notes first, each recorded
+   as a learner item. */
 
 const DRILL_LEN = 6;
 let drill = null;
@@ -22,9 +11,7 @@ let drill = null;
 
 function drillShuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=a[i]; a[i]=a[j]; a[j]=tmp; } return a; }
 
-// the session's note queue: due naturals first (SRS resurfacing), then the rest,
-// each block shuffled, capped at DRILL_LEN. On a fresh model every due is 0 → all
-// "due" → simply shuffled naturals.
+// the note queue: due naturals first, then the rest, each shuffled, capped at DRILL_LEN
 function buildQueue(){
   const now=Date.now(), naturals=NAT.map(n=>NOTES.indexOf(n));
   const due=naturals.filter(pc=>((learner.items['note:'+NOTES[pc]]||{due:0}).due)<=now);
@@ -32,8 +19,7 @@ function buildQueue(){
   return drillShuffle(due).concat(drillShuffle(rest)).slice(0, DRILL_LEN);
 }
 
-// every (string,fret) position of pitch-class `pc` in the current fret window —
-// mirrors renderBoard's cell set exactly (open string when lo<=1, then lo..hi).
+// every (string,fret) position of `pc` in the fret window — the same cell set as renderBoard
 function drillTargetsFor(pc){
   const set=new Set(), lo=FRET_LO(), hi=FRET_HI(), showOpen=lo<=1;
   for(let si=0; si<6; si++){
@@ -49,7 +35,7 @@ function startDrill(){
   const home=document.getElementById('practice-home'), area=document.getElementById('drill-area'),
         act=document.getElementById('drill-active'), sum=document.getElementById('drill-summary');
   if(home) home.hidden=true; if(area) area.hidden=false; if(act) act.hidden=false; if(sum) sum.hidden=true;
-  drillShellEnter();          // B2
+  drillShellEnter();
   renderDrillBoard();
   nextPrompt();
 }
@@ -70,9 +56,8 @@ function nextPrompt(){
   setPromptUI();
 }
 
-// one tap at (string,fret). Correct unfound target → light + sound; once all are
-// found the prompt is scored (clean = no wrong taps) and recorded, then advances.
-// A tap on the wrong note → miss flash + buzz; a re-tap of a found target → ignored.
+// one tap: an unfound target lights and sounds; when all are found the prompt is scored
+// (clean = no wrong taps) and the next one comes. A wrong note buzzes; a re-tap is ignored.
 function drillAnswer(si, f){
   if(!drill || drill.finished) return;
   const key=si+':'+f, pc=(OPEN_MIDI[si]+f)%12;
@@ -103,7 +88,7 @@ function finishDrill(){
   renderDrillSummary(elapsed, acc);
 }
 
-/* ---- DOM paint (no-ops cleanly when the panel isn't in the DOM, e.g. some tests) ---- */
+/* ---- DOM paint ---- */
 function renderDrillBoard(){
   const el=document.getElementById('drill-board'); if(!el) return;
   renderBoard(el, (pc,si,f)=>{
@@ -143,19 +128,15 @@ function renderDrillSummary(elapsed, acc){
   const dn=document.getElementById('drill-done');  if(dn){ dn.textContent=t('drill_done');  dn.onclick=exitDrill; }
 }
 
-/* board tap/keys + quit — wired once at load (the markup is parsed before this
-   script runs; guarded so a missing panel never throws). */
+/* board taps and keys, wired once at load */
 registerDrill({ id:'notes', area:'drill-area',
                 isActive:()=>!!drill, exit:exitDrill,
-                // one track with BOTH result kinds (B1): per-note SRS items, and a
-                // per-round accuracy that trends
+                // one track with both result kinds: per-note SRS items and a per-round accuracy
                 tracks:[{ id:'note', kind:'recall', items:'note', sess:'notes', label:'drill_notes',
                           better:'high', unit:'pct', scored:'acc', start:startDrill }] });
 
 (function initDrill(){
   const b=document.getElementById('drill-board'); if(!b) return;
-  // the card that used to be wired here goes through startTrack() now (B2), like every
-  // other door into a drill — see the delegated listener in 15-wiring-init.js
   const fire=d=>{ if(d) drillAnswer(parseInt(d.dataset.si,10), parseInt(d.dataset.f,10)); };
   b.addEventListener('click', e=>fire(e.target.closest('.dot.quiz')));
   b.addEventListener('keydown', e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const d=e.target.closest('.dot.quiz'); if(!d) return; e.preventDefault(); fire(d); });

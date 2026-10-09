@@ -4,19 +4,15 @@ const ROOTS = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
 const FLAT_ROOTS = {'Eb':3,'Ab':8,'Bb':10};
 const FLAT_MAP = {1:'Db',3:'Eb',6:'Gb',8:'Ab',10:'Bb'};
 const ENHARM = {'C#':'Db','D#':'Eb','F#':'Gb','G#':'Ab','A#':'Bb'};
-/* tuning state is mutable (changed by the tuning selector). Strings ordered
-   high -> low to match the on-screen board (top row = high string). */
+/* tuning state is mutable. Strings run high → low, like the board's rows. */
 let OPEN = [4,11,7,2,9,4];
 let OPEN_MIDI = [64,59,55,50,45,40];
 let SNAMES = ['e','B','G','D','A','E'];
 const FRETS = 22;
 const DOTS = [3,5,7,9,12,15,17,19,21];
 
-/* Alternate tunings, defined by MIDI note per string (high -> low). The last
-   entry is the user-editable Custom tuning: it carries no fixed `midi`,
-   reading the mutable `customTuning` below instead, so any per-string tuning works
-   without a new preset. The board/highlight math is already tuning-driven, so a
-   custom MIDI per string just flows through applyTuning like any preset. */
+/* Tunings as MIDI per string (high → low). The last entry, Custom, reads the mutable
+   `customTuning` instead, so any per-string tuning works without a new preset. */
 const TUNINGS = [
   {id:'standard', en:'Standard (E A D G B e)', uk:'Стандартний (E A D G B e)', midi:[64,59,55,50,45,40]},
   {id:'dropd',    en:'Drop D (D A D G B e)',   uk:'Drop D (D A D G B e)',      midi:[64,59,55,50,45,38]},
@@ -24,8 +20,7 @@ const TUNINGS = [
   {id:'openg',    en:'Open G (D G D G B d)',   uk:'Open G (D G D G B d)',      midi:[62,59,55,50,43,38]},
   {id:'custom',   en:'Custom',                 uk:'Власний',                   custom:true},
 ];
-/* the live custom tuning (high -> low MIDI), used when the Custom entry is selected.
-   Seeded from / clamped against the standard tuning; persisted via saveState. */
+/* the live custom tuning (high → low MIDI), persisted */
 let customTuning = [64,59,55,50,45,40];
 const TUNE_LO = 34, TUNE_HI = 69;   // editor range: Bb1 … A4 (covers every common guitar tuning)
 let tuningIdx = 0, lefty = false;
@@ -48,23 +43,18 @@ let fretRangeIdx = 0;
 function FRET_LO(){ return FRET_RANGES[fretRangeIdx].lo; }
 function FRET_HI(){ return FRET_RANGES[fretRangeIdx].hi; }
 
-/* capo: a movable nut at fret `capo` (0 = none). A capo doesn't move
-   pitches — it moves your hand — so the note at every physical fret is unchanged
-   and the highlighting math stays untouched. The board only dims the frets behind
-   the capo and draws the capo bar, so a shape reads as "playable from here up". */
+/* capo: a movable nut at fret `capo` (0 = none). It moves your hand, not the pitches,
+   so the note at every fret is unchanged; the board only dims the frets behind it. */
 let capo = 0;
 
 /* tempo (BPM) drives all playback timing + the metronome. */
 let tempo = 90;
 function beat(){ return 60/tempo; }
 
-/* time signature / meter: beats per bar + the note value that gets the
-   pulse. 4/4 is the default and reproduces the old hard-wired bar math EXACTLY (the
-   backing band, sequencer and metronome were all `beat()*4` / `count%4`). A pulse is
-   a note of value `unit`, so a quarter (unit 4) = beat(), an eighth (unit 8) = beat()/2.
-   `groups` splits the bar into accent groups — a strong bar-start + a medium group-
-   start — driving the metronome accent + the drum feel; `kick`/`snare` are drum hits
-   in PULSE indices so each meter grooves sensibly (4/4 keeps kick 1&3 / snare 2&4). */
+/* time signature: beats per bar + the note value that gets the pulse (a pulse of
+   unit 4 = beat(), unit 8 = beat()/2). `groups` start accent groups (metronome + drum
+   feel); `kick`/`snare` are drum hits in pulse indices. 4/4 reproduces the plain
+   beat()*4 bar exactly. */
 const METERS = [
   { id:'2/4',  beats:2,  unit:4, groups:[2],       kick:[0],   snare:[1] },
   { id:'3/4',  beats:3,  unit:4, groups:[3],       kick:[0],   snare:[1,2] },
@@ -76,47 +66,38 @@ let meterIdx = 2;                                          // default 4/4
 function curMeter(){ return METERS[meterIdx]; }
 function barBeats(){ return curMeter().beats; }            // pulses per bar
 function pulseSec(){ return beat()*(4/curMeter().unit); }  // one pulse (unit-note) duration
-function barSec(){ return pulseSec()*curMeter().beats; }   // whole bar (== beat()*4 for 4/4)
+function barSec(){ return pulseSec()*curMeter().beats; }   // whole bar
 function midPulseSec(){ return Math.floor(barBeats()/2)*pulseSec(); }   // the mid-bar "push" (beat 3 in 4/4)
 /* pulse indices that start an accent group (0, 3 for 6/8 …) → metronome + beat accents */
 function meterGroupStarts(){ const g=curMeter().groups, s=new Set(); let a=0; for(const n of g){ s.add(a); a+=n; } return s; }
 function setMeter(i){ if(Number.isInteger(i) && i>=0 && i<METERS.length) meterIdx=i; }
 
-/* collapsible toolbar, default closed everywhere. It used to open itself on any
-   viewport over 700x500, which put eleven setup controls (tuning, frets, capo,
-   meter, a11y, share…) between a first-time desktop visitor and the neck — exactly
-   the console the transport bar's disclosure toggles exist to avoid. They're setup,
-   not actions: one tap away is the right distance. The choice is persisted, so
-   anyone who wants it open keeps it open. */
+/* Settings start closed: they are setup, not actions, and one tap away is the right
+   distance. The choice is persisted. */
 let toolbarOpen = false;
-/* the backing band (metronome + bass/drums) lives in its own collapsible panel,
-   default closed — secondary jam-along tools, kept out of the lean transport bar */
+/* the backing band (metronome + bass/drums) has its own collapsible panel, closed */
 let backingOpen = false;
 /* the chord-shape voicing cards (right rail) are collapsible + persisted, default open */
 let shapesOpen = true;
-/* accessibility prefs: a colour-blind-safe (Okabe–Ito) palette
-   and distinct per-function dot shapes, so note roles (root/3rd/5th/7th/ext) read
-   without relying on hue. Off by default; applied as body classes by applyA11y()
-   and persisted via saveState()/loadState(). */
+/* accessibility: a colour-blind-safe (Okabe–Ito) palette and per-function dot shapes,
+   so note roles read without relying on hue. Body classes via applyA11y(); persisted. */
 let cbPalette = false, fnShapes = false;
-/* first-run onboarding: a one-time welcome card shown only to brand-new visitors
-   (no saved state); dismissing it sets welcomeSeen so it never returns. */
+/* first-run welcome, shown only on a visit with no saved state */
 let welcomeSeen = false;
 /* the chord-reference sidebar is only shown on chord-oriented tabs */
 const ASIDE_TABS = ['harmony'];
 
 function mod(n,m){ return ((n%m)+m)%m; }
-/* dev-only diagnostic: surfaces errors that were previously swallowed silently,
-   without breaking playback for the user. No effect on the shipped behaviour. */
+/* dev-only: surfaces errors that would otherwise be swallowed, without breaking playback */
 function devWarn(){ try{ if(typeof console!=='undefined' && console.warn) console.warn.apply(console, ['[GuitarStudio]'].concat([].slice.call(arguments))); }catch(_){} }
-/* Note labels stay ASCII in data — saves and session ids all hold 'Eb' /
-   'C#' — and are spelled with ♭/♯ only where they reach the screen, here. */
+/* Note labels stay ASCII in data ('Eb', 'C#' — saves and session ids) and get ♭/♯
+   only where they reach the screen, here. */
 function noteTxt(lbl){ return String(lbl).replace('#','♯').replace(/^([A-G])b/,'$1♭'); }
 function noteName(pc, flat){ return noteTxt((flat && FLAT_MAP[pc]) ? FLAT_MAP[pc] : NOTES[pc]); }
 function useFlatFor(label){ return /^[A-G][b♭]/.test(label) || label === 'F'; }
 
-/* note spelling by scale degree: gives correct letter+accidental (Cm -> Eb, not D#),
-   distinguishes ♯4 vs ♭5, and falls back to a simple enharmonic name to avoid double accidentals */
+/* spelling by scale degree: the right letter + accidental (Cm → Eb, not D#), ♯4 vs ♭5,
+   and a plain enharmonic name instead of a double accidental */
 const LET = ['C','D','E','F','G','A','B'];
 const LET_PC = [0,2,4,5,7,9,11];
 const ACC = {'-1':'♭','0':'','1':'♯'};
@@ -136,13 +117,10 @@ function spellNote(rootLbl, pc, degree){
   return LET[idx]+ACC[acc];
 }
 
-/* One diatonic source (spine, 1a). The seven stacked-thirds triads of a 7-note
-   scale `sc` (semitone offsets) rooted at pitch-class `rootPc`, as a list of
-   { rootPc, deg, suf, iv }: the chord-quality suffix ('', m, dim, aug, or '?'
-   for a non-tertian triad) and its interval set — QUALITY only. Spelling stays
-   the caller's job (the scales view spells by degree, the circle by key
-   signature). Collapses the formerly duplicated logic in diatonic() and
-   buildDia(), which disagreed on the aug / '?' fallback. */
+/* The seven stacked-thirds triads of a 7-note scale `sc` rooted at `rootPc`, as
+   { rootPc, deg, suf, iv }: suffix ('', m, dim, aug, or '?' for a non-tertian triad)
+   and intervals — quality only; spelling is the caller's (Scales by degree, the circle
+   by key signature). The one diatonic source for both views. */
 function diatonicTriads(rootPc, sc){
   const res=[];
   for(let d=0; d<7; d++){

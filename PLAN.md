@@ -111,23 +111,18 @@ later step gets smaller after it.
       progress, a failed save shown to the user once.
 - [x] **Cleanup** — one global `[hidden]` rule, dead `typeof` guards removed, copy and note-glyph
       fixes, slimmer `CLAUDE.md`, HTML comments stripped from the bundle.
-
 - [x] **Cut** (v2.17.0) — Rhythm ear, Chord-tone targeting and Call & response removed (their
       history stays in the store, tested against a captured save); Over-the-changes is Comp only;
       Arpeggio's button is Jam; one tuner (mic + "Tune by ear"; Settings ▸ Tools keeps a single
       Tuner button); Triads became a toggle on Chord tones (old Triads-view saves migrate);
       Identify and share links cut (old links open the app, hash cleared). Practice has 7 cards;
       bundle 410 → 380 KB (109 → 102 KB gzipped). The Scales seam now opens the Timing drill.
-
-### 2 — Cut the project's overhead · S · no behaviour change
-- [ ] **Changelog:** at most 3 bullets per release, one sentence each, EN + UK. Shorten the
-      entries still sliced into the bundle; `CHANGELOG.md` keeps the old ones as history.
-- [ ] **Comments say why, not what happened.** Delete the 118 history lines; trim the essays in
-      `13-drill-registry.js` (73 % comments), `13-mic.js`, `13-scored.js`,
-      `14-mic-tuner.js`, `14-onset.js` and the template. Target ~15 % of source.
-- [ ] **Smoke suite:** drop the checks for code removed in step 1; collapse repeated regex
-      pins on CSS into one table-driven check.
-- [ ] Update the `release` skill: changelog length limit as a rule.
+- [x] **Cut the project's overhead** — the shipped changelog entries are 3 one-sentence bullets
+      each (the release skill and the smoke suite enforce it); comments rewritten to say why,
+      with the history narration gone — 189 → 97 KB, 32 % → 20 % of source (stopped short of
+      15 % rather than delete the why-comments that remain); the smoke suite's CSS pins are one
+      table. The bundle is identical apart from the changelog and whitespace;
+      it shrank 380 → 368 KB (102 → 97 KB gzipped).
 
 ### 3 — Quick UI fixes · S · low risk
 - [ ] **Neck auto-scroll:** when a board has an active window (scale position, arpeggio box,

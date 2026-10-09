@@ -1,29 +1,24 @@
 /* ===================== WIRING ===================== */
 /* ---- shared root picker, display mode, sub-view toggle, global play ---- */
-/* Each render fn paints panel content for its mode and the ONE shared board only
-   when its mode is active (isBoardMode), so a cross-view pass paints the board once. */
+/* Each render fn paints its panel, and the ONE shared board only when its view is
+   active (isBoardMode), so a cross-view pass paints the board once. */
 function renderContextViews(){ renderChords(); renderArp(); renderScales(); renderNotes(); markScrollables(); }
 function renderActiveContext(){
   if(currentTab==='harmony'){ (hView==='arp'?renderArp:renderChords)(); }
   else if(currentTab==='scales'){ scView==='notes'?renderNotes():renderScales(); }
   markScrollables();
 }
-/* The whole Practice home, painted from the model in one pass (3b, rewritten B3/B4).
-   Re-run on a mode switch and on a language change, which is why the session card and
-   the badges hang off it: everything on this screen is derived — the progress narrative
-   from the learner model, the badges and the session's queue from the registry — so
-   there is one repaint, not four things to remember to call. */
+/* The Practice home, painted from the model in one pass: progress from the learner
+   model, badges and the session queue from the registry. Re-run on a mode switch and
+   a language change. */
 function renderPractice(){
-  renderProgressInto('practice-progress');                                  // 13-learner.js
-  renderSessionCard();            // B3
+  renderProgressInto('practice-progress');
+  renderSessionCard();
   applySessionViews();
-  paintDrillBadges();                                                       // B4
+  paintDrillBadges();
 }
-/* The practice cards' 🎤 Scored / Scored / Coach badge, from the registry's own `scored`
-   (trackBadge). Painted rather than written into the markup for the reason B4 exists:
-   five of the ten subtitles used to end "· coach" and three of them had been false since
-   F1 shipped mic scoring underneath them. A card cannot drift from its drill if it never
-   states the drill's tier itself. */
+/* The practice cards' tier badge comes from the registry (trackBadge), never from
+   markup, so a card can't claim a tier its drill doesn't have. */
 function paintDrillBadges(){
   document.querySelectorAll('#practice-home .drill-card[data-track]').forEach(card=>{
     const slot=card.querySelector('.dc-badge'); if(!slot) return;
@@ -31,25 +26,22 @@ function paintDrillBadges(){
     if(!tr){ slot.textContent=''; return; }
     const key=trackBadge(tr);
     slot.textContent=t(key);
-    // spelled out rather than derived from the key: a class assembled at runtime is
-    // invisible to the linter's dead-CSS check, which is the whole point of having one
+    // spelled out, not assembled: a runtime-built class is invisible to the lint's dead-CSS check
     slot.className='dc-badge '+(key==='badge_mic'?'b-mic':key==='badge_acc'?'b-acc':'b-coach');
   });
 }
 
-/* ---- one musical context (spine #1, 1a) ----
-   gRoot/gRootLbl (key center) and scIdx (mode = selected scale) are the single
-   source of truth shared by Harmony, Scales, Circle and Notes. setKey() is the
-   ONE place they change, so the views never drift: pick a key once and every
-   view follows. Pass `mode` to also move the scale (e.g. a circle click); omit
-   it to keep the current mode (e.g. the root picker). */
+/* ---- one musical context ----
+   gRoot/gRootLbl (key center) and scIdx (mode = selected scale) are shared by Harmony,
+   Scales, Circle and Notes, and setKey() is the ONE place they change, so the views
+   never drift. Pass `mode` to also move the scale (a circle click); omit it to keep it. */
 function setKey(pc, lbl, mode){
   gRoot=pc; gRootLbl=lbl;
   if(Number.isInteger(mode) && SCALES[mode]) scIdx=mode;
   chVoicing=0; scOverlay=null;
-  ntRoot=lbl;                                   // Notes reflects the shared root (#4)
+  ntRoot=lbl;                                   // Notes follows the shared root
   activateRoot(document.getElementById('g-roots'), gRoot);
-  // the drills' shared key strip (13-drill-registry.js) tracks the same context root
+  // the drill header's key picker tracks the same root
   { const dk=document.getElementById('drill-ctx-key'); if(dk) activateRoot(dk, gRoot); }
   buildChQuals(); buildArpQuals(); buildArpPos(); buildScSelect(); buildScPos();
   renderContextViews(); renderCircle(); renderNotes();
@@ -80,15 +72,14 @@ function setHView(v){ hView = v==='arp' ? 'arp' : 'chords'; v=hView;
 document.getElementById('hv-chords').onclick=()=>setHView('chords');
 document.getElementById('hv-arp').onclick=()=>setHView('arp');
 
-/* Scales-tab sub-view (1b): Scale | Notes — mirrors the Harmony Chords/Triads
-   toggle. The folded-in Notes mode reuses the shared board + the context root. */
+/* Scales sub-view: Scale | Notes. Notes reuses the shared board and root. */
 function setScView(v){ scView=v;
   document.getElementById('sub-scale').hidden = v!=='scale';
   document.getElementById('sub-notes').hidden = v!=='notes';
   ['scale','notes'].forEach(k=>{ const b=document.getElementById('sv-'+k); b.classList.toggle('active', k===v); b.setAttribute('aria-pressed', k===v?'true':'false'); });
   document.getElementById('scales-h').textContent = t(v==='notes'?'nt_h':'sc_h');
   document.getElementById('scales-p').textContent = t(v==='notes'?'nt_p':'sc_p');
-  applyContextBar();   // toggle the (dead-in-Notes) display switch with the sub-view (#4)
+  applyContextBar();   // the Names/Intervals switch does nothing in Notes
   v==='notes'?renderNotes():renderScales();
   markScrollables(); updateGlobalPlay(); saveState();
 }
@@ -96,38 +87,28 @@ document.getElementById('sv-scale').onclick=()=>setScView('scale');
 document.getElementById('sv-notes').onclick=()=>setScView('notes');
 
 function applyContextBar(){
-  // The bar shows wherever any of its groups still has a job. It used
-  // to be hidden outright on Circle, which took the ROOT PICKER with it: the app's
-  // single most important piece of state (spine #1) simply had no control on one of
-  // its three reference tabs, and you set the key by knowing to click the wheel. The
-  // groups already hide themselves individually, so the bar only has to stand down
-  // when they all have.
-  // A2 moved the view switch out of here entirely — see applyBoardRegion.
+  // The bar shows wherever one of its groups has a job (the root picker matters on
+  // Circle too); it stands down only when all of them have.
   const key = currentTab==='harmony' || currentTab==='scales' || currentTab==='circle';
   document.getElementById('context-bar').hidden = !key;
-  // the Names/Intervals display toggle does nothing in the Notes reference (it always
-  // shows note names) and there are no fretboard dots to label on Circle, so hide it
-  // in both (#4) to keep the bar honest
+  // Names/Intervals does nothing in Notes (always names) or on Circle (no dots)
   const cd=document.querySelector('.ctx-display');
   if(cd) cd.hidden = currentTab==='circle' || (currentTab==='scales' && scView==='notes');
 }
 function applyBoardRegion(){
   const show = (currentTab==='harmony' || currentTab==='scales');
   document.getElementById('board-region').hidden = !show;
-  const bm=document.getElementById('board-meta'); if(bm) bm.hidden = !show;   // legend+hint follow the board
-  // A2: the view switch is a lens ON the board, so it lives in #board-region and only
-  // the active subject's group shows. It hides with the board for free — one fewer
-  // thing to remember on a tab that has no neck.
+  const bm=document.getElementById('board-meta'); if(bm) bm.hidden = !show;   // legend + hint follow the board
+  // the view switch is a lens on the board: only the active subject's group shows
   const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
   const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
 }
-/* voicing cards + sequencer (now below the board) belong only to Harmony's
-   chord-tones view; hide them everywhere else so the board stays the last thing.
-   With triads on, the triad cards in the panel stand in for the chord shapes. */
+/* voicing cards + sequencer belong only to Harmony's chord-tones view. With triads
+   on, the triad cards in the panel stand in for the chord shapes. */
 function applyHarmonyExtras(){
   const on = currentTab==='harmony' && hView==='chords';
-  const el=document.getElementById('harmony-extras'); if(el) el.hidden = !on;     // progression sequencer (full-width row)
-  const sc=document.getElementById('shapes-card'); if(sc) sc.hidden = !on || triadsOn();   // chord-shape cards (full-width row below the neck)
+  const el=document.getElementById('harmony-extras'); if(el) el.hidden = !on;
+  const sc=document.getElementById('shapes-card'); if(sc) sc.hidden = !on || triadsOn();
   applyShapesPanel();
 }
 function globalPlay(){
@@ -138,7 +119,7 @@ function globalPlay(){
     else { const v=currentChordVoicing(); animArpMidi(boardEl, v.midis); }
   } else if(currentTab==='scales' && scView==='scale'){ const s=SCALES[scIdx]; animRun(boardEl, 48+gRoot, s.iv.concat([12])); }
   else if(currentTab==='circle'){
-    const cofMinor=ctxCofMinor(), pc=gRoot, b=48+pc, iv=cofMinor?[0,3,7]:[0,4,7], bt=0.5;  // fixed cadence pace, independent of practice tempo
+    const cofMinor=ctxCofMinor(), pc=gRoot, b=48+pc, iv=cofMinor?[0,3,7]:[0,4,7], bt=0.5;  // fixed cadence pace, independent of the tempo
     [0,5,7,12].forEach((off,i)=>{ const base=b+off; iv.forEach((x,j)=>pluck(base+x, i*bt + j*0.018, Math.max(0.9, bt*1.4))); });
   }
 }
@@ -154,8 +135,8 @@ function updateGlobalPlay(){
   }
   const lp=document.getElementById('g-loop');
   if(lp){
-    // Loops the selected chord voicing, or the shown triad with triads on, as a
-    // backing. It persists across tabs; the transport chip is the Stop.
+    // Loops the selected voicing (or the shown triad) as a backing; it persists
+    // across tabs, and the transport chip is the Stop.
     lp.hidden = !(currentTab==='harmony' && hView==='chords');
     lp.classList.toggle('active', !!loopClock);
     lp.setAttribute('aria-pressed', loopClock?'true':'false');
@@ -181,19 +162,17 @@ document.getElementById('seq-strip').addEventListener('click',e=>{
   const chip=e.target.closest('.seq-chip'); if(chip){ const st=seq[+chip.dataset.i]; if(st) setChord(st.pc, st.lbl, st.qi); }
 });
 renderSeq(); setSeqTransport();
-// one shared board, wired once (1b): a dot click sounds that string, Enter/Space plays focused.
+// the shared board: a dot click sounds that string, Enter/Space plays the focused one
 wirePlay(document.getElementById('board'));
-/* the suggester's scale chips are the reference → practice seam (spine #2):
-   jump to that scale, on the chord's root, in the Scales tab. */
+/* the suggester's scale chips jump to that scale, on the chord's root, in Scales */
 document.getElementById('suggest-body').addEventListener('click', e=>{
   const b=e.target.closest('[data-scale]'); if(!b) return;
   const ch=currentHarmonyChord(); if(!ch) return;
   setKey(ch.rootPc, ROOTS[ch.rootPc], +b.dataset.scale);
   setScView('scale'); selectTab('scales');
 });
-/* chord cards: a dot click sounds that string; clicking elsewhere on a card
-   selects that voicing (so Listen/Loop use it). Keyboard note-play stays on the
-   fretboard, which is the fully focusable surface. */
+/* chord cards: a dot click sounds that string; clicking elsewhere on a card selects
+   that voicing (so Listen/Loop use it). Keyboard note-play stays on the fretboard. */
 document.getElementById('ch-diagram').addEventListener('click',e=>{
   const dot=e.target.closest('.cd-dot');
   if(dot && dot.dataset.midi!=null){ e.stopPropagation(); pluck(parseInt(dot.dataset.midi)); return; }
@@ -201,13 +180,11 @@ document.getElementById('ch-diagram').addEventListener('click',e=>{
   chVoicing=+card.dataset.v; renderChordDiagram(); saveState();
 });
 
-/* "More / Fewer shapes": expand the collapsed shape library in place */
 document.getElementById('cd-more').addEventListener('click',()=>{
   chShapesExpanded=!chShapesExpanded; renderChordDiagram();
 });
 
-/* triad cards: a dot click sounds that string. Inversion/string-set buttons are
-   the selector here, so cards aren't separately selectable. */
+/* triad cards: a dot click sounds that string (set/inversion buttons select) */
 document.getElementById('tr-diagram').addEventListener('click',e=>{
   const dot=e.target.closest('.cd-dot');
   if(dot && dot.dataset.midi!=null){ pluck(parseInt(dot.dataset.midi)); }
@@ -220,10 +197,8 @@ document.getElementById('sc-diatonic').addEventListener('click',e=>{
   scOverlay = (scOverlay && scOverlay.tag===c.tag) ? null : {rootPc:c.rootPc, iv:c.iv, tag:c.tag};
   renderScales(); saveState();
 });
-/* reverse seam (Scales → Harmony, mirrors the suggester's Harmony → Scales jump,
-   spine #2): open the overlaid diatonic chord in Harmony's chord-tones view, so
-   the diatonic row is no longer a dead end — you can drill from "the V chord of
-   this key" straight into its voicings. */
+/* Scales → Harmony: open the overlaid diatonic chord in Chord tones, so "the V chord
+   of this key" leads straight to its voicings. */
 document.getElementById('sc-info').addEventListener('click', e=>{
   if(!e.target.closest('.sc-open-harmony') || !scOverlay) return;
   const pc=scOverlay.rootPc;
@@ -231,8 +206,7 @@ document.getElementById('sc-info').addEventListener('click', e=>{
   setHView('chords'); selectTab('harmony');
 });
 
-/* a circle node picks the key: set the context root + a canonical mode
-   (major → Ionian, minor → Aeolian). The wheel re-derives its highlight. */
+/* a circle node picks the key: major → Ionian, minor → Aeolian */
 function selectCircleNode(g){
   const i=+g.dataset.i, minor=(g.dataset.type==='min'), pc=minor?COF[i].minPc:COF[i].majPc;
   setKey(pc, pcToRootLabel(pc), minor?5:0);
@@ -244,16 +218,11 @@ document.getElementById('cof-svg').addEventListener('keydown',e=>{
   if(e.key!=='Enter'&&e.key!==' ') return;
   const g=e.target.closest('.cof-node'); if(g){ selectCircleNode(g); e.preventDefault(); }
 });
-// the circle already reflects the context; "open in scales" is now navigation.
 document.getElementById('cof-open').onclick=function(){ selectTab('scales'); };
-/* Circle → Harmony seam: open the current key's tonic chord (major or minor,
-   from the wheel's ring) in Harmony's chord-tones view — the harmonic peer of
-   "open in scales". */
+/* Circle → Harmony: open the key's tonic chord (major or minor, from the ring) */
 { const ch=document.getElementById('cof-harmony'); if(ch) ch.onclick=function(){ setChord(gRoot, gRootLbl, ctxCofMinor()?1:0); setHView('chords'); selectTab('harmony'); }; }
 
-/* Notes view (#4): a single "Naturals only" toggle. The note to highlight is no
-   longer picked here — it follows the shared Root (setKey sets ntRoot), so this
-   view stays in lockstep with the rest of the app and sheds 17 redundant buttons. */
+/* Notes: one "Naturals only" toggle; the highlighted note follows the shared root. */
 function applyNtFilter(){ const b=document.getElementById('nt-nat'); if(b){ const on=ntFilter==='nat'; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on?'true':'false'); } }
 document.getElementById('nt-nat').onclick=function(){ ntFilter = ntFilter==='nat'?'all':'nat'; applyNtFilter(); renderNotes(); saveState(); };
 applyNtFilter();
@@ -262,10 +231,8 @@ document.getElementById('aside-toggle').onclick=function(){ const b=document.get
 const _shapesTg=document.getElementById('shapes-toggle');
 if(_shapesTg) _shapesTg.onclick=function(){ shapesOpen=!shapesOpen; applyShapesPanel(); saveState(); };
 
-/* help toggle: one ? collapses/reveals BOTH the active view's description and the
-   board's playing-hint, on every viewport now (was phone-only, description-only), so
-   the default screen reads clean. A body-level class drives it because those two texts
-   live in different subtrees (.main vs .board-meta); every ? button reflects the state. */
+/* One ? folds both the view's description and the board hint. A body class drives it
+   because the two texts live in different subtrees (.main vs .board-meta). */
 let helpOpen = false;
 function applyHelpState(){
   document.body.classList.toggle('help-open', helpOpen);
@@ -275,11 +242,11 @@ document.querySelectorAll('.ph-help').forEach(btn=>{ btn.addEventListener('click
 applyHelpState();
 
 function selectTab(name){
-  // Playback (loop / progression) deliberately persists across tabs — it acts
-  // as a backing track. The global transport chip lets you stop it from anywhere.
+  // Playback persists across tabs on purpose — it is a backing track; the transport
+  // chip stops it from anywhere.
   currentTab=name;
   document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active', x.id==='panel-'+name));
-  applyNav();   // A2: the one nav follows the state, however it changed
+  applyNav();
   applyAsideState();
   applyContextBar();
   applyBoardRegion();
@@ -288,53 +255,39 @@ function selectTab(name){
   renderActiveContext();
   saveState();
 }
-// The mode axis. Orthogonal to selectTab (the reference sub-axis): body
-// classes drive the show/hide CSS, so reference content is untouched. The old Ear mode added
-// a third mode for ear training; it turned out to be a Practice pillar rather than a
-// mode (same home shell, same progress card, same learner model), so it folded back
-// in and the axis is Reference vs Practice again. Leaving Practice ends the running
-// drill.
+// The mode axis: Reference vs Practice, orthogonal to selectTab; body classes drive
+// the show/hide CSS. Leaving Practice ends the running drill.
 //
-// Playback does not persist across MODES. It still persists across
-// tabs, where it makes sense (same subject, same board, the transport genuinely acts
-// as a backing track). A mode switch is different: a drill brings its own click, its
-// own bed and its own scheduler, so a surviving reference loop just strummed the
-// reference chord over the top of it, on a clock the drill doesn't control — and its
-// controls are hidden in Practice, so it couldn't even be stopped. Reference owns the
-// transport, Practice owns the drill.
+// Playback does NOT persist across modes: a drill brings its own click, bed and
+// scheduler, and a surviving reference loop would play over it with its controls
+// hidden. Reference owns the transport, Practice owns the drill.
 function setMode(mode){
   currentMode = mode==='practice' ? 'practice' : 'reference';
   document.body.classList.toggle('mode-reference', currentMode==='reference');
   document.body.classList.toggle('mode-practice', currentMode==='practice');
-  applyNav();   // A2: one strip, painted from the live state
+  applyNav();
   if(currentMode==='reference'){
-    // leaving Practice ends whatever was running. Registry-driven
-    // (13-drill-registry.js): every drill self-registers, so this can't go stale
-    // the way the old hand-written list did.
+    // leaving Practice ends whatever was running
     exitAllDrills();
     applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
   } else {
     stopReferenceTransport();
-    // entering Practice with no drill running: show the home view (a drill starter
-    // swaps it for the drill's own area right after)
+    // entering Practice with no drill running: show the home (a drill starter swaps it
+    // for its own area right after)
     if(!activeDrill()) showDrillHome();
     renderPractice();
   }
   updateGlobalPlay();
   saveState();
 }
-/* One navigation surface. Four destinations, four panels: three
-   reference subjects and Practice. `navTo` is the only entry point — it sets the mode
-   the destination belongs to and, for a reference destination, the tab. Practice's
-   panel is a real sibling section (#panel-practice), so all four are genuine tabpanels
-   and the tablist semantics are honest rather than a shape forced onto a mode switch. */
+/* One navigation: three reference subjects and Practice, each a real tabpanel.
+   navTo() sets the mode the destination belongs to and, for a reference one, the tab. */
 function navTo(panel){
   if(panel==='practice'){ setMode('practice'); }
   else { if(currentMode!=='reference') setMode('reference'); selectTab(panel); }
   applyNav();
 }
-// paint the strip from the live state — called by setMode and selectTab, so the nav
-// follows a keyboard shortcut or a seam jump, not just a click
+// painted from the live state, so the nav follows shortcuts and seam jumps too
 function applyNav(){
   const cur = currentMode==='practice' ? 'practice' : currentTab;
   document.querySelectorAll('.navbtn').forEach(b=>{
@@ -366,10 +319,8 @@ function applyNav(){
   });
   applyNav();
 })();
-/* ---- "Drill this" — the seam, honoured (spine #2) ----
-   One label, one listener and one map: a view is a thing you are looking at, a track
-   is the drill that is about that thing, and only a person can say which is which — so
-   this map is the one curated list in the seam, and it is short enough to read.
+/* ---- "Drill this": a reference view opens the drill about what is on screen ----
+   The one curated view → track map:
 
      chord tones (+ triads) → comp     the chord on screen, changed on time under a band
      scale                  → timing   this scale, walked in one box on the beat
@@ -377,11 +328,7 @@ function applyNav(){
      circle                 → changes  the keys' chords, switched cleanly
 
    Arpeggio has no drill seam: its notes are practised over the band, so its button is
-   a Jam toggle (below).
-
-   Everything else about it is derived: startTrack() is the one door in (B2), so the
-   drill arrives with the shared header naming it, exactly as if the card had been
-   pressed. Nothing here knows about any individual drill. */
+   a Jam toggle (below). Everything else goes through startTrack(), like every door. */
 const SEAM_TRACKS = { chords:'comp', scale:'timing', notes:'note', circle:'changes' };
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-seam]'); if(!b) return;
@@ -389,15 +336,9 @@ document.addEventListener('click', e=>{
   setMode('practice');
   startTrack(track);
 });
-/* ---- "Jam over this" — the other seam (B3) ----
-   Playing along to the harmony on screen took five steps: pick a key, pick a chord or a
-   progression, open the Backing disclosure, enable bass and drums, hit Loop. The backing
-   band is one of the strongest things the app does and it had no front door; this is the
-   door, and it sits beside the suggester that is already captioned "What to play over
-   this" and already knows the answer. One tap, and the same tap stops it.
-   It plays the PROGRESSION when there is one and the current chord otherwise, because
-   that is the more musical answer whenever the player has built one. Every button
-   carrying data-jam is this toggle (the aside's, and Arpeggio's). */
+/* ---- "Jam over this": bass + drums + loop in one tap, and the same tap stops it ----
+   Plays the progression when the player has built one, the current chord otherwise.
+   Every button carrying data-jam is this toggle (the aside's and Arpeggio's). */
 function jamActive(){ return !!(typeof seqClock!=='undefined' && seqClock) || !!(typeof loopClock!=='undefined' && loopClock); }
 function renderJamBtn(){
   const on=jamActive();
@@ -412,11 +353,9 @@ function jamToggle(){
   audio();
   if(!bassOn) bassToggle();
   if(!grooveOn) drumsToggle();
-  /* Enabling the band runs ensureBacking(), which starts the single-chord loop when
-     nothing is sounding — so by this line something may already be playing, and
-     unconditionally calling loopToggle() here would turn it straight back off. Play the
-     PROGRESSION when the player has built one (seqPlay stops the loop itself), and
-     otherwise start the loop only if the band has not already done it. */
+  /* Enabling the band may already have started the single-chord loop
+     (ensureBacking), so start the loop only if nothing is sounding yet —
+     loopToggle() would otherwise turn it straight back off. */
   if(seq.length){ if(!seqClock) seqPlay(); }
   else if(!loopClock) loopToggle();
   renderJamBtn();
@@ -434,14 +373,13 @@ document.getElementById('tb-tuning').onchange=function(){
   if(TUNINGS[tuningIdx].custom) customTuning=prevMidi;   // seed Custom from the tuning you were on
   applyTuning(); buildTuner(); buildCustomTuning(); applyCustomTuningVis(); renderAllBoards(); saveState();
 };
-/* custom tuning: a per-string select changes one string's MIDI; re-apply so the
-   board, tuner and string labels follow immediately. */
+/* custom tuning: one select per string; re-apply so board, tuner and labels follow */
 { const cs=document.getElementById('tb-custom-strings');
   if(cs) cs.addEventListener('change', e=>{ const s=e.target.closest('.custom-str'); if(!s) return;
     customTuning[+s.dataset.i]=+s.value; applyTuning(); buildTuner(); renderAllBoards(); saveState(); }); }
-/* master volume: scales the whole-app output (masterOut, before the limiter). Audio is
-   lazy, so when the bus isn't up yet we just stash masterVol — setupBus reads it on
-   first sound. setTargetAtTime ramps the live gain so dragging is click-free. */
+/* master volume scales everything (masterOut, before the limiter). Before the first
+   sound the bus doesn't exist, so masterVol is stashed for setupBus; a live change
+   ramps, so dragging is click-free. */
 { const v=document.getElementById('tb-vol');
   if(v){ v.oninput=function(){ masterVol=(+this.value)/100;
       const vv=document.getElementById('tb-vol-val'); if(vv) vv.textContent=(+this.value)+'%';
@@ -450,13 +388,10 @@ document.getElementById('tb-tuning').onchange=function(){
     v.onchange=function(){ saveState(); }; } }
 document.getElementById('tb-frets').onchange=function(){ fretRangeIdx=+this.value; renderAllBoards(); saveState(); };
 { const cp=document.getElementById('tb-capo'); if(cp) cp.onchange=function(){ capo=+this.value; renderAllBoards(); saveState(); }; }
-/* a meter change alters what an in-flight drill should be showing (bar length,
-   beat grid), so re-paint the running drill via the registry rather than naming
-   one drill here — the old call reached for the timing drill only. */
+/* a meter change alters bar length and beat grid, so re-paint the running drill */
 { const mt=document.getElementById('tb-meter'); if(mt) mt.onchange=function(){ setMeter(+this.value); refreshDrillsLang(); saveState(); }; }
-/* accessibility toggles: a colour-blind-safe palette + distinct
-   per-function dot shapes. Both are pure body-class switches — the CSS does the work
-   (see styles.css), so there's nothing to repaint — and both persist. */
+/* accessibility: a colour-blind-safe palette and per-function dot shapes, both pure
+   body-class switches, both persisted */
 function applyA11y(){
   if(typeof document==='undefined' || !document.body) return;
   document.body.classList.toggle('cb-palette', cbPalette);
@@ -467,14 +402,8 @@ function applyA11y(){
 { const p=document.getElementById('tb-cbpalette'); if(p) p.onclick=function(){ cbPalette=!cbPalette; applyA11y(); saveState(); };
   const s=document.getElementById('tb-shapes');    if(s) s.onclick=function(){ fnShapes=!fnShapes;  applyA11y(); saveState(); }; }
 
-/* ---- review routing (spine #3): the progress card's Review button drops into the
-   track the queue named; the drills already prefer due items, so this just opens the
-   right one.
-
-   This was a hand-written `if(ns==='note') … else if(ns==='interval'
-   …)` that covered four of the nine tracks, the second of the three lists that
-   encoded the same knowledge incompletely. It now goes through the registry's own
-   `start`, so a track is routable the moment it is declared. */
+/* ---- review routing: the progress card's Review opens the track the queue named;
+   the drills already prefer due items. */
 function startReview(track){
   setMode('practice');
   startTrack(track);
@@ -482,12 +411,10 @@ function startReview(track){
 { const h=document.getElementById('practice-progress');
   if(h) h.addEventListener('click', e=>{ const b=e.target.closest('[data-review]'); if(b) startReview(b.dataset.review); }); }
 document.getElementById('tb-lefty').onclick=function(){ lefty=!lefty; this.classList.toggle('active',lefty); this.setAttribute('aria-pressed',lefty); renderAllBoards(); renderCircle(); saveState(); };
-/* the metronome / loop / sequencer clocks read beat() live, so the tempo glides
-   without restarting — just update the value and the label here. */
+/* the clocks read beat() live, so the tempo glides without restarting */
 document.getElementById('tb-tempo').oninput=function(){ setTempo(+this.value); };
 document.getElementById('tb-tempo').onchange=function(){ saveState(); };
-/* The same tempo, stepped from the drill strip (A1). Both controls go through the one
-   setter, so neither has to know the other exists. */
+/* the same tempo, stepped from the drill header; both controls use the one setter */
 { const step=d=>{ setTempo(tempo+d); saveState(); };
   const sl=document.getElementById('drill-ctx-slower'); if(sl) sl.onclick=()=>step(-5);
   const fa=document.getElementById('drill-ctx-faster'); if(fa) fa.onclick=()=>step(5); }
@@ -497,8 +424,7 @@ document.getElementById('tb-drums').onclick=drumsToggle;
 document.getElementById('tb-stop').onclick=function(){ if(seqClock) seqStop(); else stopLoop(); };
 document.getElementById('tb-toggle').onclick=function(){ toolbarOpen=!toolbarOpen; applyToolbarState(); saveState(); };
 document.getElementById('backing-toggle').onclick=function(){ backingOpen=!backingOpen; applyBackingPanel(); saveState(); };
-/* quality-picker disclosure (#1/#2): one toggle per picker, both flip the shared
-   chQualsAdv and rebuild so chord + arp stay in lockstep */
+/* "more" on either quality picker flips the shared chQualsAdv, so both stay in step */
 function qualMoreToggle(){ chQualsAdv=!chQualsAdv; buildChQuals(); buildArpQuals(); markScrollables(); }
 { const a=document.getElementById('ch-quals-toggle'); if(a) a.onclick=qualMoreToggle;
   const b=document.getElementById('arp-quals-toggle'); if(b) b.onclick=qualMoreToggle; }
@@ -514,8 +440,7 @@ function renderChangelog(){
       (cur?`<span class="cl-badge">${t('cl_current')}</span>`:'')+
       `<span class="cl-date">${r.date}</span></div><ul>${bullets}</ul></div>`;
   }).join('') +
-    // build.js ships only the newest few releases (the full history was 15% of the
-    // bundle); point at CHANGELOG.md for the rest.
+    // only the newest few releases ship in the bundle; CHANGELOG.md has the rest
     `<p class="cl-older"><a href="https://github.com/RomanTereshchenko13/euterpe-guitar-studio/blob/main/CHANGELOG.md" target="_blank" rel="noopener">${t('cl_older')}</a></p>`;
 }
 function openChangelog(){ const o=document.getElementById('cl-overlay'); renderChangelog(); o.hidden=false; o.classList.add('open'); }
@@ -530,20 +455,16 @@ function closeKbd(){ const o=document.getElementById('kbd-overlay'); if(!o) retu
 { const c=document.getElementById('kbd-close'); if(c) c.onclick=closeKbd;
   const ov=document.getElementById('kbd-overlay'); if(ov) ov.addEventListener('click',e=>{ if(e.target.id==='kbd-overlay') closeKbd(); });
   const ob=document.getElementById('kbd-open'); if(ob) ob.onclick=openKbd; }
-/* ---- first-run welcome (onboarding) ----
-   A one-time orientation card for brand-new visitors. Reuses the changelog overlay
-   look; dismissing it (button / ✕ / backdrop / Escape) records welcomeSeen so it
-   never returns. dismissWelcome no-ops when the card isn't open, so it's safe to
-   call from the shared Escape handler. */
+/* ---- first-run welcome ----
+   A one-time card for new visitors; dismissing it records welcomeSeen. dismissWelcome
+   is a no-op when the card isn't open, so the shared Escape handler can call it. */
 function showWelcome(){ const o=document.getElementById('welcome-overlay'); if(!o) return; o.hidden=false; o.classList.add('open');
   const f=document.getElementById('wc-go-look'); if(f) try{ f.focus(); }catch(_){} }
 function dismissWelcome(){ const o=document.getElementById('welcome-overlay'); if(!o||o.hidden) return; o.classList.remove('open'); o.hidden=true; welcomeSeen=true; saveState(); }
 { const g=document.getElementById('wc-got');   if(g) g.onclick=dismissWelcome;
   const c=document.getElementById('wc-close'); if(c) c.onclick=dismissWelcome;
-  /* Every answer routes. The card used to end in one Got it that landed you on chord
-     tones in A minor no matter which of the two nouns you had just read — so what the
-     visitor knew about themselves changed nothing. Dismiss first, then route, so the
-     destination isn't rendered behind a modal. */
+  /* Each answer routes somewhere. Dismiss first, so the destination isn't rendered
+     behind the modal. */
   const route=(id,go)=>{ const b=document.getElementById(id); if(b) b.onclick=()=>{ dismissWelcome(); go(); }; };
   route('wc-go-look',     ()=>navTo('harmony'));
   route('wc-go-practice', ()=>navTo('practice'));
@@ -552,26 +473,23 @@ function dismissWelcome(){ const o=document.getElementById('welcome-overlay'); i
 
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeChangelog(); closeKbd(); dismissWelcome(); } });
 
-/* ---- global keyboard shortcuts (desktop power-use; also seeds Phase-3 drills) ----
-   Space=Listen/Stop · L=Loop · M=Metronome · 1/2/3=tabs · A–G=key · [ ]=transpose · ?=help.
-   Guards: ignored while typing in a field, while a modal is open, or with a Ctrl/Meta/Alt
-   chord (so browser shortcuts survive). Space is only hijacked when focus is NOT on an
-   interactive control, so a focused fretboard dot / button keeps its native Space. */
+/* ---- keyboard shortcuts ----
+   Space=Listen/Stop · L=Loop · M=Metronome · 1–4=nav · A–G=key · [ ]=transpose · ?=help.
+   Ignored while typing, while a modal is open, or with Ctrl/Meta/Alt (browser shortcuts
+   survive). Space is taken only when focus is NOT on a control, so a focused dot or
+   button keeps its native Space. */
 const NOTE_KEY = { a:9, b:11, c:0, d:2, e:4, f:5, g:7 };
 function transposeKey(delta){ const pc=mod(gRoot+delta,12); setKey(pc, ROOTS[pc]); }
 document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey) return;
   const tg=e.target;
   if(tg && (tg.tagName==='INPUT'||tg.tagName==='SELECT'||tg.tagName==='TEXTAREA'||tg.isContentEditable)) return;
-  // modal open — the tuner counts too, or "a" would retune the app's key while
-  // you're squinting at a needle (and it runs its own Escape handler).
+  // a modal is open — the tuner counts too, or "a" would retune the key mid-tuning
   if(!document.getElementById('cl-overlay').hidden || !document.getElementById('kbd-overlay').hidden) return;
   { const mo=document.getElementById('mic-overlay'); if(mo && !mo.hidden) return; }
   const k=e.key;
-  // Space / L / M drive the REFERENCE transport, which is scoped out of
-  // Practice. Without this guard they'd still reach it from a drill screen: an
-  // invisible metronome beating against the drill's own click, with no control on
-  // screen to stop it. The shortcut follows the control it stands for.
+  // Space / L / M drive the REFERENCE transport, which Practice hides; from a drill
+  // they would start a metronome nobody can see or stop.
   const refTransport = currentMode!=='practice';
   if(k===' '||k==='Spacebar'){
     if(tg && tg.closest && tg.closest('button,a,[role="button"],[tabindex]')) return;   // let the focused control keep Space
@@ -583,8 +501,7 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(k==='?'){ e.preventDefault(); openKbd(); return; }
-  // A2: the number keys are the nav, in nav order — so 4 is Practice, which the
-  // shortcuts had no key for while it was a separate axis
+  // the number keys are the nav, in nav order
   if(k==='1'){ navTo('harmony'); return; }
   if(k==='2'){ navTo('scales'); return; }
   if(k==='3'){ navTo('circle'); return; }
@@ -597,8 +514,7 @@ document.addEventListener('keydown',e=>{
   if(lk && NOTE_KEY[lk]!==undefined){ const pc=NOTE_KEY[lk]; setKey(pc, ROOTS[pc]); return; }
 });
 
-/* ---- graceful degradation when the browser has no Web Audio (Phase C+) ----
-   Disable the transport controls with a hint instead of leaving dead buttons. */
+/* ---- no Web Audio: disable the transport controls with a hint, not dead buttons ---- */
 function applyAudioAvailability(){
   if(typeof window==='undefined') return true;
   const ok = !!(window.AudioContext || window.webkitAudioContext);
@@ -617,61 +533,47 @@ function applyAudioAvailability(){
 /* ---- init: restore saved state, apply tuning, render, restore tab ---- */
 const hadState = loadState();
 if(!hadState){
-  // First visit (no saved state): match the browser's preferred language —
-  // Ukrainian if it asks for it, English otherwise — instead of always landing
-  // on the hard-coded 'uk' default. The EN/UK toggle + localStorage take over
-  // from the next visit on, so this only chooses the very first impression.
+  // First visit: Ukrainian if the browser asks for it, English otherwise; the EN/UK
+  // toggle takes over from the next visit on.
   try{ const nav=(navigator.languages&&navigator.languages[0])||navigator.language||''; lang = /^uk\b/i.test(nav) ? 'uk' : 'en'; }catch(_){ /* keep the 'uk' default */ }
   if(typeof window!=='undefined' && window.innerWidth<=600) fretRangeIdx=1;  // phones default to a 5-fret window
 }
-ntRoot=gRootLbl;   // Notes highlight follows the shared root (#4); keep them in sync from the first paint
+ntRoot=gRootLbl;   // Notes follows the shared root from the first paint
 applyTuning();
 applyLang();
 selectTab(currentTab);
 setMode(currentMode);   // apply the restored mode axis after the reference shell is up
 markScrollables();
-// re-measure swipe-group overflow when the viewport changes (rotate / resize), and once
-// the webfont has loaded — button widths shift on the font swap, so a measure taken with
-// the fallback font would mis-detect overflow and show / hide the fade incorrectly.
+// re-measure swipe-group overflow on resize and once the webfont has loaded (button
+// widths change on the font swap)
 window.addEventListener('resize', markScrollables);
 try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(markScrollables); }catch(_){}
 applyAudioAvailability();
 applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
-/* the drills' one shared key picker (13-drill-registry.js). Built once here rather than by
-   each drill: they all set the same context root, and the running drill only has to say what
-   to re-derive (onKey). CSS shows the row only while a drill is up. */
+/* the drill header's one key picker: every drill sets the same root, and the running
+   drill only says what to re-derive (onKey) */
 { const dk=document.getElementById('drill-ctx-key');
   if(dk) buildRootBtns(dk, gRoot, (pc,r)=>{ setKey(pc,r); drillKeyChanged(); });
-  // Quit was a seventh identical button, one per drill area. The registry already knows
-  // which drill is running and how to end it, so the shell owns the button.
   const dq=document.getElementById('drill-ctx-quit');
   if(dq) dq.onclick=quitDrill; }
-/* Every drill starts from inside #practice-home — a drill card, or the progress
-   card's Review button. That is ONE listener instead of ten: each card
-   carries `data-track`, and startTrack() (13-learner.js) opens the registry's own
-   starter. The eight per-drill `card.onclick=startX` lines that used to live in the
-   drill files are gone with it, and — because the shell now knows which TRACK was
-   opened rather than only which drill is running — the header can finally say which
-   drill you are in. applyDrillCtx() still runs for every click here, so a drill
-   started any other way keeps the strip in step. */
+/* Every drill starts inside #practice-home — a card or the progress card's Review —
+   through one listener: each carries data-track, and startTrack() opens it. */
 { const ph=document.getElementById('practice-home');
   if(ph) ph.addEventListener('click', e=>{
     const card=e.target.closest('[data-track]');
     if(card) startTrack(card.dataset.track);
     applyDrillCtx();
   }); }
-/* the drill header's own controls (B2). The mic is routed to the running drill rather
-   than owned here: three drills score, each with its own tier semantics, and the shell
-   has no business knowing which. */
+/* the drill header's own controls. The mic goes to the running drill: each scored
+   drill has its own tier semantics. */
 { const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('drill-ctx-setup', drillSetupToggle);
   wire('drill-ctx-help',  drillHintToggle);
   wire('drill-ctx-mic',   drillMicToggle);
-  // B3: "I'm done with this one" — end the block early, keep the session
+  // end the block early, keep the session
   wire('drill-ctx-skip',  ()=>sessionAdvance()); }
-/* The timed session's home controls (B3). The length chips and the report's Done are
-   both painted by the session module, so both are delegated rather than wired by id —
-   and the chips write straight through to sessMins, which is what Start reads. */
+/* the session's length chips and the report's Done are painted by the session
+   module, so both are delegated */
 { const m=document.getElementById('sess-mins');
   if(m) m.addEventListener('click', e=>{
     const b=e.target.closest('[data-mins]'); if(!b) return;
@@ -682,15 +584,12 @@ applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
   if(r) r.addEventListener('click', e=>{ if(e.target.closest('#sess-close')) sessionDismiss(); }); }
 clearOldShareHash();
 document.getElementById('app-ver').textContent = 'v' + APP_VERSION;
-// First-run onboarding: only a genuinely first visit (no saved state) leaves
-// welcomeSeen false — returning users are grandfathered in loadState().
+// only a genuinely first visit leaves welcomeSeen false (see loadState)
 if(!welcomeSeen) showWelcome();
 
-/* ---- test introspection hook (Phase C+) ----
-   Built ONLY when a harness sets window.__GS_ALLOW_TEST__ before the page loads,
-   so production carries zero footprint. Exposes pure musical helpers and a few
-   state accessors so the committed jsdom suite can assert behaviour without
-   reaching into closures. Never set this flag in the shipped app. */
+/* ---- test introspection hook ----
+   Built ONLY when a harness sets window.__GS_ALLOW_TEST__ before load, so production
+   carries none of it. Never set this flag in the shipped app. */
 if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
   window.__GS_TEST__ = {
     APP_VERSION, I18N, QUALITIES, TRIADS, SCALES, COF, FRET_RANGES, SEQ_PRESETS,
@@ -704,18 +603,17 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     TUNINGS, applyTuning, tuningMidi, TUNE_LO, TUNE_HI,
     getOpenMidi:()=>OPEN_MIDI.slice(), getCustomTuning:()=>customTuning.slice(),
     setCustomTuning:(arr)=>{ customTuning=arr.slice(); }, setTuningIdx:(i)=>{ tuningIdx=i; applyTuning(); },
-    // learner review + activity (spine #3)
+    // learner review + activity
     learnerReview, learnerActivity, startReview,
     clearOldShareHash,
-    // drill registry (13): the one list the shell iterates instead of naming drills
+    // drill registry
     DRILLS, activeDrill, showDrillHome, exitAllDrills, refreshDrillsLang, drillKeyChanged, applyDrillCtx,
     // one drill shell
     drillSetupToggle, drillHintToggle, drillMicToggle, drillRunStarted, setCurTrack, quitDrill,
     getCurTrack:()=>curTrack, getDrillSeen:()=>drillSeen, setDrillSeen:(o)=>{ drillSeen=o||{}; },
-    // one practice model
+    // the practice model
     drillTracks, trackById, trackBySess, trackByItems, sessNs, startTrack, learnerTrend, learnerBest, scoredErr,
-    /* the timed session + the seams. Every step takes `now`, so the whole
-       flow is drivable with no timers: plan → start → tick → end → report. */
+    /* the timed session + the seams; every step takes `now`, so no timers are needed */
     SESSION_MINS, sessionPlan, sessionQueue, sessionStart, sessionAdvance, sessionTick,
     sessionEnd, sessionActive, sessionDismiss, sessionClock, renderSessionCard,
     getSession:()=>psess, getSessReport:()=>sessLast,
@@ -724,18 +622,18 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     // progress narrative + card badges
     trackBadge, paintDrillBadges, renderProgressInto, renderPractice, trendScore,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
-    // one function, one home
+    // shell
     setTempo, getTempo:()=>tempo, stopReferenceTransport, transportActive, applyContextBar, updateGlobalPlay,
     renderAllBoards,
-    // learner model (spine #3, 3b)
+    // learner model
     recordAttempt, dueItems, recordSession, learnerStats, srsInterval, normalizeLearner,
     getLearner:()=>learner, resetLearner:()=>{ learner=newLearner(); }, LEARNER_V,
     setLearner:(l)=>{ learner=l; }, SESS_PER_ID, SESS_MAX, PERF_STALE_DAYS,
-    // progress backup (step 0)
+    // progress backup
     saveState, loadState, snapshotState, progressPayload, progressParse, progressApply, progressFileName, saveFailed,
     BACKUP_FORMAT, getSaveBlocked:()=>saveBlocked, setSaveBlocked:(v)=>{ saveBlocked=!!v; },
     resetSaveFailShown:()=>{ saveFailShown=false; },
-    // note-naming drill (3c)
+    // note-naming drill
     startDrill, drillAnswer, drillTargetsFor, exitDrill, DRILL_LEN, getDrill:()=>drill,
     // ear-training drills
     startEar, earAnswer, earNext, earReplay, exitEar, getEar:()=>ear,
@@ -762,25 +660,20 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     // time signature / meter
     METERS, setMeter, curMeter, barBeats, pulseSec, barSec, midPulseSec,
     meterGroupStarts:()=>[...meterGroupStarts()], getMeterIdx:()=>meterIdx,
-    // chromatic mic tuner. The pitch→readout maths is pure and
-    // assertable here; the getUserMedia half needs a real browser (tools/mic-check.js).
+    // mic tuner: the pitch maths is pure; capture needs a browser (tools/mic-check.js)
     micSupported, micMidiFromHz, micCentsOff, micNearestString,
     micOpen, micClose, micStatus, micPaint, micPaintIdle, getMic:()=>mt, buildTuner, tunerEarShow, tunerEarOpen,
     MT_FFT, MT_CLARITY, MT_IN_TUNE, MT_HZ_LO, MT_HZ_HI,
-    // shared mic layer (13-mic.js) + onset detection & scoring.
-    // The matching/scoring maths is pure, so it is asserted directly — the capture
-    // half needs a real browser (tools/onset-check.js).
+    // shared mic layer + onset detection; capture needs a browser (tools/onset-check.js)
     micAcquire, micRelease, micReleaseAll, micLive, micErrKey,
     onsetSupported, onsetMatch, onsetScore, onsetVerdict, onsetFeel, onsetSelfHeard,
     onOnset, onsetActive, onsetRecent, onsetClear, onsetProcessorSrc,
     ON_REFRACTORY, ON_RATIO, ON_FLOOR, ON_HUMAN_MS, ON_SELF_HITRATE, ON_SELF_MIN_N,
-    // latency calibration (14-calibration.js) — restored for F1, which is its first
-    // real consumer; the v2.5.0 version was cut for having none.
+    // latency calibration
     calOffsetSec, calSetMs, calCancel, calMedian, getCalMs:()=>calMs, CAL_MAX_MS, CAL_MIN_HITS,
     calMeasured, setCalKnown:(v)=>{ calKnown=!!v; },
-    // the shared scored-run layer (13-scored.js) and its three consumers. The
-    // controllers are exposed whole: _set() injects a run so the harness can drive
-    // scoring end-to-end with no microphone attached.
+    // the shared scored-run layer and its consumers; _set() injects a run, so scoring
+    // is driven end to end with no microphone
     scoredRun, SC_TOL_MAX,
     sdScore, spScore, tgScore,
     // accessibility + onboarding
