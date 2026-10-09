@@ -1,17 +1,13 @@
 /* ===================== Drill: Ear training =====================
-   The EAR pillar: recognition by sound. Three multiple-choice drills sharing one
+   The EAR pillar: recognition by sound. Two multiple-choice drills sharing one
    engine — hear a prompt on the audio buses, pick the answer, get cue feedback,
    scored on accuracy and recorded to the learner model (13-learner.js):
      • interval — two notes played melodically; name the interval.
      • chordq   — a chord arpeggiated then strummed; name its quality.
-     • rhythm   — a one-bar figure clicked out over a soft beat; pick the matching
-                  rhythm (the time-axis mirror of interval training).
 
-   Honest framing (roadmap): these are RECOGNITION drills — a multiple-choice
-   answer, never a timing window — so they are legitimately scored on accuracy
-   without breaking the "never score tap timing" rule (the rhythm is *identified*,
-   not tapped back).
-   Each prompt writes one learner item (interval:P5 / chordq:m7 / rhythm:r3), so
+   These are RECOGNITION drills — a multiple-choice answer, never a timing window —
+   so they are legitimately scored on accuracy.
+   Each prompt writes one learner item (interval:P5 / chordq:m7), so
    Ear feeds the SAME spaced-repetition model as the fretboard drills (spine #3):
    due items resurface first, the session score lands in the ring buffer, and the
    global progress card counts ear items alongside notes. Depends on nothing but
@@ -43,38 +39,6 @@ function earIvName(iv){ return lang==='en' ? iv.en : iv.uk; }
 const EAR_QUAL_IDX = [0, 1, 10, 12, 6, 7, 8, 9];   // maj · m · dim · aug · 7 · maj7 · m7 · m7♭5
 function earQualKey(qi){ const q=QUALITIES[qi]; return 'chordq:'+(q.short||'maj'); }
 
-/* One-bar (4/4) rhythm figures, each a list of segments {d:beats, r:isRest}
-   summing to 4. The visual strip (rhythmStrip) and the audio (playRhythm) both
-   read this, so what you see matches what you hear. Distractors for a prompt are
-   other patterns from this pool. */
-function earRSeg(){ return [].slice.call(arguments).map(d => d<0 ? {d:-d, r:true} : {d, r:false}); }
-const RHYTHMS = [
-  {id:'r1', seg:earRSeg(1,1,1,1)},                 // ta ta ta ta
-  {id:'r2', seg:earRSeg(0.5,0.5,1,1,1)},           // ti-ti ta ta ta
-  {id:'r3', seg:earRSeg(1,0.5,0.5,1,1)},           // ta ti-ti ta ta
-  {id:'r4', seg:earRSeg(0.5,0.5,0.5,0.5,1,1)},     // ti-ti ti-ti ta ta
-  {id:'r5', seg:earRSeg(1.5,0.5,1,1)},             // dotted-quarter eighth, ta ta
-  {id:'r6', seg:earRSeg(1,1,0.5,0.5,1)},           // ta ta ti-ti ta
-  {id:'r7', seg:earRSeg(2,1,1)},                   // half ta ta
-  {id:'r8', seg:earRSeg(1,-1,1,1)},                // ta (rest) ta ta
-];
-const EAR_RHYTHM_BPM = 84;
-/* Play a rhythm: a soft beat-reference click on each of the four beats (so the
-   metre is audible) with the figure's onsets struck louder on top. All on the cue
-   bus, scheduled at absolute audio-clock times — short and one-shot, so it needs
-   no scheduler clock. */
-function playRhythm(r){
-  const ctx=audio(); if(!ctx) return;
-  const b=60/EAR_RHYTHM_BPM, start=ctx.currentTime+0.15;
-  for(let k=0;k<4;k++) cueBlip(start+k*b, 620, 0.06, 0.035, 'sine');           // soft metre reference
-  let pos=0;
-  r.seg.forEach(s=>{ if(!s.r) cueBlip(start+pos*b, 1320, 0.26, Math.min(0.13, s.d*b*0.8), 'square'); pos+=s.d; });
-}
-function rhythmStrip(r){
-  const segs=r.seg.map(s=>`<span class="rseg ${s.r?'rest':'note'}" style="flex:${s.d}"></span>`).join('');
-  return `<span class="rhythm">${segs}</span>`;
-}
-
 /* per-type config: how a prompt is built, played, and answered. The engine below
    is type-agnostic — it just reads cfg.pool/make/play/choices/prompt. */
 const EAR = {
@@ -93,15 +57,6 @@ const EAR = {
       q.iv.forEach((iv,i)=>pluck(cur.base+iv, i*0.16, 1.6));                                    // arpeggio up
       q.iv.forEach(iv=>pluck(cur.base+iv, n*0.16+0.28, 1.9)); },                                // then the block
     choices(){ return EAR_QUAL_IDX.map(qi=>{ const q=QUALITIES[qi]; return { key:earQualKey(qi), html:(q.short||'maj'), label:qName(q) }; }); }
-  },
-  rhythm: {
-    len:6, sess:'ear-rhythm', prompt:()=>t('ear_rhythm_prompt'),
-    pool:()=>RHYTHMS.map(r=>'rhythm:'+r.id),
-    make(key){ const ans=RHYTHMS.find(r=>'rhythm:'+r.id===key);
-      const opts=earShuffle(earShuffle(RHYTHMS.filter(r=>r!==ans)).slice(0,3).concat([ans]));
-      return {key, ans, choiceList:opts.map(r=>({ key:'rhythm:'+r.id, html:rhythmStrip(r), label:t('ear_rhythm') })) }; },
-    play(cur){ playRhythm(cur.ans); },
-    choices(cur){ return cur.choiceList; }
   }
 };
 
@@ -194,7 +149,7 @@ function renderEarPrompt(){
 }
 function renderEarChoices(){
   const host=document.getElementById('ear-choices'); if(!host) return;
-  const list=ear.cfg.choices(ear.cur);
+  const list=ear.cfg.choices();
   host.className='ear-choices ear-'+ear.type;
   host.innerHTML=list.map(o=>{
     const aria=o.label || o.html;
@@ -234,23 +189,22 @@ function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPr
 
 /* drill-card starters + the in-drill controls — wired once at load (guarded so a
    missing panel never throws, mirroring initDrill in 14-drill-notes.js). */
-/* one entry for all three ear drills — they share the `ear` state and one area */
+/* one entry for both ear drills — they share the `ear` state and one area */
 registerDrill({ id:'ear', area:'ear-area',
                 isActive:()=>!!ear, exit:exitEar, refreshLang:refreshEarLang,
-                /* Three tracks behind one entry (B1) — one drill shell, three skills
-                   with three independent SRS queues. Items are "interval:P5"; the
-                   session ids keep their historic `ear-` prefix. */
+                /* Two tracks behind one entry — one drill shell, two skills with
+                   independent SRS queues. Items are "interval:P5"; the session ids
+                   keep their historic `ear-` prefix. */
                 tracks:[
                   { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', scored:'acc', start:()=>startEar('interval') },
-                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    scored:'acc', start:()=>startEar('chordq') },
-                  { id:'rhythm',   kind:'recall', items:'rhythm',   sess:'ear-rhythm',   label:'ear_rhythm',    scored:'acc', start:()=>startEar('rhythm') }
+                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    scored:'acc', start:()=>startEar('chordq') }
                 ] });
 
 (function initEar(){
   const area=document.getElementById('ear-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  // the three cards go through startTrack() now (B2) — one door, so the shared header
-  // can name which of the three ear skills you opened
+  // the cards go through startTrack() — one door, so the shared header can name
+  // which ear skill you opened
   wire('ear-replay', earReplay);
   wire('ear-next',   earNext);
   const ch=document.getElementById('ear-choices');

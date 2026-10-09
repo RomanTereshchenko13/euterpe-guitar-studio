@@ -1,4 +1,7 @@
-/* ===================== TRIADS ===================== */
+/* ===================== TRIADS =====================
+   A toggle on Chord tones, not a view of its own: the triad shown is the triad
+   inside the chosen chord (Am7 → Am, m7♭5 → dim), on one three-string set, by
+   inversion. A chord with no third or no fifth (sus2, sus4, 11) has no triad. */
 const TRIADS=[
   {short:'',iv:[0,4,7],en:'Major',uk:'Мажор'},
   {short:'m',iv:[0,3,7],en:'Minor',uk:'Мінор'},
@@ -12,7 +15,17 @@ const STRING_SETS=[
   {label:'4·5·6', idx:[5,4,3]},
 ];
 const ROT=[[0,1,2],[1,2,0],[2,0,1]];
-let trQual=0, trSet=0, trInv=1;
+let trSet=0, trInv=1;
+// the TRIADS index of the chosen chord's triad, or -1 when it has none
+function chTriadIdx(){
+  const iv=QUALITIES[chQual].iv;
+  const third=iv.includes(4)?4:iv.includes(3)?3:-1;
+  const fifth=iv.includes(7)?7:iv.includes(6)?6:iv.includes(8)?8:-1;
+  return TRIADS.findIndex(tr=>tr.iv[1]===third && tr.iv[2]===fifth);
+}
+// is the neck showing triads right now? (the toggle is on AND the chord has one)
+function triadsOn(){ return chTriads && chTriadIdx()>=0; }
+function curTriad(){ return TRIADS[Math.max(0, chTriadIdx())]; }
 function nearestFret(open, pc, ref){
   let base=mod(pc-open,12), best=base, bd=Math.abs(base-ref);
   [base-12, base+12, base+24].forEach(c=>{ if(Math.abs(c-ref)<bd){ bd=Math.abs(c-ref); best=c; } });
@@ -21,7 +34,7 @@ function nearestFret(open, pc, ref){
 function triFuncClass(o, iv){ if(o===0)return'd-root'; if(o===iv[1])return'd-third'; return'd-fifth'; }
 function triLabel(o, iv, pc){ return gMode==='names' ? spellNote(gRootLbl,pc,DEG_OF[o]) : (o===0?'1':(o===iv[1]?DEG_LABEL[iv[1]]:DEG_LABEL[iv[2]])); }
 function triadCells(){
-  const tri=TRIADS[trQual], iv=tri.iv, set=STRING_SETS[trSet];
+  const tri=curTriad(), iv=tri.iv, set=STRING_SETS[trSet];
   const invs = trInv===0 ? [0,1,2] : [trInv-1];
   const [low,mid,high]=set.idx;
   const cells={}, pats=[];
@@ -76,17 +89,13 @@ function triadCardSVG(notes, iv){
 }
 function renderTriadCards(){
   const cont=document.getElementById('tr-diagram'); if(!cont) return;
-  const {pats,iv}=triadCells(), tri=TRIADS[trQual], set=STRING_SETS[trSet];
+  const {pats,iv}=triadCells(), tri=curTriad(), set=STRING_SETS[trSet];
   const invName=[t('inv_root'),t('inv_1st'),t('inv_2nd')];
   cont.innerHTML = pats.map(p=>{
     const notes=normalizeTriPat(p.notes);
     return `<div class="chordbox tri"><div class="cb-name">${noteTxt(gRootLbl)}${tri.short} · ${invName[p.inv]}</div>`+
            `${triadCardSVG(notes, iv)}<div class="cb-cap">${t('strings_word')} ${set.label}</div></div>`;
   }).join('');
-}
-function buildTrQuals(){
-  segButtons('tr-quals', TRIADS.map(q=>({label:qName(q)})), trQual,
-    i=>{ trQual=i; buildTrQuals(); renderTriads(); saveState(); });
 }
 function buildTrSets(){
   segButtons('tr-sets', STRING_SETS.map(s=>({label:s.label})), trSet,
@@ -97,7 +106,7 @@ function buildTrInvs(){
     i=>{ trInv=i; buildTrInvs(); renderTriads(); saveState(); });
 }
 function renderTriads(){
-  const {cells,iv}=triadCells(), tri=TRIADS[trQual], set=STRING_SETS[trSet];
+  const {cells,iv}=triadCells(), tri=curTriad(), set=STRING_SETS[trSet];
   // panel content
   const notes=iv.map(i=>spellNote(gRootLbl,mod(gRoot+i,12),DEG_OF[i])).join(' – ');
   const invDesc=[t('inv_all_desc'),t('inv_root_desc'),t('inv_1st_desc'),t('inv_2nd_desc')][trInv];
@@ -111,6 +120,5 @@ function renderTriads(){
       return makeDot(triFuncClass(o,iv), triLabel(o,iv,pc), OPEN_MIDI[si]+f);
     }, triadLegendHTML(), t('tr_hint'));
   }
-  renderSuggester();
 }
 

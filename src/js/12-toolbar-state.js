@@ -32,16 +32,6 @@ function setTempo(bpm){
   const d=document.getElementById('drill-ctx-bpm'); if(d) d.textContent=tempo+' BPM';
 }
 
-/* reference-tone tuner: one button per open string of the current tuning, low → high
-   (E A D G B e in standard), each holding a sustained pitch (tunerTone). Rebuilt from
-   the live OPEN_MIDI/SNAMES whenever the tuning changes (so a Drop-D switch re-labels). */
-function buildTuner(){
-  const ts=document.getElementById('tb-tuner-strings'); if(!ts) return;
-  // OPEN_MIDI / SNAMES are stored high → low (string 1 first); reverse for the
-  // conventional low-to-high reading order on the tuner.
-  ts.innerHTML = OPEN_MIDI.map((m,i)=>({m, nm:SNAMES[i]})).reverse()
-    .map(o=>`<button class="btn tuner-str" data-midi="${o.m}" aria-label="${o.nm}">${o.nm}</button>`).join('');
-}
 function applyToolbarState(){
   const tb=document.getElementById('toolbar'), tg=document.getElementById('tb-toggle');
   tb.classList.toggle('collapsed', !toolbarOpen);
@@ -83,11 +73,8 @@ function applyAsideState(){
   const layout=document.querySelector('.layout'); if(layout) layout.classList.toggle('no-aside', !show);
 }
 /* Repaint every board-bearing view after a tuning / fret-range / capo / lefty
-   change. Delegates to renderContextViews — the ONE complete fan-out (incl. the
-   arp + identify views) — so a newly-added view can never be left off this list.
-   It previously listed only chords/triads/scales/notes, which silently froze the
-   Arpeggio and Identify boards on a tuning/fret/capo/lefty change (they weren't
-   re-rendered, so isBoardMode never re-painted the shared #board for them). */
+   change. Delegates to renderContextViews — the ONE complete fan-out — so a
+   newly-added view can never be left off this list. */
 function renderAllBoards(){ renderContextViews(); }
 /* A2: syncTabsScroll() lived here — it faded the right edge of the mobile tab
    strip while more tabs sat off-screen. The strip is gone: at that width the nav is
@@ -202,8 +189,8 @@ function snapshotState(){ return {
   cbPalette, fnShapes, welcomeSeen,
   gRoot, gRootLbl, gMode, hView, scView,
   chQual, arpPos, scIdx, scPos, scOverlay,
-  chVoicing,
-  trQual, trSet, trInv,
+  chVoicing, chTriads,
+  trSet, trInv,
   ntRoot, ntFilter,
   seq, seqLoopOn,
   bassOn, grooveOn,
@@ -264,7 +251,7 @@ function loadState(){ try{
   if(typeof SESSION_MINS!=='undefined' && SESSION_MINS.indexOf(s.sessMins)>=0) sessMins=s.sessMins;
   if(Number.isInteger(s.gRoot)&&s.gRoot>=0&&s.gRoot<12){ gRoot=s.gRoot; if(typeof s.gRootLbl==='string') gRootLbl=s.gRootLbl; }
   if(s.gMode==='names'||s.gMode==='deg') gMode=s.gMode;
-  if(s.hView==='chords'||s.hView==='triads'||s.hView==='arp') hView=s.hView;   // identify stays transient (idSel is scratch)
+  if(s.hView==='chords'||s.hView==='arp') hView=s.hView;
   if(s.scView==='scale'||s.scView==='notes') scView=s.scView;
   if(typeof s.tab==='string'){
     if(s.tab==='chords'||s.tab==='triads') currentTab='harmony';          // migrate old merged tabs
@@ -279,9 +266,16 @@ function loadState(){ try{
   if(Number.isInteger(s.scPos)&&s.scPos>=0&&s.scPos<=5) scPos=s.scPos;
   if(s.scOverlay&&typeof s.scOverlay==='object'&&Number.isInteger(s.scOverlay.rootPc)&&Array.isArray(s.scOverlay.iv)&&typeof s.scOverlay.tag==='string')
     scOverlay={rootPc:mod(s.scOverlay.rootPc,12), iv:s.scOverlay.iv.slice(), tag:s.scOverlay.tag};
-  if(Number.isInteger(s.trQual)&&TRIADS[s.trQual]) trQual=s.trQual;
   if(Number.isInteger(s.trSet)&&STRING_SETS[s.trSet]) trSet=s.trSet;
   if(Number.isInteger(s.trInv)&&s.trInv>=0&&s.trInv<=3) trInv=s.trInv;
+  if(typeof s.chTriads==='boolean') chTriads=s.chTriads;
+  /* v2.17.0: Triads stopped being a view of its own and became a toggle on Chord
+     tones, whose chord now picks the triad. A save that was looking at triads opens on
+     Chord tones with triads on, on the triad quality it had picked (trQual). */
+  if(s.hView==='triads' || s.tab==='triads'){
+    hView='chords'; chTriads=true; chVoicing=0;
+    if(Number.isInteger(s.trQual)&&TRIADS[s.trQual]) chQual=TRI_TO_QUAL[s.trQual];
+  }
   // circle selection is no longer persisted — it is derived from the context
   // (gRoot + scIdx) at render time (1a). Older saves with cofSel/cofMinor are
   // simply ignored.
@@ -298,47 +292,13 @@ function loadState(){ try{
   }
 }catch(e){ devWarn('saved state could not be restored; using defaults', e); return false; } return true; }
 
-/* ---- shareable deep links ----
-   Encode the musical context (the things a "look at this" link should carry) into
-   the URL hash, so a backend-less single-file build is still addressable: open the
-   link and the app lands on that key / scale / chord view. Applied once on load via
-   applyShareHash() then stripped (so later navigation isn't re-pinned), and
-   persisted to localStorage from there on like any other state. The setters it
-   drives (setKey / setScView / setHView / selectTab / setMode) live in wiring-init
-   and exist by the time init calls this. */
-function encodeShareState(){
-  const p=new URLSearchParams();
-  p.set('m', currentMode);
-  p.set('t', currentTab);
-  p.set('k', String(gRoot));
-  p.set('r', gRootLbl);
-  p.set('s', String(scIdx));
-  if(currentTab==='harmony'){ p.set('hv', hView); p.set('q', String(chQual)); }
-  if(currentTab==='scales')  p.set('sv', scView);
-  return p.toString();
+/* ---- old share links ----
+   Share links (#k=…&t=…) were cut in v2.17.0. An old link still opens the app: the
+   hash is ignored and cleared, so it never pins or breaks anything. */
+function clearOldShareHash(){
+  if(typeof location==='undefined') return;
+  const h=(location.hash||'').replace(/^#/, ''); if(!h) return;
+  let p; try{ p=new URLSearchParams(h); }catch(_){ return; }
+  if(!p.has('k') && !p.has('t') && !p.has('s')) return;   // not one of ours
+  try{ history.replaceState(null, '', location.pathname+location.search); }catch(_){ /* ignore */ }
 }
-function shareURL(){
-  const base=(typeof location!=='undefined') ? (location.origin+location.pathname) : '';
-  return base + '#' + encodeShareState();
-}
-function applyShareHash(){
-  if(typeof location==='undefined') return false;
-  const h=(location.hash||'').replace(/^#/, ''); if(!h) return false;
-  let p; try{ p=new URLSearchParams(h); }catch(e){ devWarn('bad share hash', e); return false; }
-  if(!p.has('k') && !p.has('t') && !p.has('s')) return false;   // not one of ours
-  const k=parseInt(p.get('k'),10), r=p.get('r'), s=parseInt(p.get('s'),10);
-  if(Number.isInteger(k) && k>=0 && k<12){
-    const lbl=(typeof r==='string' && r) ? r : ROOTS[k];
-    setKey(k, lbl, (Number.isInteger(s) && SCALES[s]) ? s : undefined);
-  } else if(Number.isInteger(s) && SCALES[s]){ scIdx=s; }
-  const sv=p.get('sv'); if(sv==='scale'||sv==='notes') setScView(sv);
-  const hv=p.get('hv'); if(hv==='chords'||hv==='triads'||hv==='arp'||hv==='identify') setHView(hv);
-  const q=parseInt(p.get('q'),10); if(Number.isInteger(q) && QUALITIES[q]){ chQual=q; chVoicing=0; }
-  const tab=p.get('t'); if(tab==='harmony'||tab==='scales'||tab==='circle') selectTab(tab);
-  // 'ear' is an older link's mode; it folded into Practice (see loadState)
-  const m=p.get('m'); setMode(m==='practice'||m==='ear'?'practice':'reference');
-  // strip the hash so a reload / later nav isn't re-pinned to the shared state
-  try{ history.replaceState(null, '', location.pathname+location.search); }catch(e){ /* ignore */ }
-  return true;
-}
-

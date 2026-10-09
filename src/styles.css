@@ -331,15 +331,6 @@
   .dot.quiz:hover { background: rgba(220,200,160,0.26); }
   .dot.quiz.hit { background: var(--root); border-color: var(--root); color: #0e1408; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
   .dot.quiz.miss { background: #d64a4a; border-color: #d64a4a; color: #fff; }
-  /* chord-tone targeting (6a): the current chord's tones glow as guides to aim for */
-  .dot.quiz.target { background: rgba(220,200,160,0.34); border-color: var(--accent); box-shadow: 0 0 0 2px rgba(200,168,110,0.28); }
-  .dot.quiz.target.hit { box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
-  .tg-acc { margin-left: auto; align-self: center; font-size: 13px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
-  /* call & response (6c): the app's playing note pulses cyan during the CALL */
-  .dot.quiz.call { background: var(--accent); border-color: var(--accent); color: #0e1408; box-shadow: 0 0 0 4px rgba(90,200,180,0.28); }
-  .cr-stage { display: flex; align-items: baseline; gap: 12px; margin: 12px 0 10px; }
-  .cr-status { font-family: 'Fraunces', serif; font-size: 21px; font-weight: 500; }
-  .cr-scale { font-size: 13px; color: var(--text-dim); margin-left: auto; }
 
   .drill-summary { margin-top: 6px; }
   .drill-done-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-bottom: 14px; }
@@ -355,17 +346,10 @@
   .ear-choices { display: grid; gap: 10px; max-width: 620px; margin: 0 auto; }
   .ear-choices.ear-interval { grid-template-columns: repeat(4, 1fr); }
   .ear-choices.ear-chordq { grid-template-columns: repeat(4, 1fr); }
-  .ear-choices.ear-rhythm { grid-template-columns: repeat(2, 1fr); }
   .ear-choice { font-size: 15px; font-weight: 600; padding: 16px 8px; min-height: 52px; display: flex; align-items: center; justify-content: center; }
   .ear-choice:disabled { cursor: default; opacity: 0.85; }
   .ear-choice.correct { background: var(--root); border-color: var(--root); color: #0e1408; opacity: 1; font-weight: 700; }
   .ear-choice.wrong { background: #d64a4a; border-color: #d64a4a; color: #fff; opacity: 1; }
-  /* rhythm option: a proportional one-bar strip with beat gridlines behind it */
-  .ear-choice .rhythm { display: flex; gap: 3px; width: 100%; height: 30px; padding: 3px;
-    background-image: repeating-linear-gradient(90deg, transparent, transparent calc(25% - 1px), var(--border-strong) calc(25% - 1px), var(--border-strong) 25%); }
-  .rseg { border-radius: 3px; }
-  .rseg.note { background: currentColor; }
-  .rseg.rest { background: repeating-linear-gradient(45deg, transparent, transparent 3px, var(--text-faint) 3px, var(--text-faint) 4px); border: 1px solid var(--border-strong); }
   .ear-feedback { text-align: center; min-height: 22px; margin: 16px 0 6px; font-size: 14px; font-weight: 600; }
   .ear-feedback.good { color: var(--root); }
   .ear-feedback.bad { color: #e07a7a; }
@@ -673,8 +657,6 @@
   input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
   input[type="range"]::-moz-range-thumb { width: 15px; height: 15px; border: none; border-radius: 50%; background: var(--accent); cursor: pointer; }
   .bpm-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--text); min-width: 56px; }
-  .tb-tuner .tuner-strings { display: flex; gap: 5px; flex-wrap: wrap; }
-  .btn.tuner-str { min-width: 30px; padding: 5px 8px; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
   .btn.metro.active { background: var(--root); color: #0e1408; border-color: var(--root); font-weight: 700; }
   .btn.band.active { background: var(--ext); color: #11071f; border-color: var(--ext); font-weight: 700; }
   .btn[disabled], .btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
@@ -817,7 +799,7 @@
     .mt-body { padding: 12px 20px 14px; gap: 8px; }
     .mt-note-wrap { min-height: 40px; }
     .mt-note { font-size: 38px; }
-    .mt-hint { display: none; }
+    .mt-mic .mt-hint { display: none; }
   }
   /* chord-tones reference (voicing cards + sequencer) sits below the board */
   #harmony-extras { margin-top: 26px; }
@@ -1071,9 +1053,12 @@
   .mt-actions { display: flex; justify-content: center; }
   .mt-actions .btn { font-size: 14px; padding: 9px 24px; }
   .mt-hint { font-size: 11px; line-height: 1.5; color: var(--text-faint); text-align: center; }
-  /* align-self stops the button stretching to the full height of the wrapped
-     two-row string grid beside it on a phone; nowrap keeps "🎤 Mic" on one line. */
-  .btn.tuner-mic { padding: 5px 9px; white-space: nowrap; align-self: center; }
+  /* the mic half keeps the body's own rhythm; the by-ear half sits under it */
+  .mt-mic { display: flex; flex-direction: column; gap: 14px; }
+  .mt-ear { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .mt-ear-body { display: flex; flex-direction: column; gap: 10px; }
+  .tuner-strings { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .btn.tuner-str { min-width: 44px; min-height: 44px; padding: 8px 10px; font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; }
 
   /* ---- latency calibration row ---- */
   .tb-cal { flex-wrap: wrap; }

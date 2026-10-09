@@ -109,7 +109,7 @@ function mod(n,m){ return ((n%m)+m)%m; }
 /* dev-only diagnostic: surfaces errors that were previously swallowed silently,
    without breaking playback for the user. No effect on the shipped behaviour. */
 function devWarn(){ try{ if(typeof console!=='undefined' && console.warn) console.warn.apply(console, ['[GuitarStudio]'].concat([].slice.call(arguments))); }catch(_){} }
-/* Note labels stay ASCII in data — saves, share links and session ids all hold 'Eb' /
+/* Note labels stay ASCII in data — saves and session ids all hold 'Eb' /
    'C#' — and are spelled with ♭/♯ only where they reach the screen, here. */
 function noteTxt(lbl){ return String(lbl).replace('#','♯').replace(/^([A-G])b/,'$1♭'); }
 function noteName(pc, flat){ return noteTxt((flat && FLAT_MAP[pc]) ? FLAT_MAP[pc] : NOTES[pc]); }

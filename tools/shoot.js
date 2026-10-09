@@ -23,13 +23,11 @@
    to start the note-naming drill (clicks the bottom-nav Practice button, then the
    drill card, after load); the file gains a `-practice` / `-drill` suffix.
    `reference` is the default and needs no token. Phase 4 Ear: pass `ear` for the
-   Ear home, or `ear-interval` / `ear-chordq` / `ear-rhythm` to start that drill.
+   Ear home, or `ear-interval` / `ear-chordq` to start that drill.
    Phase 5 Rhythm: pass `changes` for the one-minute-changes setup, or `changes-run`
    to also press Start and land on the running tally; `strum` for the strumming-pattern
    trainer, or `strum-run` to also press Play and land on the looping grid; `comp` for the
    comp-the-progression drill, or `comp-run` to also press Play and land on the cycling now/next.
-   Phase 6 Lead: `target` for the chord-tone-targeting drill, or `target-run` to also press Play and
-   land on the lit-tones neck with the band cycling; `callresp` for the call-and-response drill.
    Phase 7 Timing: `timing` for the subdivision & timing coach, or `timing-run` to also press Play
    and land on the ticking grid with the scale walking the neck.
 
@@ -39,6 +37,8 @@
    Phase 10/A4 Settings: pass `settings` to expand the Settings disclosure (Instrument / Tools /
    Preferences). Combines with a mode token — `settings practice` is how you check that Tools is
    reachable from Practice, which is the whole point of splitting it out. Adds a `-settings` suffix.
+   Step 1: pass `triads` to turn on Chord tones' Triads toggle (adds `-triads`), or `tuner` to open
+   the one tuner panel (adds `-tuner`; on file:// it is the by-ear strings).
 
    Run:  node tools/shoot.js                       # default widths 390 768 1280, harmony
          node tools/shoot.js 360 414 820           # custom widths
@@ -72,19 +72,21 @@ const sizeArgs = [];
 const a11yArgs = [];                              // accessibility toggles (additive): cbpalette / shapes / a11y (both)
 let mode = null;                                  // null = reference (default), 'practice' = Practice surface
 let openSettings = false;                         // 'settings' token: expand the Settings panel (A4)
+let openTriads = false, openTuner = false;          // step 1: 'triads' / 'tuner' tokens
 let meterArg = null;                              // optional time signature (e.g. '3/4') set before the drill starts
 for (const a of process.argv.slice(2)) {
   if (a === 'tabs') tabArgs.push(...PANELS);
   else if (PANELS.includes(a)) tabArgs.push(a);
   else if (a === 'cbpalette' || a === 'shapes' || a === 'a11y') a11yArgs.push(a);
   else if (a === 'settings') openSettings = true;          // A4: expand the Settings disclosure
+  else if (a === 'triads') openTriads = true;              // step 1: Chord tones' Triads toggle
+  else if (a === 'tuner') openTuner = true;                // step 1: the one tuner panel
   else if (/^\d+\/\d+$/.test(a)) meterArg = a;              // time signature, e.g. 3/4 (Phase 7b)
   else if (a === 'practice' || a === 'reference' || a === 'drill' || a === 'session' || a === 'session-report'
            || a === 'changes' || a === 'changes-run'
            || a === 'strum' || a === 'strum-run' || a === 'comp' || a === 'comp-run'
-           || a === 'target' || a === 'target-run' || a === 'callresp'
            || a === 'timing' || a === 'timing-run'
-           || a === 'ear' || a === 'ear-interval' || a === 'ear-chordq' || a === 'ear-rhythm')
+           || a === 'ear' || a === 'ear-interval' || a === 'ear-chordq')
     mode = (a === 'reference') ? null : a;
   else sizeArgs.push(a);
 }
@@ -115,9 +117,6 @@ function appFor(panel) {
   if (mode === 'strum-run') clicks.push(`var g=document.getElementById('sp-play');if(g)g.click();`);
   if (mode === 'comp' || mode === 'comp-run') clicks.push(`var s=document.getElementById('start-comp');if(s)s.click();`);
   if (mode === 'comp-run') clicks.push(`var g=document.getElementById('tg-play');if(g)g.click();`);
-  if (mode === 'target' || mode === 'target-run') clicks.push(`var s=document.getElementById('start-target');if(s)s.click();`);
-  if (mode === 'target-run') clicks.push(`var g=document.getElementById('tg-play');if(g)g.click();`);
-  if (mode === 'callresp') clicks.push(`var s=document.getElementById('start-callresp');if(s)s.click();`);
   if (mode === 'timing' || mode === 'timing-run') clicks.push(`var s=document.getElementById('start-timing');if(s)s.click();`);
   if (mode === 'timing-run') clicks.push(`var g=document.getElementById('sd-play');if(g)g.click();`);
   /* Phase 10/B3, the timed session. `session` photographs a drill running INSIDE one —
@@ -126,12 +125,14 @@ function appFor(panel) {
      Both go through the app's own buttons, so they exercise the real path. */
   if (mode === 'session' || mode === 'session-report') clicks.push(`var s=document.getElementById('sess-start');if(s)s.click();`);
   if (mode === 'session-report') clicks.push(`var q=document.getElementById('drill-ctx-quit');if(q)q.click();`);
-  const earStart = { 'ear-interval': 'start-interval', 'ear-chordq': 'start-chordq', 'ear-rhythm': 'start-rhythm' }[mode];
+  const earStart = { 'ear-interval': 'start-interval', 'ear-chordq': 'start-chordq' }[mode];
   if (earStart) clicks.push(`var s=document.getElementById('${earStart}');if(s)s.click();`);
   // Settings disclosure (A4): expand it LAST, so the shot shows the three clusters
   // (Instrument / Tools / Preferences) in whichever mode was selected above — which is
   // how you check that Tools is reachable from Practice, not only from Reference.
   if (openSettings) clicks.push(`var st=document.getElementById('tb-toggle');if(st)st.click();`);
+  if (openTriads) clicks.push(`var tr=document.querySelectorAll('#ch-shape .btn')[1];if(tr)tr.click();`);
+  if (openTuner) clicks.push(`var tu=document.getElementById('tb-tuner');if(tu)tu.click();`);
   // accessibility toggles (additive): flip the colour-blind palette and/or dot shapes
   if (a11yArgs.includes('cbpalette') || a11yArgs.includes('a11y')) clicks.push(`var b=document.getElementById('tb-cbpalette');if(b)b.click();`);
   if (a11yArgs.includes('shapes') || a11yArgs.includes('a11y')) clicks.push(`var b=document.getElementById('tb-shapes');if(b)b.click();`);
@@ -140,7 +141,7 @@ function appFor(panel) {
   if (meterArg) clicks.unshift(`var ms=document.getElementById('tb-meter');if(ms){for(var i=0;i<ms.options.length;i++){if(ms.options[i].textContent==='${meterArg}'||ms.options[i].value==='${meterArg}'){ms.selectedIndex=i;break;}}ms.dispatchEvent(new Event('change'));}`);
   // any non-default capture: dismiss the first-run welcome first so it doesn't block
   // the surface (the no-arg shot keeps it, to capture the onboarding card itself).
-  if (panel || mode || a11yArgs.length || openSettings) clicks.unshift(`var wc=document.getElementById('wc-got');if(wc)wc.click();`);
+  if (panel || mode || a11yArgs.length || openSettings || openTriads || openTuner) clicks.unshift(`var wc=document.getElementById('wc-got');if(wc)wc.click();`);
   const switcher = clicks.length
     ? `<script>addEventListener('load',function(){try{${clicks.join('')}}catch(e){}});</script>`
     : '';
@@ -182,7 +183,7 @@ function appFor(panel) {
 
 for (const { w, h } of specs) {
   for (const panel of tabs) {
-    const tag = (panel ? `${w}-${panel}` : `${w}`) + (mode ? '-' + mode : '') + (openSettings ? '-settings' : '') + (a11yArgs.length ? '-' + a11yArgs.join('-') : '');
+    const tag = (panel ? `${w}-${panel}` : `${w}`) + (mode ? '-' + mode : '') + (openSettings ? '-settings' : '') + (openTriads ? '-triads' : '') + (openTuner ? '-tuner' : '') + (a11yArgs.length ? '-' + a11yArgs.join('-') : '');
     const appCopy = path.join(outDir, `_app_${tag}.html`);
     const wrapper = path.join(outDir, `_wrap_${tag}.html`);
     fs.writeFileSync(appCopy, appFor(panel));

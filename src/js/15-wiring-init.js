@@ -2,9 +2,9 @@
 /* ---- shared root picker, display mode, sub-view toggle, global play ---- */
 /* Each render fn paints panel content for its mode and the ONE shared board only
    when its mode is active (isBoardMode), so a cross-view pass paints the board once. */
-function renderContextViews(){ renderChords(); renderTriads(); renderArp(); renderIdentify(); renderScales(); renderNotes(); markScrollables(); }
+function renderContextViews(){ renderChords(); renderArp(); renderScales(); renderNotes(); markScrollables(); }
 function renderActiveContext(){
-  if(currentTab==='harmony'){ (hView==='identify'?renderIdentify:hView==='triads'?renderTriads:hView==='arp'?renderArp:renderChords)(); }
+  if(currentTab==='harmony'){ (hView==='arp'?renderArp:renderChords)(); }
   else if(currentTab==='scales'){ scView==='notes'?renderNotes():renderScales(); }
   markScrollables();
 }
@@ -66,23 +66,19 @@ document.getElementById('g-names').onclick=()=>setGMode('names');
 document.getElementById('g-deg').onclick=()=>setGMode('deg');
 
 let hView='chords';
-function setHView(v){ hView=v;
+function setHView(v){ hView = v==='arp' ? 'arp' : 'chords'; v=hView;
   document.getElementById('sub-chords').hidden = v!=='chords';
-  document.getElementById('sub-triads').hidden = v!=='triads';
   document.getElementById('sub-arp').hidden = v!=='arp';
-  document.getElementById('sub-identify').hidden = v!=='identify';
-  ['chords','triads','arp','identify'].forEach(k=>{ const b=document.getElementById('hv-'+k); if(b){ b.classList.toggle('active', k===v); b.setAttribute('aria-pressed', k===v?'true':'false'); } });
-  const head = v==='identify'?'id':(v==='triads'?'tr':v==='arp'?'arp':'ch');
+  ['chords','arp'].forEach(k=>{ const b=document.getElementById('hv-'+k); if(b){ b.classList.toggle('active', k===v); b.setAttribute('aria-pressed', k===v?'true':'false'); } });
+  const head = v==='arp'?'arp':'ch';
   document.getElementById('harmony-h').textContent = t(head+'_h');
   document.getElementById('harmony-p').textContent = t(head+'_p');
   applyHarmonyExtras();
-  (v==='identify'?renderIdentify:v==='triads'?renderTriads:v==='arp'?renderArp:renderChords)();
+  (v==='arp'?renderArp:renderChords)();
   markScrollables(); updateGlobalPlay(); saveState();
 }
 document.getElementById('hv-chords').onclick=()=>setHView('chords');
-document.getElementById('hv-triads').onclick=()=>setHView('triads');
 document.getElementById('hv-arp').onclick=()=>setHView('arp');
-document.getElementById('hv-identify').onclick=()=>setHView('identify');
 
 /* Scales-tab sub-view (1b): Scale | Notes — mirrors the Harmony Chords/Triads
    toggle. The folded-in Notes mode reuses the shared board + the context root. */
@@ -126,17 +122,18 @@ function applyBoardRegion(){
   const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
 }
 /* voicing cards + sequencer (now below the board) belong only to Harmony's
-   chord-tones view; hide them everywhere else so the board stays the last thing. */
+   chord-tones view; hide them everywhere else so the board stays the last thing.
+   With triads on, the triad cards in the panel stand in for the chord shapes. */
 function applyHarmonyExtras(){
   const on = currentTab==='harmony' && hView==='chords';
   const el=document.getElementById('harmony-extras'); if(el) el.hidden = !on;     // progression sequencer (full-width row)
-  const sc=document.getElementById('shapes-card'); if(sc) sc.hidden = !on;        // chord-shape cards (full-width row below the neck)
+  const sc=document.getElementById('shapes-card'); if(sc) sc.hidden = !on || triadsOn();   // chord-shape cards (full-width row below the neck)
   applyShapesPanel();
 }
 function globalPlay(){
   const boardEl=document.getElementById('board');
   if(currentTab==='harmony'){
-    if(hView==='triads'){ const v=currentTriadVoicing(); animArpMidi(boardEl, v.midis); }
+    if(isBoardMode('triads')){ const v=currentTriadVoicing(); animArpMidi(boardEl, v.midis); }
     else if(hView==='arp'){ const q=QUALITIES[chQual]; animRun(boardEl, 48+gRoot, q.iv.concat([12])); }   // run the arpeggio melodically up the neck
     else { const v=currentChordVoicing(); animArpMidi(boardEl, v.midis); }
   } else if(currentTab==='scales' && scView==='scale'){ const s=SCALES[scIdx]; animRun(boardEl, 48+gRoot, s.iv.concat([12])); }
@@ -148,8 +145,8 @@ function globalPlay(){
 function updateGlobalPlay(){
   const b=document.getElementById('g-play');
   if(b){
-    // nothing to "listen" to in the notes view or the identify picker
-    b.hidden = (currentTab==='scales' && scView==='notes') || (currentTab==='harmony' && hView==='identify');
+    // nothing to "listen" to in the notes view
+    b.hidden = currentTab==='scales' && scView==='notes';
     const cadence = currentTab==='circle';
     b.innerHTML='&#9654; '+t(cadence?'b_cadence':'b_listen');
     const tip=t(cadence?'b_cadence':'b_listen_tip');
@@ -157,10 +154,9 @@ function updateGlobalPlay(){
   }
   const lp=document.getElementById('g-loop');
   if(lp){
-    // The single loop now applies to both harmony views: it loops the selected
-    // chord voicing (chord-tones view) or the shown triad (triads view) as a
+    // Loops the selected chord voicing, or the shown triad with triads on, as a
     // backing. It persists across tabs; the transport chip is the Stop.
-    lp.hidden = !(currentTab==='harmony' && (hView==='chords' || hView==='triads'));
+    lp.hidden = !(currentTab==='harmony' && hView==='chords');
     lp.classList.toggle('active', !!loopClock);
     lp.setAttribute('aria-pressed', loopClock?'true':'false');
     lp.innerHTML=(loopClock?'&#9632; ':'&#8635; ')+t('b_loop');
@@ -187,18 +183,6 @@ document.getElementById('seq-strip').addEventListener('click',e=>{
 renderSeq(); setSeqTransport();
 // one shared board, wired once (1b): a dot click sounds that string, Enter/Space plays focused.
 wirePlay(document.getElementById('board'));
-/* Identify (1c): in identify mode a board tap toggles that note into the picked
-   set instead of just sounding it. Capture phase + stopPropagation so wirePlay's
-   pluck doesn't also fire; a freshly-picked note still sounds, as feedback. */
-document.getElementById('board').addEventListener('click', e=>{
-  if(!isBoardMode('identify')) return;
-  const d=e.target.closest('.dot'); if(!d || d.dataset.midi==null) return;
-  e.stopPropagation();
-  const midi=parseInt(d.dataset.midi), i=idSel.indexOf(midi);
-  if(i>=0) idSel.splice(i,1); else { idSel.push(midi); pluck(midi); rippleDot(d); }
-  _boardStagger=false; renderIdentify(); _boardStagger=true;   // a pick isn't a board-change
-}, true);
-document.getElementById('id-clear').onclick=()=>{ idSel=[]; renderIdentify(); };
 /* the suggester's scale chips are the reference → practice seam (spine #2):
    jump to that scale, on the chord's root, in the Scales tab. */
 document.getElementById('suggest-body').addEventListener('click', e=>{
@@ -350,7 +334,7 @@ function navTo(panel){
   applyNav();
 }
 // paint the strip from the live state — called by setMode and selectTab, so the nav
-// follows a keyboard shortcut, a seam jump or a restored share link, not just a click
+// follows a keyboard shortcut or a seam jump, not just a click
 function applyNav(){
   const cur = currentMode==='practice' ? 'practice' : currentTab;
   document.querySelectorAll('.navbtn').forEach(b=>{
@@ -383,24 +367,22 @@ function applyNav(){
   applyNav();
 })();
 /* ---- "Drill this" — the seam, honoured (spine #2) ----
-   The app long claimed a reference→practice seam and kept it in exactly
-   ONE of its seven reference views (Notes). All seven have it now, with one label, one
-   listener and one map: a view is a thing you are looking at, a track is the drill that
-   is about that thing, and only a person can say which is which — so this map is the
-   one curated list in the seam, and it is short enough to read.
+   One label, one listener and one map: a view is a thing you are looking at, a track
+   is the drill that is about that thing, and only a person can say which is which — so
+   this map is the one curated list in the seam, and it is short enough to read.
 
-     chord tones / triad shapes → comp     the chord on screen, changed on time under a band
-     arpeggio                   → target   the same notes, aimed at while the chords move
-     identify                   → chordq   you named it by eye; name it by ear
-     scale                      → callresp phrases built out of this scale, echoed back
-     notes                      → note     the original seam, unchanged
-     circle                     → changes  the keys' chords, switched cleanly
+     chord tones (+ triads) → comp     the chord on screen, changed on time under a band
+     scale                  → timing   this scale, walked in one box on the beat
+     notes                  → note     find every instance of the note
+     circle                 → changes  the keys' chords, switched cleanly
+
+   Arpeggio has no drill seam: its notes are practised over the band, so its button is
+   a Jam toggle (below).
 
    Everything else about it is derived: startTrack() is the one door in (B2), so the
    drill arrives with the shared header naming it, exactly as if the card had been
    pressed. Nothing here knows about any individual drill. */
-const SEAM_TRACKS = { chords:'comp', triads:'comp', arp:'target', identify:'chordq',
-                      scale:'callresp', notes:'note', circle:'changes' };
+const SEAM_TRACKS = { chords:'comp', scale:'timing', notes:'note', circle:'changes' };
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-seam]'); if(!b) return;
   const track=SEAM_TRACKS[b.dataset.seam]; if(!track) return;
@@ -414,14 +396,16 @@ document.addEventListener('click', e=>{
    door, and it sits beside the suggester that is already captioned "What to play over
    this" and already knows the answer. One tap, and the same tap stops it.
    It plays the PROGRESSION when there is one and the current chord otherwise, because
-   that is the more musical answer whenever the player has built one. */
+   that is the more musical answer whenever the player has built one. Every button
+   carrying data-jam is this toggle (the aside's, and Arpeggio's). */
 function jamActive(){ return !!(typeof seqClock!=='undefined' && seqClock) || !!(typeof loopClock!=='undefined' && loopClock); }
 function renderJamBtn(){
-  const b=document.getElementById('seam-jam'); if(!b) return;
   const on=jamActive();
-  b.textContent=t(on?'seam_jam_stop':'seam_jam');
-  b.classList.toggle('active', on);
-  b.setAttribute('aria-pressed', on?'true':'false');
+  document.querySelectorAll('[data-jam]').forEach(b=>{
+    b.textContent=t(on?'seam_jam_stop':'seam_jam');
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on?'true':'false');
+  });
 }
 function jamToggle(){
   if(jamActive()){ if(seqClock) seqStop(); else stopLoop(); renderJamBtn(); return; }
@@ -437,7 +421,7 @@ function jamToggle(){
   else if(!loopClock) loopToggle();
   renderJamBtn();
 }
-{ const j=document.getElementById('seam-jam'); if(j) j.onclick=jamToggle; }
+document.querySelectorAll('[data-jam]').forEach(b=>{ b.onclick=jamToggle; });
 document.getElementById('lang-switch').addEventListener('click',e=>{
   const b=e.target.closest('.langbtn'); if(!b||b.dataset.lang===lang) return;
   lang=b.dataset.lang; applyLang(); saveState();
@@ -464,9 +448,6 @@ document.getElementById('tb-tuning').onchange=function(){
       if(masterOut && actx) masterOut.gain.setTargetAtTime(masterVol, actx.currentTime, 0.01);
     };
     v.onchange=function(){ saveState(); }; } }
-/* tuner: tap a string button to hold its reference pitch (05-audio tunerTone) */
-{ const ts=document.getElementById('tb-tuner-strings');
-  if(ts) ts.addEventListener('click', e=>{ const b=e.target.closest('[data-midi]'); if(b) tunerTone(+b.dataset.midi); }); }
 document.getElementById('tb-frets').onchange=function(){ fretRangeIdx=+this.value; renderAllBoards(); saveState(); };
 { const cp=document.getElementById('tb-capo'); if(cp) cp.onchange=function(){ capo=+this.value; renderAllBoards(); saveState(); }; }
 /* a meter change alters what an in-flight drill should be showing (bar length,
@@ -485,21 +466,6 @@ function applyA11y(){
 }
 { const p=document.getElementById('tb-cbpalette'); if(p) p.onclick=function(){ cbPalette=!cbPalette; applyA11y(); saveState(); };
   const s=document.getElementById('tb-shapes');    if(s) s.onclick=function(){ fnShapes=!fnShapes;  applyA11y(); saveState(); }; }
-
-/* ---- share a deep link ----
-   Copy a URL whose hash encodes the current key / scale / chord view; opening it
-   lands a new visitor on that exact context (applyShareHash on load). */
-function shareFallback(){ try{ location.hash=encodeShareState(); }catch(e){ /* ignore */ } }
-{ const sb=document.getElementById('tb-share');
-  if(sb) sb.onclick=function(){
-    const url=shareURL();
-    const flash=()=>{ sb.textContent=t('share_copied'); sb.classList.add('active'); setTimeout(()=>{ sb.textContent=t('share_btn'); sb.classList.remove('active'); }, 1400); };
-    try{
-      if(typeof navigator!=='undefined' && navigator.clipboard && navigator.clipboard.writeText)
-        navigator.clipboard.writeText(url).then(flash).catch(()=>{ shareFallback(); flash(); });
-      else { shareFallback(); flash(); }
-    }catch(e){ shareFallback(); flash(); }
-  }; }
 
 /* ---- review routing (spine #3): the progress card's Review button drops into the
    track the queue named; the drills already prefer due items, so this just opens the
@@ -572,17 +538,6 @@ function closeKbd(){ const o=document.getElementById('kbd-overlay'); if(!o) retu
 function showWelcome(){ const o=document.getElementById('welcome-overlay'); if(!o) return; o.hidden=false; o.classList.add('open');
   const f=document.getElementById('wc-go-look'); if(f) try{ f.focus(); }catch(_){} }
 function dismissWelcome(){ const o=document.getElementById('welcome-overlay'); if(!o||o.hidden) return; o.classList.remove('open'); o.hidden=true; welcomeSeen=true; saveState(); }
-/* "Tune the guitar". Two tuners exist and they are different tools —
-   the mic one listens, the reference one plays a pitch at you — so route to whichever
-   is actually available. 14-mic-tuner.js REMOVES #tb-mic when there's no secure
-   context, which makes the button's presence the honest support test; without it,
-   open Settings on the reference-tone tuner, the tool that still works there. */
-function welcomeTune(){
-  if(document.getElementById('tb-mic')){ micOpen(); return; }
-  const tb=document.getElementById('toolbar'), tg=document.getElementById('tb-toggle');
-  if(tb && tb.classList.contains('collapsed') && tg) tg.click();
-  const row=document.querySelector('.tb-tuner'); if(row) try{ row.scrollIntoView({block:'nearest'}); }catch(_){}
-}
 { const g=document.getElementById('wc-got');   if(g) g.onclick=dismissWelcome;
   const c=document.getElementById('wc-close'); if(c) c.onclick=dismissWelcome;
   /* Every answer routes. The card used to end in one Got it that landed you on chord
@@ -592,7 +547,7 @@ function welcomeTune(){
   const route=(id,go)=>{ const b=document.getElementById(id); if(b) b.onclick=()=>{ dismissWelcome(); go(); }; };
   route('wc-go-look',     ()=>navTo('harmony'));
   route('wc-go-practice', ()=>navTo('practice'));
-  route('wc-go-tune',     welcomeTune);
+  route('wc-go-tune',     micOpen);
   const o=document.getElementById('welcome-overlay'); if(o) o.addEventListener('click',e=>{ if(e.target.id==='welcome-overlay') dismissWelcome(); }); }
 
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeChangelog(); closeKbd(); dismissWelcome(); } });
@@ -608,7 +563,7 @@ document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey) return;
   const tg=e.target;
   if(tg && (tg.tagName==='INPUT'||tg.tagName==='SELECT'||tg.tagName==='TEXTAREA'||tg.isContentEditable)) return;
-  // modal open — the mic tuner counts too, or "a" would retune the app's key while
+  // modal open — the tuner counts too, or "a" would retune the app's key while
   // you're squinting at a needle (and it runs its own Escape handler).
   if(!document.getElementById('cl-overlay').hidden || !document.getElementById('kbd-overlay').hidden) return;
   { const mo=document.getElementById('mic-overlay'); if(mo && !mo.hidden) return; }
@@ -725,14 +680,11 @@ applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
   const s=document.getElementById('sess-start'); if(s) s.onclick=()=>sessionStart(sessMins);
   const r=document.getElementById('session-report');
   if(r) r.addEventListener('click', e=>{ if(e.target.closest('#sess-close')) sessionDismiss(); }); }
-// Deep link: if the URL hash carries a shared context, apply it over the
-// restored state now that the shell + setters are up, then strip the hash.
-const fromShare = applyShareHash();
+clearOldShareHash();
 document.getElementById('app-ver').textContent = 'v' + APP_VERSION;
 // First-run onboarding: only a genuinely first visit (no saved state) leaves
-// welcomeSeen false — returning users are grandfathered in loadState(). A visitor
-// arriving via a share link goes straight to the shared view, not the welcome.
-if(!welcomeSeen && !fromShare) showWelcome();
+// welcomeSeen false — returning users are grandfathered in loadState().
+if(!welcomeSeen) showWelcome();
 
 /* ---- test introspection hook (Phase C+) ----
    Built ONLY when a harness sets window.__GS_ALLOW_TEST__ before the page loads,
@@ -744,8 +696,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     APP_VERSION, I18N, QUALITIES, TRIADS, SCALES, COF, FRET_RANGES, SEQ_PRESETS,
     fifthInterval, spellNote, rootParts, simpleName,
     diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey, noteTxt,
-    identifyChord, nearChords, scalesOverChord, triadQi, currentHarmonyChord, renderIdentify,
-    setIdSel:(arr)=>{ idSel=arr.slice(); },
+    scalesOverChord, triadQi, currentHarmonyChord,
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
     schedAdvance, clocks, beat,
@@ -755,8 +706,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     setCustomTuning:(arr)=>{ customTuning=arr.slice(); }, setTuningIdx:(i)=>{ tuningIdx=i; applyTuning(); },
     // learner review + activity (spine #3)
     learnerReview, learnerActivity, startReview,
-    // shareable deep links
-    encodeShareState, applyShareHash, shareURL,
+    clearOldShareHash,
     // drill registry (13): the one list the shell iterates instead of naming drills
     DRILLS, activeDrill, showDrillHome, exitAllDrills, refreshDrillsLang, drillKeyChanged, applyDrillCtx,
     // one drill shell
@@ -789,7 +739,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     startDrill, drillAnswer, drillTargetsFor, exitDrill, DRILL_LEN, getDrill:()=>drill,
     // ear-training drills
     startEar, earAnswer, earNext, earReplay, exitEar, getEar:()=>ear,
-    earChoices:()=>(ear?ear.cfg.choices(ear.cur):[]), INTERVALS, EAR_QUAL_IDX, RHYTHMS,
+    earChoices:()=>(ear?ear.cfg.choices():[]), INTERVALS, EAR_QUAL_IDX,
     // chord-change fluency drill
     startChanges, cmBegin, cmTap, cmUntap, finishChanges, exitChanges, getCm:()=>cmDrill,
     CM_PAIRS, CM_DURS, cmPairId, cmPairBest,
@@ -799,17 +749,9 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     STRUM_PATTERNS, setSpPattern:(i)=>{ spIdx=i; if(spDrill) spDrill.patIdx=i; },
     SP_SWINGS, setSpSwing:(i)=>{ spSwing=i; }, setSpAccent:(v)=>{ spAccent=!!v; },
     setSpMute:(v)=>{ spMute=!!v; }, setSpBand:(v)=>{ spBand=!!v; },
-    // over-the-changes drill — one machine, two modes
-    startOverChanges, startComp, startTarget, getOcMode:()=>tgMode,
-    setOcMode:(m)=>{ tgMode = (m==='chords') ? 'chords' : 'tones'; },
-    targetPlay, targetStop, targetToggle, targetAnswer, exitTarget, getTg:()=>tgDrill,
-    tgBuildBars, tgAccuracy, setTargetProg:(i)=>{ tgIdx=i; if(tgDrill){ tgDrill.presetIdx=i; tgDrill.bars=tgBuildBars(SEQ_PRESETS[i]); } },
-    setTargetPos:(i)=>{ tgPos=i; if(tgDrill) tgDrill.win = i ? boxWindow(i) : null; },
-    setTargetDeg:(i)=>{ tgDeg=i; if(tgDrill){ const c=tgDrill.bars[tgDrill.bar]; if(c) tgSetTargets(c); } },
-    // call & response drill
-    startCallResp, crAnswer, crReplay, exitCallResp, getCr:()=>cr, CR_ROUNDS, crPool, crMakeMotif,
-    crToResponse:()=>{ if(cr){ cr.phase='response'; cr.respIdx=0; cr.wrongNote=0; } }, setCrPos:(i)=>{ crPos=i; },
-    crNextRoundNow:()=>{ if(cr) crNewRound(); },   // test hook: skip the inter-round wait
+    // comp-the-progression drill
+    startComp, targetPlay, targetStop, targetToggle, exitTarget, getTg:()=>tgDrill,
+    tgBuildBars, setTargetProg:(i)=>{ tgIdx=i; if(tgDrill){ tgDrill.presetIdx=i; tgDrill.bars=tgBuildBars(SEQ_PRESETS[i]); } },
     // subdivision & timing drill
     startTiming, sdToggle, exitTiming, getSd:()=>sd, SUBDIVS, SD_BEATS, sdPath,
     setSdSub:(i)=>{ sdSub=i; }, setSdPos:(i)=>{ sdPos=i; }, setSdNotes:(v)=>{ sdNotes=!!v; },
@@ -823,7 +765,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     // chromatic mic tuner. The pitch→readout maths is pure and
     // assertable here; the getUserMedia half needs a real browser (tools/mic-check.js).
     micSupported, micMidiFromHz, micCentsOff, micNearestString,
-    micOpen, micClose, micStatus, micPaint, micPaintIdle, getMic:()=>mt,
+    micOpen, micClose, micStatus, micPaint, micPaintIdle, getMic:()=>mt, buildTuner, tunerEarShow, tunerEarOpen,
     MT_FFT, MT_CLARITY, MT_IN_TUNE, MT_HZ_LO, MT_HZ_HI,
     // shared mic layer (13-mic.js) + onset detection & scoring.
     // The matching/scoring maths is pure, so it is asserted directly — the capture
@@ -846,10 +788,11 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     setCbPalette:(v)=>{ cbPalette=!!v; }, setFnShapes:(v)=>{ fnShapes=!!v; }, setWelcomeSeen:(v)=>{ welcomeSeen=!!v; },
     getA11y:()=>({ cbPalette, fnShapes, welcomeSeen }),
     setChQual:(i)=>{ chQual=i; chVoicing=0; }, setChVoicing:(i)=>{ chVoicing=i; },
-    setTriad:(q,set,inv)=>{ trQual=q; trSet=set; trInv=inv; },
+    setTriad:(set,inv)=>{ trSet=set; trInv=inv; }, setChTriads:(v)=>{ chTriads=!!v; },
+    chTriadIdx, triadsOn,
     initAudio:()=>audio(),
     setCtxNow:(t)=>{ if(actx) actx.currentTime=t; },
-    state:()=>({ gRoot, gRootLbl, scIdx, scView, chQual, chVoicing, currentTab, currentMode, hView,
+    state:()=>({ gRoot, gRootLbl, scIdx, scView, chQual, chVoicing, chTriads, currentTab, currentMode, hView,
                  loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo,
                  cbPalette, fnShapes, welcomeSeen })
   };

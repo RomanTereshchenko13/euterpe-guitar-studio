@@ -6,9 +6,9 @@ function motionOK(){
   if(typeof window==='undefined' || typeof window.matchMedia!=='function') return false;
   try{ return !window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return true; }
 }
-/* Whether the next board paint should play the change-stagger. Default on; the
-   Identify tap handler turns it off around its re-render so picking a note
-   doesn't fade the whole neck on every tap. */
+/* Whether the next board paint should play the change-stagger. Default on;
+   playback-driven repaints (the progression following its chords) turn it off so
+   the neck doesn't re-fade on every bar. */
 let _boardStagger=true;
 function renderNums(el){
   const lo=FRET_LO(), hi=FRET_HI(), showOpen=lo<=1;
@@ -166,10 +166,9 @@ function wirePlay(boardEl){
    does the actual board + numbers + legend + hint draw. Legends are mode-specific
    text, generated here so the shared legend slot can switch with the mode. */
 function isBoardMode(mode){
-  if(mode==='chords')   return currentTab==='harmony' && hView==='chords';
-  if(mode==='triads')   return currentTab==='harmony' && hView==='triads';
+  if(mode==='chords')   return currentTab==='harmony' && hView==='chords' && !triadsOn();
+  if(mode==='triads')   return currentTab==='harmony' && hView==='chords' && triadsOn();
   if(mode==='arp')      return currentTab==='harmony' && hView==='arp';
-  if(mode==='identify') return currentTab==='harmony' && hView==='identify';
   if(mode==='scale')    return currentTab==='scales'  && scView==='scale';
   if(mode==='notes')    return currentTab==='scales'  && scView==='notes';
   return false;

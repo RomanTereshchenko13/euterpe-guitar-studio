@@ -27,9 +27,8 @@
        tracks:[...] }              // what this drill teaches + how its result is measured
 
    TRACKS. A drill is not the unit the learner model cares about — a
-   *track* is. Over-the-changes is one drill with two tracks (comping and chord-tone
-   targeting, different metrics, opened from different cards); ear training is one
-   drill with three. And the note drill has both kinds at once: per-item recall AND a
+   *track* is. Ear training is one drill with two (intervals and chord quality, two
+   SRS queues). And the note drill has both kinds at once: per-item recall AND a
    per-round accuracy. So the registry declares tracks, and the model reads them:
 
      { id:'note',                 // stable track id
@@ -43,8 +42,7 @@
 
    `scored` is DECLARED rather than derived from the drill's mic() predicate, and the
    difference matters: mic() answers "may I offer the tier right now on this device",
-   which is false on a machine with no microphone and false in the lead mode of
-   over-the-changes. The badge on the practice card answers "what kind of drill is
+   which is false on a machine with no microphone. The badge on the practice card answers "what kind of drill is
    this", which is a property of the exercise and true on every device. Omitted means
    'coach' — the drill hands you a number to beat and judges nothing.
 
@@ -117,9 +115,8 @@ function drillKeyChanged(){
    the player asked for — which is how the header can finally say WHICH DRILL THIS IS.
    Nine drills used to render under one <h2>Практика</h2> and never name themselves; a
    drill's own `.drill-head` showed the chord, the hit count or the round instead.
-   It is the TRACK and not the drill because two of the seven entries carry more than
-   one (over-the-changes is comping *or* targeting; ear training is three skills), and
-   "Over the changes" is not what the player pressed. */
+   It is the TRACK and not the drill because ear training carries two, and "Ear" is
+   not what the player pressed. */
 let curTrack = null;
 function setCurTrack(id){ curTrack = id || null; }
 function curTrackObj(){ return curTrack ? trackById(curTrack) : null; }
@@ -185,8 +182,8 @@ function applyDrillCtx(){
   const nm=document.getElementById('drill-ctx-name');
   if(nm){ const tr=curTrackObj(); nm.textContent = tr && tr.label ? t(tr.label) : ''; }
 
-  /* the setup handle. Only for a drill that HAS a setup: the note-naming, ear and
-     call-and-response drills configure nothing, and a disclosure over an empty box is
+  /* the setup handle. Only for a drill that HAS a setup: the note-naming and ear
+     drills configure nothing, and a disclosure over an empty box is
      worse than no disclosure. One-minute changes is the odd one out for the opposite
      reason — its setup is a whole exclusive step, not a disclosure. */
   const hasSetup=!!(d && d.setup && document.getElementById(d.setup));
@@ -259,7 +256,7 @@ function trackBadge(tr){
   return s==='mic' ? 'badge_mic' : s==='acc' ? 'badge_acc' : 'badge_coach';
 }
 /* The session ids drills write are "<namespace>:<variant>" ("timing:8ths",
-   "changes:C-G"), except the three ear tracks, which have no variant. One splitter,
+   "changes:C-G"), except the ear tracks, which have no variant. One splitter,
    so every reader agrees on where the namespace ends. */
 function sessNs(drillId){
   const s=String(drillId||''), i=s.indexOf(':');

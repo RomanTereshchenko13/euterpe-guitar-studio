@@ -166,13 +166,12 @@ if (T) {
   ['ch-board','tr-board','sc-board','nt-board'].forEach(id =>
     ok('1b: old per-tab board gone: ' + id, !win.document.getElementById(id)));
   // 1b's single shared reference board (#board) is still exactly one; the Practice
-  // drills add their own boards — note-naming (#drill-board), targeting (#tg-board, 6a),
-  // call-response (#cr-board, 6c) and subdivision/timing (#sd-board, 7a) — so five
-  // fretboards total now.
+  // drills add their own boards — note-naming (#drill-board) and subdivision/timing
+  // (#sd-board) — so three fretboards total.
   ok('1b: one shared reference board (#board)',
      win.document.querySelectorAll('#board.fretboard').length === 1);
-  ok('3c: drill has its own board, five fretboards total',
-     win.document.querySelectorAll('.fretboard').length === 5 && !!win.document.getElementById('drill-board'),
+  ok('3c: drill has its own board, three fretboards total',
+     win.document.querySelectorAll('.fretboard').length === 3 && !!win.document.getElementById('drill-board'),
      win.document.querySelectorAll('.fretboard').length + ' found');
   // A2: the tab strip became the one nav — three reference subjects + Practice
   ok('1b: Notes folded away (3 reference subjects, not 4)',
@@ -189,8 +188,8 @@ if (T) {
   ok('i18n: no keys only in en', onlyEn.length === 0, onlyEn.join(', '));
   ['b_listen_tip','b_loop_tip','b_loop_stop_tip','audio_off',
    'cd_voicings','cd_eshape','cd_ashape','cd_fret','cd_pick_hint','tr_shapes',
-   'view_scale','view_notes','view_identify','suggest_title','suggest_scales',
-   'id_near','id_missing','id_extra',
+   'view_scale','view_notes','suggest_title','suggest_scales',
+   'shape_full','shape_triads','shape_no_triad',
    'view_arp','arp_h','arp_p','arp_hint','arp_word','tb_capo','capo_off','caged_desc',
    'mode_practice','practice_h','practice_intro','drill_notes','drill_notes_meta',
    'drill_quit','drill_find_pre','drill_find_sub','drill_complete','drill_score','drill_clean',
@@ -201,24 +200,22 @@ if (T) {
    'prog_title','prog_empty','prog_accuracy','prog_streak','prog_sessions',
    'prog_yours','prog_best','prog_runs','prog_timing',
    'practice_grp_ear','ear_intervals','ear_intervals_meta','ear_chords','ear_chords_meta',
-   'ear_rhythm','ear_rhythm_meta','ear_int_prompt','ear_chord_prompt','ear_rhythm_prompt',
+   'ear_int_prompt','ear_chord_prompt',
    'ear_replay','ear_next','ear_right','ear_wrong','ear_got',
    'pwa_install','pwa_install_tip','pwa_update','pwa_update_btn','pwa_dismiss',
-   'tb_volume','tb_tuner',
+   'tb_volume','tuner_open','tuner_ear','tuner_ear_hint',
    'practice_grp_fretboard','practice_grp_rhythm','drill_changes','drill_changes_meta',
    'cm_pair','cm_dur','cm_sec','cm_click','cm_start','cm_stop','cm_setup_note',
    'cm_changes','cm_cpm','cm_best','cm_tap_hint','cm_undo','cm_newbest',
    'drill_strum','drill_strum_meta','sp_pattern','sp_chord','sp_play','sp_stop','sp_hint',
    'drill_comp','drill_comp_meta','co_now','co_next','co_hint',
-   'oc_mode','oc_chords','oc_tones',
    'sp_swing','sp_accent','sp_mute','sp_band',
-   'practice_grp_lead','drill_target','drill_target_meta','tg_prog','tg_pos','tg_deg','tg_hits','tg_acc','tg_hint',
-   'drill_callresp','drill_callresp_meta','cr_listen','cr_your_turn','cr_replay','cr_echoed','cr_rounds','cr_hint',
+   'tg_prog','tg_pos',
    'a11y_palette','a11y_shapes',
    'wc_title','wc_lead','wc_look','wc_look_d','wc_drill','wc_drill_d','wc_tune','wc_tune_d','wc_got',
    'tun_custom','cl_older',
-   'prog_active','prog_due','prog_review','share_btn','share_copied',
-   'mic_open','mic_title','mic_start','mic_stop','mic_cents','mic_string','mic_play_hint',
+   'prog_active','prog_due','prog_review',
+   'mic_title','mic_start','mic_stop','mic_cents','mic_string','mic_play_hint',
    'mic_intune','mic_hint','mic_asking','mic_denied','mic_nodev','mic_busy','mic_err',
    'mic_unsupported',
    'cal_label','cal_run','cal_running','cal_done','cal_unheard','cal_cancelled','cal_busy',
@@ -230,12 +227,12 @@ if (T) {
        T.I18N.uk[k] !== undefined && T.I18N.en[k] !== undefined);
   });
 
-  /* ---- 2.2.0: master volume + reference-tone tuner controls ---- */
+  /* ---- 2.2.0: master volume + the reference-tone strings (now inside the one tuner) ---- */
   ok('2.2: master volume slider present', !!win.document.getElementById('tb-vol'));
   ok('2.2: volume value readout present', !!win.document.getElementById('tb-vol-val'));
-  ok('2.2: tuner string container present', !!win.document.getElementById('tb-tuner-strings'));
+  ok('2.2: tuner string container present', !!win.document.getElementById('mt-strings'));
   ok('2.2: tuner builds one button per string',
-     win.document.querySelectorAll('#tb-tuner-strings .tuner-str').length === 6);
+     win.document.querySelectorAll('#mt-strings .tuner-str').length === 6);
 
   /* ---- 3a: the mode axis (Reference · Practice) ----
      jsdom doesn't resolve the full stylesheet cascade, so the actual show/hide is a
@@ -411,12 +408,12 @@ if (T) {
     ok('B1: every performance track declares its direction and unit',
        tracks.filter(tr => tr.kind === 'perf').every(tr => (tr.better === 'high' || tr.better === 'low') && tr.unit));
     ok('B1: track ids are unique', new Set(tracks.map(tr => tr.id)).size === tracks.length);
-    // the two entries that carry more than one skill
-    ok('B1: over-the-changes declares comp AND target separately',
-       !!T.trackById('comp') && !!T.trackById('target')
-       && T.trackById('comp').drill === T.trackById('target').drill);
-    ok('B1: ear declares its three skills separately',
-       ['interval', 'chordq', 'rhythm'].every(id => T.trackById(id) && T.trackById(id).kind === 'recall'));
+    // the entry that carries more than one skill
+    ok('B1: ear declares its two skills separately',
+       ['interval', 'chordq'].every(id => T.trackById(id) && T.trackById(id).kind === 'recall')
+       && T.trackById('interval').drill === T.trackById('chordq').drill);
+    ok('step 1: the cut tracks are gone from the registry',
+       ['rhythm', 'target', 'callresp'].every(id => !T.trackById(id)));
     // and the lookups the model actually uses
     ok('B1: sessNs splits "ns:variant" and leaves a bare id alone',
        T.sessNs('timing:8ths') === 'timing' && T.sessNs('ear-interval') === 'ear-interval');
@@ -427,8 +424,8 @@ if (T) {
     const rev = T.learnerReview(NOW);
     ok('B1: a never-practised performance track is in the queue',
        rev.due.some(d => d.track === 'timing' && d.reason === 'new'));
-    ok('B1: ...and so is every other one — six tracks that had no vocabulary before',
-       ['timing', 'strum', 'changes', 'comp', 'target', 'callresp']
+    ok('B1: ...and so is every other one',
+       ['timing', 'strum', 'changes', 'comp']
          .every(id => rev.due.some(d => d.track === id)));
     // a fresh run takes it out of the queue; going cold puts it back
     T.recordSession('timing:8ths', 12, NOW);
@@ -573,11 +570,6 @@ if (T) {
        its removal is the seam: a new drill that brings one back fails here. */
     ok('B2: no drill area carries its own header any more',
        doc.querySelectorAll('#panel-practice .drill-head').length === 0);
-    /* The stray vertical rule under PROGRESSION: renderTarget() hid #tg-mic but never
-       its .divider, so a floating rule sat in the row whenever the lead mode was on.
-       Both left with the button. */
-    ok('B2: the divider that outlived #tg-mic is gone with it',
-       !doc.getElementById('tg-mic') && doc.querySelectorAll('#tg-setup .divider').length === 0);
 
     /* --- every declared setup element must exist (the registry seam, again) --- */
     ok('B2: every drill that declares a setup element has one in the markup',
@@ -597,12 +589,12 @@ if (T) {
     ok('B2: ...and the header finally says which drill it is',
        doc.getElementById('drill-ctx-name').textContent === T.I18N[T.state().lang].drill_timing,
        doc.getElementById('drill-ctx-name').textContent);
-    /* It is the TRACK, not the drill: over-the-changes hosts two, and "Over the changes"
-       is not what the player pressed. */
+    /* It is the TRACK, not the drill: ear hosts two, and "Ear" is not what the player
+       pressed. */
     T.exitAllDrills();
-    doc.getElementById('start-target').click();
+    doc.getElementById('start-chordq').click();
     ok('B2: two tracks behind one drill are named apart',
-       doc.getElementById('drill-ctx-name').textContent === T.I18N[T.state().lang].drill_target);
+       doc.getElementById('drill-ctx-name').textContent === T.I18N[T.state().lang].ear_chords);
     T.exitAllDrills();
     ok('B2: leaving a drill clears the name', T.getCurTrack() === null);
 
@@ -637,7 +629,7 @@ if (T) {
     T.drillHintToggle();
     ok('B2: ...and the ? brings it back', bodyHas('drill-help-open'));
     /* per TRACK, not per drill: meeting one ear skill does not mean you have met the
-       other two, and they are three different exercises behind one area. */
+       other, and they are two different exercises behind one area. */
     T.exitAllDrills();
     doc.getElementById('start-chordq').click();
     ok('B2: a sibling track is still a first meeting', bodyHas('drill-help-open'));
@@ -650,14 +642,12 @@ if (T) {
     T.drillMicToggle();
     ok('B2: the shared mic button reaches the running drill', T.tgScore.on() !== micWasOn);
     T.drillMicToggle();
-    /* ...and it is hidden where the running drill has no tier at all. The lead mode of
-       this same drill is tap-scored until F2, which `hidden = !available()` inside
-       13-scored.js could never have expressed — availability is about the device. */
-    ok('B2: the mic is offered in comping mode', T.DRILLS.find(d => d.id === 'overchanges').mic() === T.tgScore.available());
+    ok('B2: the mic is offered while comping', T.DRILLS.find(d => d.id === 'overchanges').mic() === T.tgScore.available());
     T.exitAllDrills();
-    doc.getElementById('start-target').click();
+    /* ...and it is hidden where the running drill has no tier at all */
+    doc.getElementById('start-interval').click();
     T.applyDrillCtx();
-    ok('B2: the mic is not offered in the tap-scored lead mode', !vis('drill-ctx-mic'));
+    ok('B2: the mic is not offered by a drill with no mic tier', !vis('drill-ctx-mic'));
     T.exitAllDrills();
 
     /* --- a language switch mid-drill re-localizes the header ---
@@ -804,13 +794,13 @@ if (T) {
     T.sessionDismiss();
     T.setMode('reference');
 
-    /* --- THE SEAM, HONOURED: "drill this" from all seven reference views --- */
+    /* --- THE SEAM: "drill this" from the reference views that have a drill --- */
     const seams = [...doc.querySelectorAll('[data-seam]')];
-    ok('B3: every reference view offers the seam',
-       new Set(seams.map(b => b.dataset.seam)).size === 7,
+    ok('B3: the drill seam is offered by four views',
+       new Set(seams.map(b => b.dataset.seam)).size === 4,
        seams.map(b => b.dataset.seam).join(','));
-    ok('B3: ...covering exactly the seven views',
-       ['chords', 'triads', 'arp', 'identify', 'scale', 'notes', 'circle']
+    ok('B3: ...covering exactly those four',
+       ['chords', 'scale', 'notes', 'circle']
          .every(v => seams.some(b => b.dataset.seam === v)));
     ok('B3: every seam points at a track that exists',
        Object.keys(T.SEAM_TRACKS).every(v => !!T.trackById(T.SEAM_TRACKS[v])),
@@ -819,10 +809,10 @@ if (T) {
        seams.every(b => !!T.SEAM_TRACKS[b.dataset.seam]));
     /* pressing one lands you in Practice, in that drill, with the header naming it —
        because the seam goes through startTrack() like every other door (B2) */
-    seams.find(b => b.dataset.seam === 'identify').click();
+    seams.find(b => b.dataset.seam === 'scale').click();
     ok('B3: a seam press opens the mapped drill',
-       T.state().currentMode === 'practice' && T.getCurTrack() === 'chordq');
-    ok('B3: ...named', doc.getElementById('drill-ctx-name').textContent === T.I18N[T.state().lang].ear_chords);
+       T.state().currentMode === 'practice' && T.getCurTrack() === 'timing');
+    ok('B3: ...named', doc.getElementById('drill-ctx-name').textContent === T.I18N[T.state().lang].drill_timing);
     T.exitAllDrills();
     T.setMode('reference');
 
@@ -840,6 +830,16 @@ if (T) {
     ok('B3: ...which it does', !T.jamActive());
     ok('B3: the label goes back',
        doc.getElementById('seam-jam').textContent === T.I18N[T.state().lang].seam_jam);
+    /* step 1: Arpeggio's "practise this" is the jam, not a tap drill — the same toggle,
+       painted together with the aside's */
+    const arpJam = doc.querySelector('#sub-arp [data-jam]');
+    ok('step 1: Arpeggio offers the jam instead of a drill seam',
+       !!arpJam && !doc.querySelector('#sub-arp [data-seam]'));
+    arpJam.click();
+    ok('step 1: ...it starts the band, and both jam buttons say so',
+       T.jamActive() && [...doc.querySelectorAll('[data-jam]')].every(b => b.getAttribute('aria-pressed') === 'true'));
+    arpJam.click();
+    ok('step 1: ...and stops it', !T.jamActive());
   })();
 
   /* ---- Phase 10/B4: PROGRESS, AND COPY THAT TELLS THE TRUTH ------------------
@@ -853,7 +853,7 @@ if (T) {
     T.setMode('practice');
     const cards = [...doc.querySelectorAll('#practice-home .drill-card[data-track]')];
     ok('B4: every practice card carries a badge slot',
-       cards.length === 10 && cards.every(c => !!c.querySelector('.dc-badge')));
+       cards.length === 7 && cards.every(c => !!c.querySelector('.dc-badge')));
     ok('B4: ...filled from the registry, not written into the markup',
        cards.every(c => c.querySelector('.dc-badge').textContent
                         === T.I18N[T.state().lang][T.trackBadge(T.trackById(c.dataset.track))]),
@@ -861,10 +861,6 @@ if (T) {
     ok('B4: the three mic tiers are the three badged 🎤 Scored',
        T.drillTracks().filter(tr => T.trackBadge(tr) === 'badge_mic').map(tr => tr.id).sort().join(',')
        === 'comp,strum,timing');
-    /* the one distinction a badge derived from the drill's mic() could never draw:
-       over-the-changes offers the tier in comping and not in the lead mode */
-    ok('B4: the two tracks behind one drill badge differently',
-       T.trackBadge(T.trackById('comp')) !== T.trackBadge(T.trackById('target')));
     ok('B4: and one-minute changes is the coach it says it is',
        T.trackBadge(T.trackById('changes')) === 'badge_coach');
 
@@ -910,8 +906,7 @@ if (T) {
        promise a shipped feature is unbuilt; the badge carries the tier instead. --- */
     const later = /coming later|arrives later|comes later|додамо згодом|згодом додамо/;
     const promises = ['sd_hint', 'sp_hint', 'co_hint', 'drill_timing_meta', 'drill_strum_meta',
-                      'drill_comp_meta', 'drill_target_meta', 'drill_callresp_meta',
-                      'drill_changes_meta', 'drill_notes_meta'];
+                      'drill_comp_meta', 'drill_changes_meta', 'drill_notes_meta'];
     ['uk', 'en'].forEach(lg => promises.forEach(k => {
       ok('B4: ' + lg + '.' + k + ' does not promise a shipped feature is unbuilt',
          !later.test(T.I18N[lg][k]), T.I18N[lg][k]);
@@ -924,10 +919,6 @@ if (T) {
          metas.every(k => !/·\s*(coach|коуч)/i.test(T.I18N[lg][k])),
          metas.filter(k => /·\s*(coach|коуч)/i.test(T.I18N[lg][k])).join(','));
     });
-    /* The lead mode of over-the-changes is genuinely tap-scored, and it says so —
-       without promising a roadmap phase, which is dev-speak to a player. */
-    ok('B4: the lead hint is honest about which half of the drill is scored',
-       /your taps/.test(T.I18N.en.tg_hint) && /натисканнями/.test(T.I18N.uk.tg_hint));
     ['uk', 'en'].forEach(lg => {
       const bad = Object.keys(T.I18N[lg]).filter(k => /next phase|наступна фаза|\bphase \d|фаза \d/i.test(T.I18N[lg][k]));
       ok('step 1: no ' + lg + ' string talks about roadmap phases', bad.length === 0, bad.join(','));
@@ -998,8 +989,8 @@ if (T) {
        !!doc.querySelector('#panel-practice #ear-area'));
     ok('P4: reference shell still 3 subjects / 3 reference panels',
        dests.filter(d => d !== 'practice').length === 3 && doc.querySelectorAll('.main > .panel').length === 3);
-    // three ear drill starters, now cards in the practice home
-    ['start-interval', 'start-chordq', 'start-rhythm'].forEach(id =>
+    // two ear drill starters, now cards in the practice home
+    ['start-interval', 'start-chordq'].forEach(id =>
       ok('P4: ear drill starter present in practice home: ' + id,
          !!doc.querySelector('#practice-home #' + id)));
 
@@ -1060,16 +1051,9 @@ if (T) {
     ok('P4: chordq choices = 8 qualities', T.earChoices().length === 8);
     ok('P4: chordq prompt carries a quality index + root', Number.isInteger(ec.cur.qi) && Number.isInteger(ec.cur.root));
 
-    // ---- rhythm drill: rhythm:* ids, 4 choices that include the answer ----
-    T.resetLearner();
-    T.startEar('rhythm');
-    const er = T.getEar();
-    ok('P4: rhythm drill starts (6 prompts)', er.type === 'rhythm' && er.total === 6);
-    ok('P4: rhythm id is namespaced rhythm:*', /^rhythm:/.test(er.cur.key));
-    const rc = T.earChoices();
-    ok('P4: rhythm offers 4 choices incl. the answer',
-       rc.length === 4 && rc.some(o => o.key === er.cur.key));
-    ok('P4: rhythm choice carries a visual strip', /class="rhythm"/.test(rc[0].html));
+    // the rhythm-ear drill was cut in step 1: no starter, no card
+    T.exitEar();
+    ok('step 1: rhythm ear no longer starts', (T.startEar('rhythm'), T.getEar() === null));
 
     T.exitEar();
     ok('P4: exit clears the active ear drill', T.getEar() === null);
@@ -1085,8 +1069,8 @@ if (T) {
     ok('5a: chord-change area present (cm-area)', !!doc.getElementById('cm-area'));
     ok('5a: practice home grouped by pillar', doc.querySelectorAll('#practice-home .practice-section').length >= 2);
     // the drill uses chord-diagram SVGs, not a fretboard, so the board count is unchanged
-    // (5 total: reference #board + note-naming/targeting/call-response/timing drill boards)
-    ok('5a: no extra fretboard added', doc.querySelectorAll('.fretboard').length === 5);
+    // (3 total: reference #board + the note-naming and timing drill boards)
+    ok('5a: no extra fretboard added', doc.querySelectorAll('.fretboard').length === 3);
 
     // presets + durations are sane
     ok('5a: at least 6 chord pairs', T.CM_PAIRS.length >= 6);
@@ -1188,11 +1172,9 @@ if (T) {
     T.resetLearner();
   })();
 
-  /* ---- Phase 5c: comping, now the `chords` mode of the merged over-the-changes drill ----
-     Comp-the-progression and chord-tone targeting were one machine behind two cards; they
-     are now one drill with a mode. These checks pin the comping half: its card still opens
-     the drill, it opens in the right mode, the lead-only controls stay out of the way, and
-     it still records under the `comp:` session namespace so pre-merge history reads. */
+  /* ---- Phase 5c: comp the progression ----
+     Its card opens the drill, there is no neck and no tap scoring, and it records under
+     the `comp:` session namespace. */
   (function compMode() {
     const doc = win.document;
     ok('5c: comp drill card present (start-comp)', !!doc.getElementById('start-comp'));
@@ -1215,11 +1197,9 @@ if (T) {
     T.setCtxNow(0);
     T.setMode('practice');
     T.startComp();
-    ok('5c: the Rhythm card opens the drill in chords mode', T.getOcMode() === 'chords');
     ok('5c: startComp opens the drill, not yet playing', !!T.getTg() && T.getTg().playing === false);
-    ok('5c: comping hides the neck and the lead-only rows',
-       doc.getElementById('tg-board-wrap').hidden === true &&
-       doc.getElementById('tg-tone-rows').hidden === true);
+    ok('5c: comping has no neck, no mode switch and no lead-only rows',
+       !doc.getElementById('tg-board') && !doc.getElementById('tg-mode') && !doc.getElementById('tg-tone-rows'));
     T.setTargetProg(2);                      // I–IV–V (3 bars)
     T.targetPlay();
     let co = T.getTg();
@@ -1230,10 +1210,6 @@ if (T) {
     co = T.getTg();
     ok('5c: the bar pointer stays in range', co.bar >= 0 && co.bar < co.bars.length);
     ok('5c: at least one full progression cycle elapses', co.cycles >= 1);
-    // a tap can't score in comping mode — there is no board to tap
-    const beforeHits = co.hits;
-    T.targetAnswer(0, 0);
-    ok('5c: taps do not score while comping', T.getTg().hits === beforeHits);
 
     T.targetStop();
     ok('5c: stop ends the loop', T.getTg().playing === false);
@@ -1300,236 +1276,66 @@ if (T) {
     T.setSpSwing(0); T.setSpAccent(false); T.setSpMute(false); T.setSpBand(false);
   })();
 
-  /* ---- Phase 6a: chord-tone targeting — the `tones` mode of the merged drill ---- */
-  (function targetDrill() {
+  /* ---- PLAN step 1: three drills cut, their history kept ----
+     Rhythm ear, Chord-tone targeting and Call & response are gone: no card, no area, no
+     track. Their history stays in the store, untouched, and nothing that reads the
+     registry (review, the progress card, the session planner) trips over it. Checked
+     against a captured save that holds all three. */
+  (function cutDrills() {
     const doc = win.document;
-    ok('6a: target drill card present (start-target)', !!doc.getElementById('start-target'));
-    ok('6a: target area + board + stage present',
-       !!doc.getElementById('tg-area') && !!doc.getElementById('tg-board') &&
-       !!doc.getElementById('tg-now') && !!doc.getElementById('tg-next') && !!doc.getElementById('tg-beats'));
-    ok('6a: Lead group adds a card beyond the three Rhythm ones',
-       ['start-changes', 'start-strum', 'start-comp', 'start-target'].every(id => !!doc.getElementById(id)));
-    ok('6a: both cards point at one registered drill',
-       T.DRILLS.filter(d => d.area === 'tg-area').length === 1);
+    ['start-target', 'start-callresp', 'start-rhythm', 'cr-area', 'cr-board', 'tg-board']
+      .forEach(id => ok('step 1: removed from the markup: #' + id, !doc.getElementById(id)));
+    ok('step 1: Practice has 7 cards or fewer',
+       doc.querySelectorAll('#practice-home .drill-card').length <= 7);
+    ok('step 1: no Lead group left behind', !doc.querySelector('[data-i18n="practice_grp_lead"]'));
 
-    // bars resolve the preset to the CURRENT key (spine #1): in C, I–V–vi–IV starts on C(0)
-    T.resetLearner();
-    T.initAudio();
-    T.setCtxNow(0);
-    T.setMode('practice');
-    T.setKey(0, 'C');
-    T.setTargetProg(2);            // I–IV–V (3 bars, so a cycle wraps within the 10s drive)
-    T.startTarget();
-    let tg = T.getTg();
-    ok('6a: the Lead card opens the drill in tones mode', T.getOcMode() === 'tones');
-    ok('6a: targeting shows the neck and the lead-only rows',
-       doc.getElementById('tg-board-wrap').hidden === false &&
-       doc.getElementById('tg-tone-rows').hidden === false);
-    ok('6a: startTarget opens the drill, not yet playing', !!tg && tg.playing === false);
-    ok('6a: bars expand to one chord per bar in the key', tg.bars.length === 3 && tg.bars[0].pc === 0);
-
-    T.targetPlay();
-    tg = T.getTg();
-    ok('6a: play starts the progression loop', tg.playing === true);
-
-    // drive ~10s of the scheduler → bars advance and the target set fills synchronously
-    for (let s = 0; s <= 10; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
-    tg = T.getTg();
-    ok('6a: the bar playhead stays in range', tg.bar >= 0 && tg.bar < tg.bars.length);
-    ok('6a: at least one cycle of the progression elapses', tg.cycles >= 1);
-    ok('6a: the current chord lights its tones as targets', tg.targetPcs.size >= 3);
-
-    // a tap on a target pc scores a hit; a tap off the chord scores a miss
-    const targetPc = [...tg.targetPcs][0];
-    const offPc = [0,1,2,3,4,5,6,7,8,9,10,11].find(pc => !tg.targetPcs.has(pc));
-    const h0 = tg.hits, m0 = tg.misses;
-    // tap every board dot matching the target pc → at least one hit registered
-    doc.querySelectorAll('#tg-board .dot.quiz').forEach(d => {
-      if (+d.dataset.pc === targetPc) T.targetAnswer(+d.dataset.si, +d.dataset.f);
+    const NOW = 1760000000000, DAY = 86400000;
+    // the live state, with the cut drills' history put in — so loading it changes nothing
+    // else under the assertions that follow, and restoring it afterwards is exact
+    const before = JSON.parse(JSON.stringify(T.snapshotState()));
+    const oldSave = Object.assign(JSON.parse(JSON.stringify(before)), {
+      drillSeen: { rhythm: 1, target: 1, callresp: 1, timing: 1 },
+      learner: {
+        v: 2,
+        items: {
+          'rhythm:r3':  { seen: 4, correct: 2, streak: 0, ease: 2.1, due: NOW - DAY },
+          'interval:P5': { seen: 3, correct: 3, streak: 3, ease: 2.8, due: NOW + 9 * DAY }
+        },
+        sessions: [
+          { t: NOW - 3 * DAY, drill: 'ear-rhythm', score: 50 },
+          { t: NOW - 2 * DAY, drill: 'target:I–V–vi–IV', score: 72 },
+          { t: NOW - DAY,     drill: 'callresp:A', score: 80 },
+          { t: NOW - DAY + 1, drill: 'timing:8ths', score: 12 }
+        ],
+        best: { 'target:I–V–vi–IV': { score: 72, t: NOW - 2 * DAY }, 'callresp:A': { score: 80, t: NOW - DAY } }
+      }
     });
-    tg = T.getTg();
-    ok('6a: tapping a chord tone scores a hit', tg.hits > h0);
-    // tap an off-chord dot → a miss
-    let tapped = false;
-    doc.querySelectorAll('#tg-board .dot.quiz').forEach(d => {
-      if (!tapped && +d.dataset.pc === offPc) { T.targetAnswer(+d.dataset.si, +d.dataset.f); tapped = true; }
-    });
-    tg = T.getTg();
-    ok('6a: tapping off the chord scores a miss', tapped && tg.misses > m0);
-    ok('6a: accuracy is hits / all taps as a percent', T.tgAccuracy() === Math.round(100 * tg.hits / (tg.hits + tg.misses)));
-
-    T.targetStop();
-    tg = T.getTg();
-    ok('6a: stop ends the loop', tg.playing === false);
-    const ts = T.getLearner().sessions;
-    ok('6a: a practiced targeting session is recorded (accuracy)',
-       ts.length >= 1 && /^target:/.test(ts[ts.length - 1].drill));
-    ok('6a: targeting coach mints no per-item SRS', T.learnerStats().items === 0);
-
-    T.targetPlay();
-    T.setMode('reference');
-    ok('6a: leaving Practice exits a running targeting drill', T.getTg() === null);
-    T.setCtxNow(0);
-    T.resetLearner();
-  })();
-
-  /* ---- Phase 6b: arpeggios over changes (a box windows the targets to one shape) ---- */
-  (function targetArp() {
-    const doc = win.document;
-    ok('6b: target drill has a position picker (tg-pos)', !!doc.getElementById('tg-pos'));
-
-    T.resetLearner();
-    T.initAudio();
-    T.setCtxNow(0);
+    win.localStorage.setItem('guitarStudio.v1', JSON.stringify(oldSave));
+    ok('step 1: the old save loads', T.loadState() === true);
+    const L = T.getLearner();
+    ok('step 1: recall items of the cut drills are kept', !!L.items['rhythm:r3'] && L.items['rhythm:r3'].seen === 4);
+    ok('step 1: ...and their sessions', ['ear-rhythm', 'target:I–V–vi–IV', 'callresp:A']
+         .every(id => L.sessions.some(x => x.drill === id)));
+    ok('step 1: ...and their personal bests', L.best['target:I–V–vi–IV'].score === 72 && L.best['callresp:A'].score === 80);
+    const rev = T.learnerReview(NOW);
+    ok('step 1: an overdue item of a cut track is not offered for review',
+       rev.total === 0 && !rev.due.some(d => /rhythm|target|callresp/.test(d.track)), JSON.stringify(rev.due));
+    ok('step 1: the session planner only plans registered tracks',
+       T.sessionPlan(20, NOW).every(b => !!T.trackById(b.track)));
     T.setMode('practice');
-    T.setKey(0, 'C');
-    T.setFret(0);                  // all frets, so the box window (frets 8–12 in C) is on the board
-    T.setTargetProg(2);
-    T.startTarget();
-    T.targetPlay();
-    for (let s = 0; s <= 4; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
-
-    // whole-neck default: no window
-    let tg = T.getTg();
-    ok('6b: default position is the whole neck (no window)', tg.win === null);
-
-    // pick a box → a 5-fret window; only tones inside it are drillable
-    T.setTargetPos(1);
-    tg = T.getTg();
-    ok('6b: choosing a position sets a 5-fret window', Array.isArray(tg.win) && tg.win[1] - tg.win[0] === 4);
-    const [lo, hi] = tg.win;
-
-    // a target pc tapped OUTSIDE the box is ignored (not scored); INSIDE it scores a hit
-    const tpc = [...tg.targetPcs][0];
-    const dots = [...doc.querySelectorAll('#tg-board .dot.quiz')].map(d => ({
-      si: +d.dataset.si, f: +d.dataset.f, pc: +d.dataset.pc }));
-    const inBox = dots.find(d => d.pc === tpc && d.f >= lo && d.f <= hi);
-    const outBox = dots.find(d => d.pc === tpc && (d.f < lo || d.f > hi));
-    const h0 = tg.hits, m0 = tg.misses;
-    if (outBox) T.targetAnswer(outBox.si, outBox.f);
-    tg = T.getTg();
-    ok('6b: a chord tone tapped outside the shape is ignored', tg.hits === h0 && tg.misses === m0);
-    if (inBox) T.targetAnswer(inBox.si, inBox.f);
-    tg = T.getTg();
-    ok('6b: a chord tone tapped inside the shape scores a hit', inBox ? tg.hits === h0 + 1 : true);
-
-    T.targetStop();
-    T.setTargetPos(0);
+    const rows = [...doc.querySelectorAll('#practice-progress .pp-row')].map(r => r.dataset.track);
+    ok('step 1: the progress card has rows only for registered tracks',
+       rows.length === 1 && rows[0] === 'timing', rows.join(','));
+    // a save → reload keeps every byte of the cut drills' history
+    T.saveState();
+    const again = JSON.parse(win.localStorage.getItem('guitarStudio.v1')).learner;
+    ok('step 1: saving again keeps the history of the cut drills',
+       !!again.items['rhythm:r3'] && again.sessions.length === 4 && !!again.best['callresp:A']);
+    win.localStorage.setItem('guitarStudio.v1', JSON.stringify(before));
+    T.loadState();
     T.setMode('reference');
-    T.setCtxNow(0);
     T.resetLearner();
-  })();
-
-  /* ---- Phase 6c: target-note soloing (light ONE degree; other chord tones neutral) ---- */
-  (function targetNote() {
-    const doc = win.document;
-    ok('6c: target drill has a target-note picker (tg-deg)', !!doc.getElementById('tg-deg'));
-
-    T.resetLearner();
-    T.initAudio();
-    T.setCtxNow(0);
-    T.setMode('practice');
-    T.setKey(0, 'C');
-    T.setFret(0);
-    T.setTargetProg(2);         // I–IV–V, all major triads → root/3rd/5th present, no 7th
-    T.startTarget();
-    T.targetPlay();
-    for (let s = 0; s <= 4; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
-
-    let tg = T.getTg();
-    const allTones = tg.targetPcs.size;
-    ok('6c: default lights the whole chord', allTones >= 3 && tg.chordPcs.size === allTones);
-
-    // pick "the 3rd" → exactly one lit target, but the full chord is still known
-    T.setTargetDeg(2);
-    tg = T.getTg();
-    ok('6c: choosing a degree narrows the lit target to one tone', tg.targetPcs.size === 1);
-    ok('6c: the full chord is still tracked (for neutral notes)', tg.chordPcs.size >= 3);
-    const thirdPc = [...tg.targetPcs][0];
-    ok('6c: the lit tone is the third of the chord', tg.degMap[thirdPc] === '3' || tg.degMap[thirdPc] === '♭3');
-
-    // scoring: the target tone → hit; another chord tone → neutral (no hit, no miss);
-    // an off-chord tone → miss.
-    const dots = [...doc.querySelectorAll('#tg-board .dot.quiz')].map(d => ({
-      si: +d.dataset.si, f: +d.dataset.f, pc: +d.dataset.pc }));
-    const otherChordPc = [...tg.chordPcs].find(pc => !tg.targetPcs.has(pc));
-    const offPc = [0,1,2,3,4,5,6,7,8,9,10,11].find(pc => !tg.chordPcs.has(pc));
-    const hit = dots.find(d => d.pc === thirdPc);
-    const neutral = dots.find(d => d.pc === otherChordPc);
-    const off = dots.find(d => d.pc === offPc);
-    let h0 = tg.hits, m0 = tg.misses;
-    if (neutral) T.targetAnswer(neutral.si, neutral.f);
-    tg = T.getTg();
-    ok('6c: another chord tone is neutral (no hit, no miss)', tg.hits === h0 && tg.misses === m0);
-    if (off) T.targetAnswer(off.si, off.f);
-    tg = T.getTg();
-    ok('6c: an off-chord note misses', off ? tg.misses === m0 + 1 : true);
-    h0 = tg.hits;
-    if (hit) T.targetAnswer(hit.si, hit.f);
-    tg = T.getTg();
-    ok('6c: landing on the target tone scores a hit', hit ? tg.hits === h0 + 1 : true);
-
-    T.targetStop();
-    T.setTargetDeg(0);
-    T.setMode('reference');
-    T.setCtxNow(0);
-    T.resetLearner();
-  })();
-
-  /* ---- Phase 6c: call & response (motif echo — closes the Lead pillar) ---- */
-  (function callResp() {
-    const doc = win.document;
-    ok('6c: call-response card + area + board present',
-       !!doc.getElementById('start-callresp') && !!doc.getElementById('cr-area') && !!doc.getElementById('cr-board'));
-    ok('6c: the Lead group has two cards',
-       !!doc.getElementById('start-target') && !!doc.getElementById('start-callresp'));
-
-    T.resetLearner();
-    T.initAudio();
-    T.setCtxNow(0);
-    T.setMode('practice');
-    T.setKey(0, 'C');
-    T.setCrPos(1);
-    T.startCallResp();
-    let c = T.getCr();
-    ok('6c: start builds a call motif from the scale box', c && c.phase === 'call' && c.motif.length === 3 && c.pool.length > 0);
-    ok('6c: motif notes all come from the box palette', c.motif.every(i => i >= 0 && i < c.pool.length));
-
-    // response: a wrong echo buzzes (no advance, not scored); the right pitch advances
-    T.crToResponse();
-    c = T.getCr();
-    ok('6c: after the call it is your turn', c.phase === 'response' && c.respIdx === 0);
-    const first = c.pool[c.motif[0]];
-    const wrong = c.pool.find(p => p.midi !== first.midi);
-    if (wrong) T.crAnswer(wrong.si, wrong.f);
-    c = T.getCr();
-    ok('6c: a wrong echo does not advance and is not scored', c.respIdx === 0 && c.total === 0 && c.wrongNote >= 1);
-
-    // echo the whole motif correctly → the round scores and advances
-    for (const pi of c.motif.slice()) { const p = c.pool[pi]; T.crAnswer(p.si, p.f); }
-    c = T.getCr();
-    ok('6c: echoing the motif advances the round and counts every note', c.round === 1 && c.total === 3);
-    ok('6c: the note flubbed once is not counted clean', c.correct === 2);
-
-    // drive the remaining rounds cleanly to finish + record a session
-    T.crNextRoundNow();
-    for (let r = 1; r < T.CR_ROUNDS; r++) {
-      T.crToResponse();
-      c = T.getCr();
-      for (const pi of c.motif.slice()) { const p = c.pool[pi]; T.crAnswer(p.si, p.f); }
-      if (r < T.CR_ROUNDS - 1) T.crNextRoundNow();
-    }
-    c = T.getCr();
-    ok('6c: finishing all rounds ends the session', c.phase === 'done');
-    const ss = T.getLearner().sessions;
-    ok('6c: a call-response session is recorded (accuracy)',
-       ss.length >= 1 && /^callresp:/.test(ss[ss.length - 1].drill));
-    ok('6c: call-response mints no per-item SRS', T.learnerStats().items === 0);
-
-    T.setMode('reference');
-    ok('6c: leaving Practice exits the call-response drill', T.getCr() === null);
-    T.setCtxNow(0);
-    T.resetLearner();
+    T.setDrillSeen({});
   })();
 
   /* ---- Phase 7a: subdivision & timing (Foundations coach) ---- */
@@ -1717,14 +1523,14 @@ if (T) {
     T.exitEar();
     ok('drill ctx: returning to the home hides the key picker', !keyShown());
 
-    // drillKeyChanged() must reach the RUNNING drill's onKey — for the over-the-changes
+    // drillKeyChanged() must reach the RUNNING drill's onKey — for the comp
     // drill that means its bars are re-resolved into the new key, which is the behaviour
     // the drill's own picker used to own.
     T.initAudio();
     T.setMode('practice');
     T.setKey(0, 'C');
     T.setTargetProg(1);                     // I–V–vi–IV
-    T.startTarget();
+    T.startComp();
     ok('drill ctx: bars start in the context key (C)', T.getTg().bars[0].pc === 0);
     T.setKey(7, 'G');
     T.drillKeyChanged();
@@ -1899,7 +1705,7 @@ if (T) {
     ok('A2: ...and onto the board they change',
        !!doc.querySelector('#board-region #board-lens #ctx-view-harmony')
        && !!doc.querySelector('#board-region #board-lens #ctx-view-scales'));
-    ok('A2: the view buttons still work from there', !!doc.getElementById('hv-triads'));
+    ok('A2: the view buttons still work from there', !!doc.getElementById('hv-arp'));
     T.selectTab('harmony');
     ok('A2: Harmony shows its lens, Scales\' is stood down',
        !doc.getElementById('ctx-view-harmony').hidden && doc.getElementById('ctx-view-scales').hidden);
@@ -1992,7 +1798,7 @@ if (T) {
     ok('A3: the drill picker has a wrapper to be a column of', !!drills);
     ok('A3: every pillar sits in it',
        [...home.querySelectorAll('.practice-section')].every(s => s.closest('.ph-drills') === drills)
-       && home.querySelectorAll('.practice-section').length === 5);
+       && home.querySelectorAll('.practice-section').length === 4);
     /* B4 finished the move A3 started: the progress card was pulled out of the bottom of
        a 1700px column and set beside the picker; it now sits ON TOP of it, beside the
        session starter. What A3 asserted — that it is not buried inside the picker — is
@@ -2077,12 +1883,12 @@ if (T) {
     const inCluster = (id, sel) => !!doc.querySelector('#' + id + ' ' + sel);
     /* Tools is the point of the split: you come to DO something and leave, and two of
        these are prerequisites for a scored drill rather than configuration.
-       The reference tuner is checked LIVE (it works everywhere), the calibration row
+       The tuner button is checked LIVE (it works everywhere), the calibration row
        only in the markup — 14-calibration.js removes #cal-row where there is no mic
        path, which jsdom is, and that removal is deliberate: a control that can only
        ever fail should not be on screen. Asserting it live would be asserting that the
        degradation is broken. */
-    ok('A4: Tools holds the tuner', inCluster('tb-tools', '.tb-tuner'));
+    ok('A4: Tools holds the tuner', inCluster('tb-tools', '#tb-tuner'));
     const atTools = html.indexOf('id="tb-tools"'), atCal = html.indexOf('id="cal-row"'),
           atPrefs = html.indexOf('tbc_prefs');
     ok('A4: ...and the latency measurement, between Tools and Preferences in the markup',
@@ -2091,7 +1897,7 @@ if (T) {
        ['tb-tuning', 'tb-capo', 'tb-frets', 'tb-meter']
          .every(id => doc.getElementById(id).closest('.tb-cluster') === clusters[0]));
     ok('A4: the set-once controls sit together',
-       ['tb-vol', 'tb-lefty', 'tb-cbpalette', 'tb-shapes', 'tb-share']
+       ['tb-vol', 'tb-lefty', 'tb-cbpalette', 'tb-shapes']
          .every(id => doc.getElementById(id).closest('.tb-cluster') === clusters[2]));
     /* A cluster heading is `nowrap` + `flex-shrink: 0` — it cannot give way — so on a
        phone a long one pushes the first control group past the viewport edge and the
@@ -2296,30 +2102,11 @@ if (T) {
        saved.cofSel === undefined && saved.cofMinor === undefined);
   })();
 
-  /* ---- 1c: reverse lookup (chord identifier + scale suggester) ---- */
+  /* ---- 1c: the scale suggester (the chord identifier was cut in step 1) ---- */
   (function reverseLookup() {
-    const id = (pcs, bass) => T.identifyChord(pcs, bass).map(c => c.name);
-    // exact pitch-class identification
-    ok('1c: {C,E,G} → C', id([0, 4, 7], 0)[0] === 'C', id([0, 4, 7], 0).join(','));
-    ok('1c: {C,E,G,B} → Cmaj7', id([0, 4, 7, 11], 0)[0] === 'Cmaj7');
-    ok('1c: {C,E♭,G,B♭} → Cm7', id([0, 3, 7, 10], 0)[0] === 'Cm7');
-    ok('1c: fewer than 3 notes → no name', T.identifyChord([0, 4], 0).length === 0);
-    // genuine ambiguity surfaces as multiple names (Am7 = C6)
-    const amb = id([0, 4, 7, 9], 9);            // bass A
-    ok('1c: {A,C,E,G}/A → Am7 ranks first', amb[0] === 'Am7', amb.join(','));
-    ok('1c: same set also nameable as C6', amb.some(n => n.indexOf('C6') === 0), amb.join(','));
-    // a non-root bass reads as a slash chord
-    ok('1c: C major over E bass → C/E', id([0, 4, 7], 4).indexOf('C/E') >= 0, id([0, 4, 7], 4).join(','));
-
-    // closest-match fallback when no quality fits exactly
-    const near = T.nearChords([0, 4, 11], 0);          // C E B — Cmaj7 with the 5th dropped
-    const cm7 = near.find(c => c.name === 'Cmaj7');
-    ok('1c: {C,E,B} reads as Cmaj7 missing the 5th',
-       !!cm7 && cm7.missing.indexOf('5') >= 0, near.map(c => c.name).join(','));
-    const plusOne = T.nearChords([0, 4, 7, 1], 0).find(c => c.name === 'C');  // C major + one extra note
-    ok('1c: an extra note reads as the chord plus an extra', !!plusOne && plusOne.extra.length === 1);
-    ok('1c: no near match for fewer than 3 notes', T.nearChords([0, 4], 0).length === 0);
-
+    ok('step 1: Identify is gone — no view, no button, no helper',
+       !win.document.getElementById('sub-identify') && !win.document.getElementById('hv-identify')
+       && T.identifyChord === undefined);
     // scales that fit a chord
     const idxByName = {}; T.SCALES.forEach((s, i) => { idxByName[s.en] = i; });
     const fit = T.scalesOverChord(0, [0, 4, 7, 11]);   // Cmaj7
@@ -2327,18 +2114,12 @@ if (T) {
     ok('1c: Cmaj7 fits C Lydian', fit.indexOf(idxByName['Lydian']) >= 0);
     ok('1c: Cmaj7 does NOT fit C natural minor', fit.indexOf(idxByName['Aeolian (natural minor)']) < 0);
 
-    // identify board mode + the live suggester
-    T.selectTab('harmony'); T.setHView('identify');
-    ok('1c: identify is the active board mode', T.isBoardMode('identify') === true);
-    ok('1c: Listen hidden in identify view', win.document.getElementById('g-play').hidden === true);
-    T.setIdSel([48, 52, 55]); T.renderIdentify();      // C E G
-    ok('1c: identify result names the chord', /C/.test(win.document.getElementById('id-result').textContent));
+    // the live suggester follows the chord
+    T.selectTab('harmony'); T.setHView('chords'); T.setKey(0, 'C'); T.setChQual(0); T.setHView('chords');
+    ok('1c: suggester names the chord on screen',
+       /C/.test(win.document.querySelector('#suggest-body .sug-chord').textContent));
     ok('1c: suggester offers scale chips for the chord',
        win.document.getElementById('suggest-body').querySelectorAll('[data-scale]').length > 0);
-    T.setIdSel([48, 52, 59]); T.renderIdentify();      // C E B — no exact fit → closest match
-    ok('1c: identify shows a closest match when nothing fits exactly',
-       /Cmaj7/.test(win.document.getElementById('id-result').textContent));
-    T.setIdSel([]); T.setHView('chords');
   })();
 
   /* ---- Phase A: equal-temperament tuning target ---- */
@@ -2415,9 +2196,9 @@ if (T) {
     const lp = win.document.getElementById('g-loop');
     const gp = win.document.getElementById('g-play');
     ok('Loop visible on chord-tones view', lp && lp.hidden === false);
-    T.setHView('triads');
-    ok('Loop now visible on triads view (v1.12.0)', lp && lp.hidden === false);
-    T.setHView('chords');
+    T.setChTriads(true); T.setHView('chords');
+    ok('Loop still visible with triads on', lp && lp.hidden === false);
+    T.setChTriads(false); T.setHView('chords');
     T.selectTab('scales'); T.setScView('scale');
     ok('Loop hidden on scales tab', lp && lp.hidden === true);
     ok('Listen visible on scale view', gp && gp.hidden === false);
@@ -2494,10 +2275,32 @@ if (T) {
     T.setChVoicing(0);
   })();
 
-  /* ---- v1.12.0: triad shape playback + loop parity ---- */
+  /* ---- triads: a toggle on Chord tones (step 1), shape playback + loop parity ---- */
   (function triadParity() {
-    T.selectTab('harmony'); T.setHView('triads');
-    T.setTriad(0, 0, 1);                 // major, string set 1·2·3, root position
+    const doc = win.document;
+    ok('step 1: no Triads view of its own',
+       !doc.getElementById('hv-triads') && !doc.getElementById('sub-triads'));
+    T.selectTab('harmony'); T.setHView('chords'); T.setChQual(0);
+    T.setChTriads(false); T.setHView('chords');
+    ok('step 1: Chord tones offers Full chord | Triads', doc.querySelectorAll('#ch-shape .btn').length === 2);
+    ok('step 1: the triad rows stay folded with the full chord', doc.getElementById('ch-triad-rows').hidden === true);
+    doc.querySelectorAll('#ch-shape .btn')[1].click();
+    ok('step 1: pressing Triads turns them on', T.state().chTriads === true && T.isBoardMode('triads') === true);
+    ok('step 1: ...shows the string-set and inversion rows', doc.getElementById('ch-triad-rows').hidden === false);
+    ok('step 1: ...draws triad cards in place of the chord shapes',
+       doc.querySelectorAll('#tr-diagram .chordbox').length > 0 && doc.getElementById('shapes-card').hidden === true);
+    // the triad is the chord's own: Am7 → Am, m7♭5 → dim; a sus chord has none
+    const qIdx = sh => T.QUALITIES.findIndex(q => q.short === sh);
+    T.setChQual(qIdx('m7'));   ok('step 1: m7 → the minor triad', T.chTriadIdx() === 1);
+    T.setChQual(qIdx('m7♭5')); ok('step 1: m7♭5 → the diminished triad', T.chTriadIdx() === 2);
+    T.setChQual(qIdx('7♯9'));  ok('step 1: 7♯9 → the major triad', T.chTriadIdx() === 0);
+    T.setChQual(qIdx('sus4')); T.setHView('chords');
+    ok('step 1: a sus chord has no triad, so the neck shows the full chord',
+       T.chTriadIdx() === -1 && T.triadsOn() === false && T.isBoardMode('chords') === true);
+    ok('step 1: ...and the Triads button is disabled, not hidden',
+       doc.querySelectorAll('#ch-shape .btn')[1].disabled === true);
+    T.setChQual(0); T.setHView('chords');
+    T.setTriad(0, 1);                    // string set 1·2·3, root position (major chord)
     const tv = T.currentTriadVoicing();
     ok('triad voicing has three notes', tv.midis.length === 3, 'got ' + tv.midis.length);
     const triPcs = new Set([0, 4, 7].map(i => (T.state().gRoot + i) % 12));
@@ -2515,6 +2318,36 @@ if (T) {
     ok('triad→quality fifths are [perfect, perfect, ♭5, ♯5]',
        fifths[0] === 7 && fifths[1] === 7 && fifths[2] === 6 && fifths[3] === 8,
        fifths.join(','));
+    doc.querySelectorAll('#ch-shape .btn')[0].click();
+    ok('step 1: Full chord turns triads off', T.state().chTriads === false && T.isBoardMode('chords') === true);
+    ok('step 1: ...and the chord shapes come back', doc.getElementById('shapes-card').hidden === false);
+    T.selectTab('harmony'); T.setHView('chords');
+  })();
+
+  /* ---- step 1: a save that was on the Triads view opens on Chord tones, triads on ---- */
+  (function triadsMigration() {
+    const before = JSON.parse(JSON.stringify(T.snapshotState()));
+    const load = o => { win.localStorage.setItem('guitarStudio.v1', JSON.stringify(Object.assign(JSON.parse(JSON.stringify(before)), o))); return T.loadState(); };
+    const old = Object.assign(JSON.parse(JSON.stringify(before)), { hView: 'triads', trQual: 1, chQual: 6 });
+    delete old.chTriads;
+    win.localStorage.setItem('guitarStudio.v1', JSON.stringify(old));
+    T.loadState();
+    let st = T.state();
+    ok('step 1: an old Triads-view save opens on Chord tones', st.hView === 'chords');
+    ok('step 1: ...with triads on', st.chTriads === true);
+    ok('step 1: ...on the triad quality it had picked (minor)', T.QUALITIES[st.chQual].short === 'm');
+    load({ hView: 'identify' });
+    ok('step 1: an unknown view in a save falls back safely',
+       T.state().hView === 'chords' || T.state().hView === 'arp');
+    load({ hView: 'arp', chTriads: true, chQual: 6 });
+    st = T.state();
+    ok('step 1: a new save round-trips the toggle and keeps its chord', st.chTriads === true && st.chQual === 6 && st.hView === 'arp');
+    T.saveState();
+    const saved = JSON.parse(win.localStorage.getItem('guitarStudio.v1'));
+    ok('step 1: the toggle is saved', saved.chTriads === true);
+    ok('step 1: the folded-in triad quality is no longer written', saved.trQual === undefined);
+    win.localStorage.setItem('guitarStudio.v1', JSON.stringify(before));
+    T.loadState();
     T.selectTab('harmony'); T.setHView('chords');
   })();
 
@@ -2567,8 +2400,8 @@ if (T) {
 
   /* ---- regression: tuning/fret/capo changes must repaint EVERY board mode ----
      renderAllBoards() (wired to the tuning / fret / capo / lefty controls) once
-     fanned out to chords/triads/scales/notes only — omitting arp + identify — so
-     those two boards froze with stale geometry on a fret/capo/tuning change. Drive
+     fanned out to chords/triads/scales/notes only — omitting arp (and the since-cut
+     identify view) — so those boards froze with stale geometry on a fret/capo/tuning change. Drive
      the real onchange sequence (set the global, then renderAllBoards) on each view
      and assert the shared #board actually re-paints to the new fret range. */
   (function staleBoardRegression() {
@@ -2576,16 +2409,16 @@ if (T) {
       const row = win.document.getElementById('board').querySelector('.srow');
       return row ? row.querySelectorAll('.cell').length : -1;
     };
-    ['arp', 'identify', 'chords'].forEach(view => {
-      T.selectTab('harmony'); T.setHView(view);
+    [['arp', false], ['chords', true], ['chords', false]].forEach(([view, tri]) => {
+      T.setChTriads(tri); T.selectTab('harmony'); T.setHView(view);
       T.setFret(0); T.renderAllBoards();            // All frets (1..22)
       const wide = cellsPerRow();
       T.setFret(1); T.renderAllBoards();            // 5-fret window (1..5)
       const narrow = cellsPerRow();
-      ok('regression: ' + view + ' board repaints on a fret-range change',
+      ok('regression: ' + view + (tri ? ' (triads)' : '') + ' board repaints on a fret-range change',
          narrow > 0 && narrow < wide, view + ': ' + wide + ' → ' + narrow + ' cells');
     });
-    T.setFret(0); T.selectTab('harmony'); T.setHView('chords');
+    T.setChTriads(false); T.setFret(0); T.selectTab('harmony'); T.setHView('chords');
   })();
 
   /* ---- behaviour: loop + sequencer transport toggles ---- */
@@ -2649,29 +2482,24 @@ if (T) {
     T.resetLearner();
   })();
 
-  /* ---- 2.5: shareable deep links (Phase 9) ---- */
-  (function deepLinks() {
-    // set a known context, encode it, scramble, then decode and assert it round-trips
-    T.setMode('reference'); T.selectTab('harmony'); T.setHView('chords');
-    T.setKey(9, 'A', 5);          // A, Aeolian
-    T.setChQual(8);               // some seventh quality (valid QUALITIES index)
-    const enc = T.encodeShareState();
-    ok('share: encodes the key + tab', /(^|&)k=9(&|$)/.test(enc) && /(^|&)t=harmony(&|$)/.test(enc), enc);
-    ok('share: shareURL includes the hash', T.shareURL().indexOf('#' + enc) >= 0);
-    // scramble the live context
-    T.setKey(0, 'C', 0); T.selectTab('scales'); T.setScView('scale');
-    // apply the encoded link via the hash and confirm the context comes back
-    win.location.hash = '#' + enc;
-    const applied = T.applyShareHash();
-    const s = T.state();
-    ok('share: applyShareHash reports success', applied === true);
-    ok('share: root restored from link', s.gRoot === 9);
-    ok('share: scale restored from link', s.scIdx === 5);
-    ok('share: tab restored from link', s.currentTab === 'harmony');
-    ok('share: chord quality restored from link', s.chQual === 8);
-    ok('share: hash stripped after applying', (win.location.hash || '') === '');
-    ok('share: a non-share hash is ignored', T.applyShareHash() === false);
-    T.setKey(0, 'C', 0); T.setMode('reference');   // clean slate for any later check
+  /* ---- share links, cut in step 1: an old link still opens the app ---- */
+  (function oldShareLinks() {
+    const doc = win.document;
+    ok('step 1: no share button', !doc.getElementById('tb-share'));
+    ok('step 1: no share encoder left', T.encodeShareState === undefined && T.applyShareHash === undefined);
+    T.setMode('reference'); T.selectTab('harmony'); T.setHView('chords'); T.setKey(0, 'C', 0);
+    const was = JSON.stringify(T.state());
+    // an old link that would have moved the key, tab, view and mode
+    win.location.hash = '#m=practice&t=scales&k=9&r=A&s=5&sv=notes&hv=identify';
+    let threw = false;
+    try { T.clearOldShareHash(); } catch (e) { threw = true; }
+    ok('step 1: an old share link does not throw', !threw);
+    ok('step 1: ...is ignored — nothing it named was applied', JSON.stringify(T.state()) === was);
+    ok('step 1: ...and its hash is cleared', (win.location.hash || '') === '');
+    win.location.hash = '#install';
+    T.clearOldShareHash();
+    ok('step 1: a hash that is not an old share link is left alone', win.location.hash === '#install');
+    win.location.hash = '';
   })();
 
   /* ---- Phase 8 / F0: chromatic mic tuner ----
@@ -2687,17 +2515,35 @@ if (T) {
     ok('F0: vendored PitchDetector is present in the shared scope',
        typeof win.PitchDetector === 'function' || typeof T.MT_FFT === 'number');
 
-    /* -- self-disable: jsdom is a secure context (https://example.test) but has no
-          mediaDevices, so the feature must report unsupported and REMOVE its entry
-          point rather than leave a button that can only ever error. -- */
+    /* -- ONE tuner (step 1). jsdom is a secure context (https://example.test) but has no
+          mediaDevices, so the mic half must report unsupported and HIDE itself rather
+          than show a control that can only ever error — and the panel becomes the
+          by-ear strings, which work everywhere. -- */
     ok('F0: micSupported() is false without navigator.mediaDevices', T.micSupported() === false);
-    ok('F0: the mic entry button is removed when unsupported', !doc.getElementById('tb-mic'));
-    ok('F0: the reference-tone tuner still works when the mic half is disabled',
-       doc.querySelectorAll('#tb-tuner-strings .tuner-str').length === 6);
+    ok('step 1: one Tuner entry, always present', !!doc.getElementById('tb-tuner') && !doc.getElementById('tb-mic'));
+    ok('step 1: Settings has no reference-tone row of its own',
+       !doc.querySelector('#toolbar .tuner-str') && !doc.getElementById('tb-tuner-strings'));
+    ok('step 1: without a mic the mic half is hidden', doc.getElementById('mt-mic').hidden === true);
+    ok('step 1: ...the by-ear strings are the panel, with no toggle to hide them',
+       doc.getElementById('mt-ear-body').hidden === false && doc.getElementById('mt-ear-toggle').hidden === true);
+    ok('step 1: ...one button per string of the live tuning',
+       doc.querySelectorAll('#mt-strings .tuner-str').length === 6);
+    doc.getElementById('tb-tuner').click();
+    ok('step 1: the Tuner button opens the panel', doc.getElementById('mic-overlay').hidden === false);
+    let toneThrew = false;
+    try { doc.querySelector('#mt-strings .tuner-str').click(); } catch (e) { toneThrew = true; }
+    ok('step 1: a string plays its reference tone', !toneThrew);
+    T.micClose();
+    ok('step 1: closing the panel closes it', doc.getElementById('mic-overlay').hidden === true);
+    // the welcome's "tune the guitar" opens the one tuner, mic or not
+    T.showWelcome();
+    doc.getElementById('wc-go-tune').click();
+    ok('step 1: the welcome routes to the tuner', doc.getElementById('mic-overlay').hidden === false);
+    T.micClose(); T.setWelcomeSeen(true);
 
-    /* -- the overlay markup ships regardless (only the entry point is conditional) -- */
+    /* -- the overlay markup ships regardless -- */
     ['mic-overlay', 'mt-note', 'mt-oct', 'mt-cents', 'mt-gauge', 'mt-needle',
-     'mt-string', 'mt-status', 'mt-toggle', 'mt-close'].forEach(id => {
+     'mt-string', 'mt-status', 'mt-toggle', 'mt-close', 'mt-strings'].forEach(id => {
       ok('F0: tuner element present: #' + id, !!doc.getElementById(id));
     });
     ok('F0: the tuner overlay starts hidden', doc.getElementById('mic-overlay').hidden === true);

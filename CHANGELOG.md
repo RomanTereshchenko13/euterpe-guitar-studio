@@ -2,6 +2,12 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.17.0 — 2026-10-09
+
+- Fewer, better drills: Rhythm by ear, Chord tones over changes and Call & response are gone — for chord tones over a band, open Arpeggio and press "Jam over this" — and your history from them is kept.
+- One tuner: Settings ▸ Tools ▸ Tuner listens through the microphone, and "Tune by ear" in the same panel plays each open string when there is no mic.
+- Triads are now a switch on Chord tones that shows the triad inside the chosen chord; the Identify view and share links were removed, and an old share link still opens the app.
+
 ## v2.16.0 — 2026-10-08
 
 - Your progress can leave the browser and come back. Settings ▸ Progress has Export, which saves your practice history and preferences as a file on your device, and Import, which brings one back — on a new phone, after clearing the browser, or simply as a backup. Nothing is uploaded anywhere. Before it replaces anything, Import tells you how many sessions are on this device and how many are in the file, and it refuses a file from a newer version of the app rather than reading it as empty.

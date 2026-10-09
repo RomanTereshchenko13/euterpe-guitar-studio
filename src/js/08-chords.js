@@ -52,9 +52,9 @@ function labClass(lab){
    saveState()/loadState() with a bounds-checked restore. Current members:
      context   : gRoot, gRootLbl (root) + scIdx (mode)   (set via setKey)
      display   : gMode (note-names vs degrees)     (this block)
-     view      : hView (chords|triads), scView (scale|notes)  (sub-view per tab)
-     chords    : chQual                            (this block)
-     triads    : trQual, trSet, trInv              (~"TRIADS view")
+     view      : hView (chords|arp), scView (scale|notes)  (sub-view per tab)
+     chords    : chQual, chVoicing, chTriads       (this block)
+     triads    : trSet, trInv                      (~"TRIADS", the Chord-tones toggle)
      scales    : scPos, scOverlay                  (~"SCALES view")
      notes     : ntFilter, ntRoot                  (Notes sub-view of Scales, 1b)
      circle    : (derived from context; not persisted)
@@ -75,80 +75,13 @@ let gRoot=9, gRootLbl='A', gMode='names';
 let chQual=1;
 let chVoicing=0;   // index of the selected voicing card (open / E-barre / A-barre / computed)
 let chShapesExpanded=false;   // collapsed by default: show the first few shapes, expand for the rest
+let chTriads=false;   // Chord tones shows the chord's triad shapes instead of every chord tone
 let arpPos=0;      // Arpeggio view: isolated practice box (0 = whole neck, 1..5)
-let idSel=[];      // Identify sub-view (1c): MIDIs the user has tapped on the board (transient scratch)
 function chDegClass(iv){ if(iv===0)return'd-root'; if(iv===3||iv===4)return'd-third'; if([6,7,8].includes(iv))return'd-fifth'; return'd-sev'; }
 
-/* ---- Reverse lookup (1c) ----
-   identifyChord: name a set of sounded pitch classes. Returns candidate chords
-   (best first): an exact pitch-class match against every quality at every root,
-   so genuine ambiguities surface as multiple names (C6 = Am7). The played bass
-   (lowest note) is preferred as the root, and a non-root bass reads as a slash. */
-function identifyChord(pcs, bassPc){
-  const sel=[...new Set(pcs.map(p=>mod(p,12)))].sort((a,b)=>a-b);
-  if(sel.length<3) return [];
-  const key=sel.join(',');
-  const out=[];
-  for(let root=0; root<12; root++){
-    QUALITIES.forEach(q=>{
-      const cpcs=[...new Set(q.iv.map(iv=>mod(root+iv,12)))].sort((a,b)=>a-b);
-      if(cpcs.join(',')===key){
-        const slash = (bassPc!=null && bassPc!==root);
-        out.push({ root, short:q.short, q, slash,
-                   name: noteTxt(ROOTS[root])+q.short + (slash?'/'+noteTxt(ROOTS[bassPc]):'') });
-      }
-    });
-  }
-  out.sort((a,b)=>{
-    const ab=(a.root===bassPc?0:1)-(b.root===bassPc?0:1); if(ab) return ab;   // bass = root first
-    return a.short.length - b.short.length;                                    // then simplest name
-  });
-  return out;
-}
-/* Closest-match fallback (1c): when no quality matches the played notes exactly,
-   name the chords the selection is one or two notes away from, so a real-world
-   voicing with a doubled/dropped tone still teaches the player what they hold.
-   For each candidate we report the chord tones MISSING (by degree label) and the
-   EXTRA notes played (by name), ranked by smallest total difference. */
-function nearChords(pcs, bassPc){
-  const sel=new Set(pcs.map(p=>mod(p,12)));
-  if(sel.size<3) return [];
-  const out=[];
-  for(let root=0; root<12; root++){
-    QUALITIES.forEach(q=>{
-      const cmap={};                                   // chord pitch class -> degree label
-      q.iv.forEach((iv,i)=>{ const pc=mod(root+iv,12); if(!(pc in cmap)) cmap[pc]=q.lab[i]; });
-      const cpcs=Object.keys(cmap).map(Number);
-      const missing=cpcs.filter(pc=>!sel.has(pc));     // chord tones the player didn't play
-      const extra=[...sel].filter(pc=>!(pc in cmap));  // played notes that aren't chord tones
-      const diff=missing.length+extra.length;
-      if(diff===0 || diff>2) return;                   // exact (handled elsewhere) or too far
-      if(cpcs.length-missing.length<2) return;         // too little overlap to call it "close"
-      const slash=(bassPc!=null && bassPc in cmap && bassPc!==root);
-      out.push({ root, q, short:q.short, slash, diff,
-                 name: noteTxt(ROOTS[root])+q.short + (slash?'/'+noteTxt(ROOTS[bassPc]):''),
-                 missing: missing.map(pc=>cmap[pc]),
-                 extra:   extra.map(pc=>noteTxt(NOTES[pc])) });
-    });
-  }
-  out.sort((a,b)=> a.diff-b.diff || a.missing.length-b.missing.length || a.short.length-b.short.length);
-  return out;
-}
-/* one-line description of how a near match differs from the played notes */
-function nearHint(c){
-  const parts=[];
-  if(c.missing.length) parts.push(t('id_missing')+' '+c.missing.join(' '));
-  if(c.extra.length)   parts.push(t('id_extra')+' '+c.extra.join(' '));
-  return parts.join(' · ');
-}
-function idSelPcs(){ return idSel.map(m=>mod(m,12)); }
-function idBassPc(){ return idSel.length ? mod(Math.min.apply(null, idSel),12) : null; }
-/* The chord the "Play over this" suggester reacts to: the live selection in each
-   harmony view (chord quality, triad, or the top Identify match). */
+/* The chord the "Play over this" suggester reacts to: the chosen root + quality,
+   shared by Chord tones (and its triads) and Arpeggio. */
 function currentHarmonyChord(){
-  if(hView==='triads'){ const tri=TRIADS[trQual]; return {rootPc:gRoot, rootLbl:gRootLbl, short:tri.short, pcs:tri.iv.map(iv=>mod(gRoot+iv,12))}; }
-  if(hView==='identify'){ const c=identifyChord(idSelPcs(), idBassPc())[0]; if(!c) return null;
-    return {rootPc:c.root, rootLbl:ROOTS[c.root], short:c.short, pcs:c.q.iv.map(iv=>mod(c.root+iv,12))}; }
   const q=QUALITIES[chQual]; return {rootPc:gRoot, rootLbl:gRootLbl, short:q.short, pcs:q.iv.map(iv=>mod(gRoot+iv,12))};
 }
 /* Progressive disclosure (#1/#2): the 20-quality vocabulary is a lot to meet on
@@ -194,6 +127,8 @@ function renderChords(){
   const degs=q.lab.join('  ');
   document.getElementById('ch-info').innerHTML=`<div class="big">${noteTxt(gRootLbl)}${q.short} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
   renderChordDiagram();
+  renderChShape();
+  if(triadsOn()) renderTriads();
   // shared board: only when chord tones is the active mode
   if(isBoardMode('chords')){
     const map={}; q.iv.forEach((iv,i)=>{ map[(gRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
@@ -203,6 +138,18 @@ function renderChords(){
     }, chordLegendHTML(), t('ch_hint'));
   }
   renderSuggester();
+}
+
+/* Full chord | Triads. The triad rows show only while the neck shows triads; a chord
+   with no triad (sus, 11) disables the Triads button rather than hiding the switch, so
+   the row doesn't jump as you move through the qualities. */
+function renderChShape(){
+  const has=chTriadIdx()>=0, on=triadsOn();
+  segButtons('ch-shape', [{label:t('shape_full')},{label:t('shape_triads')}], on?1:0, i=>{
+    chTriads=!!i; chVoicing=0; renderChords(); applyHarmonyExtras(); updateGlobalPlay(); saveState(); });
+  const tb=document.querySelector('#ch-shape .btn:nth-child(2)');
+  if(tb){ tb.disabled=!has; tb.title = has ? '' : t('shape_no_triad'); }
+  const rows=document.getElementById('ch-triad-rows'); if(rows) rows.hidden=!on;
 }
 
 /* ---- Arpeggios ----
@@ -236,38 +183,12 @@ function renderArp(){
   renderSuggester();
 }
 
-/* Identify sub-view (1c): the board shows every position; tapping toggles a note
-   into idSel (handled in wiring). The result panel names the selection. */
-function renderIdentify(){
-  const cands=identifyChord(idSelPcs(), idBassPc());
-  const el=document.getElementById('id-result');
-  if(el){
-    if(idSel.length<3) el.innerHTML=`<span class="muted">${t('id_prompt')}</span>`;
-    else if(cands.length) el.innerHTML=`<div class="big">${cands.slice(0,4).map(c=>c.name).join(` <span class="muted">${t('id_also')}</span> `)}</div>`;
-    else {
-      const near=nearChords(idSelPcs(), idBassPc());
-      if(!near.length) el.innerHTML=`<span class="muted">${t('id_none')}</span>`;
-      else el.innerHTML=`<div class="sub">${t('id_near')}</div>`+
-        near.slice(0,3).map(c=>`<div class="big">${c.name} <span class="muted">(${nearHint(c)})</span></div>`).join('');
-    }
-  }
-  renderSuggester();
-  if(isBoardMode('identify')){
-    const selSet=new Set(idSel);
-    paintBoard((pc,si,f)=>{
-      const midi=OPEN_MIDI[si]+f, sharp=NOTES[pc].includes('#');
-      return makeDot(selSet.has(midi)?'d-root':(sharp?'d-sharp':'d-natural'), noteTxt(NOTES[pc]), midi);
-    }, notesLegendHTML(), t('id_p'));
-  }
-}
-
 /* "Play over this" sidebar (1c): for the live harmony chord, the arpeggio (chord
    tones) plus every scale that contains them — each a chip that jumps to Scales
    on that root+scale (the reference → practice seam, spine #2). */
 function renderSuggester(){
   const body=document.getElementById('suggest-body'); if(!body) return;
   const ch=currentHarmonyChord();
-  if(!ch){ body.innerHTML=`<span class="muted">${t('suggest_none')}</span>`; return; }
   const q=QUALITIES.find(x=>x.short===ch.short);
   const arp = q ? q.iv.map((iv,i)=>spellNote(ch.rootLbl, mod(ch.rootPc+iv,12), q.deg[i])).join(' · ')
                 : ch.pcs.map(pc=>simpleName(pc, ch.rootLbl)).join(' · ');

@@ -10,13 +10,14 @@
    in-use errors, a clean enable/disable lifecycle — plus the first honest test
    of the vendored pitch detector against the gentlest possible input.
 
-   It COMPLEMENTS the reference-tone tuner in 05-audio.js (tunerTone), which
-   stays for tuning by ear and for anyone with no working mic.
+   It is the app's ONE tuner: the same panel also plays a reference tone per open
+   string (tunerTone, 05-audio.js) to tune by ear — one tap away when the mic works,
+   and the whole panel when it doesn't.
 
    Secure-context rule: getUserMedia only exists on https / localhost. So, like
-   the PWA sidecar in 16-pwa.js, this self-disables rather than throwing — on a
-   file:// dist copy and in jsdom the entry button is simply removed, because a
-   control that can't do anything shouldn't be on screen.
+   the PWA sidecar in 16-pwa.js, the mic half self-disables rather than throwing —
+   on a file:// dist copy and in jsdom it is hidden, because a control that can't
+   do anything shouldn't be on screen, and the panel opens on the by-ear strings.
 
    LOAD ORDER — this is why it's slot 14 and not 17, next to the PWA sidecar it
    otherwise resembles: applyLang (11) calls micRefreshLang, and applyLang first
@@ -158,8 +159,10 @@ async function micStart(){
   // this app can be doing while you tune. Silence it before we listen.
   tunerStop();
   micStatus('mic_asking');
+  mtClosing = false;               // a Stop/close from before this start doesn't count
   const got = await micAcquire();
-  if(!got.ok){ micStatus(got.key); micSyncButtons(false); return; }
+  // no mic after all (denied, missing, busy): the by-ear strings are the way on
+  if(!got.ok){ micStatus(got.key); micSyncButtons(false); tunerEarShow(true); return; }
   // Re-entrancy: micAcquire awaits a permission prompt, and the user can hit Stop
   // (or close the panel) while it's up. If we're no longer wanted, hand the
   // reference straight back instead of starting a loop nobody asked for.
@@ -217,13 +220,34 @@ function micOpen(){
   micStatus(null);
   micPaintIdle();
   micSyncButtons(!!mt);
-  const b=micEl('mt-toggle'); if(b) try{ b.focus(); }catch(_){}
+  const b=micSupported() ? micEl('mt-toggle') : document.querySelector('#mt-strings .tuner-str');
+  if(b) try{ b.focus(); }catch(_){}
 }
 function micClose(){
   micStop();                       // closing the panel always releases the mic
+  tunerStop();                     // ...and silences a reference tone
   const o=micEl('mic-overlay'); if(!o) return;
   o.classList.remove('open'); o.hidden=true;
 }
+
+/* ---- tune by ear ----------------------------------------------------------- */
+/* One button per open string of the current tuning, low → high (E A D G B e in
+   standard), each holding a sustained reference pitch (tunerTone). Rebuilt from the
+   live OPEN_MIDI/SNAMES whenever the tuning changes, so a Drop-D switch re-labels.
+   OPEN_MIDI / SNAMES are stored high → low (string 1 first), hence the reverse. */
+function buildTuner(){
+  const ts=micEl('mt-strings'); if(!ts) return;
+  ts.innerHTML = OPEN_MIDI.map((m,i)=>({m, nm:SNAMES[i]})).reverse()
+    .map(o=>`<button class="btn tuner-str" data-midi="${o.m}" aria-label="${o.nm}">${o.nm}</button>`).join('');
+}
+/* The strings' disclosure. Where there is no mic they are the whole panel, so the
+   toggle hides and the strings stay open. */
+function tunerEarShow(on){
+  const body=micEl('mt-ear-body'), tg=micEl('mt-ear-toggle'), always=!micSupported();
+  if(body) body.hidden = !(on || always);
+  if(tg){ tg.hidden=always; tg.textContent=t('tuner_ear')+(on?' ▴':' ▾'); tg.setAttribute('aria-expanded', on?'true':'false'); }
+}
+function tunerEarOpen(){ const b=micEl('mt-ear-body'); return !!b && !b.hidden; }
 
 /* re-localize a panel that's already open when the language flips (called from
    applyLang in 11-notes-circle-lang.js). */
@@ -232,18 +256,25 @@ function micRefreshLang(){
   if(!mt) micPaintIdle();
   const st=micEl('mt-status');
   if(st && !st.hidden && st.dataset.key) st.textContent=t(st.dataset.key);
+  tunerEarShow(tunerEarOpen());
 }
 
 /* ---- wiring (self-contained, like the PWA sidecar) ------------------------- */
 (function(){
-  const open=micEl('tb-mic');
-  // No secure context / no getUserMedia → remove the entry point entirely rather
-  // than leave a button that can only ever report an error. The reference-tone
-  // tuner beside it still works, so the feature degrades to "tune by ear".
-  if(!micSupported()){ if(open && open.parentNode) open.parentNode.removeChild(open); return; }
-  if(open) open.onclick=micOpen;
+  const open=micEl('tb-tuner'); if(open) open.onclick=micOpen;
   const close=micEl('mt-close'); if(close) close.onclick=micClose;
-  const tog=micEl('mt-toggle'); if(tog) tog.onclick=()=>{ mt ? micStop() : micStart(); };
+  const strings=micEl('mt-strings');
+  // a reference tone with the mic listening would just move the needle, so it stops it
+  if(strings) strings.addEventListener('click', e=>{ const b=e.target.closest('[data-midi]'); if(!b) return; if(mt) micStop(); tunerTone(+b.dataset.midi); });
+  // No secure context / no getUserMedia → hide the mic half rather than show a
+  // control that can only ever report an error; the panel is the by-ear strings.
+  if(!micSupported()){
+    const m=micEl('mt-mic'); if(m) m.hidden=true;
+  } else {
+    const tog=micEl('mt-toggle'); if(tog) tog.onclick=()=>{ mt ? micStop() : micStart(); };
+    const et=micEl('mt-ear-toggle'); if(et) et.onclick=()=>tunerEarShow(!tunerEarOpen());
+  }
+  tunerEarShow(false);
   const ov=micEl('mic-overlay');
   // Click the backdrop (not the panel) to dismiss, matching the changelog overlay.
   if(ov) ov.addEventListener('click', e=>{ if(e.target===ov) micClose(); });
@@ -251,8 +282,6 @@ function micRefreshLang(){
     const o=micEl('mic-overlay');
     if(e.key==='Escape' && o && !o.hidden){ e.preventDefault(); micClose(); }
   });
-  // Never keep the mic open in a backgrounded tab — it's a privacy smell and the
-  // rAF loop is throttled to uselessness there anyway.
   // Never keep the mic open in a backgrounded tab. micReleaseAll (13-mic.js) is the
   // hard release: "another feature still holds a reference" is not a good enough
   // reason to keep a hidden tab listening, so the refcount is overridden here.

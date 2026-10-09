@@ -182,9 +182,9 @@ function loopStrum(when){
   const ctx=audio(); if(!ctx) return;
   const bs=barSec();
   let midis, pcs, boardId='board', pc, qi;     // one shared board (1b)
-  if(loopMode==='triad'){
+  if(loopMode==='triad' && chTriadIdx()>=0){   // the chord may have lost its triad mid-loop (sus)
     const v=currentTriadVoicing();
-    midis=v.midis; pcs=v.pcs; pc=gRoot; qi=TRI_TO_QUAL[trQual];
+    midis=v.midis; pcs=v.pcs; pc=gRoot; qi=TRI_TO_QUAL[chTriadIdx()];
   } else {
     const v=currentChordVoicing();
     midis=v.midis; pcs=v.pcs; pc=gRoot; qi=chQual;
@@ -202,7 +202,7 @@ function loopToggle(){
   if(loopClock){ removeClock(loopClock); loopClock=null; clearVisualQ(); stopLoopVisual();
     btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); setLoopLabel(); return; }
   seqStop();
-  loopMode = (currentTab==='harmony' && hView==='triads') ? 'triad' : 'chord';
+  loopMode = isBoardMode('triads') ? 'triad' : 'chord';
   audio();
   loopClock={ interval:()=>barSec(), tick:(time)=>loopStrum(time) };
   addClock(loopClock);
@@ -241,7 +241,7 @@ function pulseTransport(strong){
   d.classList.add(strong?'bp-strong':'bp');
 }
 function enqueueBeats(when){ const p=pulseSec(), n=barBeats(), starts=meterGroupStarts(); for(let k=0;k<n;k++) enqueueVisual(when+k*p, ()=>pulseTransport(k===0 || starts.has(k))); }
-function loopChordLabel(){ return noteTxt(gRootLbl)+(loopMode==='triad' ? TRIADS[trQual].short : QUALITIES[chQual].short); }
+function loopChordLabel(){ return noteTxt(gRootLbl)+(loopMode==='triad' && chTriadIdx()>=0 ? curTriad().short : QUALITIES[chQual].short); }
 function updateGlobalTransport(){
   const wrap=document.getElementById('tb-transport'); if(!wrap) return;
   const label=document.getElementById('tb-transport-label');
@@ -327,7 +327,7 @@ function seqStrumStep(i, when){
   enqueueVisual(when, ()=>{
     // chord changed → follow on board + chip. Suppress the board-change stagger
     // (1d): this is playback-driven, not a user edit, so the neck shouldn't
-    // re-fade its dots every bar — same precedent as the Identify tap handler.
+    // re-fade its dots every bar.
     if(i!==seqStepIdx){ seqStepIdx=i; _boardStagger=false; setChord(st.pc, st.lbl, st.qi); _boardStagger=true; renderSeq(); updateGlobalTransport(); }
     const b=document.getElementById('board'); pcs.forEach(pc=>setDotPlaying(b, pc, true));
   });

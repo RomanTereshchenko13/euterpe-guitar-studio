@@ -111,11 +111,11 @@ function applyLang(){
   const setPair=(onId,offId)=>{ const a=document.getElementById(onId),b=document.getElementById(offId); if(a){a.classList.add('active');a.setAttribute('aria-pressed','true');} if(b){b.classList.remove('active');b.setAttribute('aria-pressed','false');} };
   gMode==='names'?setPair('g-names','g-deg'):setPair('g-deg','g-names');
   applyNtFilter();
-  buildChQuals(); buildArpQuals(); buildArpPos(); buildTrQuals(); buildTrSets(); buildTrInvs(); buildScSelect(); buildScPos();
+  buildChQuals(); buildArpQuals(); buildArpPos(); buildTrSets(); buildTrInvs(); buildScSelect(); buildScPos();
   buildToolbar(); setMetroLabel(); setLoopLabel(); setBandLabels(); setBackingToggle(); applyBackingPanel();
   buildSeqPresets(); renderSeq(); setSeqTransport();
   { const o=document.getElementById('cl-overlay'); if(o && !o.hidden) renderChangelog(); }
-  renderChords(); renderArp(); renderTriads(); renderScales(); renderNotes(); renderCircle();
+  renderChords(); renderArp(); renderScales(); renderNotes(); renderCircle();
   renderPractice();   // 3b: re-localize the progress chips
   refreshDrillsLang();   // re-localize whatever drill is in flight (13-drill-registry.js)
   // ...and the shared drill header with it (B2): the drill's NAME and the setup handle

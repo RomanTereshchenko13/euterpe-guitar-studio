@@ -81,7 +81,7 @@ addEventListener('load', function () {
   }
   setTimeout(function () {
     try {
-      var btn = document.getElementById('tb-mic');
+      var btn = document.getElementById('tb-tuner');
       if (!btn) { out.err = 'mic button missing — page is not a secure context?'; return done(); }
       btn.click();                                  // open the overlay
       var tog = document.getElementById('mt-toggle');

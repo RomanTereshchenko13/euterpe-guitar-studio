@@ -150,18 +150,9 @@
       <div class="tb-cluster" id="tb-tools">
         <span class="tbc-label" data-i18n="tbc_tools">Інструменти</span>
         <div class="tbc-items">
-          <!-- Reference-tone tuner (no mic): one button per open string of the current
-               tuning; tap to hold a sustained pitch and tune a real guitar against it.
-               Buttons are built from the live tuning by buildTuner().
-               Beside it, the chromatic MIC tuner — a different tool, not a
-               replacement: this one plays a pitch at you, that one listens. 14-mic-tuner.js
-               REMOVES the mic button when there's no secure context (file:// / jsdom),
-               so it never sits there as a control that can only report an error. -->
-          <div class="tb-group tb-tuner">
-            <span class="tb-label" data-i18n="tb_tuner">Тюнер</span>
-            <span class="tuner-strings" id="tb-tuner-strings"></span>
-            <button class="btn tuner-mic" id="tb-mic" data-i18n="mic_open">🎤 Мікрофон</button>
-          </div>
+          <!-- The one tuner (14-mic-tuner.js): listens through the mic where it can, and
+               plays a reference tone per string to tune by ear where it cannot. -->
+          <button class="btn" id="tb-tuner" data-i18n="tuner_open">🎵 Тюнер</button>
           <!-- Latency calibration. Measures the audio round trip by
                playing a click and hearing it back through the mic, so timing scores
                measure the player and not the buffer size. 14-calibration.js removes
@@ -196,9 +187,6 @@
                once and forgotten, which is why they sit here and not in the hot path. -->
           <button class="btn" id="tb-cbpalette" aria-pressed="false" data-i18n="a11y_palette">Палітра для дальтоніків</button>
           <button class="btn" id="tb-shapes" aria-pressed="false" data-i18n="a11y_shapes">Форми на нотах</button>
-          <!-- Share: copy a deep link encoding the current
-               key / scale / chord view (encodeShareState → URL hash). -->
-          <button class="btn" id="tb-share" data-i18n="share_btn">Поділитися</button>
         </div>
       </div>
       <!-- Progress backup (13-backup.js): the practice history + preferences as a local
@@ -268,9 +256,7 @@
   <div class="board-lens" id="board-lens">
     <div class="lens-group" id="ctx-view-harmony">
       <button class="btn active" id="hv-chords" data-i18n="view_chords">Тони акорду</button>
-      <button class="btn" id="hv-triads" data-i18n="view_triads">Форми тріад</button>
       <button class="btn" id="hv-arp" data-i18n="view_arp">Арпеджіо</button>
-      <button class="btn" id="hv-identify" data-i18n="view_identify">Розпізнати</button>
     </div>
     <div class="lens-group" id="ctx-view-scales" hidden>
       <button class="btn active" id="sv-scale" data-i18n="view_scale">Гама</button>
@@ -304,21 +290,18 @@
         <div id="ch-quals"></div>
       </div>
       <div class="info" id="ch-info"></div>
-      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
-           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
+      <!-- Full chord or its triads: the triad of the chosen chord (Am7 → Am) on one
+           string set, by inversion. Hidden for a chord with no triad (sus, 11). -->
+      <div class="row"><span class="ctrl-label" data-i18n="lbl_show">Показати</span><div class="group" id="ch-shape"></div></div>
+      <div id="ch-triad-rows" hidden>
+        <div class="row"><span class="ctrl-label" data-i18n="lbl_set">Набір струн</span><div class="group" id="tr-sets"></div></div>
+        <div class="row"><span class="ctrl-label" data-i18n="lbl_inv">Обернення</span><div class="group" id="tr-invs"></div></div>
+        <div class="info" id="tr-info"></div>
+        <div class="cd-head"><span class="cd-h" data-i18n="tr_shapes">Форми тризвуку</span></div>
+        <div class="chorddia" id="tr-diagram"></div>
+      </div>
+      <!-- seam: drill what is on this screen (SEAM_TRACKS in 15-wiring-init.js). -->
       <div class="row"><button class="btn seam-btn" data-seam="chords" data-i18n="seam_drill">Тренувати це →</button></div>
-    </div>
-
-    <div id="sub-triads" hidden>
-      <div class="row"><span class="ctrl-label" data-i18n="lbl_chord">Акорд</span><div class="group" id="tr-quals"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="lbl_set">Набір струн</span><div class="group" id="tr-sets"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="lbl_inv">Обернення</span><div class="group" id="tr-invs"></div></div>
-      <div class="info" id="tr-info"></div>
-      <div class="cd-head"><span class="cd-h" data-i18n="tr_shapes">Форми тризвуку</span></div>
-      <div class="chorddia" id="tr-diagram"></div>
-      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
-           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
-      <div class="row"><button class="btn seam-btn" data-seam="triads" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
 
     <div id="sub-arp" hidden>
@@ -331,23 +314,11 @@
       </div>
       <div class="row"><span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="arp-pos"></div></div>
       <div class="info" id="arp-info"></div>
-      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
-           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
-      <div class="row"><button class="btn seam-btn" data-seam="arp" data-i18n="seam_drill">Тренувати це →</button></div>
+      <!-- The arpeggio is practised over the band: this is a second Jam toggle,
+           painted with the aside one by renderJamBtn(). -->
+      <div class="row"><button class="btn play seam-btn" data-jam></button></div>
     </div>
 
-    <div id="sub-identify" hidden>
-      <div class="row">
-        <span class="ctrl-label" data-i18n="lbl_identify">Ноти</span>
-        <span class="cd-hint" data-i18n="id_p">Натисни на грифі ноти, які береш, — і дізнайся, що це за акорд.</span>
-        <div class="divider"></div>
-        <button class="btn" id="id-clear" data-i18n="b_clear">Зняти</button>
-      </div>
-      <div class="info" id="id-result"></div>
-      <!-- seam (spine #2 · B3): drill what is on this screen. One label, one
-           listener, one curated view→track map (SEAM_TRACKS in 15-wiring-init.js). -->
-      <div class="row"><button class="btn seam-btn" data-seam="identify" data-i18n="seam_drill">Тренувати це →</button></div>
-    </div>
   </section>
 
   <section class="panel" id="panel-scales">
@@ -478,25 +449,9 @@
             <span class="dc-name" data-i18n="drill_strum">Бій і відчуття</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_strum_meta">Малюнки · свінг · акценти · глушіння · коуч</span>
           </button></li>
-          <!-- opens the shared "over the changes" drill in comping mode; the Lead card
-               below opens the same drill on chord tones. -->
           <li><button type="button" class="drill-card" id="start-comp" data-track="comp">
             <span class="dc-name" data-i18n="drill_comp">Акомпанемент прогресії</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="drill_comp_meta">Потрібний акорд вчасно · коуч</span>
-          </button></li>
-        </ul>
-      </div>
-      <!-- Lead pillar: playing OVER the changes. -->
-      <div class="practice-section">
-        <div class="ps-label" data-i18n="practice_grp_lead">Соло</div>
-        <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-target" data-track="target">
-            <span class="dc-name" data-i18n="drill_target">Тони акорду в прогресії</span><span class="dc-badge"></span>
-            <span class="dc-meta" data-i18n="drill_target_meta">Влучай у тони акорду під гурт · коуч</span>
-          </button></li>
-          <li><button type="button" class="drill-card" id="start-callresp" data-track="callresp">
-            <span class="dc-name" data-i18n="drill_callresp">Запитання-відповідь</span><span class="dc-badge"></span>
-            <span class="dc-meta" data-i18n="drill_callresp_meta">Почуй фразу · повтори її на грифі · коуч</span>
           </button></li>
         </ul>
       </div>
@@ -514,10 +469,6 @@
           <li><button type="button" class="drill-card" id="start-chordq" data-track="chordq">
             <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span><span class="dc-badge"></span>
             <span class="dc-meta" data-i18n="ear_chords_meta">Почуй акорд · визнач його тип</span>
-          </button></li>
-          <li><button type="button" class="drill-card" id="start-rhythm" data-track="rhythm">
-            <span class="dc-name" data-i18n="ear_rhythm">Ритм на слух</span><span class="dc-badge"></span>
-            <span class="dc-meta" data-i18n="ear_rhythm_meta">Почуй такт · обери ритмічний малюнок</span>
           </button></li>
         </ul>
       </div>
@@ -674,27 +625,11 @@
       </div>
     </div>
 
-    <!-- Over the changes: a progression loops with a
-         backing band, and you either COMP it (chord diagrams in NOW/NEXT, no neck) or
-         play its CHORD TONES (chord names + a tappable neck whose lit dots are the
-         current chord's tones, windowed by Position and narrowed by Target). The mode
-         switch is what used to be two separate cards; both cards still open it, each in
-         its own mode. Its own board so the reference board stays put. Hidden until started. -->
+    <!-- Comp the progression: a progression loops with a backing band; NOW/NEXT show
+         the chord diagrams. Hidden until started. -->
     <div id="tg-area" hidden>
-      <!-- SETUP (B2). Roughly 55% of a 390×844 viewport used to be these five control
-           rows, stacked ABOVE the NOW/NEXT stage and the neck, and they stayed there
-           during the run — when they are least useful. They fold now. The mic button
-           moved to the shared header, taking with it the stray .divider that was left
-           on screen as a floating vertical rule whenever renderTarget() hid it. -->
       <div class="drill-setup" id="tg-setup">
-        <div class="row"><span class="ctrl-label" data-i18n="oc_mode">Що граєш</span><div class="group" id="tg-mode"></div></div>
         <div class="row"><span class="ctrl-label" data-i18n="tg_prog">Прогресія</span><div class="group" id="tg-progs"></div></div>
-        <!-- lead-only: windowing the targets to one box / one degree means nothing when
-             you're comping the chord, so the whole block hides in `chords` mode. -->
-        <div id="tg-tone-rows" hidden>
-          <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="tg-pos"></div></div>
-          <div class="row"><span class="ctrl-label" data-i18n="tg_deg">Ціль</span><div class="group" id="tg-deg"></div></div>
-        </div>
       </div>
       <p class="drill-hint" id="tg-hint"></p>
       <div class="drill-count" id="tg-hits"></div>
@@ -708,42 +643,14 @@
           <div class="co-lab" id="tg-next-lab" data-i18n="co_next">Далі</div>
           <div class="co-chord co-next" id="tg-next"></div>
         </div>
-        <div class="tg-acc" id="tg-acc"></div>
       </div>
       <div class="co-beats" id="tg-beats"></div>
-      <div id="tg-board-wrap" hidden>
-        <div class="scroll"><div class="board"><div class="fretboard" id="tg-board"></div></div><div class="fretnums" id="tg-nums"></div></div>
-      </div>
-      <!-- Scored tier — comping mode only; the lead mode stays tap-scored
-           on accuracy until F2, and renderTarget() hides these there. -->
+      <!-- Scored tier: the mic times the chord changes. -->
       <p class="scored-status" id="tg-status" role="status" hidden></p>
       <div class="scored-panel" id="tg-score" hidden></div>
       <div class="drill-bar">
         <button type="button" class="btn play" id="tg-play"></button>
       </div>
-    </div>
-
-    <!-- Call & response: the app plays a lick from the key's scale in one
-         box (LISTEN), then you echo it back on the neck (YOUR TURN). Turn-based, self-
-         paced, scored on echo accuracy — its listen/answer structure is the play-vs-rest
-         phrasing lesson. Its own board so the reference board stays put. Hidden until started. -->
-    <div id="cr-area" hidden>
-      <div id="cr-active">
-        <div class="drill-setup" id="cr-setup">
-          <div class="row"><span class="ctrl-label" data-i18n="tg_pos">Позиція</span><div class="group" id="cr-pos"></div></div>
-        </div>
-        <p class="drill-hint" id="cr-hint"></p>
-        <div class="cr-stage">
-          <div class="cr-status" id="cr-status"></div>
-          <div class="drill-count" id="cr-round"></div>
-          <div class="cr-scale" id="cr-scale"></div>
-        </div>
-        <div class="scroll"><div class="board"><div class="fretboard" id="cr-board"></div></div><div class="fretnums" id="cr-nums"></div></div>
-        <div class="drill-bar">
-          <button type="button" class="btn play" id="cr-replay"></button>
-        </div>
-      </div>
-      <div class="drill-summary" id="cr-summary" hidden></div>
     </div>
 
     <!-- Subdivision & timing: a smart visual metronome — pick a subdivision
@@ -845,7 +752,7 @@
            things the app does and it had no front door. It belongs HERE, beside the
            suggester captioned "What to play over this", which already knows the answer.
            Wired in 15-wiring-init.js; it is a toggle, so it is also how you stop. -->
-      <div class="row"><button class="btn play seam-btn" id="seam-jam"></button></div>
+      <div class="row"><button class="btn play seam-btn" id="seam-jam" data-jam></button></div>
     </div>
   </div>
 </aside>
@@ -914,7 +821,7 @@
         </button>
         <button type="button" class="drill-card" id="wc-go-practice">
           <span class="dc-name" data-i18n="wc_drill">Повправлятися</span>
-          <span class="dc-meta" data-i18n="wc_drill_d">Вправи з рахунком — гриф, таймінг, ритм, соло та слух.</span>
+          <span class="dc-meta" data-i18n="wc_drill_d">Вправи з рахунком — гриф, таймінг, ритм і слух.</span>
         </button>
         <button type="button" class="drill-card" id="wc-go-tune">
           <span class="dc-name" data-i18n="wc_tune">Налаштувати гітару</span>
@@ -945,10 +852,11 @@
   </div>
 </div>
 
-<!-- Chromatic mic tuner. Reuses the changelog overlay chrome. The
-     needle is a single absolutely-positioned marker inside a ±50-cent track, moved
-     by 17-mic-tuner.js; the gauge carries .in-tune / data-dir for the colour state,
-     so hue is never the only signal (the number and the arrow say it too). -->
+<!-- The one tuner. Reuses the changelog overlay chrome. The mic half (#mt-mic) is a
+     needle inside a ±50-cent track, moved by 14-mic-tuner.js; the gauge carries
+     .in-tune / data-dir for the colour state, so hue is never the only signal. The
+     by-ear half (#mt-ear) plays a reference tone per open string: it is the whole
+     tuner where there is no mic, and one tap away where there is. -->
 <div class="cl-overlay" id="mic-overlay" role="dialog" aria-modal="true" aria-labelledby="mt-title" hidden>
   <div class="cl-modal mt-modal">
     <div class="cl-head">
@@ -956,33 +864,42 @@
       <button class="cl-close" id="mt-close" aria-label="close">✕</button>
     </div>
     <div class="mt-body">
-      <div class="mt-readout">
-        <div class="mt-note-wrap">
-          <span class="mt-note" id="mt-note">—</span><span class="mt-oct" id="mt-oct"></span>
+      <div class="mt-mic" id="mt-mic">
+        <div class="mt-readout">
+          <div class="mt-note-wrap">
+            <span class="mt-note" id="mt-note">—</span><span class="mt-oct" id="mt-oct"></span>
+          </div>
+          <div class="mt-cents" id="mt-cents"></div>
         </div>
-        <div class="mt-cents" id="mt-cents"></div>
-      </div>
-      <!-- ±50 cents. The centre band is the in-tune target; flat is left, sharp right. -->
-      <div class="mt-gauge" id="mt-gauge" role="img" aria-live="polite">
-        <div class="mt-track">
-          <span class="mt-tick" style="left:0%"></span>
-          <span class="mt-tick" style="left:25%"></span>
-          <span class="mt-tick mt-tick-mid" style="left:50%"></span>
-          <span class="mt-tick" style="left:75%"></span>
-          <span class="mt-tick" style="left:100%"></span>
-          <span class="mt-zone"></span>
-          <span class="mt-needle" id="mt-needle"></span>
+        <!-- ±50 cents. The centre band is the in-tune target; flat is left, sharp right. -->
+        <div class="mt-gauge" id="mt-gauge" role="img" aria-live="polite">
+          <div class="mt-track">
+            <span class="mt-tick" style="left:0%"></span>
+            <span class="mt-tick" style="left:25%"></span>
+            <span class="mt-tick mt-tick-mid" style="left:50%"></span>
+            <span class="mt-tick" style="left:75%"></span>
+            <span class="mt-tick" style="left:100%"></span>
+            <span class="mt-zone"></span>
+            <span class="mt-needle" id="mt-needle"></span>
+          </div>
+          <div class="mt-scale">
+            <span>♭ −50</span><span data-i18n="mic_intune">У строї</span><span>+50 ♯</span>
+          </div>
         </div>
-        <div class="mt-scale">
-          <span>♭ −50</span><span data-i18n="mic_intune">У строї</span><span>+50 ♯</span>
+        <div class="mt-string" id="mt-string"></div>
+        <p class="mt-status" id="mt-status" role="status" hidden></p>
+        <div class="mt-actions">
+          <button class="btn play" id="mt-toggle" data-i18n="mic_start">Увімкнути мікрофон</button>
+        </div>
+        <p class="mt-hint" data-i18n="mic_hint">Звук з мікрофона обробляється лише у твоєму браузері — нікуди не надсилається й не записується.</p>
+      </div>
+      <div class="mt-ear" id="mt-ear">
+        <button type="button" class="btn" id="mt-ear-toggle" aria-expanded="false" aria-controls="mt-ear-body"></button>
+        <div class="mt-ear-body" id="mt-ear-body" hidden>
+          <p class="mt-hint" data-i18n="tuner_ear_hint">Натисни струну — прозвучить її нота; підтягуй струну, доки звуки не зіллються.</p>
+          <div class="tuner-strings" id="mt-strings"></div>
         </div>
       </div>
-      <div class="mt-string" id="mt-string"></div>
-      <p class="mt-status" id="mt-status" role="status" hidden></p>
-      <div class="mt-actions">
-        <button class="btn play" id="mt-toggle" data-i18n="mic_start">Увімкнути мікрофон</button>
-      </div>
-      <p class="mt-hint" data-i18n="mic_hint">Звук з мікрофона обробляється лише у твоєму браузері — нікуди не надсилається й не записується.</p>
     </div>
   </div>
 </div>

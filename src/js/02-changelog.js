@@ -1,6 +1,13 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.17.0', date:'2026-10-09',
+    en:['Fewer, better drills: Rhythm by ear, Chord tones over changes and Call & response are gone — for chord tones over a band, open Arpeggio and press "Jam over this" — and your history from them is kept.',
+        'One tuner: Settings ▸ Tools ▸ Tuner listens through the microphone, and "Tune by ear" in the same panel plays each open string when there is no mic.',
+        'Triads are now a switch on Chord tones that shows the triad inside the chosen chord; the Identify view and share links were removed, and an old share link still opens the app.'],
+    uk:['Менше вправ, але кращих: «Ритм на слух», «Тони акорду в прогресії» та «Запитання-відповідь» прибрано — тони акорду під гурт тепер в «Арпеджіо» з кнопкою «Джем над цим», а твою історію з них збережено.',
+        'Один тюнер: «Налаштування ▸ Інструменти ▸ Тюнер» слухає через мікрофон, а «Налаштувати на слух» у тій самій панелі грає кожну відкриту струну, коли мікрофона немає.',
+        'Тризвуки тепер — перемикач у «Тонах акорду», що показує тризвук обраного акорду; вид «Розпізнати» і посилання «Поділитися» прибрано, а старе посилання все одно відкриває застосунок.'] },
   { v:'2.16.0', date:'2026-10-08',
     en:['Your progress can leave the browser and come back. Settings ▸ Progress has Export, which saves your practice history and preferences as a file on your device, and Import, which brings one back — on a new phone, after clearing the browser, or simply as a backup. Nothing is uploaded anywhere. Before it replaces anything, Import tells you how many sessions are on this device and how many are in the file, and it refuses a file from a newer version of the app rather than reading it as empty.',
         'Euterpe now asks the browser to keep its storage once you have finished a practice session. Some browsers — Safari above all — otherwise clear a site\'s data after a week without a visit, and your history with it.',

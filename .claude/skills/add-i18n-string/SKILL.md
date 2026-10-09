@@ -18,7 +18,7 @@ fails if a key exists in one block but not the other** — symmetry is enforced.
    already used in the file — гриф, лад, тоніка, квінта, …).
 3. **Follow the key-naming convention** — short, grouped-by-feature prefixes
    already in the file: `tab_*`, `view_*`, `lbl_*`, `cof_*` (circle of fifths),
-   `ch_*` (chords), `tr_*` (triads), `arp_*`, `leg_*` (legend), `id_*` (identify),
+   `ch_*` (chords), `tr_*` (triads), `arp_*`, `leg_*` (legend), `shape_*` (full chord · triads),
    `b_*` (buttons). Reuse an existing key if one already fits.
 4. Place the new key near its feature group in **both** blocks so they stay
    parallel and easy to diff.

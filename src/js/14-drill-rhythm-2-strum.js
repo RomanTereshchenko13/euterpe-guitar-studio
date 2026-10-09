@@ -24,7 +24,7 @@
    mute-able strum, metroClick (06) for the beat reference, and the shared scheduler. */
 
 /* 8th-note slots over one bar (index 0..7 = 1 & 2 & 3 & 4 &): 'D' down, 'U' up, '' miss.
-   en/uk names inline (like INTERVALS/RHYTHMS) so the i18n symmetry check only guards I18N. */
+   en/uk names inline (like INTERVALS) so the i18n symmetry check only guards I18N. */
 const STRUM_PATTERNS = [
   { id:'downs',   en:'Quarter downstrokes', uk:'Чвертки вниз',         seg:['D','','D','','D','','D',''] },
   { id:'eighths', en:'Eighth down-up',      uk:'Вісімки вниз-вгору',   seg:['D','U','D','U','D','U','D','U'] },
