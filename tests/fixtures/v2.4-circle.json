@@ -1,0 +1,99 @@
+{
+  "name": "v2.4-circle",
+  "app": "2.4.0",
+  "commit": "11d0cd6",
+  "note": "the Circle tab, colour-blind palette and shapes, welcome seen",
+  "save": {
+    "lang": "uk",
+    "mode": "reference",
+    "tab": "circle",
+    "tuningIdx": 2,
+    "fretRangeIdx": 0,
+    "tempo": 90,
+    "masterVol": 1,
+    "lefty": false,
+    "toolbarOpen": true,
+    "backingOpen": false,
+    "shapesOpen": true,
+    "capo": 0,
+    "cbPalette": true,
+    "fnShapes": true,
+    "welcomeSeen": true,
+    "gRoot": 4,
+    "gRootLbl": "E",
+    "gMode": "names",
+    "hView": "chords",
+    "scView": "scale",
+    "chQual": 1,
+    "arpPos": 0,
+    "scIdx": 5,
+    "scPos": 0,
+    "scOverlay": null,
+    "chVoicing": 0,
+    "trQual": 0,
+    "trSet": 0,
+    "trInv": 1,
+    "ntRoot": "A",
+    "ntFilter": "all",
+    "seq": [],
+    "seqLoopOn": true,
+    "bassOn": false,
+    "grooveOn": false,
+    "learner": {
+      "v": 1,
+      "items": {},
+      "sessions": [
+        {
+          "t": 1756568000000,
+          "drill": "notes",
+          "score": 64
+        }
+      ]
+    }
+  },
+  "seen": {
+    "lang": "uk",
+    "mode": "reference",
+    "view": "circle",
+    "root": "E",
+    "labels": "names",
+    "chord": "0.3.7",
+    "arpBox": 0,
+    "scale": "0.2.3.5.7.8.10",
+    "scaleBox": 0,
+    "tuning": "62.57.55.50.45.38",
+    "frets": "1-22",
+    "capo": 0,
+    "lefty": false,
+    "tempo": 90,
+    "meter": null,
+    "volume": 1,
+    "settingsOpen": true,
+    "backingOpen": false,
+    "shapesOpen": true,
+    "cbPalette": true,
+    "fnShapes": true,
+    "welcomeSeen": true,
+    "progression": "",
+    "progLoop": true,
+    "bass": false,
+    "drums": false,
+    "notesFilter": "all",
+    "latencyMs": null,
+    "latencyKnown": null,
+    "sessionMins": null,
+    "drillSeen": null,
+    "learner": {
+      "items": [],
+      "sessions": [
+        [
+          1756568000000,
+          "notes",
+          64,
+          null
+        ]
+      ],
+      "best": null
+    }
+  }
+}

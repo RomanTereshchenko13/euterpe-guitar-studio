@@ -3,7 +3,7 @@
   "private": true,
   "description": "Headless smoke + correctness suite for Guitar Studio. The app itself ships as a single zero-dependency HTML file; jsdom is a DEV-only dependency used by this gate, nothing shipped depends on it.",
   "scripts": {
-    "test": "node smoke.js ../index.html"
+    "test": "node smoke.js ../index.html && node compat.js ../index.html"
   },
   "devDependencies": {
     "jsdom": "^24.0.0"

@@ -1,0 +1,247 @@
+{
+  "name": "v2.16-full",
+  "app": "2.16.0",
+  "commit": "e695fae",
+  "note": "last build before the cuts: every field, cut drills' history, and a share link to elsewhere",
+  "save": {
+    "lang": "en",
+    "mode": "reference",
+    "tab": "harmony",
+    "tuningIdx": 1,
+    "customTuning": [
+      64,
+      59,
+      55,
+      50,
+      45,
+      40
+    ],
+    "fretRangeIdx": 1,
+    "tempo": 104,
+    "meterIdx": 1,
+    "masterVol": 0.8,
+    "lefty": true,
+    "toolbarOpen": false,
+    "backingOpen": true,
+    "shapesOpen": true,
+    "capo": 2,
+    "cbPalette": true,
+    "fnShapes": false,
+    "welcomeSeen": true,
+    "gRoot": 9,
+    "gRootLbl": "A",
+    "gMode": "names",
+    "hView": "arp",
+    "scView": "scale",
+    "chQual": 1,
+    "arpPos": 2,
+    "scIdx": 5,
+    "scPos": 0,
+    "scOverlay": null,
+    "chVoicing": 0,
+    "trQual": 0,
+    "trSet": 0,
+    "trInv": 1,
+    "ntRoot": "A",
+    "ntFilter": "all",
+    "seq": [
+      {
+        "pc": 9,
+        "lbl": "A",
+        "qi": 1,
+        "bars": 1
+      },
+      {
+        "pc": 2,
+        "lbl": "D",
+        "qi": 1,
+        "bars": 1
+      },
+      {
+        "pc": 4,
+        "lbl": "E",
+        "qi": 0,
+        "bars": 1
+      }
+    ],
+    "seqLoopOn": true,
+    "bassOn": false,
+    "grooveOn": true,
+    "calMs": 55,
+    "calKnown": true,
+    "drillSeen": {
+      "timing": 1,
+      "rhythm": 1,
+      "target": 1,
+      "callresp": 1
+    },
+    "sessMins": 15,
+    "learner": {
+      "v": 2,
+      "items": {
+        "rhythm:r3": {
+          "seen": 1,
+          "correct": 0,
+          "streak": 0,
+          "ease": 2.3,
+          "due": 1756481660000
+        },
+        "interval:P4": {
+          "seen": 1,
+          "correct": 1,
+          "streak": 1,
+          "ease": 2.6,
+          "due": 1756568000000
+        }
+      },
+      "sessions": [
+        {
+          "t": 1756481600000,
+          "drill": "ear-rhythm",
+          "score": 50
+        },
+        {
+          "t": 1756568000000,
+          "drill": "target:I-V-vi-IV",
+          "score": 72
+        },
+        {
+          "t": 1756654400000,
+          "drill": "callresp:A",
+          "score": 80
+        },
+        {
+          "t": 1756913600000,
+          "drill": "timing:8ths",
+          "score": 10,
+          "err": 14.25
+        }
+      ],
+      "best": {
+        "ear-rhythm": {
+          "score": 50,
+          "t": 1756481600000
+        },
+        "target:I-V-vi-IV": {
+          "score": 72,
+          "t": 1756568000000
+        },
+        "callresp:A": {
+          "score": 80,
+          "t": 1756654400000
+        },
+        "timing:8ths": {
+          "score": 10,
+          "t": 1756913600000,
+          "err": 14.25
+        }
+      }
+    }
+  },
+  "seen": {
+    "lang": "en",
+    "mode": "reference",
+    "view": "harmony:arp",
+    "root": "A",
+    "labels": "names",
+    "chord": "0.3.7",
+    "arpBox": 2,
+    "scale": "0.2.3.5.7.8.10",
+    "scaleBox": 0,
+    "tuning": "64.59.55.50.45.38",
+    "frets": "1-5",
+    "capo": 2,
+    "lefty": true,
+    "tempo": 104,
+    "meter": "3/4",
+    "volume": 0.8,
+    "settingsOpen": false,
+    "backingOpen": true,
+    "shapesOpen": true,
+    "cbPalette": true,
+    "fnShapes": false,
+    "welcomeSeen": true,
+    "progression": "A:0.3.7:1 D:0.3.7:1 E:0.4.7:1",
+    "progLoop": true,
+    "bass": false,
+    "drums": true,
+    "notesFilter": "all",
+    "latencyMs": 55,
+    "latencyKnown": true,
+    "sessionMins": 15,
+    "drillSeen": "callresp,rhythm,target,timing",
+    "learner": {
+      "items": [
+        [
+          "interval:P4",
+          1,
+          1,
+          1,
+          2.6,
+          1756568000000
+        ],
+        [
+          "rhythm:r3",
+          1,
+          0,
+          0,
+          2.3,
+          1756481660000
+        ]
+      ],
+      "sessions": [
+        [
+          1756481600000,
+          "ear-rhythm",
+          50,
+          null
+        ],
+        [
+          1756568000000,
+          "target:I-V-vi-IV",
+          72,
+          null
+        ],
+        [
+          1756654400000,
+          "callresp:A",
+          80,
+          null
+        ],
+        [
+          1756913600000,
+          "timing:8ths",
+          10,
+          14.25
+        ]
+      ],
+      "best": [
+        [
+          "callresp:A",
+          80,
+          1756654400000,
+          null
+        ],
+        [
+          "ear-rhythm",
+          50,
+          1756481600000,
+          null
+        ],
+        [
+          "target:I-V-vi-IV",
+          72,
+          1756568000000,
+          null
+        ],
+        [
+          "timing:8ths",
+          10,
+          1756913600000,
+          14.25
+        ]
+      ]
+    }
+  },
+  "hash": "#m=reference&t=scales&k=0&r=C&s=3&sv=notes"
+}

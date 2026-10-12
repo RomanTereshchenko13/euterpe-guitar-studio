@@ -3607,7 +3607,6 @@ function applyLang(){
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));
   { const bl=document.getElementById('board-lens'); if(bl) bl.setAttribute('aria-label', t('lbl_view')); }
 }
-
 function buildToolbar(){
   const tun=document.getElementById('tb-tuning');
   tun.innerHTML=TUNINGS.map((tu,i)=>`<option value="${i}"${i===tuningIdx?' selected':''}>${lang==='en'?tu.en:tu.uk}</option>`).join('');
@@ -3627,21 +3626,18 @@ function buildToolbar(){
   applyA11y();   
   applyToolbarState();
 }
-
 function setTempo(bpm){
   tempo = Math.max(40, Math.min(200, Math.round(bpm)));
   const r=document.getElementById('tb-tempo');  if(r) r.value=tempo;
   const b=document.getElementById('tb-bpm');    if(b) b.textContent=tempo+' BPM';
   const d=document.getElementById('drill-ctx-bpm'); if(d) d.textContent=tempo+' BPM';
 }
-
 function applyToolbarState(){
   const tb=document.getElementById('toolbar'), tg=document.getElementById('tb-toggle');
   tb.classList.toggle('collapsed', !toolbarOpen);
   tg.classList.toggle('open', toolbarOpen);
   tg.setAttribute('aria-expanded', toolbarOpen);
 }
-
 function midiLabel(m){ return NOTES[mod(m,12)].replace('#','♯') + (Math.floor(m/12)-1); }
 function buildCustomTuning(){
   const host=document.getElementById('tb-custom-strings'); if(!host) return;
@@ -3657,7 +3653,6 @@ function applyBackingPanel(){
   if(p) p.classList.toggle('collapsed', !backingOpen);
   if(tg){ tg.classList.toggle('open', backingOpen); tg.setAttribute('aria-expanded', backingOpen); }
 }
-
 function applyShapesPanel(){
   const body=document.getElementById('shapes-body'), tg=document.getElementById('shapes-toggle');
   if(body) body.style.display = shapesOpen ? '' : 'none';
@@ -3669,9 +3664,7 @@ function applyAsideState(){
   if(aside) aside.style.display = show ? '' : 'none';
   const layout=document.querySelector('.layout'); if(layout) layout.classList.toggle('no-aside', !show);
 }
-
 function renderAllBoards(){ renderContextViews(); }
-
 if(typeof window!=='undefined'){
   let _rzT=null, _rzW=window.innerWidth;
   window.addEventListener('resize', ()=>{
@@ -3680,11 +3673,7 @@ if(typeof window!=='undefined'){
     clearTimeout(_rzT); _rzT=setTimeout(()=>{ renderAllBoards(); renderCircle&&renderCircle(); }, 150);
   });
 }
-
-
 let _hdrToggleAt=0;
-
-
 if(typeof window!=='undefined'){
   let _magT=null;
   const magnetNeck=()=>{
@@ -3698,8 +3687,6 @@ if(typeof window!=='undefined'){
   };
   window.addEventListener('scroll', ()=>{ clearTimeout(_magT); _magT=setTimeout(magnetNeck, 110); }, {passive:true});
 }
-
-
 if(typeof window!=='undefined'){
   const hdr=document.querySelector('header');
   let spacer=null, baseH=0;
@@ -3737,11 +3724,9 @@ if(typeof window!=='undefined'){
   if(hdr) baseH=hdr.offsetHeight;   
   setHdrH();
 }
-
 const LS_KEY='guitarStudio.v1';
 let currentTab='harmony';
 let currentMode='reference';
-
 function snapshotState(){ return {
   lang, mode:currentMode, tab:currentTab, tuningIdx, customTuning, fretRangeIdx, tempo, meterIdx, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
   cbPalette, fnShapes, welcomeSeen,
@@ -3757,7 +3742,6 @@ function snapshotState(){ return {
   sessMins,          
   learner   
 }; }
-
 let saveBlocked=false;
 function saveState(){ if(saveBlocked) return;
   try{ localStorage.setItem(LS_KEY, JSON.stringify(snapshotState())); }
@@ -3783,7 +3767,6 @@ function loadState(){ try{
   if(typeof s.cbPalette==='boolean') cbPalette=s.cbPalette;
   if(typeof s.fnShapes==='boolean') fnShapes=s.fnShapes;
   welcomeSeen = (typeof s.welcomeSeen==='boolean') ? s.welcomeSeen : true;
-  
   if(s.drillSeen && typeof s.drillSeen==='object' && !Array.isArray(s.drillSeen)){
     const out={}; let n=0;
     for(const k of Object.keys(s.drillSeen)){
@@ -3800,7 +3783,7 @@ function loadState(){ try{
   if(typeof s.tab==='string'){
     if(s.tab==='chords'||s.tab==='triads') currentTab='harmony';          
     else if(s.tab==='notes'){ currentTab='scales'; scView='notes'; }      
-    else currentTab=s.tab;
+    else if(s.tab==='harmony'||s.tab==='scales'||s.tab==='circle') currentTab=s.tab;   
   }
   if(Number.isInteger(s.chQual)&&QUALITIES[s.chQual]) chQual=s.chQual;
   if(Number.isInteger(s.arpPos)&&s.arpPos>=0&&s.arpPos<=5) arpPos=s.arpPos;
@@ -3812,7 +3795,6 @@ function loadState(){ try{
   if(Number.isInteger(s.trSet)&&STRING_SETS[s.trSet]) trSet=s.trSet;
   if(Number.isInteger(s.trInv)&&s.trInv>=0&&s.trInv<=3) trInv=s.trInv;
   if(typeof s.chTriads==='boolean') chTriads=s.chTriads;
-  
   if(s.hView==='triads' || s.tab==='triads'){
     hView='chords'; chTriads=true; chVoicing=0;
     if(Number.isInteger(s.trQual)&&TRIADS[s.trQual]) chQual=TRI_TO_QUAL[s.trQual];
@@ -3829,8 +3811,6 @@ function loadState(){ try{
       .map(st=>({pc:st.pc, lbl:(typeof st.lbl==='string'?st.lbl:ROOTS[st.pc]), qi:st.qi, bars:([1,2,4].includes(st.bars)?st.bars:1)}));
   }
 }catch(e){ devWarn('saved state could not be restored; using defaults', e); return false; } return true; }
-
-
 function clearOldShareHash(){
   if(typeof location==='undefined') return;
   const h=(location.hash||'').replace(/^#/, ''); if(!h) return;

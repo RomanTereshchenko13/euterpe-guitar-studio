@@ -1,0 +1,128 @@
+{
+  "name": "v2.2-ear",
+  "app": "2.2.0",
+  "commit": "4758066",
+  "note": "the retired 'ear' mode; volume, backing panel, first learner model (v1)",
+  "save": {
+    "lang": "en",
+    "mode": "ear",
+    "tab": "scales",
+    "tuningIdx": 0,
+    "fretRangeIdx": 0,
+    "tempo": 90,
+    "masterVol": 0.6,
+    "lefty": false,
+    "toolbarOpen": true,
+    "backingOpen": true,
+    "shapesOpen": false,
+    "capo": 0,
+    "gRoot": 10,
+    "gRootLbl": "Bb",
+    "gMode": "names",
+    "hView": "chords",
+    "scView": "scale",
+    "chQual": 1,
+    "arpPos": 0,
+    "scIdx": 3,
+    "scPos": 2,
+    "scOverlay": null,
+    "chVoicing": 0,
+    "trQual": 0,
+    "trSet": 0,
+    "trInv": 1,
+    "ntRoot": "A",
+    "ntFilter": "all",
+    "seq": [],
+    "seqLoopOn": true,
+    "bassOn": true,
+    "grooveOn": true,
+    "learner": {
+      "v": 1,
+      "items": {
+        "note:C": {
+          "seen": 1,
+          "correct": 1,
+          "streak": 1,
+          "ease": 2.6,
+          "due": 1756827200000
+        },
+        "note:F#": {
+          "seen": 2,
+          "correct": 1,
+          "streak": 1,
+          "ease": 2.4,
+          "due": 1756913600000
+        }
+      },
+      "sessions": [
+        {
+          "t": 1756827200000,
+          "drill": "notes",
+          "score": 80
+        }
+      ]
+    }
+  },
+  "seen": {
+    "lang": "en",
+    "mode": "ear",
+    "view": "scales",
+    "root": "Bb",
+    "labels": "names",
+    "chord": "0.3.7",
+    "arpBox": 0,
+    "scale": "0.2.4.6.7.9.11",
+    "scaleBox": 2,
+    "tuning": "64.59.55.50.45.40",
+    "frets": "1-22",
+    "capo": 0,
+    "lefty": false,
+    "tempo": 90,
+    "meter": null,
+    "volume": 0.6,
+    "settingsOpen": true,
+    "backingOpen": true,
+    "shapesOpen": false,
+    "cbPalette": null,
+    "fnShapes": null,
+    "welcomeSeen": null,
+    "progression": "",
+    "progLoop": true,
+    "bass": true,
+    "drums": true,
+    "notesFilter": "all",
+    "latencyMs": null,
+    "latencyKnown": null,
+    "sessionMins": null,
+    "drillSeen": null,
+    "learner": {
+      "items": [
+        [
+          "note:C",
+          1,
+          1,
+          1,
+          2.6,
+          1756827200000
+        ],
+        [
+          "note:F#",
+          2,
+          1,
+          1,
+          2.4,
+          1756913600000
+        ]
+      ],
+      "sessions": [
+        [
+          1756827200000,
+          "notes",
+          80,
+          null
+        ]
+      ],
+      "best": null
+    }
+  }
+}

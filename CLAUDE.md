@@ -19,7 +19,9 @@ Architecture write-up: `README.md`.
   wrapper (an unwrapped `'use strict'` would turn the whole app strict).
 - **Every UI string in both `uk` and `en`** (`03-i18n.js`; lint + tests enforce it).
 - **Saved data is never lost.** A change to saved data or session ids ships an additive
-  migration, tested against old saves.
+  migration, tested against old saves: `tests/compat.js` boots real saves captured from
+  past releases (`tests/fixtures/`, written by `tools/capture-fixtures.js`). A change meant to
+  show something different lists itself in its `MIGRATED` / `RETIRED` tables.
 - **Versioning:** `APP_VERSION` in `01-version.js` is the only version (`package.json` has
   none). Each release gets a paired EN/UK entry in `02-changelog.js`. Fix/polish = patch,
   new feature = minor. Use the `release` skill.
@@ -29,7 +31,7 @@ Architecture write-up: `README.md`.
 ```bash
 node build.js      # regenerate everything from src/
 npm run lint       # src/js linted as ONE concatenated scope + hygiene checks
-npm test           # rebuilds, then the jsdom smoke suite (tests/smoke.js)
+npm test           # rebuilds, then the jsdom suites: tests/smoke.js + tests/compat.js (old saves)
 ```
 
 One-time: `npm install` (root, ESLint), `cd tests && npm install` (jsdom),

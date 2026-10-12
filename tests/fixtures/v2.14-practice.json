@@ -1,0 +1,180 @@
+{
+  "name": "v2.14-practice",
+  "app": "2.14.0",
+  "commit": "f2a6627",
+  "note": "learner v2 with timing error, personal bests, latency, drills seen",
+  "save": {
+    "lang": "uk",
+    "mode": "practice",
+    "tab": "scales",
+    "tuningIdx": 0,
+    "customTuning": [
+      64,
+      59,
+      55,
+      50,
+      45,
+      40
+    ],
+    "fretRangeIdx": 0,
+    "tempo": 90,
+    "meterIdx": 2,
+    "masterVol": 1,
+    "lefty": false,
+    "toolbarOpen": false,
+    "backingOpen": false,
+    "shapesOpen": true,
+    "capo": 0,
+    "cbPalette": false,
+    "fnShapes": false,
+    "welcomeSeen": false,
+    "gRoot": 9,
+    "gRootLbl": "A",
+    "gMode": "names",
+    "hView": "chords",
+    "scView": "scale",
+    "chQual": 1,
+    "arpPos": 0,
+    "scIdx": 5,
+    "scPos": 0,
+    "scOverlay": null,
+    "chVoicing": 0,
+    "trQual": 0,
+    "trSet": 0,
+    "trInv": 1,
+    "ntRoot": "A",
+    "ntFilter": "all",
+    "seq": [],
+    "seqLoopOn": true,
+    "bassOn": false,
+    "grooveOn": false,
+    "calMs": 42,
+    "calKnown": true,
+    "learner": {
+      "v": 2,
+      "items": {
+        "interval:P5": {
+          "seen": 1,
+          "correct": 1,
+          "streak": 1,
+          "ease": 2.6,
+          "due": 1756740800000
+        },
+        "interval:m3": {
+          "seen": 1,
+          "correct": 0,
+          "streak": 0,
+          "ease": 2.3,
+          "due": 1756654460000
+        }
+      },
+      "sessions": [
+        {
+          "t": 1756740800000,
+          "drill": "timing:16ths",
+          "score": 8,
+          "err": 18.5
+        },
+        {
+          "t": 1756827200000,
+          "drill": "strum:folk",
+          "score": 6,
+          "err": 24
+        }
+      ],
+      "best": {
+        "timing:16ths": {
+          "score": 8,
+          "t": 1756740800000,
+          "err": 18.5
+        },
+        "strum:folk": {
+          "score": 6,
+          "t": 1756827200000,
+          "err": 24
+        }
+      }
+    }
+  },
+  "seen": {
+    "lang": "uk",
+    "mode": "practice",
+    "view": "scales",
+    "root": "A",
+    "labels": "names",
+    "chord": "0.3.7",
+    "arpBox": 0,
+    "scale": "0.2.3.5.7.8.10",
+    "scaleBox": 0,
+    "tuning": "64.59.55.50.45.40",
+    "frets": "1-22",
+    "capo": 0,
+    "lefty": false,
+    "tempo": 90,
+    "meter": "4/4",
+    "volume": 1,
+    "settingsOpen": false,
+    "backingOpen": false,
+    "shapesOpen": true,
+    "cbPalette": false,
+    "fnShapes": false,
+    "welcomeSeen": false,
+    "progression": "",
+    "progLoop": true,
+    "bass": false,
+    "drums": false,
+    "notesFilter": "all",
+    "latencyMs": 42,
+    "latencyKnown": true,
+    "sessionMins": null,
+    "drillSeen": null,
+    "learner": {
+      "items": [
+        [
+          "interval:P5",
+          1,
+          1,
+          1,
+          2.6,
+          1756740800000
+        ],
+        [
+          "interval:m3",
+          1,
+          0,
+          0,
+          2.3,
+          1756654460000
+        ]
+      ],
+      "sessions": [
+        [
+          1756740800000,
+          "timing:16ths",
+          8,
+          18.5
+        ],
+        [
+          1756827200000,
+          "strum:folk",
+          6,
+          24
+        ]
+      ],
+      "best": [
+        [
+          "strum:folk",
+          6,
+          1756827200000,
+          24
+        ],
+        [
+          "timing:16ths",
+          8,
+          1756740800000,
+          18.5
+        ]
+      ]
+    }
+  }
+}

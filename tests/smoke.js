@@ -134,40 +134,8 @@ catch (e) {
   report(); process.exit(fail ? 1 : 0);
 }
 
-/* Minimal Web Audio stub: every node is a chainable proxy; AudioParams accept
-   value sets and scheduling calls. Enough for setupBus / pluck / loop / seq to
-   run without throwing under jsdom (which has no real AudioContext). */
-function buildAudioStub() {
-  function param() {
-    const p = { value: 0 };
-    ['setValueAtTime','setTargetAtTime','exponentialRampToValueAtTime',
-     'linearRampToValueAtTime','cancelScheduledValues','cancelAndHoldAtTime']
-      .forEach(m => { p[m] = () => p; });
-    return p;
-  }
-  function node() {
-    return new Proxy({}, {
-      get(t, k) {
-        if (k in t) return t[k];
-        if (k === 'connect') return () => node();
-        if (k === 'disconnect' || k === 'start' || k === 'stop') return () => {};
-        return (t[k] = param());
-      },
-      set(t, k, v) { t[k] = v; return true; }
-    });
-  }
-  const ctx = {
-    sampleRate: 44100, state: 'running', currentTime: 0,
-    resume() {}, suspend() {},
-    get destination() { return node(); },
-    createGain: node, createOscillator: node, createBiquadFilter: node,
-    createDynamicsCompressor: node, createConvolver: node, createBufferSource: node,
-    createBuffer: (ch, len) => ({ getChannelData: () => new Float32Array(Math.max(1, len || 1)) })
-  };
-  function AC() { return ctx; }
-  AC.__ctx = ctx;
-  return AC;
-}
+// the Web Audio stub is shared with the compat suite (boot.js)
+const { buildAudioStub } = require('./boot.js');
 
 const dom = new JSDOM(html, {
   runScripts: 'dangerously',

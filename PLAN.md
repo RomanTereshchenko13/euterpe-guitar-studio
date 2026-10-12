@@ -1,6 +1,6 @@
 # Euterpe — Plan
 
-_Shipping: v2.17.0 · Updated: 2026-10-09_
+_Shipping: v2.17.0 · Updated: 2026-10-12_
 
 ## What Euterpe is
 
@@ -133,12 +133,13 @@ later step gets smaller after it.
       progress card hides until there is a run. Note-naming and ear summaries end with "Review
       on the neck" buttons per miss (note → Scales ▸ Notes lit on it; interval → Chord tones
       with Intervals shown; chord quality → Chord tones on it, in the player's key).
-
-### 4 — Compatibility fixtures · S · low risk (before 5 and 7)
-- [ ] Capture real saves from past schemas (and share links, if they survive step 1) into
-      `tests/fixtures/`.
-- [ ] Assert each loads to the same visible state, and that save → load is lossless. Every later
-      step that touches state runs against these.
+- [x] **Compatibility fixtures** — `tools/capture-fixtures.js` boots ten past releases
+      (v1.11 → v2.17) out of git and lets each save a realistic state into `tests/fixtures/`,
+      with what that build showed. `tests/compat.js` (part of `npm test`) asserts the current
+      build shows the same (apart from listed migrations), saves every key the old one did (or
+      lists it as retired), clears an old share link, and that save → load → save is
+      byte-identical. It found one bug: a save with an unknown tab opened on no panel;
+      `loadState` now accepts only real tabs.
 
 ### 5 — State: declared once · M · medium risk
 Smaller than the old "one state store" step, because step 1 removed a lot of the state it would

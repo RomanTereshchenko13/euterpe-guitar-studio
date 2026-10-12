@@ -41,3 +41,21 @@ node smoke.js /path/to/guitar-studio.html
   alignment; All-frets correctly exceeds the viewport (scroller fallback).
 - **Behaviour** — Loop is shown only on the chord-tones view; loop and
   progression transports toggle and are mutually exclusive.
+
+## Compatibility: saves from past releases (`compat.js`)
+
+`fixtures/*.json` are real saves, written by old releases themselves:
+`tools/capture-fixtures.js` boots each release's `index.html` out of git under jsdom,
+puts it into a state a player could have reached, lets that build's `saveState()` write
+localStorage, and records what that build showed (`seen`, read by `boot.js`'s
+`readVisible`). `compat.js` boots the current build on each save and asserts:
+
+- it shows the same thing, apart from the migrations listed in `MIGRATED`;
+- every key the old build saved is still saved, or listed in `RETIRED` with the reason;
+- an old share link is cleared and the save decides what opens;
+- save → load restores the same state, and saving again writes the same bytes;
+- a damaged save (unknown tab, not JSON) still opens on a real view.
+
+A change that is meant to show an old save differently adds its entry to `MIGRATED`;
+it never edits a fixture. To cover a new schema, add a scenario to
+`tools/capture-fixtures.js` and run it (`node tools/capture-fixtures.js <name-prefix>`).

@@ -217,7 +217,7 @@ function loadState(){ try{
   if(typeof s.tab==='string'){
     if(s.tab==='chords'||s.tab==='triads') currentTab='harmony';          // old Chords / Triads tabs merged into Harmony
     else if(s.tab==='notes'){ currentTab='scales'; scView='notes'; }      // Notes became a view of Scales
-    else currentTab=s.tab;
+    else if(s.tab==='harmony'||s.tab==='scales'||s.tab==='circle') currentTab=s.tab;   // anything else would open on no panel at all
   }
   // ---- working musical state ----
   if(Number.isInteger(s.chQual)&&QUALITIES[s.chQual]) chQual=s.chQual;

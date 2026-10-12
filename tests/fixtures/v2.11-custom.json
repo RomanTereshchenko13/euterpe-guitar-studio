@@ -1,0 +1,109 @@
+{
+  "name": "v2.11-custom",
+  "app": "2.11.0",
+  "commit": "e470b51",
+  "note": "custom tuning, time signature, the timing coach",
+  "save": {
+    "lang": "en",
+    "mode": "practice",
+    "tab": "harmony",
+    "tuningIdx": 4,
+    "customTuning": [
+      62,
+      57,
+      55,
+      50,
+      45,
+      36
+    ],
+    "fretRangeIdx": 0,
+    "tempo": 72,
+    "meterIdx": 3,
+    "masterVol": 1,
+    "lefty": false,
+    "toolbarOpen": true,
+    "backingOpen": false,
+    "shapesOpen": true,
+    "capo": 0,
+    "calMs": 0,
+    "cbPalette": false,
+    "fnShapes": false,
+    "welcomeSeen": false,
+    "gRoot": 0,
+    "gRootLbl": "C",
+    "gMode": "names",
+    "hView": "chords",
+    "scView": "scale",
+    "chQual": 2,
+    "arpPos": 0,
+    "scIdx": 5,
+    "scPos": 0,
+    "scOverlay": null,
+    "chVoicing": 0,
+    "trQual": 0,
+    "trSet": 0,
+    "trInv": 1,
+    "ntRoot": "A",
+    "ntFilter": "all",
+    "seq": [],
+    "seqLoopOn": true,
+    "bassOn": false,
+    "grooveOn": false,
+    "learner": {
+      "v": 1,
+      "items": {},
+      "sessions": [
+        {
+          "t": 1756913600000,
+          "drill": "timing:8ths",
+          "score": 12
+        }
+      ]
+    }
+  },
+  "seen": {
+    "lang": "en",
+    "mode": "practice",
+    "view": "harmony:chords",
+    "root": "C",
+    "labels": "names",
+    "chord": "0.2.7",
+    "arpBox": 0,
+    "scale": "0.2.3.5.7.8.10",
+    "scaleBox": 0,
+    "tuning": "62.57.55.50.45.36",
+    "frets": "1-22",
+    "capo": 0,
+    "lefty": false,
+    "tempo": 72,
+    "meter": "6/8",
+    "volume": 1,
+    "settingsOpen": true,
+    "backingOpen": false,
+    "shapesOpen": true,
+    "cbPalette": false,
+    "fnShapes": false,
+    "welcomeSeen": false,
+    "progression": "",
+    "progLoop": true,
+    "bass": false,
+    "drums": false,
+    "notesFilter": "all",
+    "latencyMs": 0,
+    "latencyKnown": null,
+    "sessionMins": null,
+    "drillSeen": null,
+    "learner": {
+      "items": [],
+      "sessions": [
+        [
+          1756913600000,
+          "timing:8ths",
+          12,
+          null
+        ]
+      ],
+      "best": null
+    }
+  }
+}
