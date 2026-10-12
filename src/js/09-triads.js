@@ -32,7 +32,7 @@ function nearestFret(open, pc, ref){
   return best;
 }
 function triFuncClass(o, iv){ if(o===0)return'd-root'; if(o===iv[1])return'd-third'; return'd-fifth'; }
-function triLabel(o, iv, pc){ return gMode==='names' ? spellNote(gRootLbl,pc,DEG_OF[o]) : (o===0?'1':(o===iv[1]?DEG_LABEL[iv[1]]:DEG_LABEL[iv[2]])); }
+function triLabel(o, iv, pc){ return gMode==='names' ? spellNote(chLbl,pc,DEG_OF[o]) : (o===0?'1':(o===iv[1]?DEG_LABEL[iv[1]]:DEG_LABEL[iv[2]])); }
 function triadCells(){
   const tri=curTriad(), iv=tri.iv, set=STRING_SETS[trSet];
   const invs = trInv===0 ? [0,1,2] : [trInv-1];
@@ -40,7 +40,7 @@ function triadCells(){
   const cells={}, pats=[];
   invs.forEach(inv=>{
     const order=ROT[inv].map(i=>iv[i]);              // intervals bottom -> top
-    const pcs=order.map(o=>mod(gRoot+o,12));
+    const pcs=order.map(o=>mod(chRoot+o,12));
     const lf=mod(pcs[0]-OPEN[low],12);
     const mf=nearestFret(OPEN[mid],pcs[1],lf);
     const hf=nearestFret(OPEN[high],pcs[2],mf);
@@ -91,7 +91,7 @@ function renderTriadCards(){
   const invName=[t('inv_root'),t('inv_1st'),t('inv_2nd')];
   cont.innerHTML = pats.map(p=>{
     const notes=normalizeTriPat(p.notes);
-    return `<div class="chordbox tri"><div class="cb-name">${noteTxt(gRootLbl)}${tri.short} · ${invName[p.inv]}</div>`+
+    return `<div class="chordbox tri"><div class="cb-name">${noteTxt(chLbl)}${tri.short} · ${invName[p.inv]}</div>`+
            `${triadCardSVG(notes, iv)}<div class="cb-cap">${t('strings_word')} ${set.label}</div></div>`;
   }).join('');
 }
@@ -105,10 +105,10 @@ function buildTrInvs(){
 }
 function renderTriads(){
   const {cells,iv}=triadCells(), tri=curTriad(), set=STRING_SETS[trSet];
-  const notes=iv.map(i=>spellNote(gRootLbl,mod(gRoot+i,12),DEG_OF[i])).join(' – ');
+  const notes=iv.map(i=>spellNote(chLbl,mod(chRoot+i,12),DEG_OF[i])).join(' – ');
   const invDesc=[t('inv_all_desc'),t('inv_root_desc'),t('inv_1st_desc'),t('inv_2nd_desc')][trInv];
   document.getElementById('tr-info').innerHTML=
-    `<div class="big">${noteTxt(gRootLbl)}${tri.short} · ${qName(tri)} · ${t('strings_word')} ${set.label}: ${notes}</div><div class="sub">${invDesc}</div>`;
+    `<div class="big">${noteTxt(chLbl)}${tri.short} · ${qName(tri)} · ${t('strings_word')} ${set.label}: ${notes}</div><div class="sub">${invDesc}</div>`;
   renderTriadCards();
   if(isBoardMode('triads')){
     paintBoard((pc,si,f)=>{

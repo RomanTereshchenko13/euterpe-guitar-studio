@@ -43,13 +43,19 @@ const MIGRATED = {
 /* Keys old builds saved that the current one no longer writes, and why that loses nothing. */
 const RETIRED = {
   trQual: 'Triads became a toggle (v2.17.0): folded into chQual when the save was on Triads',
-  cofSel: 'the circle reads its selection from gRoot + scIdx',
-  cofMinor: 'the circle reads its selection from gRoot + scIdx'
+  cofSel: 'the circle reads its selection from the key (gRoot + scIdx)',
+  cofMinor: 'the circle reads its selection from the key (gRoot + scIdx)'
 };
 /* Fields a build before them didn't save: what a returning player must get instead. */
 const ABSENT_DEFAULT = {
   welcomeSeen: () => true,                        // a returning visitor isn't welcomed again
   latencyKnown: now => now.latencyMs > 0          // a measured latency counts as known
+};
+
+/* Fields split out of one that older builds showed: the new field must show what the old
+   one did. [new field]: the field the fixture recorded. */
+const SPLIT = {
+  chordRoot: 'root'                               // the chord got its own root (PLAN step 6): it starts on the key's
 };
 
 function bootChecked(save, hash, storage, quiet) {
@@ -70,7 +76,7 @@ function domAgrees(label, win, T) {
   ok(label + ': exactly one reference panel is shown, the restored tab',
      panels.length === 1 && panels[0] === 'panel-' + st.currentTab, panels.join(','));
   const root = doc.querySelector('#g-roots .btn.active');
-  ok(label + ': the root buttons mark the restored root', !!root && +root.dataset.pc === st.gRoot, root && root.dataset.pc);
+  ok(label + ': the root buttons mark the restored root', !!root && +root.dataset.pc === st.keyRoot, root && root.dataset.pc);
   ok(label + ': the tempo readout shows the restored tempo', doc.getElementById('tb-bpm').textContent === st.tempo + ' BPM');
   const snap = T.snapshotState();
   ok(label + ': the tuning select shows the restored tuning', doc.getElementById('tb-tuning').value === String(snap.tuningIdx));
@@ -105,6 +111,11 @@ for (const fx of fixtures) {
     }
     const want = (MIGRATED[k] && Object.prototype.hasOwnProperty.call(MIGRATED[k], old)) ? MIGRATED[k][old] : old;
     ok(L + ': shows the same ' + k, same(now[k], want), 'was ' + JSON.stringify(want) + ', now ' + JSON.stringify(now[k]));
+  }
+  for (const [k, from] of Object.entries(SPLIT)) {
+    if (!(k in fx.seen) && from in fx.seen)
+      ok(L + ': ' + k + ' (one with ' + from + ' then) shows what ' + from + ' did', same(now[k], fx.seen[from]),
+         'was ' + JSON.stringify(fx.seen[from]) + ', now ' + JSON.stringify(now[k]));
   }
   domAgrees(L, a.win, a.T);
   if (fx.hash) {

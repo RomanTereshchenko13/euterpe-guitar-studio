@@ -57,12 +57,12 @@ function scClass(iv, ivs){
   if(iv===10||iv===11) return 'd-sev';
   return 'd-other';
 }
-function boxWindow(pos){ if(!pos) return null; const anchor=(gRoot-4+12)%12; const start=anchor+BOX_OFFSETS[pos-1]; return [start, start+4]; }
+function boxWindow(pos){ if(!pos) return null; const anchor=(keyRoot-4+12)%12; const start=anchor+BOX_OFFSETS[pos-1]; return [start, start+4]; }
 function diatonic(){
   const iv=SCALES[scIdx].iv; if(iv.length!==7) return [];
   // the shared diatonicTriads() gives quality; this view spells each root by degree
-  return diatonicTriads(gRoot, iv).map(c=>({
-    label: spellNote(gRootLbl, c.rootPc, c.deg+1)+c.suf,
+  return diatonicTriads(keyRoot, iv).map(c=>({
+    label: spellNote(keyLbl, c.rootPc, c.deg+1)+c.suf,
     rootPc: c.rootPc, iv: c.iv, tag: 'dia'+c.deg
   }));
 }
@@ -72,15 +72,15 @@ function renderDiatonic(){
   cont.innerHTML = diaList.map((c,i)=>`<button class="btn dia${scOverlay&&scOverlay.tag===c.tag?' active':''}" data-i="${i}">${c.label}</button>`).join('') + `<button class="btn" data-clear="1">${t('b_clear')}</button>`;
 }
 function renderScales(){
-  const s=SCALES[scIdx], flat=useFlatFor(gRootLbl);
+  const s=SCALES[scIdx], flat=useFlatFor(keyLbl);
   const seven = s.iv.length===7;
-  const map={}, deg={}; s.iv.forEach((iv,di)=>{ const pc=(gRoot+iv)%12; map[pc]=iv; deg[pc]=di+1; });
-  const scName = pc => seven ? spellNote(gRootLbl, pc, deg[pc]) : simpleName(pc, gRootLbl);
+  const map={}, deg={}; s.iv.forEach((iv,di)=>{ const pc=(keyRoot+iv)%12; map[pc]=iv; deg[pc]=di+1; });
+  const scName = pc => seven ? spellNote(keyLbl, pc, deg[pc]) : simpleName(pc, keyLbl);
   // panel content (info + diatonic)
-  const notes=s.iv.map(iv=>scName((gRoot+iv)%12)).join(' – ');
+  const notes=s.iv.map(iv=>scName((keyRoot+iv)%12)).join(' – ');
   const degs=s.iv.map(iv=>SDEG[iv]).join(' ');
-  let html=`<div class="big">${noteTxt(gRootLbl)} ${sName(s)}: ${notes}</div><div class="sub">${t('degrees_word')}: ${degs}</div>`;
-  if(MODE_OFF[scIdx]!==undefined){ const pr=noteName((gRoot-MODE_OFF[scIdx]+120)%12,flat); html+=`<div class="sub">${t('samenotes')} ${pr} ${t('major_word')} ${t('mode_tail')}</div>`; }
+  let html=`<div class="big">${noteTxt(keyLbl)} ${sName(s)}: ${notes}</div><div class="sub">${t('degrees_word')}: ${degs}</div>`;
+  if(MODE_OFF[scIdx]!==undefined){ const pr=noteName((keyRoot-MODE_OFF[scIdx]+120)%12,flat); html+=`<div class="sub">${t('samenotes')} ${pr} ${t('major_word')} ${t('mode_tail')}</div>`; }
   if(isCAGEDScale() && scPos>0){ const letter=CAGED_BY_POS[scPos-1]; html+=`<div class="sub">CAGED · ${cagedShapeName(letter)} — ${t('caged_desc')}</div>`; }
   if(scOverlay){ html+=`<div class="sub" style="color:var(--third)">${t('overlay_msg')} <button class="btn dia sc-open-harmony" type="button">${t('b_open_harmony')} →</button></div>`; }
   document.getElementById('sc-info').innerHTML=html;

@@ -18,7 +18,7 @@ const tgScore = scoredRun({
 
 // expand a preset's steps (offset, qi, bars) into one chord per bar, in the context key
 function tgBuildBars(preset){
-  const r=gRoot, out=[];
+  const r=keyRoot, out=[];
   preset.steps.forEach(([off,qi,b])=>{ const pc=mod(r+off,12); for(let k=0;k<Math.max(1,b);k++) out.push({pc, qi}); });
   return out;
 }

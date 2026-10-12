@@ -171,10 +171,10 @@ function loopStrum(when){
   let midis, pcs, boardId='board', pc, qi;
   if(loopMode==='triad' && chTriadIdx()>=0){   // the chord may have lost its triad mid-loop (sus)
     const v=currentTriadVoicing();
-    midis=v.midis; pcs=v.pcs; pc=gRoot; qi=TRI_TO_QUAL[chTriadIdx()];
+    midis=v.midis; pcs=v.pcs; pc=chRoot; qi=TRI_TO_QUAL[chTriadIdx()];
   } else {
     const v=currentChordVoicing();
-    midis=v.midis; pcs=v.pcs; pc=gRoot; qi=chQual;
+    midis=v.midis; pcs=v.pcs; pc=chRoot; qi=chQual;
   }
   strumMidi(midis, when, 0.9, 0.026, +1);                 // humanized downstrum
   if(bandActive()) strumMidi(midis, when+midPulseSec(), 0.55, 0.02, +1);   // softer push mid-bar (beat 3 in 4/4)
@@ -217,13 +217,13 @@ function pulseTransport(strong){
   d.classList.add(strong?'bp-strong':'bp');
 }
 function enqueueBeats(when){ const p=pulseSec(), n=barBeats(), starts=meterGroupStarts(); for(let k=0;k<n;k++) enqueueVisual(when+k*p, ()=>pulseTransport(k===0 || starts.has(k))); }
-function loopChordLabel(){ return noteTxt(gRootLbl)+(loopMode==='triad' && chTriadIdx()>=0 ? curTriad().short : QUALITIES[chQual].short); }
+function loopChordLabel(){ return noteTxt(chLbl)+(loopMode==='triad' && chTriadIdx()>=0 ? curTriad().short : QUALITIES[chQual].short); }
 function updateGlobalTransport(){
   const wrap=document.getElementById('tb-transport'); if(!wrap) return;
   const label=document.getElementById('tb-transport-label');
   const stop=document.getElementById('tb-stop');
   stop.innerHTML='&#9632; '+t('tb_stop'); stop.setAttribute('aria-label', t('tb_stop'));
-  if(seqClock){ label.textContent=t('tb_now_seq')+' · '+noteTxt(gRootLbl)+QUALITIES[chQual].short; wrap.hidden=false; }
+  if(seqClock){ label.textContent=t('tb_now_seq')+' · '+noteTxt(chLbl)+QUALITIES[chQual].short; wrap.hidden=false; }
   else if(loopClock){ label.textContent=t('tb_now_loop')+' · '+loopChordLabel(); wrap.hidden=false; }
   else { wrap.hidden=true; }
   // the Jam buttons follow the transport, including when something else stops it
@@ -255,9 +255,11 @@ if(typeof document!=='undefined'){
 }
 
 /* ---- chord progression sequencer ----
-   Steps {pc,lbl,qi,bars}, walked bar by bar: re-strums each bar, follows the chord on
-   the fretboard, highlights the chip, optionally cycles. Mutually exclusive with the
-   single-chord loop. */
+   The progression is state of its own (seq, saved): steps {pc,lbl,qi,bars}, absolute,
+   a preset laid on the key when picked (spelled in it) or chords added one by one.
+   Walked bar by bar: re-strums each bar, moves the CHORD (never the key) so Harmony
+   follows it, highlights the chip, optionally cycles; Stop puts the chord back.
+   Mutually exclusive with the single-chord loop. */
 const SEQ_PRESETS = [
   { name:'ii–V–I',     steps:[[2,8,1],[7,6,1],[0,7,2]] },                 // Dm7 · G7 · Cmaj7
   { name:'I–V–vi–IV',  steps:[[0,0,1],[7,0,1],[9,1,1],[5,0,1]] },         // C · G · Am · F
@@ -267,12 +269,6 @@ const SEQ_PRESETS = [
 ];
 let seq=[], seqClock=null, seqLoopOn=true, seqBar=0, seqStepIdx=-1, seqBarMap=[], seqSaved=null;
 
-function syncChordButtons(){
-  const rc=document.getElementById('g-roots');
-  if(rc){ [...rc.children].forEach(b=>{ const on=+b.dataset.pc===gRoot; b.classList.toggle('active',on); b.setAttribute('aria-pressed', on?'true':'false'); }); }
-  buildChQuals();
-}
-function setChord(pc,lbl,qi){ gRoot=pc; gRootLbl=lbl; chQual=qi; syncChordButtons(); renderChords(); }
 function seqChordName(st){ return noteTxt(st.lbl) + QUALITIES[st.qi].short; }
 function renderSeq(){
   const strip=document.getElementById('seq-strip'); if(!strip) return;
@@ -284,8 +280,8 @@ function renderSeq(){
 }
 function buildSeqPresets(){ const c=document.getElementById('seq-presets'); if(!c) return;
   c.innerHTML=SEQ_PRESETS.map((p,i)=>`<button class="btn seq-preset" data-p="${i}">${p.name}</button>`).join(''); }
-function applyPreset(p){ const r=gRoot; seq=p.steps.map(([off,qi,bars])=>{ const pc=mod(r+off,12); return {pc, lbl:ROOTS[pc], qi, bars}; }); seqStepIdx=-1; renderSeq(); if(seqClock) seqRebuild(); saveState(); }
-function seqAddCurrent(){ seq.push({pc:gRoot, lbl:gRootLbl, qi:chQual, bars:1}); renderSeq(); if(seqClock) seqRebuild(); saveState(); }
+function applyPreset(p){ const dg=keyDegrees(); seq=p.steps.map(([off,qi,bars])=>{ const pc=mod(keyRoot+off,12), d=dg.find(x=>x.rootPc===pc); return {pc, lbl:d?d.lbl:ROOTS[pc], qi, bars}; }); seqStepIdx=-1; renderSeq(); if(seqClock) seqRebuild(); saveState(); }
+function seqAddCurrent(){ seq.push({pc:chRoot, lbl:chLbl, qi:chQual, bars:1}); renderSeq(); if(seqClock) seqRebuild(); saveState(); }
 function seqBuildMap(){ seqBarMap=[]; seq.forEach((st,i)=>{ for(let b=0;b<Math.max(1,st.bars);b++) seqBarMap.push(i); }); }
 function seqStrumStep(i, when){
   const st=seq[i]; if(!st) return;
@@ -316,7 +312,7 @@ function seqPlay(){
   if(!seq.length) return;
   if(seqClock){ seqStop(); return; }      // transport is a play/stop toggle
   stopLoop(); audio();
-  seqSaved={pc:gRoot, lbl:gRootLbl, qi:chQual};
+  seqSaved={pc:chRoot, lbl:chLbl, qi:chQual};
   seqBuildMap(); seqBar=0; seqStepIdx=-1;
   seqClock={ interval:()=>barSec(), tick:(time)=>seqTick(time) };
   addClock(seqClock);

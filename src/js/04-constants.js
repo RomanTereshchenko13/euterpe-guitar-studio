@@ -96,6 +96,8 @@ function devWarn(){ try{ if(typeof console!=='undefined' && console.warn) consol
 /* Note labels stay ASCII in data ('Eb', 'C#' — saves and session ids) and get ♭/♯
    only where they reach the screen, here. */
 function noteTxt(lbl){ return String(lbl).replace('#','♯').replace(/^([A-G])b/,'$1♭'); }
+/* the reverse, for a spelled name going into data (saves, chord state) */
+function noteAscii(lbl){ return String(lbl).replace('♯','#').replace('♭','b'); }
 function noteName(pc, flat){ return noteTxt((flat && FLAT_MAP[pc]) ? FLAT_MAP[pc] : NOTES[pc]); }
 function useFlatFor(label){ return /^[A-G][b♭]/.test(label) || label === 'F'; }
 

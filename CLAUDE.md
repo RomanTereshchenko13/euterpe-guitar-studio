@@ -65,7 +65,7 @@ Skills: `release`, `preflight` (every gate), `visual-review`, `add-i18n-string`,
 | `14-calibration` · `14-onset` · `14-mic-tuner` | latency, onset detection, tuner |
 | `14-drill-*` | the drills (each self-registers) |
 | `14-session` | timed practice session |
-| `15-1-context` | `setKey`, sub-views, `renderActiveContext` (only the view on screen paints) |
+| `15-1-context` | `setKey` (the key), sub-views, `renderActiveContext` (only the view on screen paints) |
 | `15-2-panels` · `15-3-nav` · `15-4-play` | reference panel wiring · tabs, mode, seams · Jam, no-audio fallback |
 | `15-5-settings` · `15-6-modals` · `15-7-shortcuts` | toolbar · changelog/welcome · keyboard |
 | `15-8-init` | restore, first render, `__GS_TEST__` hook |
@@ -85,6 +85,10 @@ Also: `src/styles.css`, `src/index.template.html` (markers `@@STYLES@@` `@@SCRIP
 - **Adding a drill** = one `14-drill-*.js` calling `registerDrill({...tracks})` + its
   `*-area` markup + a practice card with `data-track`. The suite fails if an area or card
   has no registered drill. Drills open through `startTrack()`.
+- **Key ≠ chord.** `setKey()` moves the key (`keyRoot`/`keyLbl`/`scIdx`) and brings the chord
+  to its tonic root; `setChord()` moves only the chord (`chRoot`/`chLbl`/`chQual`). Scales,
+  the circle, Notes and scale drills read the key; Harmony, the loop, the progression's
+  playback and "play over this" read the chord. The key's save names stay `gRoot`/`gRootLbl`.
 - **Note labels:** data stays ASCII (`'Eb'`, `'C#'` — saves, session ids);
   render through `noteTxt()`. Root buttons carry `data-pc`; never parse labels back.
 - **Mic features** need a secure context; they remove their controls on `file://`/jsdom.

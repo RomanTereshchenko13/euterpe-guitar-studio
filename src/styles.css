@@ -383,6 +383,7 @@
   .btn:hover:not(.active) { background: var(--bg-panel-2); border-color: var(--text-faint); }
   .btn.active { background: var(--accent); color: #07203a; border-color: var(--accent); font-weight: 700; }
   .btn.dia.active { background: var(--third); color: #1f1405; border-color: var(--third); }
+  .deg-rn { font-size: 0.85em; opacity: 0.7; }
   .btn.play { background: transparent; border-color: var(--root); color: var(--root); }
   .btn.play:hover { background: rgba(107,165,58,0.14); }
   .btn.play.loop { border-color: var(--accent); color: var(--accent); }
@@ -499,6 +500,10 @@
   .cof-arc { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; stroke-dasharray: 320; stroke-dashoffset: 320; animation: cof-draw 0.55s ease forwards; pointer-events: none; }
   @keyframes cof-draw { to { stroke-dashoffset: 0; } }
   #cof-info .sub b { font-weight: 700; }
+  /* the chord, marked on top of the key: a dashed ring on its node, an underline in the list */
+  .cof-node.cof-chord circle { stroke: var(--text); stroke-width: 3; stroke-dasharray: 5 3; }
+  .cof-deg { display: inline-block; min-width: 48px; }
+  .cof-deg.on { box-shadow: inset 0 -2px 0 var(--third); }
 
   /* ---- timing bar (tempo + transport) + collapsible settings ---- */
   .tb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 16px; }

@@ -219,6 +219,8 @@
 <div class="main">
 
   <section class="panel active" id="panel-harmony">
+    <!-- the chord as a degree of the key (keyDegrees); both sub-views read the chord -->
+    <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="h-degrees"></div></div>
     <div id="sub-chords">
       <div class="row-quals">
         <div class="quals-head">
@@ -238,7 +240,7 @@
         <div class="cd-head"><span class="cd-h" data-i18n="tr_shapes">Форми тризвуку</span></div>
         <div class="chorddia" id="tr-diagram"></div>
       </div>
-      <!-- "drill this" (SEAM_TRACKS in 15-wiring-init.js) -->
+      <!-- "drill this" (SEAM_TRACKS in 15-3-nav.js) -->
       <div class="row"><button class="btn seam-btn" data-seam="chords" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
 
@@ -267,7 +269,7 @@
       </div>
       <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="sc-diatonic"></div></div>
       <div class="info" id="sc-info"></div>
-      <!-- "drill this" (SEAM_TRACKS in 15-wiring-init.js) -->
+      <!-- "drill this" (SEAM_TRACKS in 15-3-nav.js) -->
       <div class="row"><button class="btn seam-btn" data-seam="scale" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
 
@@ -278,7 +280,7 @@
         <button class="btn" id="nt-nat" aria-pressed="false" data-i18n="b_natonly">Тільки натуральні</button>
         <span class="cd-hint" data-i18n="nt_pick_hint">Підсвічена нота йде за тонікою вгорі · «Тільки натуральні» ховає дієзи й бемолі</span>
       </div>
-      <!-- "drill this" (SEAM_TRACKS in 15-wiring-init.js) -->
+      <!-- "drill this" (SEAM_TRACKS in 15-3-nav.js) -->
       <div class="row"><button class="btn seam-btn" data-seam="notes" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
   </section>

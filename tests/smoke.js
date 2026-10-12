@@ -1134,7 +1134,7 @@ if (T) {
     ok('step 3: ...which opens Scales ▸ Notes with that note lit',
        T.state().currentMode === 'reference' && T.state().currentTab === 'scales' && T.state().scView === 'notes'
        && T.state().ntRoot === ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][missed] && T.getDrill() === null);
-    ok('step 3: ...and leaves the key alone', T.state().gRoot === 9);
+    ok('step 3: ...and leaves the key alone', T.state().keyRoot === 9);
     T.setScView('scale');
 
     T.setMode('practice'); T.startDrill();
@@ -1170,7 +1170,7 @@ if (T) {
     ok('step 3: a missed chord quality offers that chord', rv.length === 1);
     rv[0].click();
     ok('step 3: ...opened in Chord tones on that quality, in the player’s key',
-       T.state().currentTab === 'harmony' && T.state().chQual === missQ && T.state().gRoot === 9);
+       T.state().currentTab === 'harmony' && T.state().chQual === missQ && T.state().keyRoot === 9 && T.state().chRoot === 9);
     T.setChQual(1); T.renderAllBoards();
     T.resetLearner();
   })();
@@ -2134,7 +2134,7 @@ if (T) {
   /* ---- 1a: one musical context (root + mode); circle is a projection ---- */
   (function oneContext() {
     T.setKey(7, 'G', 0);                            // G major (Ionian)
-    ok('1a: setKey sets the shared root', T.state().gRoot === 7 && T.state().gRootLbl === 'G');
+    ok('1a: setKey sets the key, and brings the chord to its tonic', T.state().keyRoot === 7 && T.state().keyLbl === 'G' && T.state().chRoot === 7 && T.state().chLbl === 'G');
     ok('1a: setKey sets the mode (scIdx)', T.state().scIdx === 0);
     ok('1a: Ionian → circle major ring', T.ctxCofMinor() === false && T.isMajorFamily(0) === true);
     ok('1a: circle node tracks the major root', T.COF[T.ctxCofSel()].majPc === 7);
@@ -2352,7 +2352,7 @@ if (T) {
     T.setTriad(0, 1);                    // string set 1·2·3, root position (major chord)
     const tv = T.currentTriadVoicing();
     ok('triad voicing has three notes', tv.midis.length === 3, 'got ' + tv.midis.length);
-    const triPcs = new Set([0, 4, 7].map(i => (T.state().gRoot + i) % 12));
+    const triPcs = new Set([0, 4, 7].map(i => (T.state().chRoot + i) % 12));
     ok('triad voicing sounds only triad tones',
        tv.pcs.every(pc => triPcs.has(((pc % 12) + 12) % 12)));
     // Loop in triads view starts in triad mode and is mutually exclusive with seq
@@ -2429,7 +2429,105 @@ if (T) {
     const n2 = m2.takeRecords().length; m2.disconnect();
     ok('step 5: in Practice, a key change paints no reference view', n2 === 0, n2 + ' mutations');
     T.setMode('reference');
-    T.setKey(st0.gRoot, st0.gRootLbl, st0.scIdx);
+    T.setKey(st0.keyRoot, st0.keyLbl, st0.scIdx);
+    T.selectTab('harmony'); T.setHView('chords');
+  })();
+
+  /* ---- PLAN step 6: the key and the chord are separate state ----
+     Scales and the circle show the key; Harmony shows the chord, which moves through the
+     key's degrees, a progression or a scale's chord without moving the key. */
+  (function keyAndChord() {
+    const doc = win.document, st0 = T.state(), seq0 = JSON.parse(JSON.stringify(T.getSeq()));
+    const s = () => T.state();
+    T.setMode('reference'); T.selectTab('harmony'); T.setHView('chords');
+    T.setKey(0, 'C', 0); T.setChQual(0);
+    const degs = [...doc.querySelectorAll('#h-degrees [data-deg]')];
+    ok('step 6: Harmony lists the key\'s seven chords as degrees',
+       degs.map(b => b.querySelector('.deg-rn').textContent).join(' ') === 'I ii iii IV V vi vii°',
+       degs.map(b => b.textContent).join(' | '));
+    ok('step 6: ...the tonic marked while the chord is the key\'s',
+       degs[0].classList.contains('active') && doc.querySelectorAll('#h-degrees .active').length === 1);
+    degs[1].click();
+    ok('step 6: a degree moves the chord (ii in C = Dm)...',
+       s().chRoot === 2 && s().chLbl === 'D' && s().chQual === 1, JSON.stringify([s().chRoot, s().chLbl, s().chQual]));
+    ok('step 6: ...and leaves the key alone', s().keyRoot === 0 && s().keyLbl === 'C' && s().scIdx === 0);
+    ok('step 6: Harmony shows the chord', /^Dm\s/.test(doc.getElementById('ch-info').textContent),
+       doc.getElementById('ch-info').textContent.slice(0, 30));
+    ok('step 6: the root picker still marks the key',
+       +doc.querySelector('#g-roots .btn.active').dataset.pc === 0);
+    ok('step 6: the degree row marks ii', doc.querySelector('#h-degrees .active').dataset.deg === '1');
+    T.selectTab('scales'); T.setScView('scale');
+    ok('step 6: Scales shows the key, not the chord', /^C\s/.test(doc.getElementById('sc-info').textContent),
+       doc.getElementById('sc-info').textContent.slice(0, 30));
+    T.selectTab('circle');
+    const ringed = [...doc.querySelectorAll('#cof-svg .cof-chord')];
+    ok('step 6: the circle shows the key with the chord ringed (Dm, inner ring)',
+       ringed.length === 1 && ringed[0].dataset.type === 'min' && T.COF[+ringed[0].dataset.i].minPc === 2
+       && /^C\s/.test(doc.getElementById('cof-info').textContent));
+    const on = doc.querySelector('#cof-info .cof-deg.on');
+    ok('step 6: ...and its degree marked in the key\'s chords', !!on && /ii\s*Dm/.test(on.textContent), on && on.textContent);
+
+    // persisted on their own, and an older save (one root) opens on the chord it showed
+    T.saveState();
+    const saved = JSON.parse(win.localStorage.getItem('guitarStudio.v1'));
+    ok('step 6: the save keeps the key under its old names and the chord beside it',
+       saved.gRoot === 0 && saved.gRootLbl === 'C' && saved.chRoot === 2 && saved.chLbl === 'D');
+    T.setKey(9, 'A', 5);                                // this saves, so put the save back
+    win.localStorage.setItem('guitarStudio.v1', JSON.stringify(saved)); T.loadState();
+    ok('step 6: ...and a load restores both', s().keyRoot === 0 && s().chRoot === 2 && s().chLbl === 'D');
+    const mig = T.migrateSave({ gRoot: 3, gRootLbl: 'Eb' });
+    ok('step 6: an older save\'s root becomes the chord root too', mig.chRoot === 3 && mig.chLbl === 'Eb');
+    const keep = T.migrateSave({ gRoot: 3, gRootLbl: 'Eb', chRoot: 10, chLbl: 'Bb' });
+    ok('step 6: ...but a saved chord root is kept', keep.chRoot === 10 && keep.chLbl === 'Bb');
+    ok('step 6: a broken chord root is replaced by the key\'s', T.migrateSave({ gRoot: 3, gRootLbl: 'Eb', chRoot: 99 }).chRoot === 3);
+
+    // a new key brings the chord to its tonic root, quality kept
+    T.selectTab('harmony');
+    T.setKey(7, 'G');
+    ok('step 6: a new key brings the chord home, keeping its quality (Dm → Gm)',
+       s().keyRoot === 7 && s().chRoot === 7 && s().chLbl === 'G' && s().chQual === 1);
+
+    // the progression moves the chord, never the key
+    T.setKey(1, 'C#', 0);
+    T.applyPreset(T.SEQ_PRESETS.find(p => p.name === 'I–V–vi–IV'));
+    ok('step 6: a preset is spelled in the key (C♯: C# G# A# F#)',
+       T.getSeq().map(x => x.lbl).join(' ') === 'C# G# A# F#', T.getSeq().map(x => x.lbl).join(' '));
+    doc.querySelectorAll('#seq-strip .seq-chip .nm')[1].click();
+    ok('step 6: a progression chip sets the chord, not the key', s().chRoot === 8 && s().keyRoot === 1);
+    T.setChord(1, 'C#', 0);
+    T.seqPlay(); T.setChord(6, 'F#', 0); T.seqPlay();   // play, a step moves the chord, stop
+    ok('step 6: stopping the progression puts the chord back', s().chRoot === 1 && s().keyRoot === 1);
+
+    // the key's own cadence
+    T.setKey(9, 'A', 5);
+    const cad = T.keyCadence();
+    ok('step 6: natural minor cadences i–iv–v',
+       cad.map(c => c.off).join(',') === '0,5,7,12' && cad.slice(0, 3).every(c => c.iv[1] === 3), JSON.stringify(cad));
+    T.selectTab('circle');
+    ok('step 6: the cadence button names the key\'s degrees (A minor: i–iv–v)',
+       /i–iv–v$/.test(doc.getElementById('g-play').textContent), doc.getElementById('g-play').textContent);
+    T.setChQual(1); T.setKey(9, 'A', 5);
+    ok('step 6: the key\'s own tonic chord is not marked twice',
+       doc.querySelectorAll('#cof-svg .cof-chord, #cof-info .cof-deg.on').length === 0);
+    T.setKey(9, 'A', 10);
+    ok('step 6: harmonic minor cadences i–iv–V', T.keyCadence()[2].iv[1] === 4);
+    T.setKey(0, 'C', 4);
+    ok('step 6: Mixolydian cadences I–IV–v', T.keyCadence()[2].iv[1] === 3 && T.keyCadence()[0].iv[1] === 4);
+
+    // the scale's chord and the circle's tonic open in Harmony, in the same key
+    T.setKey(0, 'C', 0); T.selectTab('scales'); T.setScView('scale');
+    doc.querySelectorAll('#sc-diatonic .dia')[4].click();          // V
+    doc.querySelector('#sc-info .sc-open-harmony').click();
+    ok('step 6: Scales\' V opens G in Harmony, still in C',
+       s().currentTab === 'harmony' && s().chRoot === 7 && s().chQual === 0 && s().keyRoot === 0);
+    T.setKey(9, 'A', 5); T.selectTab('circle');
+    doc.getElementById('cof-harmony').click();
+    ok('step 6: the circle opens the key\'s tonic chord', s().chRoot === 9 && s().chQual === 1 && s().currentTab === 'harmony');
+
+    // put everything back
+    T.seqClear(); T.setSeq(seq0);
+    T.setKey(st0.keyRoot, st0.keyLbl, st0.scIdx);
+    T.setChord(st0.chRoot, st0.chLbl, st0.chQual);
     T.selectTab('harmony'); T.setHView('chords');
   })();
 
@@ -3050,7 +3148,7 @@ if (T) {
     ok('glyphs: noteTxt spells for display', T.noteTxt('Eb') === 'E♭' && T.noteTxt('C#') === 'C♯' && T.noteTxt('B') === 'B');
     [[3, 'Eb'], [1, 'C#'], [10, 'Bb']].forEach(([pc, lbl]) => {
       T.setKey(pc, lbl);
-      ok('glyphs: the key label itself stays ASCII in state (' + lbl + ')', T.state().gRootLbl === lbl);
+      ok('glyphs: the key label itself stays ASCII in state (' + lbl + ')', T.state().keyLbl === lbl && T.state().chLbl === lbl);
       ['harmony', 'scales', 'circle'].forEach(tab => {
         T.selectTab(tab);
         if (tab === 'harmony') ['chords', 'triads', 'arp'].forEach(v => { T.setHView(v); scan(lbl + '/' + v); });

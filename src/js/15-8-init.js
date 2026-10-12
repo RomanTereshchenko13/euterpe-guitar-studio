@@ -6,7 +6,7 @@ if(!hadState){
   // toggle takes over from the next visit on.
   try{ const nav=(navigator.languages&&navigator.languages[0])||navigator.language||''; lang = /^uk\b/i.test(nav) ? 'uk' : 'en'; }catch(_){ /* keep the 'uk' default */ }
 }
-ntRoot=gRootLbl;   // Notes follows the shared root from the first paint
+ntRoot=keyLbl;   // Notes follows the shared root from the first paint
 applyTuning();
 applyLang();
 selectTab(currentTab);
@@ -21,7 +21,7 @@ applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
 /* the drill header's one key picker: every drill sets the same root, and the running
    drill only says what to re-derive (onKey) */
 { const dk=document.getElementById('drill-ctx-key');
-  if(dk) buildRootBtns(dk, gRoot, (pc,r)=>{ setKey(pc,r); drillKeyChanged(); });
+  if(dk) buildRootBtns(dk, keyRoot, (pc,r)=>{ setKey(pc,r); drillKeyChanged(); });
   const dq=document.getElementById('drill-ctx-quit');
   if(dq) dq.onclick=quitDrill; }
 /* Every drill starts inside #practice-home — a card or the progress card's Review —
@@ -62,7 +62,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
   window.__GS_TEST__ = {
     APP_VERSION, I18N, QUALITIES, TRIADS, SCALES, COF, FRET_RANGES, SEQ_PRESETS,
     fifthInterval, spellNote, rootParts, simpleName,
-    diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey, noteTxt,
+    diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey, noteTxt, keyDegrees, keyCadence,
     scalesOverChord, triadQi, currentHarmonyChord,
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
@@ -89,7 +89,8 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     SEAM_TRACKS, jamToggle, jamActive, renderJamBtn,
     // progress narrative + card badges
     trackBadge, paintDrillBadges, renderProgressInto, renderPractice, trendScore,
-    selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
+    selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord, seqClear,
+    getSeq:()=>seq, setSeq:(a)=>{ seq=a; renderSeq(); },
     // shell
     setTempo, getTempo:()=>tempo, stopReferenceTransport, transportActive, applyContextBar, updateGlobalPlay,
     renderAllBoards,
@@ -154,7 +155,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     initAudio:()=>audio(),
     setCtxNow:(t)=>{ if(actx) actx.currentTime=t; },
     setGMode, revealFrets,
-    state:()=>({ gRoot, gRootLbl, scIdx, scView, chQual, chVoicing, chTriads, currentTab, currentMode, hView, gMode, ntRoot,
+    state:()=>({ keyRoot, keyLbl, chRoot, chLbl, scIdx, scView, chQual, chVoicing, chTriads, currentTab, currentMode, hView, gMode, ntRoot,
                  loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo,
                  cbPalette, fnShapes, welcomeSeen })
   };

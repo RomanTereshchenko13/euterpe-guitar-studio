@@ -185,10 +185,14 @@ function savedFields(){ return [
   ['cbPalette',    svBool,                                ()=>cbPalette,    v=>{ cbPalette=v; }],
   ['fnShapes',     svBool,                                ()=>fnShapes,     v=>{ fnShapes=v; }],
   ['welcomeSeen',  svBool,                                ()=>welcomeSeen,  v=>{ welcomeSeen=v; }],
-  ['gRoot',        svInt(0, 11),                          ()=>gRoot,        v=>{ gRoot=v; }],
+  // the key keeps the save names it had when it was the only root ('gRoot', 'gRootLbl');
   // a label only means something next to the root it spells
+  ['gRoot',        svInt(0, 11),                          ()=>keyRoot,      v=>{ keyRoot=v; }],
   ['gRootLbl',     (v,s)=>typeof v==='string' && svInt(0, 11)(s.gRoot)!==undefined ? v : undefined,
-                                                          ()=>gRootLbl,     v=>{ gRootLbl=v; }],
+                                                          ()=>keyLbl,       v=>{ keyLbl=v; }],
+  ['chRoot',       svInt(0, 11),                          ()=>chRoot,       v=>{ chRoot=v; }],
+  ['chLbl',        (v,s)=>typeof v==='string' && svInt(0, 11)(s.chRoot)!==undefined ? v : undefined,
+                                                          ()=>chLbl,        v=>{ chLbl=v; }],
   ['gMode',        svOneOf('names','deg'),                ()=>gMode,        v=>{ gMode=v; }],
   ['hView',        svOneOf('chords','arp'),               ()=>hView,        v=>{ hView=v; }],
   ['scView',       svOneOf('scale','notes'),              ()=>scView,       v=>{ scView=v; }],
@@ -244,6 +248,9 @@ function migrateSave(raw){
   if(typeof s.calKnown!=='boolean') s.calKnown = svNum(0, CAL_MAX_MS)(s.calMs)>0;
   // a save from before onboarding is a returning visitor: no welcome
   if(typeof s.welcomeSeen!=='boolean') s.welcomeSeen=true;
+  // one root was both key and chord until the chord got its own: it starts on the key's
+  // tonic, so the save opens on the chord it showed
+  if(svInt(0, 11)(s.chRoot)===undefined && svInt(0, 11)(s.gRoot)!==undefined){ s.chRoot=s.gRoot; s.chLbl=s.gRootLbl; }
   return s;
 }
 

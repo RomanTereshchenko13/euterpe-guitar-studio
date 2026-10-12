@@ -5,7 +5,7 @@
    survive). Space is taken only when focus is NOT on a control, so a focused dot or
    button keeps its native Space. */
 const NOTE_KEY = { a:9, b:11, c:0, d:2, e:4, f:5, g:7 };
-function transposeKey(delta){ const pc=mod(gRoot+delta,12); setKey(pc, ROOTS[pc]); }
+function transposeKey(delta){ const pc=mod(keyRoot+delta,12); setKey(pc, ROOTS[pc]); }
 document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey) return;
   const tg=e.target;

@@ -10,16 +10,17 @@ document.getElementById('seq-presets').addEventListener('click',e=>{ const b=e.t
 document.getElementById('seq-strip').addEventListener('click',e=>{
   const x=e.target.closest('[data-x]'); if(x){ seq.splice(+x.dataset.x,1); seqStepIdx=-1; if(!seq.length) seqStop(); renderSeq(); if(seqClock) seqRebuild(); saveState(); return; }
   const bb=e.target.closest('[data-bars]'); if(bb){ const i=+bb.dataset.bars, cur=seq[i].bars; seq[i].bars = cur>=4?1:(cur===1?2:4); renderSeq(); if(seqClock) seqRebuild(); saveState(); return; }
-  const chip=e.target.closest('.seq-chip'); if(chip){ const st=seq[+chip.dataset.i]; if(st) setChord(st.pc, st.lbl, st.qi); }
+  const chip=e.target.closest('.seq-chip'); if(chip){ const st=seq[+chip.dataset.i]; if(st){ chVoicing=0; setChord(st.pc, st.lbl, st.qi); saveState(); } }
 });
 renderSeq(); setSeqTransport();
 // the shared board: a dot click sounds that string, Enter/Space plays the focused one
 wirePlay(document.getElementById('board'));
-/* the suggester's scale chips jump to that scale, on the chord's root, in Scales */
+/* the suggester's scale chips jump to that scale, on the chord's root, in Scales: the
+   key moves to the chord, so the chord stays what it was */
 document.getElementById('suggest-body').addEventListener('click', e=>{
   const b=e.target.closest('[data-scale]'); if(!b) return;
   const ch=currentHarmonyChord(); if(!ch) return;
-  setKey(ch.rootPc, ROOTS[ch.rootPc], +b.dataset.scale);
+  setKey(ch.rootPc, ch.rootLbl, +b.dataset.scale);
   setScView('scale'); selectTab('scales');
 });
 /* chord cards: a dot click sounds that string; clicking elsewhere on a card selects
@@ -55,11 +56,11 @@ document.getElementById('sc-diatonic').addEventListener('click',e=>{
   renderScales(); saveState();
 });
 /* Scales → Harmony: open the overlaid diatonic chord in Chord tones, so "the V chord
-   of this key" leads straight to its voicings. */
+   of this key" leads straight to its voicings — in the same key. */
 document.getElementById('sc-info').addEventListener('click', e=>{
   if(!e.target.closest('.sc-open-harmony') || !scOverlay) return;
-  const pc=scOverlay.rootPc;
-  setChord(pc, ROOTS[pc], triadQi(scOverlay.iv));
+  const pc=scOverlay.rootPc, d=keyDegrees().find(x=>x.rootPc===pc);
+  chVoicing=0; setChord(pc, d?d.lbl:ROOTS[pc], triadQi(scOverlay.iv));
   setHView('chords'); selectTab('harmony');
 });
 
@@ -76,8 +77,14 @@ document.getElementById('cof-svg').addEventListener('keydown',e=>{
   const g=e.target.closest('.cof-node'); if(g){ selectCircleNode(g); e.preventDefault(); }
 });
 document.getElementById('cof-open').onclick=function(){ selectTab('scales'); };
-/* Circle → Harmony: open the key's tonic chord (major or minor, from the ring) */
-{ const ch=document.getElementById('cof-harmony'); if(ch) ch.onclick=function(){ setChord(gRoot, gRootLbl, ctxCofMinor()?1:0); setHView('chords'); selectTab('harmony'); }; }
+/* Circle → Harmony: open the key's tonic chord */
+{ const ch=document.getElementById('cof-harmony'); if(ch) ch.onclick=function(){ const d=keyDegrees()[0]; chVoicing=0; setChord(d.rootPc, d.lbl, d.qi); setHView('chords'); selectTab('harmony'); }; }
+/* Harmony: a degree of the key becomes the chord; the key stays */
+document.getElementById('h-degrees').addEventListener('click', e=>{
+  const b=e.target.closest('[data-deg]'); if(!b) return;
+  const d=keyDegrees()[+b.dataset.deg]; if(!d) return;
+  chVoicing=0; chShapesExpanded=false; setChord(d.rootPc, d.lbl, d.qi); saveState();
+});
 
 /* Notes: one "Naturals only" toggle; the highlighted note follows the shared root. */
 function applyNtFilter(){ const b=document.getElementById('nt-nat'); if(b){ const on=ntFilter==='nat'; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on?'true':'false'); } }

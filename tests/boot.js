@@ -73,7 +73,7 @@ function boot(html, opts) {
    build doesn't have reads as null — "this build didn't show it" — instead of throwing. */
 function readVisiblePage() {
   /* global currentTab, currentMode, hView, scView, chTriads, chTriadIdx, trQual, TRIADS, QUALITIES, chQual, arpPos,
-     SCALES, scIdx, scPos, gRootLbl, gMode, TUNINGS, tuningIdx, customTuning, FRET_RANGES, fretRangeIdx, capo, lefty,
+     SCALES, scIdx, scPos, gRootLbl, keyLbl, chLbl, gMode, TUNINGS, tuningIdx, customTuning, FRET_RANGES, fretRangeIdx, capo, lefty,
      tempo, METERS, meterIdx, masterVol, toolbarOpen, backingOpen, shapesOpen, cbPalette, fnShapes, welcomeSeen,
      seq, seqLoopOn, bassOn, grooveOn, ntFilter, calMs, calKnown, sessMins, learner, lang, drillSeen */
   const g = f => { try { const v = f(); return v === undefined ? null : v; } catch (e) { return null; } };
@@ -91,7 +91,9 @@ function readVisiblePage() {
     lang: g(() => lang),
     mode: g(() => currentMode) || 'reference',
     view,
-    root: g(() => gRootLbl),
+    // one root was both key and chord until PLAN step 6: an older build shows it as both
+    root: g(() => keyLbl) ?? g(() => gRootLbl),
+    chordRoot: g(() => chLbl) ?? g(() => gRootLbl),
     labels: g(() => gMode),
     chord: triads ? g(() => iv(TRIADS[isNew ? chTriadIdx() : trQual].iv)) : g(() => iv(QUALITIES[chQual].iv)),
     arpBox: g(() => arpPos),

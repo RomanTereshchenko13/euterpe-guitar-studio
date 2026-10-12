@@ -317,6 +317,7 @@
   .btn:hover:not(.active) { background: var(--bg-panel-2); border-color: var(--text-faint); }
   .btn.active { background: var(--accent); color: #07203a; border-color: var(--accent); font-weight: 700; }
   .btn.dia.active { background: var(--third); color: #1f1405; border-color: var(--third); }
+  .deg-rn { font-size: 0.85em; opacity: 0.7; }
   .btn.play { background: transparent; border-color: var(--root); color: var(--root); }
   .btn.play:hover { background: rgba(107,165,58,0.14); }
   .btn.play.loop { border-color: var(--accent); color: var(--accent); }
@@ -408,6 +409,9 @@
   .cof-arc { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; stroke-dasharray: 320; stroke-dashoffset: 320; animation: cof-draw 0.55s ease forwards; pointer-events: none; }
   @keyframes cof-draw { to { stroke-dashoffset: 0; } }
   #cof-info .sub b { font-weight: 700; }
+  .cof-node.cof-chord circle { stroke: var(--text); stroke-width: 3; stroke-dasharray: 5 3; }
+  .cof-deg { display: inline-block; min-width: 48px; }
+  .cof-deg.on { box-shadow: inset 0 -2px 0 var(--third); }
   .tb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 16px; }
   .tb-bar .tb-group { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 9px; padding: 6px 11px; }
   .tb-bar > .btn, .tb-bar .tb-toggle, .tb-bar > .tb-group, .tb-bar > .tb-transport { min-height: 34px; }
@@ -857,6 +861,7 @@
 <div class="main">
 
   <section class="panel active" id="panel-harmony">
+    <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="h-degrees"></div></div>
     <div id="sub-chords">
       <div class="row-quals">
         <div class="quals-head">
@@ -1934,7 +1939,7 @@ const I18N = {
     cof_sig:'Ключові знаки', cof_sig0:'без ключових знаків',
     cof_rel_minor:'Паралельний мінор', cof_rel_major:'Паралельний мажор',
     cof_neighbors:'Сусіди по колу', cof_subdom:'субдомінанта', cof_dom:'домінанта',
-    min_word:'мінор', b_cadence:'Прослухати I–IV–V', b_open_scales:'Відкрити в гамах', b_open_harmony:'Відкрити в акордах',
+    min_word:'мінор', b_cadence:'Прослухати {cad}', b_open_scales:'Відкрити в гамах', b_open_harmony:'Відкрити в акордах',
     leg_tonic:'Тоніка', leg_dom:'Домінанта (V)', leg_subdom:'Субдомінанта (IV)', leg_rel:'Паралель',
     ch_h:'Тони акорду на грифі',
     ch_p:'Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу. Натисни на ноту, щоб почути її.',
@@ -2093,7 +2098,7 @@ const I18N = {
     cof_sig:'Key signature', cof_sig0:'no sharps or flats',
     cof_rel_minor:'Relative minor', cof_rel_major:'Relative major',
     cof_neighbors:'Neighbours on the circle', cof_subdom:'subdominant', cof_dom:'dominant',
-    min_word:'minor', b_cadence:'Play I–IV–V', b_open_scales:'Open in scales', b_open_harmony:'Open in chords',
+    min_word:'minor', b_cadence:'Play {cad}', b_open_scales:'Open in scales', b_open_harmony:'Open in chords',
     leg_tonic:'Tonic', leg_dom:'Dominant (V)', leg_subdom:'Subdominant (IV)', leg_rel:'Relative key',
     ch_h:'Chord tones across the neck',
     ch_p:'Pick a root and a chord type — the root, third, fifth (and seventh for seventh chords) light up across the whole neck. Tap a note to hear it.',
@@ -2272,6 +2277,7 @@ const ASIDE_TABS = ['harmony'];
 function mod(n,m){ return ((n%m)+m)%m; }
 function devWarn(){ try{ if(typeof console!=='undefined' && console.warn) console.warn.apply(console, ['[GuitarStudio]'].concat([].slice.call(arguments))); }catch(_){} }
 function noteTxt(lbl){ return String(lbl).replace('#','♯').replace(/^([A-G])b/,'$1♭'); }
+function noteAscii(lbl){ return String(lbl).replace('♯','#').replace('♭','b'); }
 function noteName(pc, flat){ return noteTxt((flat && FLAT_MAP[pc]) ? FLAT_MAP[pc] : NOTES[pc]); }
 function useFlatFor(label){ return /^[A-G][b♭]/.test(label) || label === 'F'; }
 const LET = ['C','D','E','F','G','A','B'];
@@ -2641,10 +2647,10 @@ function loopStrum(when){
   let midis, pcs, boardId='board', pc, qi;
   if(loopMode==='triad' && chTriadIdx()>=0){   
     const v=currentTriadVoicing();
-    midis=v.midis; pcs=v.pcs; pc=gRoot; qi=TRI_TO_QUAL[chTriadIdx()];
+    midis=v.midis; pcs=v.pcs; pc=chRoot; qi=TRI_TO_QUAL[chTriadIdx()];
   } else {
     const v=currentChordVoicing();
-    midis=v.midis; pcs=v.pcs; pc=gRoot; qi=chQual;
+    midis=v.midis; pcs=v.pcs; pc=chRoot; qi=chQual;
   }
   strumMidi(midis, when, 0.9, 0.026, +1);                 
   if(bandActive()) strumMidi(midis, when+midPulseSec(), 0.55, 0.02, +1);   
@@ -2679,13 +2685,13 @@ function pulseTransport(strong){
   d.classList.add(strong?'bp-strong':'bp');
 }
 function enqueueBeats(when){ const p=pulseSec(), n=barBeats(), starts=meterGroupStarts(); for(let k=0;k<n;k++) enqueueVisual(when+k*p, ()=>pulseTransport(k===0 || starts.has(k))); }
-function loopChordLabel(){ return noteTxt(gRootLbl)+(loopMode==='triad' && chTriadIdx()>=0 ? curTriad().short : QUALITIES[chQual].short); }
+function loopChordLabel(){ return noteTxt(chLbl)+(loopMode==='triad' && chTriadIdx()>=0 ? curTriad().short : QUALITIES[chQual].short); }
 function updateGlobalTransport(){
   const wrap=document.getElementById('tb-transport'); if(!wrap) return;
   const label=document.getElementById('tb-transport-label');
   const stop=document.getElementById('tb-stop');
   stop.innerHTML='&#9632; '+t('tb_stop'); stop.setAttribute('aria-label', t('tb_stop'));
-  if(seqClock){ label.textContent=t('tb_now_seq')+' · '+noteTxt(gRootLbl)+QUALITIES[chQual].short; wrap.hidden=false; }
+  if(seqClock){ label.textContent=t('tb_now_seq')+' · '+noteTxt(chLbl)+QUALITIES[chQual].short; wrap.hidden=false; }
   else if(loopClock){ label.textContent=t('tb_now_loop')+' · '+loopChordLabel(); wrap.hidden=false; }
   else { wrap.hidden=true; }
   renderJamBtn();
@@ -2718,12 +2724,6 @@ const SEQ_PRESETS = [
   { name:'Blues 12',   steps:[[0,6,1],[0,6,1],[0,6,1],[0,6,1],[5,6,1],[5,6,1],[0,6,1],[0,6,1],[7,6,1],[5,6,1],[0,6,1],[7,6,1]] },
 ];
 let seq=[], seqClock=null, seqLoopOn=true, seqBar=0, seqStepIdx=-1, seqBarMap=[], seqSaved=null;
-function syncChordButtons(){
-  const rc=document.getElementById('g-roots');
-  if(rc){ [...rc.children].forEach(b=>{ const on=+b.dataset.pc===gRoot; b.classList.toggle('active',on); b.setAttribute('aria-pressed', on?'true':'false'); }); }
-  buildChQuals();
-}
-function setChord(pc,lbl,qi){ gRoot=pc; gRootLbl=lbl; chQual=qi; syncChordButtons(); renderChords(); }
 function seqChordName(st){ return noteTxt(st.lbl) + QUALITIES[st.qi].short; }
 function renderSeq(){
   const strip=document.getElementById('seq-strip'); if(!strip) return;
@@ -2735,8 +2735,8 @@ function renderSeq(){
 }
 function buildSeqPresets(){ const c=document.getElementById('seq-presets'); if(!c) return;
   c.innerHTML=SEQ_PRESETS.map((p,i)=>`<button class="btn seq-preset" data-p="${i}">${p.name}</button>`).join(''); }
-function applyPreset(p){ const r=gRoot; seq=p.steps.map(([off,qi,bars])=>{ const pc=mod(r+off,12); return {pc, lbl:ROOTS[pc], qi, bars}; }); seqStepIdx=-1; renderSeq(); if(seqClock) seqRebuild(); saveState(); }
-function seqAddCurrent(){ seq.push({pc:gRoot, lbl:gRootLbl, qi:chQual, bars:1}); renderSeq(); if(seqClock) seqRebuild(); saveState(); }
+function applyPreset(p){ const dg=keyDegrees(); seq=p.steps.map(([off,qi,bars])=>{ const pc=mod(keyRoot+off,12), d=dg.find(x=>x.rootPc===pc); return {pc, lbl:d?d.lbl:ROOTS[pc], qi, bars}; }); seqStepIdx=-1; renderSeq(); if(seqClock) seqRebuild(); saveState(); }
+function seqAddCurrent(){ seq.push({pc:chRoot, lbl:chLbl, qi:chQual, bars:1}); renderSeq(); if(seqClock) seqRebuild(); saveState(); }
 function seqBuildMap(){ seqBarMap=[]; seq.forEach((st,i)=>{ for(let b=0;b<Math.max(1,st.bars);b++) seqBarMap.push(i); }); }
 function seqStrumStep(i, when){
   const st=seq[i]; if(!st) return;
@@ -2765,7 +2765,7 @@ function seqPlay(){
   if(!seq.length) return;
   if(seqClock){ seqStop(); return; }      
   stopLoop(); audio();
-  seqSaved={pc:gRoot, lbl:gRootLbl, qi:chQual};
+  seqSaved={pc:chRoot, lbl:chLbl, qi:chQual};
   seqBuildMap(); seqBar=0; seqStepIdx=-1;
   seqClock={ interval:()=>barSec(), tick:(time)=>seqTick(time) };
   addClock(seqClock);
@@ -3024,7 +3024,8 @@ function labClass(lab){
   if(lab==='7'||lab==='♭7'||lab==='♭♭7') return 'd-sev';
   return 'd-ext';   
 }
-let gRoot=9, gRootLbl='A', gMode='names';
+let keyRoot=9, keyLbl='A', gMode='names';
+let chRoot=9, chLbl='A';
 let chQual=1;
 let chVoicing=0;   
 let chShapesExpanded=false;   
@@ -3032,7 +3033,34 @@ let chTriads=false;
 let arpPos=0;      
 function chDegClass(iv){ if(iv===0)return'd-root'; if(iv===3||iv===4)return'd-third'; if([6,7,8].includes(iv))return'd-fifth'; return'd-sev'; }
 function currentHarmonyChord(){
-  const q=QUALITIES[chQual]; return {rootPc:gRoot, rootLbl:gRootLbl, short:q.short, pcs:q.iv.map(iv=>mod(gRoot+iv,12))};
+  const q=QUALITIES[chQual]; return {rootPc:chRoot, rootLbl:chLbl, short:q.short, pcs:q.iv.map(iv=>mod(chRoot+iv,12))};
+}
+const ROMAN=['I','II','III','IV','V','VI','VII'];
+function keyDegrees(){
+  const s=SCALES[scIdx].iv, sc = s.length===7 ? s : (isMajorFamily(scIdx) ? MAJ_IV : MIN_IV);
+  return diatonicTriads(keyRoot, sc).map(c=>{
+    const off=sc[c.deg]-MAJ_IV[c.deg];
+    let r=ROMAN[c.deg]; if(c.iv[1]===3) r=r.toLowerCase();
+    r=(off<0?'♭':off>0?'♯':'')+r+(c.suf==='dim'?'°':c.suf==='aug'?'+':'');
+    return { deg:c.deg, off:sc[c.deg], roman:r, rootPc:c.rootPc, lbl:noteAscii(spellNote(keyLbl, c.rootPc, c.deg+1)), qi:triadQi(c.iv) };
+  });
+}
+function keyCadence(){
+  const d=keyDegrees();
+  return [0,3,4,0].map((k,i)=>({ off: i===3 ? 12 : d[k].off, iv:QUALITIES[d[k].qi].iv, roman:d[k].roman }));
+}
+function keyCadenceName(){ return keyCadence().slice(0,3).map(c=>c.roman).join('–'); }
+function setChord(pc, lbl, qi){
+  chRoot=pc; chLbl=lbl; chQual=qi;
+  renderActiveContext();
+}
+function renderDegrees(){
+  const c=document.getElementById('h-degrees'); if(!c) return;
+  c.innerHTML=keyDegrees().map(d=>{
+    const on=d.rootPc===chRoot;
+    return `<button class="btn dia${on?' active':''}" data-deg="${d.deg}" aria-pressed="${on}">`+
+      `<span class="deg-rn">${d.roman}</span> ${noteTxt(d.lbl)}${QUALITIES[d.qi].short}</button>`;
+  }).join('');
 }
 let chQualsAdv=false;
 function qualSeg(g, onPick, showLabel){
@@ -3060,18 +3088,18 @@ function buildChQuals(){
 }
 function renderChords(){
   const q=QUALITIES[chQual];
-  const notes=q.iv.map((iv,i)=>spellNote(gRootLbl,(gRoot+iv)%12,q.deg[i])).join(' – ');
+  const notes=q.iv.map((iv,i)=>spellNote(chLbl,(chRoot+iv)%12,q.deg[i])).join(' – ');
   const degs=q.lab.join('  ');
-  document.getElementById('ch-info').innerHTML=`<div class="big">${noteTxt(gRootLbl)}${q.short} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
+  document.getElementById('ch-info').innerHTML=`<div class="big">${noteTxt(chLbl)}${q.short} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
   renderChordDiagram();
   renderChShape();
   if(triadsOn()) renderTriads();
   if(isBoardMode('chords')){
-    const map={}; q.iv.forEach((iv,i)=>{ map[(gRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
+    const map={}; q.iv.forEach((iv,i)=>{ map[(chRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
     const shape=shapeOnNeck();
     paintBoard((pc,si,f)=>{
       const m=map[pc]; if(m===undefined) return null;
-      const d=makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
+      const d=makeDot(labClass(m.lab), gMode==='names'?spellNote(chLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
       if(shape && shape.cells.has(si+'_'+f)) d.classList.add('in-shape');
       return d;
     }, chordLegendHTML(), t('ch_hint'), shape && shape.win);
@@ -3095,17 +3123,17 @@ function buildArpPos(){
 }
 function renderArp(){
   const q=QUALITIES[chQual];
-  const notes=q.iv.map((iv,i)=>spellNote(gRootLbl,(gRoot+iv)%12,q.deg[i])).join(' – ');
+  const notes=q.iv.map((iv,i)=>spellNote(chLbl,(chRoot+iv)%12,q.deg[i])).join(' – ');
   const degs=q.lab.join('  ');
   const info=document.getElementById('arp-info');
-  if(info) info.innerHTML=`<div class="big">${noteTxt(gRootLbl)}${q.short} ${t('arp_word')} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
+  if(info) info.innerHTML=`<div class="big">${noteTxt(chLbl)}${q.short} ${t('arp_word')} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
   if(isBoardMode('arp')){
-    const map={}; q.iv.forEach((iv,i)=>{ map[(gRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
+    const map={}; q.iv.forEach((iv,i)=>{ map[(chRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
     const win=boxWindow(arpPos);
     paintBoard((pc,si,f)=>{
       const m=map[pc]; if(m===undefined) return null;
       if(win && (f<win[0]||f>win[1])) return null;
-      return makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
+      return makeDot(labClass(m.lab), gMode==='names'?spellNote(chLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
     }, chordLegendHTML(), t('arp_hint'), win);
   }
   renderSuggester();
@@ -3170,9 +3198,9 @@ function chordVoicings(rootPc, short, ivs){
 }
 function currentChordVoicing(){
   const q=QUALITIES[chQual];
-  const list=chordVoicings(gRoot, q.short, q.iv);
+  const list=chordVoicings(chRoot, q.short, q.iv);
   if(!list.length){                                   
-    const base=48+gRoot, midis=q.iv.map(iv=>base+iv);
+    const base=48+chRoot, midis=q.iv.map(iv=>base+iv);
     return {midis, pcs:[...new Set(midis.map(m=>mod(m,12)))], list, idx:0};
   }
   const idx=Math.max(0, Math.min(chVoicing, list.length-1));
@@ -3261,15 +3289,15 @@ function voicingCaption(v){
 function renderChordDiagram(){
   const cont=document.getElementById('ch-diagram');
   const q=QUALITIES[chQual], short=q.short;
-  const funcMap={}; q.iv.forEach((iv,i)=>{ funcMap[mod(gRoot+iv,12)]=labClass(q.lab[i]); });
-  const list=chordVoicings(gRoot, short, q.iv);
-  if(!list.length){ cont.innerHTML=`<div class="chordbox"><div class="cb-name">${noteTxt(gRootLbl)}${short}</div><div class="cb-cap">${t('cd_na')}</div></div>`; return; }
+  const funcMap={}; q.iv.forEach((iv,i)=>{ funcMap[mod(chRoot+iv,12)]=labClass(q.lab[i]); });
+  const list=chordVoicings(chRoot, short, q.iv);
+  if(!list.length){ cont.innerHTML=`<div class="chordbox"><div class="cb-name">${noteTxt(chLbl)}${short}</div><div class="cb-cap">${t('cd_na')}</div></div>`; return; }
   if(chVoicing>list.length-1) chVoicing=0;             
   const collapsed = !chShapesExpanded && list.length>CHORD_SHAPES_COLLAPSED && chVoicing<CHORD_SHAPES_COLLAPSED;
   cont.innerHTML = list.map((v,i)=>{
     const hide = collapsed && i>=CHORD_SHAPES_COLLAPSED;
     return `<button type="button" class="chordbox${i===chVoicing?' sel':''}" data-v="${i}" aria-pressed="${i===chVoicing}"${hide?' hidden':''}>`+
-      `<div class="cb-name">${noteTxt(gRootLbl)}${short}</div>${chordBoxSVG(v, funcMap)}`+
+      `<div class="cb-name">${noteTxt(chLbl)}${short}</div>${chordBoxSVG(v, funcMap)}`+
       `<div class="cb-cap">${voicingCaption(v)}</div>${i===chVoicing?`<div class="cb-plays">${t('cd_plays')}</div>`:''}</button>`;
   }).join('');
   const more=document.getElementById('cd-more');
@@ -3306,7 +3334,7 @@ function nearestFret(open, pc, ref){
   return best;
 }
 function triFuncClass(o, iv){ if(o===0)return'd-root'; if(o===iv[1])return'd-third'; return'd-fifth'; }
-function triLabel(o, iv, pc){ return gMode==='names' ? spellNote(gRootLbl,pc,DEG_OF[o]) : (o===0?'1':(o===iv[1]?DEG_LABEL[iv[1]]:DEG_LABEL[iv[2]])); }
+function triLabel(o, iv, pc){ return gMode==='names' ? spellNote(chLbl,pc,DEG_OF[o]) : (o===0?'1':(o===iv[1]?DEG_LABEL[iv[1]]:DEG_LABEL[iv[2]])); }
 function triadCells(){
   const tri=curTriad(), iv=tri.iv, set=STRING_SETS[trSet];
   const invs = trInv===0 ? [0,1,2] : [trInv-1];
@@ -3314,7 +3342,7 @@ function triadCells(){
   const cells={}, pats=[];
   invs.forEach(inv=>{
     const order=ROT[inv].map(i=>iv[i]);              
-    const pcs=order.map(o=>mod(gRoot+o,12));
+    const pcs=order.map(o=>mod(chRoot+o,12));
     const lf=mod(pcs[0]-OPEN[low],12);
     const mf=nearestFret(OPEN[mid],pcs[1],lf);
     const hf=nearestFret(OPEN[high],pcs[2],mf);
@@ -3360,7 +3388,7 @@ function renderTriadCards(){
   const invName=[t('inv_root'),t('inv_1st'),t('inv_2nd')];
   cont.innerHTML = pats.map(p=>{
     const notes=normalizeTriPat(p.notes);
-    return `<div class="chordbox tri"><div class="cb-name">${noteTxt(gRootLbl)}${tri.short} · ${invName[p.inv]}</div>`+
+    return `<div class="chordbox tri"><div class="cb-name">${noteTxt(chLbl)}${tri.short} · ${invName[p.inv]}</div>`+
            `${triadCardSVG(notes, iv)}<div class="cb-cap">${t('strings_word')} ${set.label}</div></div>`;
   }).join('');
 }
@@ -3374,10 +3402,10 @@ function buildTrInvs(){
 }
 function renderTriads(){
   const {cells,iv}=triadCells(), tri=curTriad(), set=STRING_SETS[trSet];
-  const notes=iv.map(i=>spellNote(gRootLbl,mod(gRoot+i,12),DEG_OF[i])).join(' – ');
+  const notes=iv.map(i=>spellNote(chLbl,mod(chRoot+i,12),DEG_OF[i])).join(' – ');
   const invDesc=[t('inv_all_desc'),t('inv_root_desc'),t('inv_1st_desc'),t('inv_2nd_desc')][trInv];
   document.getElementById('tr-info').innerHTML=
-    `<div class="big">${noteTxt(gRootLbl)}${tri.short} · ${qName(tri)} · ${t('strings_word')} ${set.label}: ${notes}</div><div class="sub">${invDesc}</div>`;
+    `<div class="big">${noteTxt(chLbl)}${tri.short} · ${qName(tri)} · ${t('strings_word')} ${set.label}: ${notes}</div><div class="sub">${invDesc}</div>`;
   renderTriadCards();
   if(isBoardMode('triads')){
     paintBoard((pc,si,f)=>{
@@ -3386,7 +3414,6 @@ function renderTriads(){
     }, triadLegendHTML(), t('tr_hint'));
   }
 }
-
 const SDEG=['1','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'];
 const SCALES=[
   {iv:[0,2,4,5,7,9,11],en:'Major (Ionian)',uk:'Мажор (іонійський)'},
@@ -3403,9 +3430,7 @@ const SCALES=[
   {iv:[0,2,3,5,7,9,11],en:'Melodic minor',uk:'Мелодичний мінор'},
 ];
 function sName(s){ return lang==='en'?s.en:s.uk; }
-
 function isMajorFamily(i){ return SCALES[i].iv.includes(4); }
-
 function scalesOverChord(rootPc, chordPcs){
   const need=chordPcs.map(pc=>mod(pc,12));
   const out=[];
@@ -3415,7 +3440,6 @@ function scalesOverChord(rootPc, chordPcs){
   });
   return out;
 }
-
 function triadQi(iv){
   const t3=iv[1], t5=iv[2];
   const tri = (t3===3&&t5===6) ? 2 : (t3===4&&t5===8) ? 3 : (t3===3) ? 1 : 0;
@@ -3423,14 +3447,12 @@ function triadQi(iv){
 }
 const MODE_OFF={1:2,2:4,3:5,4:7,5:9,6:11};
 const BOX_OFFSETS=[0,3,5,7,10];
-
 const CAGED_BY_POS=['E','D','C','A','G'];
 function isCAGEDScale(){ return scIdx===0; }
 function cagedShapeName(letter){ return lang==='en' ? letter+'-shape' : 'форма '+letter; }
 let scIdx=5, scPos=0, scOverlay=null;
 let scView='scale';   
 let diaList=[];
-
 function scClass(iv, ivs){
   if(iv===0) return 'd-root';
   if(iv===3||iv===4) return 'd-third';
@@ -3438,11 +3460,11 @@ function scClass(iv, ivs){
   if(iv===10||iv===11) return 'd-sev';
   return 'd-other';
 }
-function boxWindow(pos){ if(!pos) return null; const anchor=(gRoot-4+12)%12; const start=anchor+BOX_OFFSETS[pos-1]; return [start, start+4]; }
+function boxWindow(pos){ if(!pos) return null; const anchor=(keyRoot-4+12)%12; const start=anchor+BOX_OFFSETS[pos-1]; return [start, start+4]; }
 function diatonic(){
   const iv=SCALES[scIdx].iv; if(iv.length!==7) return [];
-  return diatonicTriads(gRoot, iv).map(c=>({
-    label: spellNote(gRootLbl, c.rootPc, c.deg+1)+c.suf,
+  return diatonicTriads(keyRoot, iv).map(c=>({
+    label: spellNote(keyLbl, c.rootPc, c.deg+1)+c.suf,
     rootPc: c.rootPc, iv: c.iv, tag: 'dia'+c.deg
   }));
 }
@@ -3452,14 +3474,14 @@ function renderDiatonic(){
   cont.innerHTML = diaList.map((c,i)=>`<button class="btn dia${scOverlay&&scOverlay.tag===c.tag?' active':''}" data-i="${i}">${c.label}</button>`).join('') + `<button class="btn" data-clear="1">${t('b_clear')}</button>`;
 }
 function renderScales(){
-  const s=SCALES[scIdx], flat=useFlatFor(gRootLbl);
+  const s=SCALES[scIdx], flat=useFlatFor(keyLbl);
   const seven = s.iv.length===7;
-  const map={}, deg={}; s.iv.forEach((iv,di)=>{ const pc=(gRoot+iv)%12; map[pc]=iv; deg[pc]=di+1; });
-  const scName = pc => seven ? spellNote(gRootLbl, pc, deg[pc]) : simpleName(pc, gRootLbl);
-  const notes=s.iv.map(iv=>scName((gRoot+iv)%12)).join(' – ');
+  const map={}, deg={}; s.iv.forEach((iv,di)=>{ const pc=(keyRoot+iv)%12; map[pc]=iv; deg[pc]=di+1; });
+  const scName = pc => seven ? spellNote(keyLbl, pc, deg[pc]) : simpleName(pc, keyLbl);
+  const notes=s.iv.map(iv=>scName((keyRoot+iv)%12)).join(' – ');
   const degs=s.iv.map(iv=>SDEG[iv]).join(' ');
-  let html=`<div class="big">${noteTxt(gRootLbl)} ${sName(s)}: ${notes}</div><div class="sub">${t('degrees_word')}: ${degs}</div>`;
-  if(MODE_OFF[scIdx]!==undefined){ const pr=noteName((gRoot-MODE_OFF[scIdx]+120)%12,flat); html+=`<div class="sub">${t('samenotes')} ${pr} ${t('major_word')} ${t('mode_tail')}</div>`; }
+  let html=`<div class="big">${noteTxt(keyLbl)} ${sName(s)}: ${notes}</div><div class="sub">${t('degrees_word')}: ${degs}</div>`;
+  if(MODE_OFF[scIdx]!==undefined){ const pr=noteName((keyRoot-MODE_OFF[scIdx]+120)%12,flat); html+=`<div class="sub">${t('samenotes')} ${pr} ${t('major_word')} ${t('mode_tail')}</div>`; }
   if(isCAGEDScale() && scPos>0){ const letter=CAGED_BY_POS[scPos-1]; html+=`<div class="sub">CAGED · ${cagedShapeName(letter)} — ${t('caged_desc')}</div>`; }
   if(scOverlay){ html+=`<div class="sub" style="color:var(--third)">${t('overlay_msg')} <button class="btn dia sc-open-harmony" type="button">${t('b_open_harmony')} →</button></div>`; }
   document.getElementById('sc-info').innerHTML=html;
@@ -3489,7 +3511,6 @@ function buildScPos(){
   });
   segButtons('sc-pos', items, scPos, i=>{ scPos=i; buildScPos(); renderScales(); saveState(); });
 }
-
 const NAT=['C','D','E','F','G','A','B'], SHARP=['C#','D#','F#','G#','A#'], FLAT=['Db','Eb','Gb','Ab','Bb'];
 let ntFilter='all', ntRoot='';
 function ntMatch(note){ if(!ntRoot) return false; if(note===ntRoot) return true; if(ENHARM[note]===ntRoot) return true; const rev=Object.entries(ENHARM).find(([,v])=>v===ntRoot); return rev && rev[0]===note; }
@@ -3529,13 +3550,17 @@ function buildDia(rootPc, sc, flat){
   return diatonicTriads(rootPc, sc).map(c=> noteName(c.rootPc, flat)+c.suf);
 }
 function ctxCofMinor(){ return !isMajorFamily(scIdx); }
-function ctxCofSel(){ const minor=ctxCofMinor(); const i=COF.findIndex(c=>(minor?c.minPc:c.majPc)===gRoot); return i<0?0:i; }
+function ctxCofSel(){ const minor=ctxCofMinor(); const i=COF.findIndex(c=>(minor?c.minPc:c.majPc)===keyRoot); return i<0?0:i; }
 function pcToRootLabel(pc){ const i=ROOTS.findIndex(r=> (FLAT_ROOTS[r]!==undefined?FLAT_ROOTS[r]:NOTES.indexOf(r))===pc ); return ROOTS[i]; }
 function activateRoot(container, pc){ [...container.children].forEach(b=>{ b.classList.toggle('active', +b.dataset.pc===pc); }); }
+function cofChordRing(){
+  const iv=QUALITIES[chQual].iv, ring = iv[2]!==7 ? null : iv[1]===4 ? 'maj' : iv[1]===3 ? 'min' : null;
+  return (chRoot===keyRoot && ring===(ctxCofMinor()?'min':'maj')) ? null : ring;
+}
 function cofXY(i,r){ const a=(-90+i*30)*Math.PI/180; return [180+r*Math.cos(a), 180+r*Math.sin(a)]; }
 function renderCircle(){
   const cofSel=ctxCofSel(), cofMinor=ctxCofMinor();
-  const RO=132, RI=85, rMaj=27, rMin=21, dom=(cofSel+1)%12, sub=(cofSel+11)%12;
+  const RO=132, RI=85, rMaj=27, rMin=21, dom=(cofSel+1)%12, sub=(cofSel+11)%12, ring=cofChordRing();
   let s=`<circle cx="180" cy="180" r="${RO}" fill="none" stroke="var(--border)" stroke-width="1"/><circle cx="180" cy="180" r="${RI}" fill="none" stroke="var(--border)" stroke-width="1"/>`;
   const arcR=cofMinor?RI:RO;
   const [asx,asy]=cofXY(sub,arcR), [atx,aty]=cofXY(cofSel,arcR), [adx,ady]=cofXY(dom,arcR);
@@ -3557,8 +3582,9 @@ function renderCircle(){
       if(i===cofSel){mfill='var(--seventh)';mtext='#2a0a16';}
     }
     const [mx,my]=cofXY(i,RO), [nx,ny]=cofXY(i,RI);
-    s+=`<g class="cof-node" data-i="${i}" data-type="maj" tabindex="0" role="button" aria-label="${c.maj} ${t('major_word')}"><circle cx="${mx}" cy="${my}" r="${rMaj}" fill="${mfill}" stroke="var(--border-strong)" stroke-width="1.5"/><text x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="central" font-size="15" fill="${mtext}">${c.maj}</text></g>`;
-    s+=`<g class="cof-node" data-i="${i}" data-type="min" tabindex="0" role="button" aria-label="${c.min}"><circle cx="${nx}" cy="${ny}" r="${rMin}" fill="${nfill}" stroke="var(--border)" stroke-width="1.2"/><text x="${nx}" y="${ny}" text-anchor="middle" dominant-baseline="central" font-size="10.5" fill="${ntext}">${c.min}</text></g>`;
+    const majCh=ring==='maj' && c.majPc===chRoot, minCh=ring==='min' && c.minPc===chRoot;
+    s+=`<g class="cof-node${majCh?' cof-chord':''}" data-i="${i}" data-type="maj" tabindex="0" role="button" aria-label="${c.maj} ${t('major_word')}"><circle cx="${mx}" cy="${my}" r="${rMaj}" fill="${mfill}" stroke="var(--border-strong)" stroke-width="1.5"/><text x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="central" font-size="15" fill="${mtext}">${c.maj}</text></g>`;
+    s+=`<g class="cof-node${minCh?' cof-chord':''}" data-i="${i}" data-type="min" tabindex="0" role="button" aria-label="${c.min}"><circle cx="${nx}" cy="${ny}" r="${rMin}" fill="${nfill}" stroke="var(--border)" stroke-width="1.2"/><text x="${nx}" y="${ny}" text-anchor="middle" dominant-baseline="central" font-size="10.5" fill="${ntext}">${c.min}</text></g>`;
   });
   document.getElementById('cof-svg').innerHTML=s;
   renderCofInfo();
@@ -3567,13 +3593,13 @@ function renderCofInfo(){
   const cofSel=ctxCofSel(), cofMinor=ctxCofMinor();
   const c=COF[cofSel], useFlat=(c.sig<0||c.sig===6);
   const keyPc=cofMinor?c.minPc:c.majPc;
-  const dia=buildDia(keyPc, cofMinor?MIN_IV:MAJ_IV, useFlat);
+  const ring=cofChordRing(), sc=cofMinor?MIN_IV:MAJ_IV, dia=buildDia(keyPc, sc, useFlat), diaPc=diatonicTriads(keyPc, sc).map(x=>x.rootPc);
   const roman=cofMinor?ROMAN_MIN:ROMAN_MAJ;
   const keyName=cofMinor?c.min:(c.enh||c.maj), kind=cofMinor?t('min_word'):t('major_word');
   const rel=cofMinor?`${t('cof_rel_major')}: ${(c.enh||c.maj)} ${t('major_word')}`:`${t('cof_rel_minor')}: ${c.min}`;
   const sub=COF[(cofSel+11)%12], dom=COF[(cofSel+1)%12];
   const subL=cofMinor?sub.min:sub.maj, domL=cofMinor?dom.min:dom.maj;
-  const diaHtml=dia.map((ch,idx)=>`<span style="display:inline-block;min-width:48px"><b style="color:var(--text-faint)">${roman[idx]}</b> ${ch}</span>`).join(' ');
+  const diaHtml=dia.map((ch,idx)=>`<span class="cof-deg${ring && diaPc[idx]===chRoot?' on':''}"><b style="color:var(--text-faint)">${roman[idx]}</b> ${ch}</span>`).join(' ');
   document.getElementById('cof-info').innerHTML=
     `<div class="big">${keyName} ${kind}</div>`+
     `<div class="sub">${t('cof_sig')}: ${sigText(c.sig)}</div>`+
@@ -3601,7 +3627,7 @@ function applyLang(){
   applyAudioAvailability();
   micRefreshLang();
   calRefreshLang();
-  activateRoot(document.getElementById('g-roots'), gRoot);
+  activateRoot(document.getElementById('g-roots'), keyRoot);
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));
   { const bl=document.getElementById('board-lens'); if(bl) bl.setAttribute('aria-label', t('lbl_view')); }
@@ -3750,9 +3776,12 @@ function savedFields(){ return [
   ['cbPalette',    svBool,                                ()=>cbPalette,    v=>{ cbPalette=v; }],
   ['fnShapes',     svBool,                                ()=>fnShapes,     v=>{ fnShapes=v; }],
   ['welcomeSeen',  svBool,                                ()=>welcomeSeen,  v=>{ welcomeSeen=v; }],
-  ['gRoot',        svInt(0, 11),                          ()=>gRoot,        v=>{ gRoot=v; }],
+  ['gRoot',        svInt(0, 11),                          ()=>keyRoot,      v=>{ keyRoot=v; }],
   ['gRootLbl',     (v,s)=>typeof v==='string' && svInt(0, 11)(s.gRoot)!==undefined ? v : undefined,
-                                                          ()=>gRootLbl,     v=>{ gRootLbl=v; }],
+                                                          ()=>keyLbl,       v=>{ keyLbl=v; }],
+  ['chRoot',       svInt(0, 11),                          ()=>chRoot,       v=>{ chRoot=v; }],
+  ['chLbl',        (v,s)=>typeof v==='string' && svInt(0, 11)(s.chRoot)!==undefined ? v : undefined,
+                                                          ()=>chLbl,        v=>{ chLbl=v; }],
   ['gMode',        svOneOf('names','deg'),                ()=>gMode,        v=>{ gMode=v; }],
   ['hView',        svOneOf('chords','arp'),               ()=>hView,        v=>{ hView=v; }],
   ['scView',       svOneOf('scale','notes'),              ()=>scView,       v=>{ scView=v; }],
@@ -3797,6 +3826,7 @@ function migrateSave(raw){
   }
   if(typeof s.calKnown!=='boolean') s.calKnown = svNum(0, CAL_MAX_MS)(s.calMs)>0;
   if(typeof s.welcomeSeen!=='boolean') s.welcomeSeen=true;
+  if(svInt(0, 11)(s.chRoot)===undefined && svInt(0, 11)(s.gRoot)!==undefined){ s.chRoot=s.gRoot; s.chLbl=s.gRootLbl; }
   return s;
 }
 const LS_PROGRESS='guitarStudio.progress.v1';
@@ -4645,9 +4675,6 @@ function calRefreshLang(){
   };
   calRender();
 })();
-
-
-
 const INTERVALS = [
   {st:1,  name:'m2', en:'Minor 2nd',   uk:'Мала секунда'},
   {st:2,  name:'M2', en:'Major 2nd',   uk:'Велика секунда'},
@@ -4663,12 +4690,8 @@ const INTERVALS = [
   {st:12, name:'P8', en:'Octave',      uk:'Октава'},
 ];
 function earIvName(iv){ return lang==='en' ? iv.en : iv.uk; }
-
-
 const EAR_QUAL_IDX = [0, 1, 10, 12, 6, 7, 8, 9];   
 function earQualKey(qi){ const q=QUALITIES[qi]; return 'chordq:'+(q.short||'maj'); }
-
-
 const EAR = {
   interval: {
     len:8, sess:'ear-interval', prompt:()=>t('ear_int_prompt'),
@@ -4687,9 +4710,7 @@ const EAR = {
     choices(){ return EAR_QUAL_IDX.map(qi=>{ const q=QUALITIES[qi]; return { key:earQualKey(qi), html:(q.short||'maj'), label:qName(q) }; }); }
   }
 };
-
 let ear = null;
-
 function earShuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=a[i]; a[i]=a[j]; a[j]=tmp; } return a; }
 function buildEarQueue(keys, len){
   const now=Date.now();
@@ -4697,7 +4718,6 @@ function buildEarQueue(keys, len){
   const rest=keys.filter(k=>due.indexOf(k)<0);
   return earShuffle(due).concat(earShuffle(rest)).slice(0, len);
 }
-
 function startEar(type){
   const cfg=EAR[type]; if(!cfg) return;
   ear={ type, cfg, queue:buildEarQueue(cfg.pool(), cfg.len), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, cur:null, answered:false, missed:[] };
@@ -4723,7 +4743,6 @@ function nextEarPrompt(){
   earReplay();                 
 }
 function earReplay(){ if(ear && ear.cur){ audio(); ear.cfg.play(ear.cur); } }
-
 function earAnswer(key){
   if(!ear || ear.finished || ear.answered) return;
   ear.answered=true;
@@ -4743,15 +4762,12 @@ function finishEar(){
   renderPractice();
   renderEarSummary(elapsed, acc);
 }
-
 function earAnswerLabel(){
   if(!ear || !ear.cur) return '';
   if(ear.type==='interval') return earIvName(ear.cur.iv);
   if(ear.type==='chordq')   return noteTxt(ROOTS[ear.cur.root])+' '+qName(QUALITIES[ear.cur.qi]);
   return '';
 }
-
-
 function renderEarPrompt(){
   const p=document.getElementById('ear-prompt'); if(p) p.textContent=ear.cfg.prompt();
   const c=document.getElementById('ear-count'); if(c) c.textContent=Math.min(ear.done+1, ear.total)+' / '+ear.total;
@@ -4801,26 +4817,21 @@ function renderEarSummary(elapsed, acc){
   const ag=document.getElementById('ear-again'); if(ag){ ag.textContent=t('drill_again'); ag.onclick=()=>startEar(type); }
   const dn=document.getElementById('ear-done');  if(dn){ dn.textContent=t('drill_done');  dn.onclick=exitEar; }
 }
-
 function earReview(){
   if(!ear || !ear.missed.length) return [];
   if(ear.type==='interval') return [{ label:t('view_chords'),
     open:()=>{ openReference('harmony','chords'); setGMode('deg'); } }];
   const qis=[...new Set(ear.missed.map(c=>c.qi))];
-  return qis.map(qi=>({ label:noteTxt(gRootLbl)+(QUALITIES[qi].short||''),
-    open:()=>{ chQual=qi; chVoicing=0; chTriads=false; buildChQuals(); buildArpQuals(); openReference('harmony','chords'); } }));
+  return qis.map(qi=>({ label:noteTxt(keyLbl)+(QUALITIES[qi].short||''),
+    open:()=>{ chVoicing=0; chTriads=false; setChord(keyRoot, keyLbl, qi); openReference('harmony','chords'); } }));
 }
 function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPrompt(); }
-
-
 registerDrill({ id:'ear', area:'ear-area',
                 isActive:()=>!!ear, exit:exitEar, refreshLang:refreshEarLang,
-                
                 tracks:[
                   { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', scored:'acc', start:()=>startEar('interval') },
                   { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    scored:'acc', start:()=>startEar('chordq') }
                 ] });
-
 (function initEar(){
   const area=document.getElementById('ear-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
@@ -4973,7 +4984,7 @@ const tgScore = scoredRun({
   onChange:()=>{ if(tgDrill) renderTarget(); },
 });
 function tgBuildBars(preset){
-  const r=gRoot, out=[];
+  const r=keyRoot, out=[];
   preset.steps.forEach(([off,qi,b])=>{ const pc=mod(r+off,12); for(let k=0;k<Math.max(1,b);k++) out.push({pc, qi}); });
   return out;
 }
@@ -5355,8 +5366,8 @@ function spTick(time, count){
     if(slot===0) kickHit(time, 1);
     if(slot===4) kickHit(time, 0.9);
     if(backbeat) snareHit(time, spAccent ? 1.0 : 0.8);
-    if(slot===0) bassNote(time, 36+gRoot, b*1.9, 0.95);
-    if(slot===4) bassNote(time, 36+gRoot+fifthInterval(chQual), b*1.7, 0.8);
+    if(slot===0) bassNote(time, 36+chRoot, b*1.9, 0.95);
+    if(slot===4) bassNote(time, 36+chRoot+fifthInterval(chQual), b*1.7, 0.8);
   }
   if(spClick && beatPos) metroClick(time, slot===0);              
   enqueueVisual(time, ()=>spHighlightSlot(slot));
@@ -5368,7 +5379,7 @@ function renderStrum(){
   const sw=document.getElementById('sp-swings');
   if(sw) sw.innerHTML=SP_SWINGS.map((s,i)=>`<button type="button" class="btn sp-swing${i===spSwing?' active':''}" data-i="${i}" aria-pressed="${i===spSwing}">${spName(s)}</button>`).join('');
   const nm=document.getElementById('sp-name'); if(nm) nm.textContent=spName(STRUM_PATTERNS[spIdx]);
-  const ch=document.getElementById('sp-chord'); if(ch) ch.textContent=t('sp_chord')+' · '+noteTxt(gRootLbl)+QUALITIES[chQual].short;
+  const ch=document.getElementById('sp-chord'); if(ch) ch.textContent=t('sp_chord')+' · '+noteTxt(chLbl)+QUALITIES[chQual].short;
   renderStrumGrid();
   const toggle=(id,on,label)=>{ const el=document.getElementById(id); if(!el) return;
     el.textContent=t(label); el.classList.toggle('active', on); el.setAttribute('aria-pressed', on?'true':'false'); };
@@ -5418,9 +5429,6 @@ registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',
   pick('sp-patterns', 'sp-pat',   i=>{ spIdx=i; if(spDrill) spDrill.patIdx=i; });
   pick('sp-swings',   'sp-swing', i=>{ spSwing=i; });
 })();
-
-
-
 const SUBDIVS = [
   { id:'quarter',   div:1, en:'Quarter notes', uk:'Чвертки' },
   { id:'eighth',    div:2, en:'Eighth notes',  uk:'Вісімки' },
@@ -5429,32 +5437,25 @@ const SUBDIVS = [
 ];
 function sdSubName(s){ return lang==='en'?s.en:s.uk; }
 const SD_BEATS = 4;   
-
 let sdSub = 1;        
 let sdPos = 1;        
 let sdNotes = true;   
 let sd = null;
 let sdLit = null;     
-
-
 const sdScore = scoredRun({
   micId:'drill-ctx-mic', statusId:'sd-status', scoreId:'sd-score', countKey:'on_played',
   tol:()=>beat()/(sd?sd.div:2)/2,
   onChange:()=>{ if(sd) renderTiming(); },
 });
-
-
 function sdWin(){ return boxWindow(sdPos)||[0,4]; }
 function sdPath(){
   const s=SCALES[scIdx], win=sdWin(), lo=win[0], hi=win[1];
-  const scPcs=new Set(s.iv.map(iv=>mod(gRoot+iv,12))), pool=[];
+  const scPcs=new Set(s.iv.map(iv=>mod(keyRoot+iv,12))), pool=[];
   for(let si=0; si<6; si++) for(let f=lo; f<=hi; f++){ const midi=OPEN_MIDI[si]+f; if(scPcs.has(midi%12)) pool.push({si, f, midi}); }
   pool.sort((a,b)=>a.midi-b.midi);
   if(pool.length<2) return pool;
   return pool.concat(pool.slice(1,-1).reverse());   
 }
-
-
 function sdClick(when, level){
   const ctx=audio(); if(!ctx) return;
   const o=ctx.createOscillator(), g=ctx.createGain();
@@ -5466,8 +5467,6 @@ function sdClick(when, level){
   g.gain.exponentialRampToValueAtTime(0.0001, when+0.045);
   o.connect(g).connect(cue); o.start(when); o.stop(when+0.06);
 }
-
-
 function startTiming(){
   sd={ playing:false, clock:null, count:0, bars:0, div:SUBDIVS[sdSub].div, path:[], pathIdx:0 };
   sdScore.clearScore();
@@ -5514,7 +5513,6 @@ function sdStop(){
   }
   renderTiming();
 }
-
 function sdRestart(){
   if(!sd || !sd.playing) return;
   if(sd.clock) removeClock(sd.clock);
@@ -5537,13 +5535,11 @@ function sdTick(when, count){
   }
   enqueueVisual(when, ()=>sdHighlightCell(pos));
 }
-
-
 function renderTiming(){
   if(!sd) return;
   segButtons('sd-subs', SUBDIVS.map(s=>({label:sdSubName(s)})), sdSub, i=>{ sdSub=i; renderSdGrid(); sdRestart(); renderTiming(); });
   segButtons('sd-pos', ['1','2','3','4','5'].map(label=>({label})), sdPos-1, i=>{ sdPos=i+1; sdRenderBoard(); sdRestart(); });
-  const tt=document.getElementById('sd-title'); if(tt) tt.textContent=noteTxt(gRootLbl)+' · '+sName(SCALES[scIdx]);
+  const tt=document.getElementById('sd-title'); if(tt) tt.textContent=noteTxt(keyLbl)+' · '+sName(SCALES[scIdx]);
   const nb=document.getElementById('sd-notes'); if(nb){ nb.textContent=t('sd_notes'); nb.classList.toggle('active', sdNotes); nb.setAttribute('aria-pressed', sdNotes?'true':'false'); }
   renderSdGrid();
   const pb=document.getElementById('sd-play'); if(pb){ pb.innerHTML=(sd.playing?'&#9632; ':'&#9654; ')+t(sd.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', sd.playing); pb.setAttribute('aria-pressed', sd.playing?'true':'false'); }
@@ -5551,7 +5547,6 @@ function renderTiming(){
   sdScore.render();
   applyDrillCtx();     
 }
-
 function renderSdGrid(){
   const g=document.getElementById('sd-grid'); if(!g) return;
   const div=SUBDIVS[sdSub].div, n=SD_BEATS*div, cur=(sd&&sd.playing)?-2:-1, cells=[];
@@ -5576,10 +5571,9 @@ function sdRenderBoard(){
   sdLit=null;
   sdPaintScale();
 }
-
 function sdPaintScale(){
   const s=SCALES[scIdx], win=sdWin(), lo=win[0], hi=win[1];
-  const scPcs=new Set(s.iv.map(iv=>mod(gRoot+iv,12)));
+  const scPcs=new Set(s.iv.map(iv=>mod(keyRoot+iv,12)));
   document.querySelectorAll('#sd-board .sd-dot').forEach(d=>{
     const si=+d.dataset.si, f=+d.dataset.f, inBox=f>=lo&&f<=hi&&scPcs.has((OPEN_MIDI[si]+f)%12);
     d.classList.toggle('pal', inBox);
@@ -5596,7 +5590,6 @@ function refreshTimingLang(){
   renderTiming();
   sdScore.refreshLang();
 }
-
 registerDrill({ id:'timing', area:'sd-area', tempo:true, setup:'sd-setup',
                 tracks:[{ id:'timing', kind:'perf', sess:'timing', label:'drill_timing',
                           better:'high', unit:'bars', scored:'mic', start:startTiming }],
@@ -5604,7 +5597,6 @@ registerDrill({ id:'timing', area:'sd-area', tempo:true, setup:'sd-setup',
                 mic:()=>sdScore.available(),
                 onMic:()=>{ if(sd&&sd.playing) sdStop(); sdScore.toggle(); renderTiming(); },
                 onKey:()=>{ if(!sd) return; sdRenderBoard(); sdRestart(); renderTiming(); } });
-
 (function initTiming(){
   const area=document.getElementById('sd-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
@@ -6129,6 +6121,7 @@ function renderSessionReport(){
 function renderActiveContext(){
   if(currentMode!=='reference') return;
   if(currentTab==='harmony'){
+    renderDegrees();
     if(hView==='arp'){ buildArpQuals(); buildArpPos(); renderArp(); }
     else { buildChQuals(); renderChords(); }
   }
@@ -6156,16 +6149,17 @@ function paintDrillBadges(){
   });
 }
 function setKey(pc, lbl, mode){
-  gRoot=pc; gRootLbl=lbl;
+  keyRoot=pc; keyLbl=lbl;
   if(Number.isInteger(mode) && SCALES[mode]) scIdx=mode;
+  chRoot=pc; chLbl=lbl;
   chVoicing=0; scOverlay=null;
   ntRoot=lbl;                                   
-  activateRoot(document.getElementById('g-roots'), gRoot);
-  { const dk=document.getElementById('drill-ctx-key'); if(dk) activateRoot(dk, gRoot); }
-  renderActiveContext();
+  activateRoot(document.getElementById('g-roots'), keyRoot);
+  { const dk=document.getElementById('drill-ctx-key'); if(dk) activateRoot(dk, keyRoot); }
+  renderActiveContext(); updateGlobalPlay();   
   saveState();
 }
-buildRootBtns(document.getElementById('g-roots'), gRoot, (pc,r)=>{ setKey(pc,r); });
+buildRootBtns(document.getElementById('g-roots'), keyRoot, (pc,r)=>{ setKey(pc,r); });
 function setGMode(m){ gMode=m;
   const on=document.getElementById(m==='names'?'g-names':'g-deg'), off=document.getElementById(m==='names'?'g-deg':'g-names');
   on.classList.add('active'); on.setAttribute('aria-pressed','true'); off.classList.remove('active'); off.setAttribute('aria-pressed','false');
@@ -6223,12 +6217,12 @@ function globalPlay(){
   const boardEl=document.getElementById('board');
   if(currentTab==='harmony'){
     if(isBoardMode('triads')){ const v=currentTriadVoicing(); animArpMidi(boardEl, v.midis); }
-    else if(hView==='arp'){ const q=QUALITIES[chQual]; animRun(boardEl, 48+gRoot, q.iv.concat([12])); }   
+    else if(hView==='arp'){ const q=QUALITIES[chQual]; animRun(boardEl, 48+chRoot, q.iv.concat([12])); }   
     else { const v=currentChordVoicing(); animArpMidi(boardEl, v.midis); }
-  } else if(currentTab==='scales' && scView==='scale'){ const s=SCALES[scIdx]; animRun(boardEl, 48+gRoot, s.iv.concat([12])); }
+  } else if(currentTab==='scales' && scView==='scale'){ const s=SCALES[scIdx]; animRun(boardEl, 48+keyRoot, s.iv.concat([12])); }
   else if(currentTab==='circle'){
-    const cofMinor=ctxCofMinor(), pc=gRoot, b=48+pc, iv=cofMinor?[0,3,7]:[0,4,7], bt=0.5;  
-    [0,5,7,12].forEach((off,i)=>{ const base=b+off; iv.forEach((x,j)=>pluck(base+x, i*bt + j*0.018, Math.max(0.9, bt*1.4))); });
+    const b=48+keyRoot, bt=0.5;
+    keyCadence().forEach((c,i)=>{ const base=b+c.off; c.iv.forEach((x,j)=>pluck(base+x, i*bt + j*0.018, Math.max(0.9, bt*1.4))); });
   }
 }
 function updateGlobalPlay(){
@@ -6236,8 +6230,9 @@ function updateGlobalPlay(){
   if(b){
     b.hidden = currentTab==='scales' && scView==='notes';
     const cadence = currentTab==='circle';
-    b.innerHTML='&#9654; '+t(cadence?'b_cadence':'b_listen');
-    const tip=t(cadence?'b_cadence':'b_listen_tip');
+    const cad=t('b_cadence').replace('{cad}', keyCadenceName());
+    b.innerHTML='&#9654; '+(cadence?cad:t('b_listen'));
+    const tip=cadence?cad:t('b_listen_tip');
     b.setAttribute('aria-label', tip); b.title=tip;
   }
   const lp=document.getElementById('g-loop');
@@ -6262,14 +6257,14 @@ document.getElementById('seq-presets').addEventListener('click',e=>{ const b=e.t
 document.getElementById('seq-strip').addEventListener('click',e=>{
   const x=e.target.closest('[data-x]'); if(x){ seq.splice(+x.dataset.x,1); seqStepIdx=-1; if(!seq.length) seqStop(); renderSeq(); if(seqClock) seqRebuild(); saveState(); return; }
   const bb=e.target.closest('[data-bars]'); if(bb){ const i=+bb.dataset.bars, cur=seq[i].bars; seq[i].bars = cur>=4?1:(cur===1?2:4); renderSeq(); if(seqClock) seqRebuild(); saveState(); return; }
-  const chip=e.target.closest('.seq-chip'); if(chip){ const st=seq[+chip.dataset.i]; if(st) setChord(st.pc, st.lbl, st.qi); }
+  const chip=e.target.closest('.seq-chip'); if(chip){ const st=seq[+chip.dataset.i]; if(st){ chVoicing=0; setChord(st.pc, st.lbl, st.qi); saveState(); } }
 });
 renderSeq(); setSeqTransport();
 wirePlay(document.getElementById('board'));
 document.getElementById('suggest-body').addEventListener('click', e=>{
   const b=e.target.closest('[data-scale]'); if(!b) return;
   const ch=currentHarmonyChord(); if(!ch) return;
-  setKey(ch.rootPc, ROOTS[ch.rootPc], +b.dataset.scale);
+  setKey(ch.rootPc, ch.rootLbl, +b.dataset.scale);
   setScView('scale'); selectTab('scales');
 });
 document.getElementById('ch-diagram').addEventListener('click',e=>{
@@ -6298,8 +6293,8 @@ document.getElementById('sc-diatonic').addEventListener('click',e=>{
 });
 document.getElementById('sc-info').addEventListener('click', e=>{
   if(!e.target.closest('.sc-open-harmony') || !scOverlay) return;
-  const pc=scOverlay.rootPc;
-  setChord(pc, ROOTS[pc], triadQi(scOverlay.iv));
+  const pc=scOverlay.rootPc, d=keyDegrees().find(x=>x.rootPc===pc);
+  chVoicing=0; setChord(pc, d?d.lbl:ROOTS[pc], triadQi(scOverlay.iv));
   setHView('chords'); selectTab('harmony');
 });
 function selectCircleNode(g){
@@ -6314,7 +6309,12 @@ document.getElementById('cof-svg').addEventListener('keydown',e=>{
   const g=e.target.closest('.cof-node'); if(g){ selectCircleNode(g); e.preventDefault(); }
 });
 document.getElementById('cof-open').onclick=function(){ selectTab('scales'); };
-{ const ch=document.getElementById('cof-harmony'); if(ch) ch.onclick=function(){ setChord(gRoot, gRootLbl, ctxCofMinor()?1:0); setHView('chords'); selectTab('harmony'); }; }
+{ const ch=document.getElementById('cof-harmony'); if(ch) ch.onclick=function(){ const d=keyDegrees()[0]; chVoicing=0; setChord(d.rootPc, d.lbl, d.qi); setHView('chords'); selectTab('harmony'); }; }
+document.getElementById('h-degrees').addEventListener('click', e=>{
+  const b=e.target.closest('[data-deg]'); if(!b) return;
+  const d=keyDegrees()[+b.dataset.deg]; if(!d) return;
+  chVoicing=0; chShapesExpanded=false; setChord(d.rootPc, d.lbl, d.qi); saveState();
+});
 function applyNtFilter(){ const b=document.getElementById('nt-nat'); if(b){ const on=ntFilter==='nat'; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on?'true':'false'); } }
 document.getElementById('nt-nat').onclick=function(){ ntFilter = ntFilter==='nat'?'all':'nat'; applyNtFilter(); renderNotes(); saveState(); };
 applyNtFilter();
@@ -6523,7 +6523,7 @@ function dismissWelcome(){ const o=document.getElementById('welcome-overlay'); i
   const o=document.getElementById('welcome-overlay'); if(o) o.addEventListener('click',e=>{ if(e.target.id==='welcome-overlay') dismissWelcome(); }); }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeChangelog(); closeKbd(); dismissWelcome(); } });
 const NOTE_KEY = { a:9, b:11, c:0, d:2, e:4, f:5, g:7 };
-function transposeKey(delta){ const pc=mod(gRoot+delta,12); setKey(pc, ROOTS[pc]); }
+function transposeKey(delta){ const pc=mod(keyRoot+delta,12); setKey(pc, ROOTS[pc]); }
 document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey) return;
   const tg=e.target;
@@ -6557,7 +6557,7 @@ const hadState = loadState();
 if(!hadState){
   try{ const nav=(navigator.languages&&navigator.languages[0])||navigator.language||''; lang = /^uk\b/i.test(nav) ? 'uk' : 'en'; }catch(_){  }
 }
-ntRoot=gRootLbl;   
+ntRoot=keyLbl;   
 applyTuning();
 applyLang();
 selectTab(currentTab);
@@ -6568,7 +6568,7 @@ try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(markSc
 applyAudioAvailability();
 applyA11y();   
 { const dk=document.getElementById('drill-ctx-key');
-  if(dk) buildRootBtns(dk, gRoot, (pc,r)=>{ setKey(pc,r); drillKeyChanged(); });
+  if(dk) buildRootBtns(dk, keyRoot, (pc,r)=>{ setKey(pc,r); drillKeyChanged(); });
   const dq=document.getElementById('drill-ctx-quit');
   if(dq) dq.onclick=quitDrill; }
 { const ph=document.getElementById('practice-home');
@@ -6597,7 +6597,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
   window.__GS_TEST__ = {
     APP_VERSION, I18N, QUALITIES, TRIADS, SCALES, COF, FRET_RANGES, SEQ_PRESETS,
     fifthInterval, spellNote, rootParts, simpleName,
-    diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey, noteTxt,
+    diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey, noteTxt, keyDegrees, keyCadence,
     scalesOverChord, triadQi, currentHarmonyChord,
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
@@ -6617,7 +6617,8 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     getSessMins:()=>sessMins, setSessMins:(m)=>{ sessMins=m; },
     SEAM_TRACKS, jamToggle, jamActive, renderJamBtn,
     trackBadge, paintDrillBadges, renderProgressInto, renderPractice, trendScore,
-    selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord,
+    selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord, seqClear,
+    getSeq:()=>seq, setSeq:(a)=>{ seq=a; renderSeq(); },
     setTempo, getTempo:()=>tempo, stopReferenceTransport, transportActive, applyContextBar, updateGlobalPlay,
     renderAllBoards,
     recordAttempt, dueItems, recordSession, learnerStats, srsInterval, normalizeLearner,
@@ -6666,7 +6667,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     initAudio:()=>audio(),
     setCtxNow:(t)=>{ if(actx) actx.currentTime=t; },
     setGMode, revealFrets,
-    state:()=>({ gRoot, gRootLbl, scIdx, scView, chQual, chVoicing, chTriads, currentTab, currentMode, hView, gMode, ntRoot,
+    state:()=>({ keyRoot, keyLbl, chRoot, chLbl, scIdx, scView, chQual, chVoicing, chTriads, currentTab, currentMode, hView, gMode, ntRoot,
                  loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo,
                  cbPalette, fnShapes, welcomeSeen })
   };

@@ -6,6 +6,7 @@
 function renderActiveContext(){
   if(currentMode!=='reference') return;
   if(currentTab==='harmony'){
+    renderDegrees();
     if(hView==='arp'){ buildArpQuals(); buildArpPos(); renderArp(); }
     else { buildChQuals(); renderChords(); }
   }
@@ -39,22 +40,24 @@ function paintDrillBadges(){
   });
 }
 
-/* ---- one musical context ----
-   gRoot/gRootLbl (key center) and scIdx (mode = selected scale) are shared by Harmony,
-   Scales, Circle and Notes, and setKey() is the ONE place they change, so the views
-   never drift. Pass `mode` to also move the scale (a circle click); omit it to keep it. */
+/* ---- one key ----
+   keyRoot/keyLbl (key center) and scIdx (its scale) are what Scales, Circle and Notes
+   show, and setKey() is the ONE place they change, so the views never drift. Pass
+   `mode` to also move the scale (a circle click); omit it to keep it. A new key brings
+   the chord home to its tonic root, quality kept (setChord moves it within the key). */
 function setKey(pc, lbl, mode){
-  gRoot=pc; gRootLbl=lbl;
+  keyRoot=pc; keyLbl=lbl;
   if(Number.isInteger(mode) && SCALES[mode]) scIdx=mode;
+  chRoot=pc; chLbl=lbl;
   chVoicing=0; scOverlay=null;
   ntRoot=lbl;                                   // Notes follows the shared root
-  activateRoot(document.getElementById('g-roots'), gRoot);
+  activateRoot(document.getElementById('g-roots'), keyRoot);
   // the drill header's key picker tracks the same root
-  { const dk=document.getElementById('drill-ctx-key'); if(dk) activateRoot(dk, gRoot); }
-  renderActiveContext();
+  { const dk=document.getElementById('drill-ctx-key'); if(dk) activateRoot(dk, keyRoot); }
+  renderActiveContext(); updateGlobalPlay();   // the cadence button names the key's degrees
   saveState();
 }
-buildRootBtns(document.getElementById('g-roots'), gRoot, (pc,r)=>{ setKey(pc,r); });
+buildRootBtns(document.getElementById('g-roots'), keyRoot, (pc,r)=>{ setKey(pc,r); });
 
 function setGMode(m){ gMode=m;
   const on=document.getElementById(m==='names'?'g-names':'g-deg'), off=document.getElementById(m==='names'?'g-deg':'g-names');
@@ -124,12 +127,13 @@ function globalPlay(){
   const boardEl=document.getElementById('board');
   if(currentTab==='harmony'){
     if(isBoardMode('triads')){ const v=currentTriadVoicing(); animArpMidi(boardEl, v.midis); }
-    else if(hView==='arp'){ const q=QUALITIES[chQual]; animRun(boardEl, 48+gRoot, q.iv.concat([12])); }   // run the arpeggio melodically up the neck
+    else if(hView==='arp'){ const q=QUALITIES[chQual]; animRun(boardEl, 48+chRoot, q.iv.concat([12])); }   // run the arpeggio melodically up the neck
     else { const v=currentChordVoicing(); animArpMidi(boardEl, v.midis); }
-  } else if(currentTab==='scales' && scView==='scale'){ const s=SCALES[scIdx]; animRun(boardEl, 48+gRoot, s.iv.concat([12])); }
+  } else if(currentTab==='scales' && scView==='scale'){ const s=SCALES[scIdx]; animRun(boardEl, 48+keyRoot, s.iv.concat([12])); }
   else if(currentTab==='circle'){
-    const cofMinor=ctxCofMinor(), pc=gRoot, b=48+pc, iv=cofMinor?[0,3,7]:[0,4,7], bt=0.5;  // fixed cadence pace, independent of the tempo
-    [0,5,7,12].forEach((off,i)=>{ const base=b+off; iv.forEach((x,j)=>pluck(base+x, i*bt + j*0.018, Math.max(0.9, bt*1.4))); });
+    // the key's own I–IV–V–I, at a fixed pace independent of the tempo
+    const b=48+keyRoot, bt=0.5;
+    keyCadence().forEach((c,i)=>{ const base=b+c.off; c.iv.forEach((x,j)=>pluck(base+x, i*bt + j*0.018, Math.max(0.9, bt*1.4))); });
   }
 }
 function updateGlobalPlay(){
@@ -138,8 +142,10 @@ function updateGlobalPlay(){
     // nothing to "listen" to in the notes view
     b.hidden = currentTab==='scales' && scView==='notes';
     const cadence = currentTab==='circle';
-    b.innerHTML='&#9654; '+t(cadence?'b_cadence':'b_listen');
-    const tip=t(cadence?'b_cadence':'b_listen_tip');
+    // the cadence names the key's own degrees: i–iv–v in A minor, not I–IV–V
+    const cad=t('b_cadence').replace('{cad}', keyCadenceName());
+    b.innerHTML='&#9654; '+(cadence?cad:t('b_listen'));
+    const tip=cadence?cad:t('b_listen_tip');
     b.setAttribute('aria-label', tip); b.title=tip;
   }
   const lp=document.getElementById('g-loop');

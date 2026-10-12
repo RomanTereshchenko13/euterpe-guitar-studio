@@ -177,8 +177,8 @@ function earReview(){
   if(ear.type==='interval') return [{ label:t('view_chords'),
     open:()=>{ openReference('harmony','chords'); setGMode('deg'); } }];
   const qis=[...new Set(ear.missed.map(c=>c.qi))];
-  return qis.map(qi=>({ label:noteTxt(gRootLbl)+(QUALITIES[qi].short||''),
-    open:()=>{ chQual=qi; chVoicing=0; chTriads=false; buildChQuals(); buildArpQuals(); openReference('harmony','chords'); } }));
+  return qis.map(qi=>({ label:noteTxt(keyLbl)+(QUALITIES[qi].short||''),
+    open:()=>{ chVoicing=0; chTriads=false; setChord(keyRoot, keyLbl, qi); openReference('harmony','chords'); } }));
 }
 // re-localize an in-flight prompt on a language switch
 function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPrompt(); }

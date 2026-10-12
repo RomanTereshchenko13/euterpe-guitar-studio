@@ -117,8 +117,8 @@ function spTick(time, count){
     if(slot===0) kickHit(time, 1);
     if(slot===4) kickHit(time, 0.9);
     if(backbeat) snareHit(time, spAccent ? 1.0 : 0.8);
-    if(slot===0) bassNote(time, 36+gRoot, b*1.9, 0.95);
-    if(slot===4) bassNote(time, 36+gRoot+fifthInterval(chQual), b*1.7, 0.8);
+    if(slot===0) bassNote(time, 36+chRoot, b*1.9, 0.95);
+    if(slot===4) bassNote(time, 36+chRoot+fifthInterval(chQual), b*1.7, 0.8);
   }
   if(spClick && beatPos) metroClick(time, slot===0);              // beat-reference click
   enqueueVisual(time, ()=>spHighlightSlot(slot));
@@ -132,7 +132,7 @@ function renderStrum(){
   const sw=document.getElementById('sp-swings');
   if(sw) sw.innerHTML=SP_SWINGS.map((s,i)=>`<button type="button" class="btn sp-swing${i===spSwing?' active':''}" data-i="${i}" aria-pressed="${i===spSwing}">${spName(s)}</button>`).join('');
   const nm=document.getElementById('sp-name'); if(nm) nm.textContent=spName(STRUM_PATTERNS[spIdx]);
-  const ch=document.getElementById('sp-chord'); if(ch) ch.textContent=t('sp_chord')+' · '+noteTxt(gRootLbl)+QUALITIES[chQual].short;
+  const ch=document.getElementById('sp-chord'); if(ch) ch.textContent=t('sp_chord')+' · '+noteTxt(chLbl)+QUALITIES[chQual].short;
   renderStrumGrid();
   const toggle=(id,on,label)=>{ const el=document.getElementById(id); if(!el) return;
     el.textContent=t(label); el.classList.toggle('active', on); el.setAttribute('aria-pressed', on?'true':'false'); };

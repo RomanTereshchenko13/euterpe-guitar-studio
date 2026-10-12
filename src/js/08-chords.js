@@ -41,19 +41,24 @@ function labClass(lab){
 }
 /* ---- the persisted musical state ----
    A small set of top-level lets, each next to the view that owns it, all saved through
-   saveState()/loadState() with a bounds-checked restore:
-     context   : gRoot, gRootLbl (root) + scIdx (mode)   (set via setKey)
+   savedFields() (12-toolbar-state.js) with a bounds-checked restore:
+     key       : keyRoot, keyLbl + scIdx (its scale)          (set via setKey)
+     chord     : chRoot, chLbl + chQual, chVoicing, chTriads   (set via setChord)
      display   : gMode (note-names vs degrees)
      view      : hView (chords|arp), scView (scale|notes)
-     chords    : chQual, chVoicing, chTriads
      triads    : trSet, trInv                      (the Chord-tones Triads toggle)
      scales    : scPos, scOverlay
      notes     : ntFilter, ntRoot
-     transport : tempo, lefty, bassOn, grooveOn, seqLoopOn, seq[]
+     transport : tempo, lefty, bassOn, grooveOn, seqLoopOn, seq[] (the progression)
      ui        : lang, currentTab, tuningIdx, fretRangeIdx, toolbarOpen
-   The circle's selection is derived from (gRoot, scIdx), never stored. */
+   The key is what Scales, the circle and Notes show; the chord is what Harmony shows,
+   the band loops and "play over this" reads. A new key brings the chord to its tonic
+   root (quality kept); a degree of the key, a progression step or a scale's chord moves
+   the chord and leaves the key alone. The circle's selection is derived from
+   (keyRoot, scIdx), never stored. */
 /* gMode is the note-name/degree display toggle, not the musical mode (that is scIdx) */
-let gRoot=9, gRootLbl='A', gMode='names';
+let keyRoot=9, keyLbl='A', gMode='names';
+let chRoot=9, chLbl='A';
 let chQual=1;
 let chVoicing=0;   // index of the selected voicing card (open / E-barre / A-barre / computed)
 let chShapesExpanded=false;   // collapsed by default: show the first few shapes, expand for the rest
@@ -64,7 +69,46 @@ function chDegClass(iv){ if(iv===0)return'd-root'; if(iv===3||iv===4)return'd-th
 /* The chord the "Play over this" suggester reacts to: the chosen root + quality,
    shared by Chord tones (and its triads) and Arpeggio. */
 function currentHarmonyChord(){
-  const q=QUALITIES[chQual]; return {rootPc:gRoot, rootLbl:gRootLbl, short:q.short, pcs:q.iv.map(iv=>mod(gRoot+iv,12))};
+  const q=QUALITIES[chQual]; return {rootPc:chRoot, rootLbl:chLbl, short:q.short, pcs:q.iv.map(iv=>mod(chRoot+iv,12))};
+}
+
+/* ---- the key's chords ----
+   The seven triads of the key, as degrees: roman numeral (♭/♯ against the major scale,
+   lower case for minor, ° dim, + aug), the root spelled in the key, and the quality
+   index. A 5- or 6-note scale has no seven chords of its own, so it borrows its
+   family's (major or natural minor). */
+const ROMAN=['I','II','III','IV','V','VI','VII'];
+function keyDegrees(){
+  const s=SCALES[scIdx].iv, sc = s.length===7 ? s : (isMajorFamily(scIdx) ? MAJ_IV : MIN_IV);
+  return diatonicTriads(keyRoot, sc).map(c=>{
+    const off=sc[c.deg]-MAJ_IV[c.deg];
+    let r=ROMAN[c.deg]; if(c.iv[1]===3) r=r.toLowerCase();
+    r=(off<0?'♭':off>0?'♯':'')+r+(c.suf==='dim'?'°':c.suf==='aug'?'+':'');
+    return { deg:c.deg, off:sc[c.deg], roman:r, rootPc:c.rootPc, lbl:noteAscii(spellNote(keyLbl, c.rootPc, c.deg+1)), qi:triadQi(c.iv) };
+  });
+}
+/* The key's cadence, I–IV–V–I from its own chords: i–iv–v in natural minor, i–iv–V in
+   harmonic minor, I–IV–v in Mixolydian. Returns [{off, iv}]: semitones above the
+   tonic, and the triad. */
+function keyCadence(){
+  const d=keyDegrees();
+  return [0,3,4,0].map((k,i)=>({ off: i===3 ? 12 : d[k].off, iv:QUALITIES[d[k].qi].iv, roman:d[k].roman }));
+}
+function keyCadenceName(){ return keyCadence().slice(0,3).map(c=>c.roman).join('–'); }
+/* The one way the chord changes without the key: a degree, a progression step, a
+   scale's chord, the circle's tonic. Paints only what is on screen. */
+function setChord(pc, lbl, qi){
+  chRoot=pc; chLbl=lbl; chQual=qi;
+  renderActiveContext();
+}
+/* the degree row (Harmony): the chord's place in the key, one tap to another degree */
+function renderDegrees(){
+  const c=document.getElementById('h-degrees'); if(!c) return;
+  c.innerHTML=keyDegrees().map(d=>{
+    const on=d.rootPc===chRoot;
+    return `<button class="btn dia${on?' active':''}" data-deg="${d.deg}" aria-pressed="${on}">`+
+      `<span class="deg-rn">${d.roman}</span> ${noteTxt(d.lbl)}${QUALITIES[d.qi].short}</button>`;
+  }).join('');
 }
 /* Only the basic tier shows by default; sevenths and extensions sit behind "more".
    They reveal themselves when the active quality lives in them, so the selection is
@@ -96,19 +140,19 @@ function buildChQuals(){
 }
 function renderChords(){
   const q=QUALITIES[chQual];
-  const notes=q.iv.map((iv,i)=>spellNote(gRootLbl,(gRoot+iv)%12,q.deg[i])).join(' – ');
+  const notes=q.iv.map((iv,i)=>spellNote(chLbl,(chRoot+iv)%12,q.deg[i])).join(' – ');
   const degs=q.lab.join('  ');
-  document.getElementById('ch-info').innerHTML=`<div class="big">${noteTxt(gRootLbl)}${q.short} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
+  document.getElementById('ch-info').innerHTML=`<div class="big">${noteTxt(chLbl)}${q.short} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
   renderChordDiagram();
   renderChShape();
   if(triadsOn()) renderTriads();
   // the shared board, only when this is the active view
   if(isBoardMode('chords')){
-    const map={}; q.iv.forEach((iv,i)=>{ map[(gRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
+    const map={}; q.iv.forEach((iv,i)=>{ map[(chRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
     const shape=shapeOnNeck();
     paintBoard((pc,si,f)=>{
       const m=map[pc]; if(m===undefined) return null;
-      const d=makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
+      const d=makeDot(labClass(m.lab), gMode==='names'?spellNote(chLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
       if(shape && shape.cells.has(si+'_'+f)) d.classList.add('in-shape');
       return d;
     }, chordLegendHTML(), t('ch_hint'), shape && shape.win);
@@ -140,17 +184,17 @@ function buildArpPos(){
 }
 function renderArp(){
   const q=QUALITIES[chQual];
-  const notes=q.iv.map((iv,i)=>spellNote(gRootLbl,(gRoot+iv)%12,q.deg[i])).join(' – ');
+  const notes=q.iv.map((iv,i)=>spellNote(chLbl,(chRoot+iv)%12,q.deg[i])).join(' – ');
   const degs=q.lab.join('  ');
   const info=document.getElementById('arp-info');
-  if(info) info.innerHTML=`<div class="big">${noteTxt(gRootLbl)}${q.short} ${t('arp_word')} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
+  if(info) info.innerHTML=`<div class="big">${noteTxt(chLbl)}${q.short} ${t('arp_word')} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
   if(isBoardMode('arp')){
-    const map={}; q.iv.forEach((iv,i)=>{ map[(gRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
+    const map={}; q.iv.forEach((iv,i)=>{ map[(chRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
     const win=boxWindow(arpPos);
     paintBoard((pc,si,f)=>{
       const m=map[pc]; if(m===undefined) return null;
       if(win && (f<win[0]||f>win[1])) return null;
-      return makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
+      return makeDot(labClass(m.lab), gMode==='names'?spellNote(chLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
     }, chordLegendHTML(), t('arp_hint'), win);
   }
   renderSuggester();
@@ -234,9 +278,9 @@ function chordVoicings(rootPc, short, ivs){
    real MIDI (low->high) plus the pitch classes to light on the board. */
 function currentChordVoicing(){
   const q=QUALITIES[chQual];
-  const list=chordVoicings(gRoot, q.short, q.iv);
+  const list=chordVoicings(chRoot, q.short, q.iv);
   if(!list.length){                                   // safety net: stacked from the root
-    const base=48+gRoot, midis=q.iv.map(iv=>base+iv);
+    const base=48+chRoot, midis=q.iv.map(iv=>base+iv);
     return {midis, pcs:[...new Set(midis.map(m=>mod(m,12)))], list, idx:0};
   }
   const idx=Math.max(0, Math.min(chVoicing, list.length-1));
@@ -339,9 +383,9 @@ function voicingCaption(v){
 function renderChordDiagram(){
   const cont=document.getElementById('ch-diagram');
   const q=QUALITIES[chQual], short=q.short;
-  const funcMap={}; q.iv.forEach((iv,i)=>{ funcMap[mod(gRoot+iv,12)]=labClass(q.lab[i]); });
-  const list=chordVoicings(gRoot, short, q.iv);
-  if(!list.length){ cont.innerHTML=`<div class="chordbox"><div class="cb-name">${noteTxt(gRootLbl)}${short}</div><div class="cb-cap">${t('cd_na')}</div></div>`; return; }
+  const funcMap={}; q.iv.forEach((iv,i)=>{ funcMap[mod(chRoot+iv,12)]=labClass(q.lab[i]); });
+  const list=chordVoicings(chRoot, short, q.iv);
+  if(!list.length){ cont.innerHTML=`<div class="chordbox"><div class="cb-name">${noteTxt(chLbl)}${short}</div><div class="cb-cap">${t('cd_na')}</div></div>`; return; }
   if(chVoicing>list.length-1) chVoicing=0;             // clamp after a quality change
   // A few shapes by default; "More shapes" reveals the rest — but the selected shape
   // always shows, or its highlight would vanish while Listen / Loop still use it.
@@ -349,7 +393,7 @@ function renderChordDiagram(){
   cont.innerHTML = list.map((v,i)=>{
     const hide = collapsed && i>=CHORD_SHAPES_COLLAPSED;
     return `<button type="button" class="chordbox${i===chVoicing?' sel':''}" data-v="${i}" aria-pressed="${i===chVoicing}"${hide?' hidden':''}>`+
-      `<div class="cb-name">${noteTxt(gRootLbl)}${short}</div>${chordBoxSVG(v, funcMap)}`+
+      `<div class="cb-name">${noteTxt(chLbl)}${short}</div>${chordBoxSVG(v, funcMap)}`+
       `<div class="cb-cap">${voicingCaption(v)}</div>${i===chVoicing?`<div class="cb-plays">${t('cd_plays')}</div>`:''}</button>`;
   }).join('');
   const more=document.getElementById('cd-more');

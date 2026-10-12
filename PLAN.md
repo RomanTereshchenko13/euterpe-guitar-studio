@@ -148,16 +148,17 @@ later step gets smaller after it.
       is never overwritten, and if its key can't be written it rides with the settings. Only the
       view on screen paints (controls and board); the others repaint when shown. The wiring file
       is eight focused `15-*` files. No subscription system was needed.
-
-### 6 — Separate key from chord (the model) · M · medium risk
-- [ ] `key = {root, scale}` and `chord = {root, quality}` as distinct state; chord defaults to
-      the key's tonic chord; diatonic chords selectable as degrees of the key.
-- [ ] Each view's reading defined explicitly: Harmony shows the chord, Scales the key, the
-      circle the key with the chord highlighted. "Listen" on the key plays its real cadence
-      (i–iv–v in minor, not "I–IV–V").
-- [ ] A **progression** (presets or user-built) is state of its own, saved, and readable by the
-      Rhythm guitar drill (step 9).
-- [ ] _Data:_ saves migrate additively (old `gRoot` → key root + chord root).
+- [x] **Key and chord separated** — the key (`keyRoot`/`keyLbl` + `scIdx`) is what Scales, the
+      circle and Notes show; the chord (`chRoot`/`chLbl` + `chQual`) is what Harmony shows, the
+      band loops and "play over this" reads. A new key brings the chord to its tonic root
+      (quality kept); a degree of the key (Harmony's new "Chords in key" row), a
+      progression step, a scale's chord or the circle's "Open in chords" moves the chord and
+      leaves the key alone. The circle rings the chord when it isn't the tonic. The cadence
+      button plays and names the key's own I–IV–V–I (i–iv–v in natural minor, i–iv–V in
+      harmonic minor). The progression (`seq`, saved) no longer moves the key while it plays,
+      and presets are spelled in the key; the Rhythm guitar drill (step 9) reads `seq`.
+      _Data:_ the key keeps its save names (`gRoot`, `gRootLbl`); `chRoot`/`chLbl` are new, and
+      an older save's root becomes the chord root too (compat checks it against every fixture).
 
 ### 7 — Registry owns the drill lifecycle · S–M · low risk
 Smaller now that fewer drills remain.
