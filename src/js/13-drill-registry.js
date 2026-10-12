@@ -189,6 +189,18 @@ function sessNs(drillId){
   return i<0 ? s : s.slice(0,i);
 }
 
+/* A finished drill's way back to what teaches the misses: "Review on the neck" and one
+   button per missed thing, each {label, open} where open() goes to that Reference view.
+   Nothing missed, no row. */
+function drillReviewHTML(items){
+  if(!items.length) return '';
+  return '<div class="drill-review"><span class="ctrl-label">'+t('sum_review')+'</span><div class="group">'+
+    items.map((it,i)=>'<button type="button" class="btn dia" data-rv="'+i+'">'+it.label+' →</button>').join('')+'</div></div>';
+}
+function wireDrillReview(host, items){
+  host.querySelectorAll('[data-rv]').forEach(b=>{ b.onclick=()=>items[+b.dataset.rv].open(); });
+}
+
 // show the practice home and hide every drill area
 function showDrillHome(){
   const home=document.getElementById('practice-home');

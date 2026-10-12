@@ -123,16 +123,16 @@ later step gets smaller after it.
       15 % rather than delete the why-comments that remain); the smoke suite's CSS pins are one
       table. The bundle is identical apart from the changelog and whitespace;
       it shrank 380 → 368 KB (102 → 97 KB gzipped).
-
-### 3 — Quick UI fixes · S · low risk
-- [ ] **Neck auto-scroll:** when a board has an active window (scale position, arpeggio box,
-      chord shape, drill box), scroll it into view — smoothly, only when it is off-screen, never
-      while the user is dragging the neck. One helper in `07-render-shared.js`.
-- [ ] Section headings above the content they name (heading → sub-view tabs → neck).
-- [ ] Chord-shape cards look selectable (selected state + "plays this voicing").
-- [ ] Practice: hide the progress card until there is something to show.
-- [ ] Drill summaries link back to the Reference view that teaches what was missed (notes →
-      Scales ▸ Notes, intervals → Harmony ▸ Chord tones).
+- [x] **Quick UI fixes** — the neck auto-scrolls to a changed window (scale position, arpeggio
+      box, selected chord shape, timing drill box): smoothly, only when off-screen, never while
+      held or flung (`revealFrets` in `07-render-shared.js`). Phones now start on All frets;
+      a saved zoom that can't hold the picked box gives way to the whole neck for that paint
+      (`withFretsFor`), so a box is never an empty board. The Harmony / Scales heading sits above
+      the view switch and neck. Shape cards carry a radio mark, the selected one says it plays
+      in Listen, a click strums it and rings its notes on the neck (standard tuning only). The
+      progress card hides until there is a run. Note-naming and ear summaries end with "Review
+      on the neck" buttons per miss (note → Scales ▸ Notes lit on it; interval → Chord tones
+      with Intervals shown; chord quality → Chord tones on it, in the player's key).
 
 ### 4 — Compatibility fixtures · S · low risk (before 5 and 7)
 - [ ] Capture real saves from past schemas (and share links, if they survive step 1) into

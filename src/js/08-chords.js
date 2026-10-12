@@ -105,10 +105,13 @@ function renderChords(){
   // the shared board, only when this is the active view
   if(isBoardMode('chords')){
     const map={}; q.iv.forEach((iv,i)=>{ map[(gRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
+    const shape=shapeOnNeck();
     paintBoard((pc,si,f)=>{
       const m=map[pc]; if(m===undefined) return null;
-      return makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
-    }, chordLegendHTML(), t('ch_hint'));
+      const d=makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
+      if(shape && shape.cells.has(si+'_'+f)) d.classList.add('in-shape');
+      return d;
+    }, chordLegendHTML(), t('ch_hint'), shape && shape.win);
   }
   renderSuggester();
 }
@@ -148,7 +151,7 @@ function renderArp(){
       const m=map[pc]; if(m===undefined) return null;
       if(win && (f<win[0]||f>win[1])) return null;
       return makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
-    }, chordLegendHTML(), t('arp_hint'));
+    }, chordLegendHTML(), t('arp_hint'), win);
   }
   renderSuggester();
 }
@@ -239,6 +242,16 @@ function currentChordVoicing(){
   const idx=Math.max(0, Math.min(chVoicing, list.length-1));
   const midis=voicingMidi(list[idx]);
   return {midis, pcs:[...new Set(midis.map(m=>mod(m,12)))], list, idx};
+}
+/* The selected shape card on the neck: its cells ("si_fret", board rows run high → low)
+   and its fret window. The cards are a standard-tuning reference, so on any other
+   tuning their frets would mark the wrong notes — null there. */
+function shapeOnNeck(){
+  if(OPEN_MIDI.join()!==STD_LOW6_MIDI.slice().reverse().join()) return null;
+  const {list, idx}=currentChordVoicing(), v=list[idx]; if(!v) return null;
+  const cells=new Set(), played=[];
+  v.frets.forEach((fr,li)=>{ if(fr!=null){ cells.add((5-li)+'_'+fr); played.push(fr); } });
+  return played.length ? {cells, win:[Math.min(...played), Math.max(...played)]} : null;
 }
 /* One 4-fret window [base, base+3]: on each string the lowest fret that is a chord
    tone, then leading strings muted until the bass is the root. Returns the frets
@@ -337,7 +350,7 @@ function renderChordDiagram(){
     const hide = collapsed && i>=CHORD_SHAPES_COLLAPSED;
     return `<button type="button" class="chordbox${i===chVoicing?' sel':''}" data-v="${i}" aria-pressed="${i===chVoicing}"${hide?' hidden':''}>`+
       `<div class="cb-name">${noteTxt(gRootLbl)}${short}</div>${chordBoxSVG(v, funcMap)}`+
-      `<div class="cb-cap">${voicingCaption(v)}</div></button>`;
+      `<div class="cb-cap">${voicingCaption(v)}</div>${i===chVoicing?`<div class="cb-plays">${t('cd_plays')}</div>`:''}</button>`;
   }).join('');
   const more=document.getElementById('cd-more');
   if(more){

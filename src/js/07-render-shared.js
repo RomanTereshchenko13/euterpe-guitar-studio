@@ -73,6 +73,52 @@ function renderBoard(boardEl, cellFn){
   // hint that the neck scrolls (only the wide "All frets" view overflows)
   const sc=boardEl.closest('.scroll'); if(sc){ sc.classList.toggle('scrollable', sc.scrollWidth > sc.clientWidth + 1); }
 }
+/* ---- neck auto-scroll ----
+   A board with an active window (scale position, arpeggio box, chord shape, drill box)
+   brings it into view when the window changes: smoothly, only when it is off-screen, and
+   never while the player holds or flings the neck. A repaint of the same window leaves
+   the neck where the player put it. */
+const NECK_FLING_MS = 700;   // a released swipe keeps scrolling for about this long
+function neckHeld(sc){ return !!sc._held || Date.now() < (sc._heldUntil||0); }
+(function wireNeckHold(){
+  if(typeof document==='undefined') return;
+  document.querySelectorAll('.scroll').forEach(sc=>{
+    const hold=()=>{ sc._held=true; }, release=()=>{ sc._held=false; sc._heldUntil=Date.now()+NECK_FLING_MS; };
+    ['pointerdown','touchstart'].forEach(ev=>sc.addEventListener(ev, hold, {passive:true}));
+    ['pointerup','pointercancel','touchend','touchcancel','wheel'].forEach(ev=>sc.addEventListener(ev, release, {passive:true}));
+  });
+})();
+/* A zoomed fret range that can't hold the view's active window gives way to the whole
+   neck for that one paint, so a picked box never lands on an empty board. The saved
+   range is untouched; FRET_LO/HI read the override only inside paint(). */
+function withFretsFor(win, paint){
+  const r=FRET_RANGES[fretRangeIdx];
+  fretZoomOff = !!win && (win[0] < (r.lo<=1 ? 0 : r.lo) || win[1] > r.hi);
+  try{ paint(); } finally { fretZoomOff=false; }
+}
+/* win = [loFret, hiFret] (fret 0 = the open column) or null for the whole neck; call it
+   inside the withFretsFor() that painted the board */
+function revealFrets(boardEl, win){
+  const sc=boardEl && boardEl.closest('.scroll'); if(!sc || !sc.clientWidth) return;   // hidden or jsdom
+  const lo0=FRET_LO(), showOpen=lo0<=1;
+  const key = win ? [win[0],win[1],lo0,FRET_HI(),lefty].join(':') : '';
+  if(sc.dataset.win===key) return;
+  sc.dataset.win=key;
+  if(!win || neckHeld(sc) || sc.scrollWidth <= sc.clientWidth+1) return;
+  const lo=Math.max(win[0], showOpen?0:lo0), hi=Math.min(win[1], FRET_HI()); if(lo>hi) return;
+  // a row's columns: label, [open cell, nut,] then one cell per fret from lo0
+  const row=boardEl.querySelector('.srow'); if(!row) return;
+  const col=f=>row.children[f===0 ? 1 : f-lo0+(showOpen?3:1)];
+  const a=col(lo), b=col(hi); if(!a || !b) return;
+  // measured, not computed, so the mirrored left-handed neck needs no special case
+  const ra=a.getBoundingClientRect(), rb=b.getBoundingClientRect(), base=sc.getBoundingClientRect().left-sc.scrollLeft;
+  const left=Math.min(ra.left,rb.left)-base, right=Math.max(ra.right,rb.right)-base, view=sc.clientWidth;
+  if(left>=sc.scrollLeft && right<=sc.scrollLeft+view) return;
+  const pad=16;
+  const x = right-left+2*pad <= view ? (left+right-view)/2      // fits: centre it
+          : lefty ? right-view+pad : left-pad;                   // too wide: lead with the low frets
+  sc.scrollTo({ left:Math.max(0, Math.round(x)), behavior: motionOK() ? 'smooth' : 'auto' });
+}
 const INLAY_SINGLE = new Set(DOTS.filter(f=>f!==12&&f!==24));
 const INLAY_DOUBLE = new Set([12,24]);
 /* swipe affordance (phone): a control row that overflows its track fades its right
@@ -145,7 +191,7 @@ function wirePlay(boardEl){
 /* ---- one shared board ----
    Every board view paints into #board. isBoardMode() says whether a render function
    owns it right now (so cross-view passes paint once); paintBoard() draws the board,
-   numbers, legend and hint. */
+   numbers, legend and hint, and brings the view's active window (or null) into view. */
 function isBoardMode(mode){
   if(mode==='chords')   return currentTab==='harmony' && hView==='chords' && !triadsOn();
   if(mode==='triads')   return currentTab==='harmony' && hView==='chords' && triadsOn();
@@ -154,9 +200,13 @@ function isBoardMode(mode){
   if(mode==='notes')    return currentTab==='scales'  && scView==='notes';
   return false;
 }
-function paintBoard(cellFn, legendHTML, hintHTML){
-  renderBoard(document.getElementById('board'), cellFn);
-  renderNums(document.getElementById('nums'));
+function paintBoard(cellFn, legendHTML, hintHTML, win){
+  const board=document.getElementById('board');
+  withFretsFor(win, ()=>{
+    renderBoard(board, cellFn);
+    renderNums(document.getElementById('nums'));
+    revealFrets(board, win || null);
+  });
   document.getElementById('legend').innerHTML = legendHTML || '';
   document.getElementById('hint').innerHTML = hintHTML || '';
 }

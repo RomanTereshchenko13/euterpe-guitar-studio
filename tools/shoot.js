@@ -39,6 +39,8 @@
    reachable from Practice, which is the whole point of splitting it out. Adds a `-settings` suffix.
    Step 1: pass `triads` to turn on Chord tones' Triads toggle (adds `-triads`), or `tuner` to open
    the one tuner panel (adds `-tuner`; on file:// it is the by-ear strings).
+   Step 3: `pos4` picks Scales position 4 and `shape3` the third chord-shape card (adds
+   `-pos4` / `-shape3`) — on a phone the neck should have scrolled to the window.
 
    Run:  node tools/shoot.js                       # default widths 390 768 1280, harmony
          node tools/shoot.js 360 414 820           # custom widths
@@ -73,6 +75,7 @@ const a11yArgs = [];                              // accessibility toggles (addi
 let mode = null;                                  // null = reference (default), 'practice' = Practice surface
 let openSettings = false;                         // 'settings' token: expand the Settings panel (A4)
 let openTriads = false, openTuner = false;          // step 1: 'triads' / 'tuner' tokens
+let pickPos = false, pickShape = false;             // step 3: 'pos4' / 'shape3' tokens (neck auto-scroll)
 let meterArg = null;                              // optional time signature (e.g. '3/4') set before the drill starts
 for (const a of process.argv.slice(2)) {
   if (a === 'tabs') tabArgs.push(...PANELS);
@@ -81,6 +84,8 @@ for (const a of process.argv.slice(2)) {
   else if (a === 'settings') openSettings = true;          // A4: expand the Settings disclosure
   else if (a === 'triads') openTriads = true;              // step 1: Chord tones' Triads toggle
   else if (a === 'tuner') openTuner = true;                // step 1: the one tuner panel
+  else if (a === 'pos4') pickPos = true;                   // step 3: Scales position 4 (the neck scrolls to it)
+  else if (a === 'shape3') pickShape = true;               // step 3: the third chord-shape card
   else if (/^\d+\/\d+$/.test(a)) meterArg = a;              // time signature, e.g. 3/4 (Phase 7b)
   else if (a === 'practice' || a === 'reference' || a === 'drill' || a === 'session' || a === 'session-report'
            || a === 'changes' || a === 'changes-run'
@@ -133,6 +138,8 @@ function appFor(panel) {
   if (openSettings) clicks.push(`var st=document.getElementById('tb-toggle');if(st)st.click();`);
   if (openTriads) clicks.push(`var tr=document.querySelectorAll('#ch-shape .btn')[1];if(tr)tr.click();`);
   if (openTuner) clicks.push(`var tu=document.getElementById('tb-tuner');if(tu)tu.click();`);
+  if (pickPos) clicks.push(`var p=document.querySelectorAll('#sc-pos .btn')[4];if(p)p.click();`);
+  if (pickShape) clicks.push(`var c=document.querySelectorAll('#ch-diagram .chordbox')[2];if(c)c.click();`);
   // accessibility toggles (additive): flip the colour-blind palette and/or dot shapes
   if (a11yArgs.includes('cbpalette') || a11yArgs.includes('a11y')) clicks.push(`var b=document.getElementById('tb-cbpalette');if(b)b.click();`);
   if (a11yArgs.includes('shapes') || a11yArgs.includes('a11y')) clicks.push(`var b=document.getElementById('tb-shapes');if(b)b.click();`);
@@ -141,7 +148,7 @@ function appFor(panel) {
   if (meterArg) clicks.unshift(`var ms=document.getElementById('tb-meter');if(ms){for(var i=0;i<ms.options.length;i++){if(ms.options[i].textContent==='${meterArg}'||ms.options[i].value==='${meterArg}'){ms.selectedIndex=i;break;}}ms.dispatchEvent(new Event('change'));}`);
   // any non-default capture: dismiss the first-run welcome first so it doesn't block
   // the surface (the no-arg shot keeps it, to capture the onboarding card itself).
-  if (panel || mode || a11yArgs.length || openSettings || openTriads || openTuner) clicks.unshift(`var wc=document.getElementById('wc-got');if(wc)wc.click();`);
+  if (panel || mode || a11yArgs.length || openSettings || openTriads || openTuner || pickPos || pickShape) clicks.unshift(`var wc=document.getElementById('wc-got');if(wc)wc.click();`);
   const switcher = clicks.length
     ? `<script>addEventListener('load',function(){try{${clicks.join('')}}catch(e){}});</script>`
     : '';
@@ -183,7 +190,7 @@ function appFor(panel) {
 
 for (const { w, h } of specs) {
   for (const panel of tabs) {
-    const tag = (panel ? `${w}-${panel}` : `${w}`) + (mode ? '-' + mode : '') + (openSettings ? '-settings' : '') + (openTriads ? '-triads' : '') + (openTuner ? '-tuner' : '') + (a11yArgs.length ? '-' + a11yArgs.join('-') : '');
+    const tag = (panel ? `${w}-${panel}` : `${w}`) + (mode ? '-' + mode : '') + (openSettings ? '-settings' : '') + (openTriads ? '-triads' : '') + (openTuner ? '-tuner' : '') + (pickPos ? '-pos4' : '') + (pickShape ? '-shape3' : '') + (a11yArgs.length ? '-' + a11yArgs.join('-') : '');
     const appCopy = path.join(outDir, `_app_${tag}.html`);
     const wrapper = path.join(outDir, `_wrap_${tag}.html`);
     fs.writeFileSync(appCopy, appFor(panel));
@@ -197,6 +204,8 @@ for (const { w, h } of specs) {
     execFileSync(browser, [
       '--headless=new', '--disable-gpu', '--disable-extensions', '--disable-sync', '--hide-scrollbars', '--force-device-scale-factor=2',
       '--virtual-time-budget=3000',
+      // headless virtual time never advances a smooth scroll: jump, so the shot shows where the neck lands
+      ...(pickPos || pickShape ? ['--force-prefers-reduced-motion'] : []),
       `--screenshot=${out}`, `--window-size=${w},${h}`, fileUrl(wrapper),
     ], { stdio: 'ignore' });
     fs.unlinkSync(wrapper); fs.unlinkSync(appCopy);

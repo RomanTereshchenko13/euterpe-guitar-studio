@@ -14,6 +14,7 @@ const I18N = {
     // the drill header's setup handle, and the ear drills' hint
     drill_setup:'Параметри', ear_hint:'Послухай приклад і обери відповідь. «Ще раз» — скільки завгодно; помилка повернеться до тебе раніше.',
     drill_complete:'Сесію завершено', drill_score:'Рахунок', drill_clean:'Чисто', drill_misses:'Помилки', drill_time:'Час', drill_again:'Ще раз', drill_done:'Готово',
+    sum_review:'Повтори на грифі',
     // one "drill this" label for every reference view
     seam_drill:'Тренувати це →', seam_jam:'Джем над цим', seam_jam_stop:'Зупинити джем',
     // the timed practice session
@@ -40,7 +41,7 @@ const I18N = {
     co_now:'Зараз', co_next:'Далі',
     co_hint:'Акомпануй показаний акорд — змінюй вчасно, поки гурт веде прогресію.',
     tg_prog:'Прогресія', tg_pos:'Позиція',
-    prog_title:'Прогрес', prog_empty:'Ще немає практики — статистика з’явиться, щойно почнеш вправи.',
+    prog_title:'Прогрес',
     prog_accuracy:'Точність', prog_streak:'Найкраща серія', prog_sessions:'Сесій',
     // the progress card
     prog_yours:'Твої вправи', prog_best:'рекорд', prog_runs:'спроб', prog_timing:'таймінг',
@@ -155,7 +156,8 @@ const I18N = {
     cd_barre:'барре, лад', cd_std:'аплікатура для стандартного строю',
     cd_na:'немає простої форми', cd_calc:'обчислена аплікатура', cd_pos:'вище по грифу',
     cd_voicings:'Форми акорду', cd_eshape:'барре у формі E', cd_ashape:'барре у формі A',
-    cd_fret:'лад', cd_pick_hint:'Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»',
+    cd_fret:'лад', cd_pick_hint:'Натисни картку — вона прозвучить, обведеться на грифі й гратиме в «Прослухати» / «Лупа»',
+    cd_plays:'▶ Грає в «Прослухати»',
     cd_more:'Більше форм', cd_less:'Менше форм',
     tr_shapes:'Форми тризвуку',
     shape_full:'Увесь акорд', shape_triads:'Тризвуки', shape_no_triad:'У цього акорду немає тризвуку (немає терції чи квінти).',
@@ -177,6 +179,7 @@ const I18N = {
     drill_quit:'Quit', drill_find_pre:'Find every', drill_find_sub:'Tap every one of them on the neck',
     drill_setup:'Setup', ear_hint:'Listen to the prompt, then pick the answer. Replay as often as you like; a wrong answer comes back sooner.',
     drill_complete:'Session complete', drill_score:'Score', drill_clean:'Clean', drill_misses:'Wrong taps', drill_time:'Time', drill_again:'Again', drill_done:'Done',
+    sum_review:'Review on the neck',
     seam_drill:'Drill this →', seam_jam:'Jam over this', seam_jam_stop:'Stop the jam',
     sess_title:'Practice session', sess_lead:'Say how long you have — the app lines up what is due, runs the clock, and tells you how it went.',
     sess_len:'Length', sess_min:'min', sess_start:'Start session', sess_next:'Next →',
@@ -200,7 +203,7 @@ const I18N = {
     co_now:'Now', co_next:'Next',
     co_hint:'Comp the chord shown — switch on time as the band cycles the progression.',
     tg_prog:'Progression', tg_pos:'Position',
-    prog_title:'Progress', prog_empty:'No practice yet — your stats will appear once you start a drill.',
+    prog_title:'Progress',
     prog_accuracy:'Accuracy', prog_streak:'Best streak', prog_sessions:'Sessions',
     prog_yours:'Your drills', prog_best:'best', prog_runs:'runs', prog_timing:'timing',
     unit_bars:'bars', unit_cpm:'/min',
@@ -313,7 +316,8 @@ const I18N = {
     cd_barre:'barre, fret', cd_std:'fingering for standard tuning',
     cd_na:'no simple shape', cd_calc:'computed voicing', cd_pos:'up the neck',
     cd_voicings:'Chord shapes', cd_eshape:'E-shape barre', cd_ashape:'A-shape barre',
-    cd_fret:'fret', cd_pick_hint:'Tap a card to choose the shape for Listen / Loop',
+    cd_fret:'fret', cd_pick_hint:'Tap a card to hear it, ring it on the neck and use it for Listen / Loop',
+    cd_plays:'▶ Plays in Listen',
     cd_more:'More shapes', cd_less:'Fewer shapes',
     tr_shapes:'Triad shapes',
     shape_full:'Full chord', shape_triads:'Triads', shape_no_triad:'This chord has no triad (no third or no fifth).',

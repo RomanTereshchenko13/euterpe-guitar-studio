@@ -7,7 +7,7 @@
 const DRILL_LEN = 6;
 let drill = null;
 // drill = { queue:[pc…], total, done, correctPrompts, totalWrong, startT, finished,
-//           targetPc, targets:Set("si:f"), wrongThis }
+//           targetPc, targets:Set("si:f"), wrongThis, missed:[pc…] }
 
 function drillShuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=a[i]; a[i]=a[j]; a[j]=tmp; } return a; }
 
@@ -30,7 +30,7 @@ function drillTargetsFor(pc){
 }
 
 function startDrill(){
-  drill={ queue:buildQueue(), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, targetPc:null, targets:null, wrongThis:0 };
+  drill={ queue:buildQueue(), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, targetPc:null, targets:null, wrongThis:0, missed:[] };
   drill.total=drill.queue.length;
   const home=document.getElementById('practice-home'), area=document.getElementById('drill-area'),
         act=document.getElementById('drill-active'), sum=document.getElementById('drill-summary');
@@ -67,7 +67,7 @@ function drillAnswer(si, f){
     pluck(OPEN_MIDI[si]+f);
     if(drill.targets.size===0){
       recordAttempt('note:'+NOTES[drill.targetPc], drill.wrongThis===0);
-      drill.done++; if(drill.wrongThis===0) drill.correctPrompts++;
+      drill.done++; if(drill.wrongThis===0) drill.correctPrompts++; else drill.missed.push(drill.targetPc);
       playCue('correct');
       nextPrompt();
     }
@@ -115,6 +115,9 @@ function renderDrillSummary(elapsed, acc){
   const el=document.getElementById('drill-summary'); if(!el) return;
   const act=document.getElementById('drill-active'); if(act) act.hidden=true;
   const stat=(v,l)=>'<div class="pp-stat"><div class="pp-val">'+v+'</div><div class="pp-lab">'+l+'</div></div>';
+  // each missed note opens Scales ▸ Notes with that note lit (ntRoot), the key untouched
+  const review=drill.missed.map(pc=>({ label:noteTxt(NOTES[pc]),
+    open:()=>{ ntRoot=NOTES[pc]; openReference('scales','notes'); saveState(); } }));
   el.innerHTML='<div class="drill-done-title">'+t('drill_complete')+'</div>'+
     '<div class="pp-stats">'+
       stat(Math.round(acc*100)+'%', t('drill_score'))+
@@ -122,8 +125,10 @@ function renderDrillSummary(elapsed, acc){
       stat(drill.totalWrong, t('drill_misses'))+
       stat(elapsed+'s', t('drill_time'))+
     '</div>'+
+    drillReviewHTML(review)+
     '<div class="drill-actions"><button class="btn play" id="drill-again"></button><button class="btn" id="drill-done"></button></div>';
   el.hidden=false;
+  wireDrillReview(el, review);
   const ag=document.getElementById('drill-again'); if(ag){ ag.textContent=t('drill_again'); ag.onclick=startDrill; }
   const dn=document.getElementById('drill-done');  if(dn){ dn.textContent=t('drill_done');  dn.onclick=exitDrill; }
 }

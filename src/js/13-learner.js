@@ -227,7 +227,11 @@ function trendArrow(dir){ return dir==='up' ? '▲' : dir==='down' ? '▼' : '�
 function renderProgressInto(hostId){
   const host=document.getElementById(hostId); if(!host) return;
   const s=learnerStats();
-  if(!s.seen && !s.sessions){ host.innerHTML='<div class="pp-empty">'+t('prog_empty')+'</div>'; return; }
+  // nothing to show yet: the whole card stands down rather than say "no practice yet"
+  const card=host.closest('.practice-progress-card');
+  const empty=!s.seen && !s.sessions;
+  if(card) card.hidden=empty;
+  if(empty){ host.innerHTML=''; return; }
   const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   let html='';
 

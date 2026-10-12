@@ -31,8 +31,9 @@ const sdScore = scoredRun({
 
 /* the key's scale notes inside the box, walked up then down (turnarounds not repeated),
    so consecutive notes are neighbours. Returns [{si,f,midi}…]. */
+function sdWin(){ return boxWindow(sdPos)||[0,4]; }
 function sdPath(){
-  const s=SCALES[scIdx], win=boxWindow(sdPos)||[0,4], lo=win[0], hi=win[1];
+  const s=SCALES[scIdx], win=sdWin(), lo=win[0], hi=win[1];
   const scPcs=new Set(s.iv.map(iv=>mod(gRoot+iv,12))), pool=[];
   for(let si=0; si<6; si++) for(let f=lo; f<=hi; f++){ const midi=OPEN_MIDI[si]+f; if(scPcs.has(midi%12)) pool.push({si, f, midi}); }
   pool.sort((a,b)=>a.midi-b.midi);
@@ -132,7 +133,7 @@ function sdTick(when, count){
 function renderTiming(){
   if(!sd) return;
   segButtons('sd-subs', SUBDIVS.map(s=>({label:sdSubName(s)})), sdSub, i=>{ sdSub=i; renderSdGrid(); sdRestart(); renderTiming(); });
-  segButtons('sd-pos', ['1','2','3','4','5'].map(label=>({label})), sdPos-1, i=>{ sdPos=i+1; sdPaintScale(); sdRestart(); });
+  segButtons('sd-pos', ['1','2','3','4','5'].map(label=>({label})), sdPos-1, i=>{ sdPos=i+1; sdRenderBoard(); sdRestart(); });
   const tt=document.getElementById('sd-title'); if(tt) tt.textContent=noteTxt(gRootLbl)+' · '+sName(SCALES[scIdx]);
   const nb=document.getElementById('sd-notes'); if(nb){ nb.textContent=t('sd_notes'); nb.classList.toggle('active', sdNotes); nb.setAttribute('aria-pressed', sdNotes?'true':'false'); }
   renderSdGrid();
@@ -160,14 +161,18 @@ function sdHighlightCell(pos){
 }
 function sdRenderBoard(){
   const el=document.getElementById('sd-board'); if(!el) return;
-  renderBoard(el, (pc,si,f)=>{ const d=document.createElement('div'); d.className='dot sd-dot'; d.dataset.si=si; d.dataset.f=f; return d; });
-  renderNums(document.getElementById('sd-nums'));
+  // repainted per box: a zoomed range that can't hold the box gives way to the whole neck
+  withFretsFor(sdWin(), ()=>{
+    renderBoard(el, (pc,si,f)=>{ const d=document.createElement('div'); d.className='dot sd-dot'; d.dataset.si=si; d.dataset.f=f; return d; });
+    renderNums(document.getElementById('sd-nums'));
+    revealFrets(el, sdWin());
+  });
   sdLit=null;
   sdPaintScale();
 }
 /* dim-light the box palette so you always see the shape you're walking (even paused) */
 function sdPaintScale(){
-  const s=SCALES[scIdx], win=boxWindow(sdPos)||[0,4], lo=win[0], hi=win[1];
+  const s=SCALES[scIdx], win=sdWin(), lo=win[0], hi=win[1];
   const scPcs=new Set(s.iv.map(iv=>mod(gRoot+iv,12)));
   document.querySelectorAll('#sd-board .sd-dot').forEach(d=>{
     const si=+d.dataset.si, f=+d.dataset.f, inBox=f>=lo&&f<=hi&&scPcs.has((OPEN_MIDI[si]+f)%12);

@@ -52,7 +52,7 @@ const EAR = {
 
 let ear = null;
 // ear = { type, cfg, queue:[itemKey…], total, done, correctPrompts, totalWrong,
-//         startT, finished, cur, answered }
+//         startT, finished, cur, answered, missed:[cur…] }
 
 function earShuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=a[i]; a[i]=a[j]; a[j]=tmp; } return a; }
 // SRS-weighted queue: due items first, then the rest, each shuffled, capped at the length
@@ -65,7 +65,7 @@ function buildEarQueue(keys, len){
 
 function startEar(type){
   const cfg=EAR[type]; if(!cfg) return;
-  ear={ type, cfg, queue:buildEarQueue(cfg.pool(), cfg.len), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, cur:null, answered:false };
+  ear={ type, cfg, queue:buildEarQueue(cfg.pool(), cfg.len), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, cur:null, answered:false, missed:[] };
   ear.total=ear.queue.length;
   const home=document.getElementById('practice-home'), area=document.getElementById('ear-area'),
         act=document.getElementById('ear-active'), sum=document.getElementById('ear-summary');
@@ -95,7 +95,7 @@ function earAnswer(key){
   ear.answered=true;
   const correct = key===ear.cur.key;
   recordAttempt(ear.cur.key, correct);
-  ear.done++; if(correct) ear.correctPrompts++; else ear.totalWrong++;
+  ear.done++; if(correct) ear.correctPrompts++; else { ear.totalWrong++; ear.missed.push(ear.cur); }
   playCue(correct?'correct':'wrong');
   renderEarAnswered(key, correct);
 }
@@ -154,17 +154,31 @@ function renderEarSummary(elapsed, acc){
   const el=document.getElementById('ear-summary'); if(!el) return;
   const act=document.getElementById('ear-active'); if(act) act.hidden=true;
   const stat=(v,l)=>'<div class="pp-stat"><div class="pp-val">'+v+'</div><div class="pp-lab">'+l+'</div></div>';
+  const review=earReview();
   el.innerHTML='<div class="drill-done-title">'+t('drill_complete')+'</div>'+
     '<div class="pp-stats">'+
       stat(Math.round(acc*100)+'%', t('drill_score'))+
       stat(ear.correctPrompts+' / '+ear.total, t('ear_got'))+
       stat(elapsed+'s', t('drill_time'))+
     '</div>'+
+    drillReviewHTML(review)+
     '<div class="drill-actions"><button class="btn play" id="ear-again"></button><button class="btn" id="ear-done"></button></div>';
   el.hidden=false;
+  wireDrillReview(el, review);
   const type=ear.type;
   const ag=document.getElementById('ear-again'); if(ag){ ag.textContent=t('drill_again'); ag.onclick=()=>startEar(type); }
   const dn=document.getElementById('ear-done');  if(dn){ dn.textContent=t('drill_done');  dn.onclick=exitEar; }
+}
+/* Where the misses are taught: intervals are Chord tones read as intervals (the
+   Intervals display); a missed chord quality opens Chord tones on that quality, in the
+   player's own key. One button per distinct miss. */
+function earReview(){
+  if(!ear || !ear.missed.length) return [];
+  if(ear.type==='interval') return [{ label:t('view_chords'),
+    open:()=>{ openReference('harmony','chords'); setGMode('deg'); } }];
+  const qis=[...new Set(ear.missed.map(c=>c.qi))];
+  return qis.map(qi=>({ label:noteTxt(gRootLbl)+(QUALITIES[qi].short||''),
+    open:()=>{ chQual=qi; chVoicing=0; chTriads=false; buildChQuals(); buildArpQuals(); openReference('harmony','chords'); } }));
 }
 // re-localize an in-flight prompt on a language switch
 function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPrompt(); }

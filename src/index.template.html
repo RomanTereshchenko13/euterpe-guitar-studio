@@ -185,6 +185,18 @@
      reader order meet the neck before the controls that change it. -->
 <!-- The view switch is a lens on the board, inside #board-region so it moves, hides
      and sticks with the neck. -->
+<!-- The board views' headings sit above what they name (heading → view switch → neck),
+     outside #board-region so the sticky phone neck doesn't carry them. -->
+<div class="view-head" id="view-head">
+  <div class="panel-head" id="vh-harmony">
+    <div class="ph-top"><h2 id="harmony-h">Тони акорду на грифі</h2><button class="ph-help" type="button" aria-expanded="false" aria-controls="harmony-p">?</button></div>
+    <p id="harmony-p">Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу.</p>
+  </div>
+  <div class="panel-head" id="vh-scales" hidden>
+    <div class="ph-top"><h2 id="scales-h" data-i18n="sc_h">Гами і моди</h2><button class="ph-help" type="button" aria-expanded="false" aria-controls="scales-p">?</button></div>
+    <p id="scales-p" data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
+  </div>
+</div>
 <div class="board-region" id="board-region">
   <div class="board-lens" id="board-lens">
     <div class="lens-group" id="ctx-view-harmony">
@@ -207,11 +219,6 @@
 <div class="main">
 
   <section class="panel active" id="panel-harmony">
-    <div class="panel-head">
-      <div class="ph-top"><h2 id="harmony-h">Тони акорду на грифі</h2><button class="ph-help" type="button" aria-expanded="false" aria-controls="harmony-p">?</button></div>
-      <p id="harmony-p">Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу.</p>
-    </div>
-
     <div id="sub-chords">
       <div class="row-quals">
         <div class="quals-head">
@@ -252,11 +259,6 @@
   </section>
 
   <section class="panel" id="panel-scales">
-    <div class="panel-head">
-      <div class="ph-top"><h2 id="scales-h" data-i18n="sc_h">Гами і моди</h2><button class="ph-help" type="button" aria-expanded="false" aria-controls="scales-p">?</button></div>
-      <p id="scales-p" data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
-    </div>
-
     <div id="sub-scale">
       <div class="row">
         <span class="ctrl-label" data-i18n="lbl_scale">Гама</span><select id="sc-select"></select>

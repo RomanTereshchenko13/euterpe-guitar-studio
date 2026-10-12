@@ -90,6 +90,7 @@
     grid-template-columns: minmax(0,1fr) 234px;
     grid-template-areas:
       "ctx       ctx"
+      "vhead     vhead"
       "board     board"
       "boardmeta boardmeta"
       "main      aside"
@@ -99,8 +100,10 @@
     align-items: start;
     padding-top: 30px;
   }
-  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "ctx" "board" "boardmeta" "main" "shapes" "extras"; }
+  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "ctx" "vhead" "board" "boardmeta" "main" "shapes" "extras"; }
   #context-bar { grid-area: ctx; }
+  .view-head { grid-area: vhead; }
+  .view-head .panel-head { margin-bottom: 8px; }
   .main { grid-area: main; min-width: 0; margin-top: 22px; }
   body.mode-practice .main { margin-top: 0; }
   #board-region { grid-area: board; }
@@ -111,7 +114,7 @@
   @media (max-width: 940px) {
     .layout, .layout.no-aside {
       grid-template-columns: minmax(0,1fr);
-      grid-template-areas: "ctx" "board" "boardmeta" "main" "shapes" "aside" "extras";
+      grid-template-areas: "ctx" "vhead" "board" "boardmeta" "main" "shapes" "aside" "extras";
     }
     .aside { position: static; margin-top: 22px; }
     #shapes-card { margin-top: 22px; }
@@ -126,12 +129,13 @@
   .ph-help, .drill-help { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 22px; height: 22px; padding: 0; line-height: 1; border: 1px solid var(--border-strong); border-radius: 50%; background: var(--bg-panel); color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; cursor: pointer; }
   .ph-help:hover, .drill-help:hover { color: var(--text); border-color: var(--text-faint); }
   .ph-help.on, .drill-help.on { background: var(--accent); color: #07203a; border-color: var(--accent); }
-  body.help-open .panel.active .panel-head p { display: block; margin-top: 6px; }
+  body.help-open .panel.active .panel-head p, body.help-open .view-head .panel-head p { display: block; margin-top: 6px; }
   .practice-panel { display: none; animation: fade 0.25s ease; }
   body.mode-practice .practice-panel { display: block; }
   #practice-home:not([hidden]) ~ #drill-ctx { display: none; }
   body.mode-practice .panel.active,
   body.mode-practice #context-bar,
+  body.mode-practice .view-head,
   body.mode-practice #board-region,
   body.mode-practice .board-meta,
   body.mode-practice #harmony-extras,
@@ -211,6 +215,7 @@
   .drill-summary { margin-top: 6px; }
   .drill-done-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-bottom: 14px; }
   .drill-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .drill-review { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 16px; }
   .ear-prompt { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; }
   .drill-bar .btn.play { font-size: 14px; padding: 9px 22px; }
   .ear-choices { display: grid; gap: 10px; max-width: 620px; margin: 0 auto; }
@@ -357,6 +362,7 @@
   .srow:nth-child(6) .cell::before { height: 2.8px; }
   .dot { width: 27px; height: 27px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; position: relative; z-index: 1; transition: transform 0.1s; color: #0e1408; box-shadow: 0 1px 3px rgba(0,0,0,0.4); cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   .dot:hover { transform: scale(1.18); }
+  .dot.in-shape { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
   .dot.playing { transform: scale(1.34); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #fff, 0 0 16px 3px rgba(255,255,255,0.55); z-index: 6; }
   .d-root { background: var(--root); }
   .d-third { background: var(--third); }
@@ -485,6 +491,7 @@
       grid-template-columns: minmax(0,1fr) minmax(300px, 46%);
       grid-template-areas:
         "ctx       board"
+        "vhead     board"
         "main      board"
         "shapes    board"
         "aside     board"
@@ -525,14 +532,17 @@
   .cd-head .cd-h { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
   .cd-head .cd-hint { font-size: 11px; color: var(--text-faint); font-style: italic; }
   .chordbox { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px 10px; font-family: inherit; text-align: left; transition: border-color 0.12s, box-shadow 0.12s, background 0.12s; }
-  button.chordbox { cursor: pointer; color: var(--text); }
-  button.chordbox:hover { border-color: var(--text-faint); background: var(--bg-panel-2); }
+  button.chordbox { position: relative; cursor: pointer; color: var(--text); }
+  button.chordbox::after { content: ''; position: absolute; top: 12px; right: 12px; width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--text-faint); }
+  button.chordbox.sel::after { border-color: var(--root); background: var(--root); box-shadow: inset 0 0 0 2px var(--bg-panel); }
+  button.chordbox:hover { border-color: var(--text-faint); background: var(--bg-panel-2); transform: translateY(-1px); }
   button.chordbox:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .chordbox.sel { border-color: var(--root); box-shadow: 0 0 0 2px rgba(107,165,58,0.32); }
   .chordbox.tri { cursor: default; }
   .chordbox .cb-name { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; margin-bottom: 8px; color: var(--text); }
   .chordbox svg { display: block; }
   .chordbox .cb-cap { font-size: 11px; color: var(--text-faint); margin-top: 7px; max-width: 160px; }
+  .chordbox .cb-plays { font-size: 11px; font-weight: 600; color: var(--root); margin-top: 4px; }
   .cd-more { margin-top: 2px; font-size: 12px; padding: 6px 12px; }
   .cd-string { stroke: var(--line-string); stroke-width: 1.3; }
   .cd-fret { stroke: var(--line-fret); stroke-width: 1.3; }
@@ -816,6 +826,16 @@
     </div>
   </div>
 
+<div class="view-head" id="view-head">
+  <div class="panel-head" id="vh-harmony">
+    <div class="ph-top"><h2 id="harmony-h">Тони акорду на грифі</h2><button class="ph-help" type="button" aria-expanded="false" aria-controls="harmony-p">?</button></div>
+    <p id="harmony-p">Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу.</p>
+  </div>
+  <div class="panel-head" id="vh-scales" hidden>
+    <div class="ph-top"><h2 id="scales-h" data-i18n="sc_h">Гами і моди</h2><button class="ph-help" type="button" aria-expanded="false" aria-controls="scales-p">?</button></div>
+    <p id="scales-p" data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
+  </div>
+</div>
 <div class="board-region" id="board-region">
   <div class="board-lens" id="board-lens">
     <div class="lens-group" id="ctx-view-harmony">
@@ -837,11 +857,6 @@
 <div class="main">
 
   <section class="panel active" id="panel-harmony">
-    <div class="panel-head">
-      <div class="ph-top"><h2 id="harmony-h">Тони акорду на грифі</h2><button class="ph-help" type="button" aria-expanded="false" aria-controls="harmony-p">?</button></div>
-      <p id="harmony-p">Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу.</p>
-    </div>
-
     <div id="sub-chords">
       <div class="row-quals">
         <div class="quals-head">
@@ -878,11 +893,6 @@
   </section>
 
   <section class="panel" id="panel-scales">
-    <div class="panel-head">
-      <div class="ph-top"><h2 id="scales-h" data-i18n="sc_h">Гами і моди</h2><button class="ph-help" type="button" aria-expanded="false" aria-controls="scales-p">?</button></div>
-      <p id="scales-p" data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
-    </div>
-
     <div id="sub-scale">
       <div class="row">
         <span class="ctrl-label" data-i18n="lbl_scale">Гама</span><select id="sc-select"></select>
@@ -1888,6 +1898,7 @@ const I18N = {
     drill_quit:'Вийти', drill_find_pre:'Знайди всі', drill_find_sub:'Познач усі такі ноти на грифі',
     drill_setup:'Параметри', ear_hint:'Послухай приклад і обери відповідь. «Ще раз» — скільки завгодно; помилка повернеться до тебе раніше.',
     drill_complete:'Сесію завершено', drill_score:'Рахунок', drill_clean:'Чисто', drill_misses:'Помилки', drill_time:'Час', drill_again:'Ще раз', drill_done:'Готово',
+    sum_review:'Повтори на грифі',
     seam_drill:'Тренувати це →', seam_jam:'Джем над цим', seam_jam_stop:'Зупинити джем',
     sess_title:'Заняття', sess_lead:'Скажи, скільки маєш часу — застосунок збере вправи, які варто повторити, відлічить час і підсумує.',
     sess_len:'Тривалість', sess_min:'хв', sess_start:'Почати заняття', sess_next:'Далі →',
@@ -1911,7 +1922,7 @@ const I18N = {
     co_now:'Зараз', co_next:'Далі',
     co_hint:'Акомпануй показаний акорд — змінюй вчасно, поки гурт веде прогресію.',
     tg_prog:'Прогресія', tg_pos:'Позиція',
-    prog_title:'Прогрес', prog_empty:'Ще немає практики — статистика з’явиться, щойно почнеш вправи.',
+    prog_title:'Прогрес',
     prog_accuracy:'Точність', prog_streak:'Найкраща серія', prog_sessions:'Сесій',
     prog_yours:'Твої вправи', prog_best:'рекорд', prog_runs:'спроб', prog_timing:'таймінг',
     unit_bars:'тактів', unit_cpm:'/хв',
@@ -2023,7 +2034,8 @@ const I18N = {
     cd_barre:'барре, лад', cd_std:'аплікатура для стандартного строю',
     cd_na:'немає простої форми', cd_calc:'обчислена аплікатура', cd_pos:'вище по грифу',
     cd_voicings:'Форми акорду', cd_eshape:'барре у формі E', cd_ashape:'барре у формі A',
-    cd_fret:'лад', cd_pick_hint:'Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»',
+    cd_fret:'лад', cd_pick_hint:'Натисни картку — вона прозвучить, обведеться на грифі й гратиме в «Прослухати» / «Лупа»',
+    cd_plays:'▶ Грає в «Прослухати»',
     cd_more:'Більше форм', cd_less:'Менше форм',
     tr_shapes:'Форми тризвуку',
     shape_full:'Увесь акорд', shape_triads:'Тризвуки', shape_no_triad:'У цього акорду немає тризвуку (немає терції чи квінти).',
@@ -2045,6 +2057,7 @@ const I18N = {
     drill_quit:'Quit', drill_find_pre:'Find every', drill_find_sub:'Tap every one of them on the neck',
     drill_setup:'Setup', ear_hint:'Listen to the prompt, then pick the answer. Replay as often as you like; a wrong answer comes back sooner.',
     drill_complete:'Session complete', drill_score:'Score', drill_clean:'Clean', drill_misses:'Wrong taps', drill_time:'Time', drill_again:'Again', drill_done:'Done',
+    sum_review:'Review on the neck',
     seam_drill:'Drill this →', seam_jam:'Jam over this', seam_jam_stop:'Stop the jam',
     sess_title:'Practice session', sess_lead:'Say how long you have — the app lines up what is due, runs the clock, and tells you how it went.',
     sess_len:'Length', sess_min:'min', sess_start:'Start session', sess_next:'Next →',
@@ -2068,7 +2081,7 @@ const I18N = {
     co_now:'Now', co_next:'Next',
     co_hint:'Comp the chord shown — switch on time as the band cycles the progression.',
     tg_prog:'Progression', tg_pos:'Position',
-    prog_title:'Progress', prog_empty:'No practice yet — your stats will appear once you start a drill.',
+    prog_title:'Progress',
     prog_accuracy:'Accuracy', prog_streak:'Best streak', prog_sessions:'Sessions',
     prog_yours:'Your drills', prog_best:'best', prog_runs:'runs', prog_timing:'timing',
     unit_bars:'bars', unit_cpm:'/min',
@@ -2180,7 +2193,8 @@ const I18N = {
     cd_barre:'barre, fret', cd_std:'fingering for standard tuning',
     cd_na:'no simple shape', cd_calc:'computed voicing', cd_pos:'up the neck',
     cd_voicings:'Chord shapes', cd_eshape:'E-shape barre', cd_ashape:'A-shape barre',
-    cd_fret:'fret', cd_pick_hint:'Tap a card to choose the shape for Listen / Loop',
+    cd_fret:'fret', cd_pick_hint:'Tap a card to hear it, ring it on the neck and use it for Listen / Loop',
+    cd_plays:'▶ Plays in Listen',
     cd_more:'More shapes', cd_less:'Fewer shapes',
     tr_shapes:'Triad shapes',
     shape_full:'Full chord', shape_triads:'Triads', shape_no_triad:'This chord has no triad (no third or no fifth).',
@@ -2227,8 +2241,10 @@ const FRET_RANGES = [
   {lo:9, hi:12, label:'9–12'},
 ];
 let fretRangeIdx = 0;
-function FRET_LO(){ return FRET_RANGES[fretRangeIdx].lo; }
-function FRET_HI(){ return FRET_RANGES[fretRangeIdx].hi; }
+let fretZoomOff = false;
+function fretRange(){ return FRET_RANGES[fretZoomOff ? 0 : fretRangeIdx]; }
+function FRET_LO(){ return fretRange().lo; }
+function FRET_HI(){ return fretRange().hi; }
 let capo = 0;
 let tempo = 90;
 function beat(){ return 60/tempo; }
@@ -2829,6 +2845,40 @@ function renderBoard(boardEl, cellFn){
   const panel=boardEl.closest('.board'); if(panel){ panel.style.minWidth=boardWidth()+'px'; panel.classList.toggle('lefty', lefty); panel.classList.toggle('anim', stag); }
   const sc=boardEl.closest('.scroll'); if(sc){ sc.classList.toggle('scrollable', sc.scrollWidth > sc.clientWidth + 1); }
 }
+const NECK_FLING_MS = 700;   
+function neckHeld(sc){ return !!sc._held || Date.now() < (sc._heldUntil||0); }
+(function wireNeckHold(){
+  if(typeof document==='undefined') return;
+  document.querySelectorAll('.scroll').forEach(sc=>{
+    const hold=()=>{ sc._held=true; }, release=()=>{ sc._held=false; sc._heldUntil=Date.now()+NECK_FLING_MS; };
+    ['pointerdown','touchstart'].forEach(ev=>sc.addEventListener(ev, hold, {passive:true}));
+    ['pointerup','pointercancel','touchend','touchcancel','wheel'].forEach(ev=>sc.addEventListener(ev, release, {passive:true}));
+  });
+})();
+function withFretsFor(win, paint){
+  const r=FRET_RANGES[fretRangeIdx];
+  fretZoomOff = !!win && (win[0] < (r.lo<=1 ? 0 : r.lo) || win[1] > r.hi);
+  try{ paint(); } finally { fretZoomOff=false; }
+}
+function revealFrets(boardEl, win){
+  const sc=boardEl && boardEl.closest('.scroll'); if(!sc || !sc.clientWidth) return;   
+  const lo0=FRET_LO(), showOpen=lo0<=1;
+  const key = win ? [win[0],win[1],lo0,FRET_HI(),lefty].join(':') : '';
+  if(sc.dataset.win===key) return;
+  sc.dataset.win=key;
+  if(!win || neckHeld(sc) || sc.scrollWidth <= sc.clientWidth+1) return;
+  const lo=Math.max(win[0], showOpen?0:lo0), hi=Math.min(win[1], FRET_HI()); if(lo>hi) return;
+  const row=boardEl.querySelector('.srow'); if(!row) return;
+  const col=f=>row.children[f===0 ? 1 : f-lo0+(showOpen?3:1)];
+  const a=col(lo), b=col(hi); if(!a || !b) return;
+  const ra=a.getBoundingClientRect(), rb=b.getBoundingClientRect(), base=sc.getBoundingClientRect().left-sc.scrollLeft;
+  const left=Math.min(ra.left,rb.left)-base, right=Math.max(ra.right,rb.right)-base, view=sc.clientWidth;
+  if(left>=sc.scrollLeft && right<=sc.scrollLeft+view) return;
+  const pad=16;
+  const x = right-left+2*pad <= view ? (left+right-view)/2      
+          : lefty ? right-view+pad : left-pad;                   
+  sc.scrollTo({ left:Math.max(0, Math.round(x)), behavior: motionOK() ? 'smooth' : 'auto' });
+}
 const INLAY_SINGLE = new Set(DOTS.filter(f=>f!==12&&f!==24));
 const INLAY_DOUBLE = new Set([12,24]);
 function markScrollables(){
@@ -2895,9 +2945,13 @@ function isBoardMode(mode){
   if(mode==='notes')    return currentTab==='scales'  && scView==='notes';
   return false;
 }
-function paintBoard(cellFn, legendHTML, hintHTML){
-  renderBoard(document.getElementById('board'), cellFn);
-  renderNums(document.getElementById('nums'));
+function paintBoard(cellFn, legendHTML, hintHTML, win){
+  const board=document.getElementById('board');
+  withFretsFor(win, ()=>{
+    renderBoard(board, cellFn);
+    renderNums(document.getElementById('nums'));
+    revealFrets(board, win || null);
+  });
   document.getElementById('legend').innerHTML = legendHTML || '';
   document.getElementById('hint').innerHTML = hintHTML || '';
 }
@@ -3014,10 +3068,13 @@ function renderChords(){
   if(triadsOn()) renderTriads();
   if(isBoardMode('chords')){
     const map={}; q.iv.forEach((iv,i)=>{ map[(gRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
+    const shape=shapeOnNeck();
     paintBoard((pc,si,f)=>{
       const m=map[pc]; if(m===undefined) return null;
-      return makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
-    }, chordLegendHTML(), t('ch_hint'));
+      const d=makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
+      if(shape && shape.cells.has(si+'_'+f)) d.classList.add('in-shape');
+      return d;
+    }, chordLegendHTML(), t('ch_hint'), shape && shape.win);
   }
   renderSuggester();
 }
@@ -3049,7 +3106,7 @@ function renderArp(){
       const m=map[pc]; if(m===undefined) return null;
       if(win && (f<win[0]||f>win[1])) return null;
       return makeDot(labClass(m.lab), gMode==='names'?spellNote(gRootLbl,pc,m.deg):m.lab, OPEN_MIDI[si]+f);
-    }, chordLegendHTML(), t('arp_hint'));
+    }, chordLegendHTML(), t('arp_hint'), win);
   }
   renderSuggester();
 }
@@ -3121,6 +3178,13 @@ function currentChordVoicing(){
   const idx=Math.max(0, Math.min(chVoicing, list.length-1));
   const midis=voicingMidi(list[idx]);
   return {midis, pcs:[...new Set(midis.map(m=>mod(m,12)))], list, idx};
+}
+function shapeOnNeck(){
+  if(OPEN_MIDI.join()!==STD_LOW6_MIDI.slice().reverse().join()) return null;
+  const {list, idx}=currentChordVoicing(), v=list[idx]; if(!v) return null;
+  const cells=new Set(), played=[];
+  v.frets.forEach((fr,li)=>{ if(fr!=null){ cells.add((5-li)+'_'+fr); played.push(fr); } });
+  return played.length ? {cells, win:[Math.min(...played), Math.max(...played)]} : null;
 }
 function scanWindow(base, need, rootPc){
   const frets=[];                                   
@@ -3206,7 +3270,7 @@ function renderChordDiagram(){
     const hide = collapsed && i>=CHORD_SHAPES_COLLAPSED;
     return `<button type="button" class="chordbox${i===chVoicing?' sel':''}" data-v="${i}" aria-pressed="${i===chVoicing}"${hide?' hidden':''}>`+
       `<div class="cb-name">${noteTxt(gRootLbl)}${short}</div>${chordBoxSVG(v, funcMap)}`+
-      `<div class="cb-cap">${voicingCaption(v)}</div></button>`;
+      `<div class="cb-cap">${voicingCaption(v)}</div>${i===chVoicing?`<div class="cb-plays">${t('cd_plays')}</div>`:''}</button>`;
   }).join('');
   const more=document.getElementById('cd-more');
   if(more){
@@ -3410,7 +3474,7 @@ function renderScales(){
       if(ovMap){ cls = (ovMap[pc]!==undefined) ? chDegClass(ovMap[pc]) : 'd-dim'; }
       else { cls = scClass(map[pc], s.iv); }
       return makeDot(cls, gMode==='names'?scName(pc):SDEG[map[pc]], OPEN_MIDI[si]+f);
-    }, scaleLegendHTML(), '');
+    }, scaleLegendHTML(), '', win);
   }
 }
 function buildScSelect(){
@@ -3543,6 +3607,7 @@ function applyLang(){
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));
   { const bl=document.getElementById('board-lens'); if(bl) bl.setAttribute('aria-label', t('lbl_view')); }
 }
+
 function buildToolbar(){
   const tun=document.getElementById('tb-tuning');
   tun.innerHTML=TUNINGS.map((tu,i)=>`<option value="${i}"${i===tuningIdx?' selected':''}>${lang==='en'?tu.en:tu.uk}</option>`).join('');
@@ -3562,18 +3627,21 @@ function buildToolbar(){
   applyA11y();   
   applyToolbarState();
 }
+
 function setTempo(bpm){
   tempo = Math.max(40, Math.min(200, Math.round(bpm)));
   const r=document.getElementById('tb-tempo');  if(r) r.value=tempo;
   const b=document.getElementById('tb-bpm');    if(b) b.textContent=tempo+' BPM';
   const d=document.getElementById('drill-ctx-bpm'); if(d) d.textContent=tempo+' BPM';
 }
+
 function applyToolbarState(){
   const tb=document.getElementById('toolbar'), tg=document.getElementById('tb-toggle');
   tb.classList.toggle('collapsed', !toolbarOpen);
   tg.classList.toggle('open', toolbarOpen);
   tg.setAttribute('aria-expanded', toolbarOpen);
 }
+
 function midiLabel(m){ return NOTES[mod(m,12)].replace('#','♯') + (Math.floor(m/12)-1); }
 function buildCustomTuning(){
   const host=document.getElementById('tb-custom-strings'); if(!host) return;
@@ -3589,6 +3657,7 @@ function applyBackingPanel(){
   if(p) p.classList.toggle('collapsed', !backingOpen);
   if(tg){ tg.classList.toggle('open', backingOpen); tg.setAttribute('aria-expanded', backingOpen); }
 }
+
 function applyShapesPanel(){
   const body=document.getElementById('shapes-body'), tg=document.getElementById('shapes-toggle');
   if(body) body.style.display = shapesOpen ? '' : 'none';
@@ -3600,7 +3669,9 @@ function applyAsideState(){
   if(aside) aside.style.display = show ? '' : 'none';
   const layout=document.querySelector('.layout'); if(layout) layout.classList.toggle('no-aside', !show);
 }
+
 function renderAllBoards(){ renderContextViews(); }
+
 if(typeof window!=='undefined'){
   let _rzT=null, _rzW=window.innerWidth;
   window.addEventListener('resize', ()=>{
@@ -3609,7 +3680,11 @@ if(typeof window!=='undefined'){
     clearTimeout(_rzT); _rzT=setTimeout(()=>{ renderAllBoards(); renderCircle&&renderCircle(); }, 150);
   });
 }
+
+
 let _hdrToggleAt=0;
+
+
 if(typeof window!=='undefined'){
   let _magT=null;
   const magnetNeck=()=>{
@@ -3623,6 +3698,8 @@ if(typeof window!=='undefined'){
   };
   window.addEventListener('scroll', ()=>{ clearTimeout(_magT); _magT=setTimeout(magnetNeck, 110); }, {passive:true});
 }
+
+
 if(typeof window!=='undefined'){
   const hdr=document.querySelector('header');
   let spacer=null, baseH=0;
@@ -3660,9 +3737,11 @@ if(typeof window!=='undefined'){
   if(hdr) baseH=hdr.offsetHeight;   
   setHdrH();
 }
+
 const LS_KEY='guitarStudio.v1';
 let currentTab='harmony';
 let currentMode='reference';
+
 function snapshotState(){ return {
   lang, mode:currentMode, tab:currentTab, tuningIdx, customTuning, fretRangeIdx, tempo, meterIdx, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
   cbPalette, fnShapes, welcomeSeen,
@@ -3678,6 +3757,7 @@ function snapshotState(){ return {
   sessMins,          
   learner   
 }; }
+
 let saveBlocked=false;
 function saveState(){ if(saveBlocked) return;
   try{ localStorage.setItem(LS_KEY, JSON.stringify(snapshotState())); }
@@ -3703,6 +3783,7 @@ function loadState(){ try{
   if(typeof s.cbPalette==='boolean') cbPalette=s.cbPalette;
   if(typeof s.fnShapes==='boolean') fnShapes=s.fnShapes;
   welcomeSeen = (typeof s.welcomeSeen==='boolean') ? s.welcomeSeen : true;
+  
   if(s.drillSeen && typeof s.drillSeen==='object' && !Array.isArray(s.drillSeen)){
     const out={}; let n=0;
     for(const k of Object.keys(s.drillSeen)){
@@ -3731,6 +3812,7 @@ function loadState(){ try{
   if(Number.isInteger(s.trSet)&&STRING_SETS[s.trSet]) trSet=s.trSet;
   if(Number.isInteger(s.trInv)&&s.trInv>=0&&s.trInv<=3) trInv=s.trInv;
   if(typeof s.chTriads==='boolean') chTriads=s.chTriads;
+  
   if(s.hView==='triads' || s.tab==='triads'){
     hView='chords'; chTriads=true; chVoicing=0;
     if(Number.isInteger(s.trQual)&&TRIADS[s.trQual]) chQual=TRI_TO_QUAL[s.trQual];
@@ -3747,6 +3829,8 @@ function loadState(){ try{
       .map(st=>({pc:st.pc, lbl:(typeof st.lbl==='string'?st.lbl:ROOTS[st.pc]), qi:st.qi, bars:([1,2,4].includes(st.bars)?st.bars:1)}));
   }
 }catch(e){ devWarn('saved state could not be restored; using defaults', e); return false; } return true; }
+
+
 function clearOldShareHash(){
   if(typeof location==='undefined') return;
   const h=(location.hash||'').replace(/^#/, ''); if(!h) return;
@@ -3960,6 +4044,14 @@ function sessNs(drillId){
   const s=String(drillId||''), i=s.indexOf(':');
   return i<0 ? s : s.slice(0,i);
 }
+function drillReviewHTML(items){
+  if(!items.length) return '';
+  return '<div class="drill-review"><span class="ctrl-label">'+t('sum_review')+'</span><div class="group">'+
+    items.map((it,i)=>'<button type="button" class="btn dia" data-rv="'+i+'">'+it.label+' →</button>').join('')+'</div></div>';
+}
+function wireDrillReview(host, items){
+  host.querySelectorAll('[data-rv]').forEach(b=>{ b.onclick=()=>items[+b.dataset.rv].open(); });
+}
 function showDrillHome(){
   const home=document.getElementById('practice-home');
   if(home) home.hidden=false;
@@ -4160,7 +4252,10 @@ function trendArrow(dir){ return dir==='up' ? '▲' : dir==='down' ? '▼' : '�
 function renderProgressInto(hostId){
   const host=document.getElementById(hostId); if(!host) return;
   const s=learnerStats();
-  if(!s.seen && !s.sessions){ host.innerHTML='<div class="pp-empty">'+t('prog_empty')+'</div>'; return; }
+  const card=host.closest('.practice-progress-card');
+  const empty=!s.seen && !s.sessions;
+  if(card) card.hidden=empty;
+  if(empty){ host.innerHTML=''; return; }
   const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   let html='';
 
@@ -4626,7 +4721,7 @@ function buildEarQueue(keys, len){
 
 function startEar(type){
   const cfg=EAR[type]; if(!cfg) return;
-  ear={ type, cfg, queue:buildEarQueue(cfg.pool(), cfg.len), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, cur:null, answered:false };
+  ear={ type, cfg, queue:buildEarQueue(cfg.pool(), cfg.len), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, cur:null, answered:false, missed:[] };
   ear.total=ear.queue.length;
   const home=document.getElementById('practice-home'), area=document.getElementById('ear-area'),
         act=document.getElementById('ear-active'), sum=document.getElementById('ear-summary');
@@ -4655,7 +4750,7 @@ function earAnswer(key){
   ear.answered=true;
   const correct = key===ear.cur.key;
   recordAttempt(ear.cur.key, correct);
-  ear.done++; if(correct) ear.correctPrompts++; else ear.totalWrong++;
+  ear.done++; if(correct) ear.correctPrompts++; else { ear.totalWrong++; ear.missed.push(ear.cur); }
   playCue(correct?'correct':'wrong');
   renderEarAnswered(key, correct);
 }
@@ -4712,17 +4807,29 @@ function renderEarSummary(elapsed, acc){
   const el=document.getElementById('ear-summary'); if(!el) return;
   const act=document.getElementById('ear-active'); if(act) act.hidden=true;
   const stat=(v,l)=>'<div class="pp-stat"><div class="pp-val">'+v+'</div><div class="pp-lab">'+l+'</div></div>';
+  const review=earReview();
   el.innerHTML='<div class="drill-done-title">'+t('drill_complete')+'</div>'+
     '<div class="pp-stats">'+
       stat(Math.round(acc*100)+'%', t('drill_score'))+
       stat(ear.correctPrompts+' / '+ear.total, t('ear_got'))+
       stat(elapsed+'s', t('drill_time'))+
     '</div>'+
+    drillReviewHTML(review)+
     '<div class="drill-actions"><button class="btn play" id="ear-again"></button><button class="btn" id="ear-done"></button></div>';
   el.hidden=false;
+  wireDrillReview(el, review);
   const type=ear.type;
   const ag=document.getElementById('ear-again'); if(ag){ ag.textContent=t('drill_again'); ag.onclick=()=>startEar(type); }
   const dn=document.getElementById('ear-done');  if(dn){ dn.textContent=t('drill_done');  dn.onclick=exitEar; }
+}
+
+function earReview(){
+  if(!ear || !ear.missed.length) return [];
+  if(ear.type==='interval') return [{ label:t('view_chords'),
+    open:()=>{ openReference('harmony','chords'); setGMode('deg'); } }];
+  const qis=[...new Set(ear.missed.map(c=>c.qi))];
+  return qis.map(qi=>({ label:noteTxt(gRootLbl)+(QUALITIES[qi].short||''),
+    open:()=>{ chQual=qi; chVoicing=0; chTriads=false; buildChQuals(); buildArpQuals(); openReference('harmony','chords'); } }));
 }
 function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPrompt(); }
 
@@ -4767,7 +4874,7 @@ function drillTargetsFor(pc){
 }
 
 function startDrill(){
-  drill={ queue:buildQueue(), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, targetPc:null, targets:null, wrongThis:0 };
+  drill={ queue:buildQueue(), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, targetPc:null, targets:null, wrongThis:0, missed:[] };
   drill.total=drill.queue.length;
   const home=document.getElementById('practice-home'), area=document.getElementById('drill-area'),
         act=document.getElementById('drill-active'), sum=document.getElementById('drill-summary');
@@ -4802,7 +4909,7 @@ function drillAnswer(si, f){
     pluck(OPEN_MIDI[si]+f);
     if(drill.targets.size===0){
       recordAttempt('note:'+NOTES[drill.targetPc], drill.wrongThis===0);
-      drill.done++; if(drill.wrongThis===0) drill.correctPrompts++;
+      drill.done++; if(drill.wrongThis===0) drill.correctPrompts++; else drill.missed.push(drill.targetPc);
       playCue('correct');
       nextPrompt();
     }
@@ -4850,6 +4957,8 @@ function renderDrillSummary(elapsed, acc){
   const el=document.getElementById('drill-summary'); if(!el) return;
   const act=document.getElementById('drill-active'); if(act) act.hidden=true;
   const stat=(v,l)=>'<div class="pp-stat"><div class="pp-val">'+v+'</div><div class="pp-lab">'+l+'</div></div>';
+  const review=drill.missed.map(pc=>({ label:noteTxt(NOTES[pc]),
+    open:()=>{ ntRoot=NOTES[pc]; openReference('scales','notes'); saveState(); } }));
   el.innerHTML='<div class="drill-done-title">'+t('drill_complete')+'</div>'+
     '<div class="pp-stats">'+
       stat(Math.round(acc*100)+'%', t('drill_score'))+
@@ -4857,8 +4966,10 @@ function renderDrillSummary(elapsed, acc){
       stat(drill.totalWrong, t('drill_misses'))+
       stat(elapsed+'s', t('drill_time'))+
     '</div>'+
+    drillReviewHTML(review)+
     '<div class="drill-actions"><button class="btn play" id="drill-again"></button><button class="btn" id="drill-done"></button></div>';
   el.hidden=false;
+  wireDrillReview(el, review);
   const ag=document.getElementById('drill-again'); if(ag){ ag.textContent=t('drill_again'); ag.onclick=startDrill; }
   const dn=document.getElementById('drill-done');  if(dn){ dn.textContent=t('drill_done');  dn.onclick=exitDrill; }
 }
@@ -5354,8 +5465,9 @@ const sdScore = scoredRun({
 });
 
 
+function sdWin(){ return boxWindow(sdPos)||[0,4]; }
 function sdPath(){
-  const s=SCALES[scIdx], win=boxWindow(sdPos)||[0,4], lo=win[0], hi=win[1];
+  const s=SCALES[scIdx], win=sdWin(), lo=win[0], hi=win[1];
   const scPcs=new Set(s.iv.map(iv=>mod(gRoot+iv,12))), pool=[];
   for(let si=0; si<6; si++) for(let f=lo; f<=hi; f++){ const midi=OPEN_MIDI[si]+f; if(scPcs.has(midi%12)) pool.push({si, f, midi}); }
   pool.sort((a,b)=>a.midi-b.midi);
@@ -5451,7 +5563,7 @@ function sdTick(when, count){
 function renderTiming(){
   if(!sd) return;
   segButtons('sd-subs', SUBDIVS.map(s=>({label:sdSubName(s)})), sdSub, i=>{ sdSub=i; renderSdGrid(); sdRestart(); renderTiming(); });
-  segButtons('sd-pos', ['1','2','3','4','5'].map(label=>({label})), sdPos-1, i=>{ sdPos=i+1; sdPaintScale(); sdRestart(); });
+  segButtons('sd-pos', ['1','2','3','4','5'].map(label=>({label})), sdPos-1, i=>{ sdPos=i+1; sdRenderBoard(); sdRestart(); });
   const tt=document.getElementById('sd-title'); if(tt) tt.textContent=noteTxt(gRootLbl)+' · '+sName(SCALES[scIdx]);
   const nb=document.getElementById('sd-notes'); if(nb){ nb.textContent=t('sd_notes'); nb.classList.toggle('active', sdNotes); nb.setAttribute('aria-pressed', sdNotes?'true':'false'); }
   renderSdGrid();
@@ -5477,14 +5589,17 @@ function sdHighlightCell(pos){
 }
 function sdRenderBoard(){
   const el=document.getElementById('sd-board'); if(!el) return;
-  renderBoard(el, (pc,si,f)=>{ const d=document.createElement('div'); d.className='dot sd-dot'; d.dataset.si=si; d.dataset.f=f; return d; });
-  renderNums(document.getElementById('sd-nums'));
+  withFretsFor(sdWin(), ()=>{
+    renderBoard(el, (pc,si,f)=>{ const d=document.createElement('div'); d.className='dot sd-dot'; d.dataset.si=si; d.dataset.f=f; return d; });
+    renderNums(document.getElementById('sd-nums'));
+    revealFrets(el, sdWin());
+  });
   sdLit=null;
   sdPaintScale();
 }
 
 function sdPaintScale(){
-  const s=SCALES[scIdx], win=boxWindow(sdPos)||[0,4], lo=win[0], hi=win[1];
+  const s=SCALES[scIdx], win=sdWin(), lo=win[0], hi=win[1];
   const scPcs=new Set(s.iv.map(iv=>mod(gRoot+iv,12)));
   document.querySelectorAll('#sd-board .sd-dot').forEach(d=>{
     const si=+d.dataset.si, f=+d.dataset.f, inBox=f>=lo&&f<=hi&&scPcs.has((OPEN_MIDI[si]+f)%12);
@@ -6111,6 +6226,9 @@ function applyBoardRegion(){
   const bm=document.getElementById('board-meta'); if(bm) bm.hidden = !show;   
   const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
   const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
+  document.getElementById('view-head').hidden = !show;
+  document.getElementById('vh-harmony').hidden = currentTab!=='harmony';
+  document.getElementById('vh-scales').hidden  = currentTab!=='scales';
 }
 function applyHarmonyExtras(){
   const on = currentTab==='harmony' && hView==='chords';
@@ -6175,7 +6293,11 @@ document.getElementById('ch-diagram').addEventListener('click',e=>{
   const dot=e.target.closest('.cd-dot');
   if(dot && dot.dataset.midi!=null){ e.stopPropagation(); pluck(parseInt(dot.dataset.midi)); return; }
   const card=e.target.closest('.chordbox'); if(!card || card.dataset.v==null) return;
-  chVoicing=+card.dataset.v; renderChordDiagram(); saveState();
+  chVoicing=+card.dataset.v;
+  _boardStagger=false; renderChords(); _boardStagger=true;
+  currentChordVoicing().midis.forEach((m,i)=>pluck(m, i*0.03));
+  const sel=document.querySelector('#ch-diagram .chordbox.sel'); if(sel) sel.focus({preventScroll:true});   
+  saveState();
 });
 document.getElementById('cd-more').addEventListener('click',()=>{
   chShapesExpanded=!chShapesExpanded; renderChordDiagram();
@@ -6294,6 +6416,11 @@ document.addEventListener('click', e=>{
   setMode('practice');
   startTrack(track);
 });
+function openReference(tab, sub){
+  navTo(tab);
+  if(tab==='harmony') setHView(sub); else setScView(sub);
+  (document.scrollingElement || document.documentElement).scrollTop = 0;
+}
 function jamActive(){ return !!(typeof seqClock!=='undefined' && seqClock) || !!(typeof loopClock!=='undefined' && loopClock); }
 function renderJamBtn(){
   const on=jamActive();
@@ -6446,7 +6573,6 @@ function applyAudioAvailability(){
 const hadState = loadState();
 if(!hadState){
   try{ const nav=(navigator.languages&&navigator.languages[0])||navigator.language||''; lang = /^uk\b/i.test(nav) ? 'uk' : 'en'; }catch(_){  }
-  if(typeof window!=='undefined' && window.innerWidth<=600) fretRangeIdx=1;  
 }
 ntRoot=gRootLbl;   
 applyTuning();
@@ -6556,7 +6682,8 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     chTriadIdx, triadsOn,
     initAudio:()=>audio(),
     setCtxNow:(t)=>{ if(actx) actx.currentTime=t; },
-    state:()=>({ gRoot, gRootLbl, scIdx, scView, chQual, chVoicing, chTriads, currentTab, currentMode, hView,
+    setGMode, revealFrets,
+    state:()=>({ gRoot, gRootLbl, scIdx, scView, chQual, chVoicing, chTriads, currentTab, currentMode, hView, gMode, ntRoot,
                  loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo,
                  cbPalette, fnShapes, welcomeSeen })
   };

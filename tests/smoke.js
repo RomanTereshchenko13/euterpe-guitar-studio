@@ -231,7 +231,7 @@ if (T) {
    'sess_title','sess_lead','sess_len','sess_min','sess_start','sess_next',
    'sess_done_h','sess_none','sess_drills','sess_norun',
    'badge_mic','badge_acc','badge_coach','unit_bars','unit_cpm',
-   'prog_title','prog_empty','prog_accuracy','prog_streak','prog_sessions',
+   'prog_title','prog_accuracy','prog_streak','prog_sessions',
    'prog_yours','prog_best','prog_runs','prog_timing',
    'practice_grp_ear','ear_intervals','ear_intervals_meta','ear_chords','ear_chords_meta',
    'ear_int_prompt','ear_chord_prompt',
@@ -894,13 +894,15 @@ if (T) {
     /* --- the narrative: a row per drill you have run --- */
     T.resetLearner();
     T.renderPractice();
-    ok('B4: an untouched model still shows the empty state',
-       !!doc.querySelector('#practice-progress .pp-empty'));
+    ok('step 3: an untouched model hides the progress card',
+       doc.querySelector('.practice-progress-card').hidden);
     // six runs on the timing coach, improving, with a timing error that improves too
     [4, 5, 6, 10, 11, 12].forEach((n, i) => T.recordSession('timing:8ths', n, T0 + i * 1000, { err: 60 - i * 5 }));
     T.recordSession('strum:down', 8, T0 + 9000);
     T.renderPractice();
     const rows = [...doc.querySelectorAll('#practice-progress .pp-row')];
+    ok('step 3: ...and shows it once there is a run to report',
+       !doc.querySelector('.practice-progress-card').hidden);
     ok('B4: only the drills you have actually run get a row',
        rows.length === 2, rows.map(r => r.dataset.track).join(','));
     ok('B4: most recently practised first', rows[0].dataset.track === 'strum');
@@ -1085,6 +1087,121 @@ if (T) {
     T.exitEar();
     ok('P4: exit clears the active ear drill', T.getEar() === null);
     T.setMode('reference');
+    T.resetLearner();
+  })();
+
+  /* ---- step 3: quick UI fixes ---- */
+  (function quickUiFixes() {
+    const doc = win.document;
+    T.setMode('reference'); T.setKey(9, 'A'); T.setGMode('names');
+
+    /* headings above the neck, one per board subject */
+    const vh = id => doc.getElementById(id);
+    T.selectTab('harmony');
+    ok('step 3: Harmony shows its heading above the neck', !vh('view-head').hidden && !vh('vh-harmony').hidden && vh('vh-scales').hidden);
+    T.selectTab('scales');
+    ok('step 3: Scales swaps in its own heading', !vh('vh-scales').hidden && vh('vh-harmony').hidden);
+    T.setScView('notes');
+    ok('step 3: ...which follows the sub-view', vh('scales-h').textContent === T.I18N[T.state().lang].nt_h);
+    T.setScView('scale');
+    T.selectTab('circle');
+    ok('step 3: Circle has no board, so no heading above one', vh('view-head').hidden);
+    ok('step 3: Circle keeps its heading in its panel', !!doc.querySelector('#panel-circle .panel-head h2'));
+
+    /* chord-shape cards: selectable, and the selected one rings its notes on the neck */
+    T.selectTab('harmony'); T.setHView('chords'); T.setChTriads(false); T.setChQual(1);
+    T.renderAllBoards();
+    const cards = () => [...doc.querySelectorAll('#ch-diagram .chordbox')];
+    ok('step 3: only the selected card says it plays',
+       cards().filter(c => c.querySelector('.cb-plays')).map(c => c.dataset.v).join() === '0');
+    const ringCount = v => v.frets.filter(f => f != null).length;
+    const list = T.currentChordVoicing().list;
+    ok('step 3: the selected shape is ringed on the neck, one ring per played string',
+       doc.querySelectorAll('#board .dot.in-shape').length === ringCount(list[0]));
+    cards()[1].click();
+    ok('step 3: a card click selects that voicing', T.state().chVoicing === 1);
+    ok('step 3: ...moves the "plays" label to it', !!cards()[1].querySelector('.cb-plays') && !cards()[0].querySelector('.cb-plays'));
+    const rings = [...doc.querySelectorAll('#board .dot.in-shape')].map(d => +d.dataset.midi).sort((a, b) => a - b);
+    ok('step 3: ...and the rings to its notes', rings.join() === T.voicingMidi(list[1]).sort((a, b) => a - b).join(), rings.join());
+    ok('step 3: ...keeping keyboard focus on the chosen card', doc.activeElement === cards()[1]);
+    T.setTuningIdx(1);   // Drop D: the standard-tuning cards no longer match the neck
+    T.renderAllBoards();
+    ok('step 3: on another tuning nothing is ringed', !doc.querySelector('#board .dot.in-shape'));
+    T.setTuningIdx(0); T.setChVoicing(0); T.renderAllBoards();
+    ok('step 3: revealFrets is a no-op without layout', (T.revealFrets(doc.getElementById('board'), [5, 9]), true));
+
+    /* a zoomed range that can't hold the picked box gives way to the whole neck */
+    const fretCells = id => doc.querySelectorAll('#' + id + ' .srow:first-child .cell').length;
+    T.setFret(1); T.selectTab('scales'); T.setScView('scale');
+    doc.querySelectorAll('#sc-pos .btn')[0].click();
+    ok('step 3: the 1–5 zoom paints 5 frets for the whole-neck view', fretCells('board') === 5);
+    doc.querySelectorAll('#sc-pos .btn')[4].click();   // A minor pos 4: frets 12–16
+    ok('step 3: a box outside the zoom paints the whole neck', fretCells('board') === T.FRET_RANGES[0].hi);
+    ok('step 3: ...without touching the saved range', T.state().fretRangeIdx === 1 && T.FRET_HI() === 5);
+    doc.querySelectorAll('#sc-pos .btn')[1].click();   // pos 1: frets 5–9, still outside 1–5
+    doc.querySelectorAll('#sc-pos .btn')[0].click();
+    ok('step 3: back to the whole-neck view, the zoom returns', fretCells('board') === 5);
+    T.setMode('practice'); T.startTrack('timing');
+    doc.querySelectorAll('#sd-pos .btn')[3].click();
+    ok('step 3: the timing drill’s box gets the whole neck too', fretCells('sd-board') === T.FRET_RANGES[0].hi
+       && doc.querySelectorAll('#sd-board .sd-dot.pal').length > 0);
+    T.exitAllDrills(); T.setMode('reference');
+    T.setFret(0); T.selectTab('harmony'); T.renderAllBoards();
+
+    /* drill summaries lead back to the view that teaches the misses */
+    T.resetLearner();
+    T.setMode('practice'); T.startDrill();
+    const missed = T.getDrill().targetPc;
+    const [wsi, wf] = [...T.drillTargetsFor((missed + 1) % 12)][0].split(':').map(Number);
+    T.drillAnswer(wsi, wf);
+    let guard = 0;
+    while (!T.getDrill().finished && guard++ < 50) {
+      for (const key of T.drillTargetsFor(T.getDrill().targetPc)) { const [si, f] = key.split(':').map(Number); T.drillAnswer(si, f); }
+    }
+    let rv = [...doc.querySelectorAll('#drill-summary [data-rv]')];
+    ok('step 3: the note summary offers the one missed note', rv.length === 1 && rv[0].textContent.startsWith(T.noteTxt(['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][missed])));
+    rv[0].click();
+    ok('step 3: ...which opens Scales ▸ Notes with that note lit',
+       T.state().currentMode === 'reference' && T.state().currentTab === 'scales' && T.state().scView === 'notes'
+       && T.state().ntRoot === ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][missed] && T.getDrill() === null);
+    ok('step 3: ...and leaves the key alone', T.state().gRoot === 9);
+    T.setScView('scale');
+
+    T.setMode('practice'); T.startDrill();
+    guard = 0;
+    while (!T.getDrill().finished && guard++ < 50) {
+      for (const key of T.drillTargetsFor(T.getDrill().targetPc)) { const [si, f] = key.split(':').map(Number); T.drillAnswer(si, f); }
+    }
+    ok('step 3: a clean round has no review row', !doc.querySelector('#drill-summary .drill-review'));
+    T.exitDrill();
+
+    T.startEar('interval');
+    guard = 0;
+    while (!T.getEar().finished && guard++ < 50) {
+      const cur = T.getEar().cur;
+      T.earAnswer(T.getEar().done === 0 ? T.INTERVALS.map(iv => 'interval:' + iv.name).find(k => k !== cur.key) : cur.key); T.earNext();
+    }
+    rv = [...doc.querySelectorAll('#ear-summary [data-rv]')];
+    ok('step 3: a missed interval offers Chord tones', rv.length === 1);
+    rv[0].click();
+    ok('step 3: ...opened with the Intervals display',
+       T.state().currentTab === 'harmony' && T.state().hView === 'chords' && T.state().gMode === 'deg');
+    T.setGMode('names');
+
+    T.setMode('practice'); T.startEar('chordq');
+    let missQ = null; guard = 0;
+    while (!T.getEar().finished && guard++ < 50) {
+      const cur = T.getEar().cur;
+      if (T.getEar().done === 0) { missQ = cur.qi; T.earAnswer(T.earChoices().map(c => c.key).find(k => k !== cur.key)); }
+      else T.earAnswer(cur.key);
+      T.earNext();
+    }
+    rv = [...doc.querySelectorAll('#ear-summary [data-rv]')];
+    ok('step 3: a missed chord quality offers that chord', rv.length === 1);
+    rv[0].click();
+    ok('step 3: ...opened in Chord tones on that quality, in the player’s key',
+       T.state().currentTab === 'harmony' && T.state().chQual === missQ && T.state().gRoot === 9);
+    T.setChQual(1); T.renderAllBoards();
     T.resetLearner();
   })();
 
@@ -1755,14 +1872,17 @@ if (T) {
     /* --- the bands above the neck --- */
     ok('A3: the context bar is its own grid item, not part of .main',
        !!doc.querySelector('.layout > #context-bar') && !doc.querySelector('.main #context-bar'));
-    /* Exactly one band stands between the header and the neck now. Counting the
-       .layout children that precede #board-region is the durable form of "the neck
-       leads": adding another band above it fails here, whatever it is called. */
+    /* Only the context bar and the view's own heading (step 3: heading → view switch →
+       neck) stand between the header and the neck. Counting the .layout children that
+       precede #board-region is the durable form of "the neck leads": adding another
+       band above it fails here, whatever it is called. */
     const layoutKids = [...doc.querySelector('.layout').children];
     const beforeBoard = layoutKids.slice(0, layoutKids.findIndex(el => el.id === 'board-region'));
-    ok('A3: exactly one band separates the header from the neck',
-       beforeBoard.length === 1 && beforeBoard[0].id === 'context-bar',
+    ok('A3: only the context bar and the view heading precede the neck',
+       beforeBoard.map(el => el.id).join(',') === 'context-bar,view-head',
        beforeBoard.map(el => el.id || el.className).join(','));
+    ok('step 3: the view heading is just the heading — no controls ride in it',
+       !doc.querySelector('#view-head button:not(.ph-help), #view-head select, #view-head input'));
     /* Source order IS focus order. The area maps alone would have shown the neck above
        controls that still came first in the DOM — so a keyboard user would meet the
        chord picker before the neck it changes, and the lens after it. */

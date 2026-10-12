@@ -96,7 +96,7 @@ function renderScales(){
       if(ovMap){ cls = (ovMap[pc]!==undefined) ? chDegClass(ovMap[pc]) : 'd-dim'; }
       else { cls = scClass(map[pc], s.iv); }
       return makeDot(cls, gMode==='names'?scName(pc):SDEG[map[pc]], OPEN_MIDI[si]+f);
-    }, scaleLegendHTML(), '');
+    }, scaleLegendHTML(), '', win);
   }
 }
 function buildScSelect(){

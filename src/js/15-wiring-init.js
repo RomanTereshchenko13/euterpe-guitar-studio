@@ -102,6 +102,10 @@ function applyBoardRegion(){
   // the view switch is a lens on the board: only the active subject's group shows
   const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
   const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
+  // ...and the heading above it names the same subject (Circle keeps its own in its panel)
+  document.getElementById('view-head').hidden = !show;
+  document.getElementById('vh-harmony').hidden = currentTab!=='harmony';
+  document.getElementById('vh-scales').hidden  = currentTab!=='scales';
 }
 /* voicing cards + sequencer belong only to Harmony's chord-tones view. With triads
    on, the triad cards in the panel stand in for the chord shapes. */
@@ -172,12 +176,18 @@ document.getElementById('suggest-body').addEventListener('click', e=>{
   setScView('scale'); selectTab('scales');
 });
 /* chord cards: a dot click sounds that string; clicking elsewhere on a card selects
-   that voicing (so Listen/Loop use it). Keyboard note-play stays on the fretboard. */
+   that voicing (so Listen/Loop use it), strums it, and rings it on the neck — repainted
+   without the change-stagger, since only the rings moved. Keyboard note-play stays on
+   the fretboard. */
 document.getElementById('ch-diagram').addEventListener('click',e=>{
   const dot=e.target.closest('.cd-dot');
   if(dot && dot.dataset.midi!=null){ e.stopPropagation(); pluck(parseInt(dot.dataset.midi)); return; }
   const card=e.target.closest('.chordbox'); if(!card || card.dataset.v==null) return;
-  chVoicing=+card.dataset.v; renderChordDiagram(); saveState();
+  chVoicing=+card.dataset.v;
+  _boardStagger=false; renderChords(); _boardStagger=true;
+  currentChordVoicing().midis.forEach((m,i)=>pluck(m, i*0.03));
+  const sel=document.querySelector('#ch-diagram .chordbox.sel'); if(sel) sel.focus({preventScroll:true});   // the click rebuilt the cards
+  saveState();
 });
 
 document.getElementById('cd-more').addEventListener('click',()=>{
@@ -336,6 +346,14 @@ document.addEventListener('click', e=>{
   setMode('practice');
   startTrack(track);
 });
+/* ---- the way back: a drill summary's "Review on the neck" ----
+   Leaving Practice ends the drill; the page starts at the top, where the view's heading
+   and neck are. */
+function openReference(tab, sub){
+  navTo(tab);
+  if(tab==='harmony') setHView(sub); else setScView(sub);
+  (document.scrollingElement || document.documentElement).scrollTop = 0;
+}
 /* ---- "Jam over this": bass + drums + loop in one tap, and the same tap stops it ----
    Plays the progression when the player has built one, the current chord otherwise.
    Every button carrying data-jam is this toggle (the aside's and Arpeggio's). */
@@ -536,7 +554,6 @@ if(!hadState){
   // First visit: Ukrainian if the browser asks for it, English otherwise; the EN/UK
   // toggle takes over from the next visit on.
   try{ const nav=(navigator.languages&&navigator.languages[0])||navigator.language||''; lang = /^uk\b/i.test(nav) ? 'uk' : 'en'; }catch(_){ /* keep the 'uk' default */ }
-  if(typeof window!=='undefined' && window.innerWidth<=600) fretRangeIdx=1;  // phones default to a 5-fret window
 }
 ntRoot=gRootLbl;   // Notes follows the shared root from the first paint
 applyTuning();
@@ -685,7 +702,8 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     chTriadIdx, triadsOn,
     initAudio:()=>audio(),
     setCtxNow:(t)=>{ if(actx) actx.currentTime=t; },
-    state:()=>({ gRoot, gRootLbl, scIdx, scView, chQual, chVoicing, chTriads, currentTab, currentMode, hView,
+    setGMode, revealFrets,
+    state:()=>({ gRoot, gRootLbl, scIdx, scView, chQual, chVoicing, chTriads, currentTab, currentMode, hView, gMode, ntRoot,
                  loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo,
                  cbPalette, fnShapes, welcomeSeen })
   };

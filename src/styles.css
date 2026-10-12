@@ -85,6 +85,7 @@
     grid-template-columns: minmax(0,1fr) 234px;
     grid-template-areas:
       "ctx       ctx"
+      "vhead     vhead"
       "board     board"
       "boardmeta boardmeta"
       "main      aside"
@@ -95,8 +96,10 @@
     padding-top: 30px;
   }
   /* no suggester off Harmony: drop its column (applyAsideState) */
-  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "ctx" "board" "boardmeta" "main" "shapes" "extras"; }
+  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "ctx" "vhead" "board" "boardmeta" "main" "shapes" "extras"; }
   #context-bar { grid-area: ctx; }
+  .view-head { grid-area: vhead; }
+  .view-head .panel-head { margin-bottom: 8px; }
   /* .main follows the neck and needs air above it. Not a row-gap: the areas are
      optional, and a gap would show as a hole. */
   .main { grid-area: main; min-width: 0; margin-top: 22px; }
@@ -113,7 +116,7 @@
   @media (max-width: 940px) {
     .layout, .layout.no-aside {
       grid-template-columns: minmax(0,1fr);
-      grid-template-areas: "ctx" "board" "boardmeta" "main" "shapes" "aside" "extras";
+      grid-template-areas: "ctx" "vhead" "board" "boardmeta" "main" "shapes" "aside" "extras";
     }
     /* air between the stacked cards; shapes ("how to fret this") before the suggester */
     .aside { position: static; margin-top: 22px; }
@@ -132,7 +135,7 @@
   .ph-help, .drill-help { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 22px; height: 22px; padding: 0; line-height: 1; border: 1px solid var(--border-strong); border-radius: 50%; background: var(--bg-panel); color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; cursor: pointer; }
   .ph-help:hover, .drill-help:hover { color: var(--text); border-color: var(--text-faint); }
   .ph-help.on, .drill-help.on { background: var(--accent); color: #07203a; border-color: var(--accent); }
-  body.help-open .panel.active .panel-head p { display: block; margin-top: 6px; }
+  body.help-open .panel.active .panel-head p, body.help-open .view-head .panel-head p { display: block; margin-top: 6px; }
 
   /* ===== Mode axis: Reference · Practice (body.mode-practice) ===== */
 
@@ -147,6 +150,7 @@
      extras, suggester and shapes card. */
   body.mode-practice .panel.active,
   body.mode-practice #context-bar,
+  body.mode-practice .view-head,
   body.mode-practice #board-region,
   body.mode-practice .board-meta,
   body.mode-practice #harmony-extras,
@@ -252,6 +256,8 @@
   .drill-summary { margin-top: 6px; }
   .drill-done-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-bottom: 14px; }
   .drill-actions { display: flex; gap: 10px; margin-top: 18px; }
+  /* the summary's way back to the Reference view that teaches the misses */
+  .drill-review { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 16px; }
 
   /* ---- ear-training drills ---- */
   .ear-prompt { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; }
@@ -433,6 +439,8 @@
   .srow:nth-child(6) .cell::before { height: 2.8px; }
   .dot { width: 27px; height: 27px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; position: relative; z-index: 1; transition: transform 0.1s; color: #0e1408; box-shadow: 0 1px 3px rgba(0,0,0,0.4); cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   .dot:hover { transform: scale(1.18); }
+  /* the selected chord-shape card's notes, ringed among the chord tones */
+  .dot.in-shape { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
   .dot.playing { transform: scale(1.34); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #fff, 0 0 16px 3px rgba(255,255,255,0.55); z-index: 6; }
   .d-root { background: var(--root); }
   .d-third { background: var(--third); }
@@ -611,6 +619,7 @@
          auto-places to the end */
       grid-template-areas:
         "ctx       board"
+        "vhead     board"
         "main      board"
         "shapes    board"
         "aside     board"
@@ -665,14 +674,18 @@
   .cd-head .cd-h { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
   .cd-head .cd-hint { font-size: 11px; color: var(--text-faint); font-style: italic; }
   .chordbox { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px 10px; font-family: inherit; text-align: left; transition: border-color 0.12s, box-shadow 0.12s, background 0.12s; }
-  button.chordbox { cursor: pointer; color: var(--text); }
-  button.chordbox:hover { border-color: var(--text-faint); background: var(--bg-panel-2); }
+  /* a pickable card: a radio mark in the corner, filled on the selected one */
+  button.chordbox { position: relative; cursor: pointer; color: var(--text); }
+  button.chordbox::after { content: ''; position: absolute; top: 12px; right: 12px; width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--text-faint); }
+  button.chordbox.sel::after { border-color: var(--root); background: var(--root); box-shadow: inset 0 0 0 2px var(--bg-panel); }
+  button.chordbox:hover { border-color: var(--text-faint); background: var(--bg-panel-2); transform: translateY(-1px); }
   button.chordbox:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .chordbox.sel { border-color: var(--root); box-shadow: 0 0 0 2px rgba(107,165,58,0.32); }
   .chordbox.tri { cursor: default; }
   .chordbox .cb-name { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; margin-bottom: 8px; color: var(--text); }
   .chordbox svg { display: block; }
   .chordbox .cb-cap { font-size: 11px; color: var(--text-faint); margin-top: 7px; max-width: 160px; }
+  .chordbox .cb-plays { font-size: 11px; font-weight: 600; color: var(--root); margin-top: 4px; }
   /* "More / Fewer shapes", low-key on its own line */
   .cd-more { margin-top: 2px; font-size: 12px; padding: 6px 12px; }
   .cd-string { stroke: var(--line-string); stroke-width: 1.3; }

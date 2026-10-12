@@ -40,8 +40,11 @@ const FRET_RANGES = [
   {lo:9, hi:12, label:'9–12'},
 ];
 let fretRangeIdx = 0;
-function FRET_LO(){ return FRET_RANGES[fretRangeIdx].lo; }
-function FRET_HI(){ return FRET_RANGES[fretRangeIdx].hi; }
+/* true only while withFretsFor() paints a window the saved range can't hold */
+let fretZoomOff = false;
+function fretRange(){ return FRET_RANGES[fretZoomOff ? 0 : fretRangeIdx]; }
+function FRET_LO(){ return fretRange().lo; }
+function FRET_HI(){ return fretRange().hi; }
 
 /* capo: a movable nut at fret `capo` (0 = none). It moves your hand, not the pitches,
    so the note at every fret is unchanged; the board only dims the frets behind it. */
