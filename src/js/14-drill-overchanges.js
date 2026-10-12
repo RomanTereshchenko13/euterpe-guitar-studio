@@ -22,21 +22,15 @@ function tgBuildBars(preset){
   preset.steps.forEach(([off,qi,b])=>{ const pc=mod(r+off,12); for(let k=0;k<Math.max(1,b);k++) out.push({pc, qi}); });
   return out;
 }
-function startComp(){
+function beginComp(){
   tgDrill={ presetIdx:tgIdx, bars:tgBuildBars(SEQ_PRESETS[tgIdx]), bar:0, cycles:0, clock:null, playing:false };
   tgScore.clearScore();
-  const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
-  if(home) home.hidden=true; if(area) area.hidden=false;
-  drillShellEnter();
   renderTarget();
 }
-function exitTarget(){
+function endComp(){
   targetStop();
   tgScore.release();     // never leave the mic open behind a closed drill
   tgDrill=null;
-  const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  renderPractice();
 }
 function targetToggle(){ if(tgDrill && tgDrill.playing) targetStop(); else targetPlay(); }
 function targetPlay(){
@@ -60,9 +54,7 @@ function targetStop(){
   const sc=tgScore.end();
   const barsPlayed = tgDrill.cycles*tgDrill.bars.length + tgDrill.bar;
   if(barsPlayed>=1){
-    recordSession('comp:'+SEQ_PRESETS[tgDrill.presetIdx].name, barsPlayed, undefined, scoredErr(sc));
-    saveState();
-    renderPractice();
+    drillRecord('comp:'+SEQ_PRESETS[tgDrill.presetIdx].name, barsPlayed, scoredErr(sc));
   }
   renderTarget();
 }
@@ -117,9 +109,9 @@ function refreshTargetLang(){ if(tgDrill){ renderTarget(); tgScore.refreshLang()
 
 registerDrill({ id:'overchanges', area:'tg-area', tempo:true,   // bars ride barSec()
                 tracks:[
-                  { id:'comp', kind:'perf', sess:'comp', better:'high', unit:'bars', label:'drill_comp', scored:'mic', start:startComp }
+                  { id:'comp', kind:'perf', sess:'comp', better:'high', unit:'bars', label:'drill_comp', scored:'mic' }
                 ],
-                isActive:()=>!!tgDrill, exit:exitTarget, refreshLang:refreshTargetLang,
+                begin:beginComp, end:endComp, isActive:()=>!!tgDrill, refreshLang:refreshTargetLang,
                 setup:'tg-setup',
                 mic:()=>tgScore.available(),
                 // stop first: switching tiers mid-run would change what a score in progress measures

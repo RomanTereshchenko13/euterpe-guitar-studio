@@ -315,6 +315,8 @@
     <div class="panel-head">
       <div class="ph-top"><h2 id="practice-h" data-i18n="practice_h">Практика</h2></div>
     </div>
+    <!-- a run's result, said aloud (drillRecord); the summary and score lines are visual -->
+    <p class="sr-only" id="drill-live" role="status" aria-live="polite"></p>
     <!-- the practice home, swapped for the drill's area while one runs -->
     <div id="practice-home">
       <!-- "What should I do now?" first: the session starter and progress, side by side on
@@ -396,7 +398,7 @@
       <!-- The title band takes the full width, so the 12-key picker below can wrap without
            pushing Quit onto a line of its own. -->
       <span class="drill-ctx-lead">
-      <span class="drill-name" id="drill-ctx-name"></span>
+      <span class="drill-name" id="drill-ctx-name" tabindex="-1"></span>
       <!-- a running session's block counter and Next (painted by sessionPaint) -->
       <span class="drill-sess" id="drill-ctx-sess" hidden></span>
       <button type="button" class="btn" id="drill-ctx-skip" hidden></button>

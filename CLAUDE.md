@@ -59,7 +59,7 @@ Skills: `release`, `preflight` (every gate), `visual-review`, `add-i18n-string`,
 | `08-chords` · `09-triads` · `10-scales` · `11-notes-circle-lang` | reference views, circle, `applyLang` |
 | `12-toolbar-state` | settings; `savedFields()` (every saved field, one row each), `migrateSave`, save/load; progress under its own key; old share-link cleanup |
 | `13-backup` | progress export/import, storage persistence, failed-save notice |
-| `13-drill-registry` | `DRILLS`/`registerDrill`, the one drill shell, `startTrack` |
+| `13-drill-registry` | `DRILLS`/`registerDrill`, the drill lifecycle (`drillOpen`/`drillDone`/`quitDrill`), header, summary, `drillRecord` |
 | `13-learner` | learner model (SRS items, sessions, bests), progress card |
 | `13-mic` · `13-scored` | shared mic (refcounted) · shared scored-run layer |
 | `14-calibration` · `14-onset` · `14-mic-tuner` | latency, onset detection, tuner |
@@ -82,9 +82,11 @@ Also: `src/styles.css`, `src/index.template.html` (markers `@@STYLES@@` `@@SCRIP
   TDZ error — that is why the registry sits at slot 13 and the mic tuner at 14.
 - **`[hidden]` always wins** via one global `!important` rule. Rules keyed on body classes
   (`.drill-setup`, `.drill-hint`) are invisible to jsdom — the suite pins them by regex.
-- **Adding a drill** = one `14-drill-*.js` calling `registerDrill({...tracks})` + its
-  `*-area` markup + a practice card with `data-track`. The suite fails if an area or card
-  has no registered drill. Drills open through `startTrack()`.
+- **Adding a drill** = one `14-drill-*.js` calling `registerDrill({begin, end, ...tracks})` +
+  its `*-area` markup + a practice card with `data-track`. The suite fails if an area or card
+  has no registered drill. Drills open through `startTrack()`; the registry shows the area,
+  focuses the header and closes back to the card. A drill records a run with
+  `drillRecord()` (saves, repaints, announces) and a finite one ends on `renderDrillSummary()`.
 - **Key ≠ chord.** `setKey()` moves the key (`keyRoot`/`keyLbl`/`scIdx`) and brings the chord
   to its tonic root; `setChord()` moves only the chord (`chRoot`/`chLbl`/`chQual`). Scales,
   the circle, Notes and scale drills read the key; Harmony, the loop, the progression's

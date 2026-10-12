@@ -159,13 +159,13 @@ later step gets smaller after it.
       and presets are spelled in the key; the Rhythm guitar drill (step 9) reads `seq`.
       _Data:_ the key keeps its save names (`gRoot`, `gRootLbl`); `chRoot`/`chLbl` are new, and
       an older save's root becomes the chord root too (compat checks it against every fixture).
-
-### 7 — Registry owns the drill lifecycle · S–M · low risk
-Smaller now that fewer drills remain.
-- [ ] Enter / exit / show-hide / summary handled by the registry; a drill provides its stage,
-      tick and scoring.
-- [ ] Focus moves to the drill header on start and back to its card on quit; results announced
-      in the existing live region.
+- [x] **Registry owns the drill lifecycle** — a drill registers `begin(arg)` (its state and
+      stage) and `end()` (clocks, mic, state); the registry shows its area and hides the rest,
+      names and focuses the header on start, and on Quit or Done closes back to the home with
+      focus on the card that opened it (Done leaves a timed session running). One drill at a
+      time: opening another ends the first. `drillRecord()` records, saves, repaints the home
+      and says the result in a live region (`#drill-live`; there was none, so it is new). The
+      note and ear drills share one summary (`renderDrillSummary`: stats, review, Again, Done).
 
 ### 8 — The context strip: one layout grammar · L · medium risk
 One compact row directly above the neck (or the drill stage), the same in Reference and Practice:

@@ -201,11 +201,11 @@ function learnerReview(now){
 /* Open a track by id, via the registry's own `start`. */
 function startTrack(id){
   const tr = trackById(id);
-  if(!tr || typeof tr.start!=='function') return false;
+  if(!tr) return false;
   /* The ONE door into a drill (cards, Review, seams, the session), so the header can
-     name what was opened. A drill's start() called directly just leaves it unnamed. */
+     name what was opened. */
   setCurTrack(tr.id);
-  tr.start();
+  drillOpen(tr.drill, tr.arg);
   return true;
 }
 /* ---- the progress readout ----

@@ -4,8 +4,9 @@
 
    An entry:
      { id, area:'<area element id>',
+       begin:fn(arg),              // set up its state + paint its stage (the shell does the rest)
+       end:fn,                     // stop its clocks, release the mic, drop its state
        isActive:()=>boolean,       // is this drill running right now?
-       exit:fn,                    // tear it down + restore the home view
        refreshLang:fn|undefined,   // optional: re-paint an in-flight drill
        onKey:fn|undefined,         // optional: re-derive from a new context key
        tempo:true|undefined,       // optional: this drill runs on the shared tempo
@@ -24,7 +25,7 @@
        better:'high'|'low',       // perf only: which direction is improvement
        unit:'pct'|'bars'|'cpm',   // perf only: what the number is, for the readout
        scored:'mic'|'acc',        // optional: what tier this track offers
-       start:fn }                 // open this track
+       arg:any }                  // optional: handed to the drill's begin()
 
    `scored` is declared, not derived from mic(): mic() says whether the tier can run on
    this device right now, the card badge says what kind of drill this is on any device.
@@ -45,17 +46,19 @@ function activeDrill(){
   return DRILLS.find(drillIsActive) || null;
 }
 
-// end every running drill (leaving Practice, or starting a different drill)
+// end every running drill (leaving Practice, or the session changing block)
 function exitAllDrills(){
-  DRILLS.forEach(d=>{ if(drillIsActive(d) && typeof d.exit==='function') d.exit(); });
+  DRILLS.forEach(d=>{ if(drillIsActive(d)) drillClose(d); });
   drillShellLeft();
 }
-/* The header's Quit. Both ways out (this and exitAllDrills) end in drillShellLeft(),
-   so the header never keeps naming a drill that isn't running. */
+/* The header's Quit: the player abandons the drill (and a timed session with it). Both
+   ways out (this and exitAllDrills) end in drillShellLeft(), so the header never keeps
+   naming a drill that isn't running. Focus goes back to the card that opened it. */
 function quitDrill(){
-  const d=activeDrill();
-  if(d && typeof d.exit==='function') d.exit();
+  const d=activeDrill(), tr=curTrack;
+  if(d) drillClose(d);
   drillShellLeft();
+  focusTrackCard(tr);
 }
 /* Quit and a mode switch are the two ways a player abandons a timed session, so this
    is where the session learns it is over. sessionInterrupt() is a no-op while the
@@ -63,6 +66,70 @@ function quitDrill(){
 function drillShellLeft(){
   sessionInterrupt();
   setCurTrack(null); applyDrillCtx();
+}
+
+/* ---- the lifecycle: the registry opens and closes every drill ----
+   A drill provides begin(arg) (its state and the first paint of its stage) and end()
+   (stop its clocks, release the mic, drop its state). Everything around them is here:
+   one area shown and the home hidden, the header named and focused; on the way out the
+   area hidden, the home repainted, focus back on the card. */
+function drillOpen(d, arg){
+  if(!d) return;
+  DRILLS.forEach(o=>{ if(drillIsActive(o)) o.end(); });   // one drill at a time; Again restarts
+  const home=document.getElementById('practice-home'); if(home) home.hidden=true;
+  DRILLS.forEach(o=>{ const a=o.area && document.getElementById(o.area); if(a) a.hidden = o!==d; });
+  d.begin(arg);
+  drillShellEnter();
+  const nm=document.getElementById('drill-ctx-name'); if(nm && nm.textContent) nm.focus();
+}
+function drillClose(d){
+  if(drillIsActive(d)) d.end();
+  const a=d.area && document.getElementById(d.area); if(a) a.hidden=true;
+  const home=document.getElementById('practice-home'); if(home) home.hidden=false;
+  renderPractice();
+}
+/* A finished drill's Done: closes it like Quit but leaves a timed session running —
+   the session moves on to its next block by itself. */
+function drillDone(d){
+  d = d || activeDrill(); if(!d) return;
+  const tr=curTrack;
+  drillClose(d);
+  setCurTrack(null); applyDrillCtx();
+  focusTrackCard(tr);
+}
+function focusTrackCard(id){
+  if(!id) return;
+  const card=document.querySelector('#practice-home .drill-card[data-track="'+id+'"]');
+  if(card && !card.closest('[hidden]')) card.focus();
+}
+function drillById(id){ return DRILLS.find(d=>d.id===id) || null; }
+
+/* A run that counts: recorded, saved, the home behind the drill repainted, and the
+   result said aloud in the live region — the summary and score lines are only seen. */
+function drillRecord(sessId, score, err){
+  recordSession(sessId, score, undefined, err);
+  saveState();
+  renderPractice();
+  const tr=trackBySess(sessNs(sessId));
+  const live=document.getElementById('drill-live');
+  if(live) live.textContent=(tr && tr.label ? t(tr.label)+': ' : '')+trendScore({ last:score, unit:tr ? tr.unit : '' });
+}
+
+/* The finite drills' summary (notes, ear): stats, a way back to what teaches the misses,
+   Again and Done. `stats` is [[value, label]…]; Again reopens the same track. */
+function renderDrillSummary(hostId, activeId, o){
+  const el=document.getElementById(hostId); if(!el) return;
+  const act=document.getElementById(activeId); if(act) act.hidden=true;
+  const stat=(v,l)=>'<div class="pp-stat"><div class="pp-val">'+v+'</div><div class="pp-lab">'+l+'</div></div>';
+  const review=o.review || [];
+  el.innerHTML='<div class="drill-done-title">'+t('drill_complete')+'</div>'+
+    '<div class="pp-stats">'+o.stats.map(s=>stat(s[0], s[1])).join('')+'</div>'+
+    drillReviewHTML(review)+
+    '<div class="drill-actions"><button class="btn play" data-sum="again"></button><button class="btn" data-sum="done"></button></div>';
+  el.hidden=false;
+  wireDrillReview(el, review);
+  const ag=el.querySelector('[data-sum="again"]'); ag.textContent=t('drill_again'); ag.onclick=o.again;
+  const dn=el.querySelector('[data-sum="done"]');  dn.textContent=t('drill_done');  dn.onclick=()=>drillDone();
 }
 
 /* The shared key picker changed the context key: tell the running drill to re-derive

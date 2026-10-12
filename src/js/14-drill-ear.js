@@ -63,23 +63,15 @@ function buildEarQueue(keys, len){
   return earShuffle(due).concat(earShuffle(rest)).slice(0, len);
 }
 
-function startEar(type){
+function beginEar(type){
   const cfg=EAR[type]; if(!cfg) return;
   ear={ type, cfg, queue:buildEarQueue(cfg.pool(), cfg.len), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, cur:null, answered:false, missed:[] };
   ear.total=ear.queue.length;
-  const home=document.getElementById('practice-home'), area=document.getElementById('ear-area'),
-        act=document.getElementById('ear-active'), sum=document.getElementById('ear-summary');
-  if(home) home.hidden=true; if(area) area.hidden=false; if(act) act.hidden=false; if(sum) sum.hidden=true;
-  drillShellEnter();
+  const act=document.getElementById('ear-active'), sum=document.getElementById('ear-summary');
+  if(act) act.hidden=false; if(sum) sum.hidden=true;
   nextEarPrompt();
 }
-function exitEar(){
-  ear=null;
-  const area=document.getElementById('ear-area');
-  if(area) area.hidden=true;
-  showDrillHome();
-  renderPractice();
-}
+function endEar(){ ear=null; }
 function nextEarPrompt(){
   if(!ear.queue.length){ finishEar(); return; }
   ear.answered=false;
@@ -104,9 +96,7 @@ function finishEar(){
   ear.finished=true;
   const elapsed=Math.max(0, Math.round((Date.now()-ear.startT)/1000));
   const acc=ear.total ? ear.correctPrompts/ear.total : 0;
-  recordSession(ear.cfg.sess, Math.round(acc*100));
-  saveState();
-  renderPractice();
+  drillRecord(ear.cfg.sess, Math.round(acc*100));
   renderEarSummary(elapsed, acc);
 }
 
@@ -151,23 +141,11 @@ function renderEarAnswered(chosenKey, correct){
   if(nx){ nx.hidden=false; nx.innerHTML = ear.queue.length ? (t('ear_next')+' &rarr;') : t('drill_done'); }
 }
 function renderEarSummary(elapsed, acc){
-  const el=document.getElementById('ear-summary'); if(!el) return;
-  const act=document.getElementById('ear-active'); if(act) act.hidden=true;
-  const stat=(v,l)=>'<div class="pp-stat"><div class="pp-val">'+v+'</div><div class="pp-lab">'+l+'</div></div>';
-  const review=earReview();
-  el.innerHTML='<div class="drill-done-title">'+t('drill_complete')+'</div>'+
-    '<div class="pp-stats">'+
-      stat(Math.round(acc*100)+'%', t('drill_score'))+
-      stat(ear.correctPrompts+' / '+ear.total, t('ear_got'))+
-      stat(elapsed+'s', t('drill_time'))+
-    '</div>'+
-    drillReviewHTML(review)+
-    '<div class="drill-actions"><button class="btn play" id="ear-again"></button><button class="btn" id="ear-done"></button></div>';
-  el.hidden=false;
-  wireDrillReview(el, review);
   const type=ear.type;
-  const ag=document.getElementById('ear-again'); if(ag){ ag.textContent=t('drill_again'); ag.onclick=()=>startEar(type); }
-  const dn=document.getElementById('ear-done');  if(dn){ dn.textContent=t('drill_done');  dn.onclick=exitEar; }
+  renderDrillSummary('ear-summary', 'ear-active', { review:earReview(), again:()=>drillOpen(drillById('ear'), type), stats:[
+    [Math.round(acc*100)+'%', t('drill_score')],
+    [ear.correctPrompts+' / '+ear.total, t('ear_got')],
+    [elapsed+'s', t('drill_time')] ] });
 }
 /* Where the misses are taught: intervals are Chord tones read as intervals (the
    Intervals display); a missed chord quality opens Chord tones on that quality, in the
@@ -185,11 +163,11 @@ function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPr
 
 /* in-drill controls, wired once at load */
 registerDrill({ id:'ear', area:'ear-area',
-                isActive:()=>!!ear, exit:exitEar, refreshLang:refreshEarLang,
+                begin:beginEar, end:endEar, isActive:()=>!!ear, refreshLang:refreshEarLang,
                 /* two tracks, two SRS queues; session ids keep their historic `ear-` prefix */
                 tracks:[
-                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', scored:'acc', start:()=>startEar('interval') },
-                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    scored:'acc', start:()=>startEar('chordq') }
+                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', scored:'acc', arg:'interval' },
+                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    scored:'acc', arg:'chordq' }
                 ] });
 
 (function initEar(){

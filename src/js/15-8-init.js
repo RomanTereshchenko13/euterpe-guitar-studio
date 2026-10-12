@@ -75,7 +75,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     learnerReview, learnerActivity, startReview,
     clearOldShareHash,
     // drill registry
-    DRILLS, activeDrill, showDrillHome, exitAllDrills, refreshDrillsLang, drillKeyChanged, applyDrillCtx,
+    DRILLS, activeDrill, showDrillHome, drillOpen, drillDone, drillById, renderDrillSummary, exitAllDrills, refreshDrillsLang, drillKeyChanged, applyDrillCtx,
     // one drill shell
     drillSetupToggle, drillHintToggle, drillMicToggle, drillRunStarted, setCurTrack, quitDrill,
     getCurTrack:()=>curTrack, getDrillSeen:()=>drillSeen, setDrillSeen:(o)=>{ drillSeen=o||{}; },
@@ -102,25 +102,26 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     saveState, loadState, snapshotState, migrateSave, progressPayload, progressParse, progressApply, progressFileName, saveFailed,
     BACKUP_FORMAT, getSaveBlocked:()=>saveBlocked, setSaveBlocked:(v)=>{ saveBlocked=!!v; },
     resetSaveFailShown:()=>{ saveFailShown=false; },
+    // the drills, opened and closed through the registry (drillOpen / drillDone)
     // note-naming drill
-    startDrill, drillAnswer, drillTargetsFor, exitDrill, DRILL_LEN, getDrill:()=>drill,
+    startDrill:()=>drillOpen(drillById('notes')), drillAnswer, drillTargetsFor, exitDrill:()=>drillDone(drillById('notes')), DRILL_LEN, getDrill:()=>drill,
     // ear-training drills
-    startEar, earAnswer, earNext, earReplay, exitEar, getEar:()=>ear,
+    startEar:(type)=>drillOpen(drillById('ear'), type), earAnswer, earNext, earReplay, exitEar:()=>drillDone(drillById('ear')), getEar:()=>ear,
     earChoices:()=>(ear?ear.cfg.choices():[]), INTERVALS, EAR_QUAL_IDX,
     // chord-change fluency drill
-    startChanges, cmBegin, cmTap, cmUntap, finishChanges, exitChanges, getCm:()=>cmDrill,
+    startChanges:()=>drillOpen(drillById('changes')), cmBegin, cmTap, cmUntap, finishChanges, exitChanges:()=>drillDone(drillById('changes')), getCm:()=>cmDrill,
     CM_PAIRS, CM_DURS, cmPairId, cmPairBest,
     setCmPair:(i)=>{ cmPairIdx=i; if(cmDrill) cmDrill.pairIdx=i; }, setCmDur:(i)=>{ cmDurIdx=i; if(cmDrill) cmDrill.dur=CM_DURS[i]; },
     // strumming & feel lab
-    startStrum, spPlay, spStop, spToggle, exitStrum, getSp:()=>spDrill,
+    startStrum:()=>drillOpen(drillById('strum')), spPlay, spStop, spToggle, exitStrum:()=>drillDone(drillById('strum')), getSp:()=>spDrill,
     STRUM_PATTERNS, setSpPattern:(i)=>{ spIdx=i; if(spDrill) spDrill.patIdx=i; },
     SP_SWINGS, setSpSwing:(i)=>{ spSwing=i; }, setSpAccent:(v)=>{ spAccent=!!v; },
     setSpMute:(v)=>{ spMute=!!v; }, setSpBand:(v)=>{ spBand=!!v; },
     // comp-the-progression drill
-    startComp, targetPlay, targetStop, targetToggle, exitTarget, getTg:()=>tgDrill,
+    startComp:()=>drillOpen(drillById('overchanges')), targetPlay, targetStop, targetToggle, exitTarget:()=>drillDone(drillById('overchanges')), getTg:()=>tgDrill,
     tgBuildBars, setTargetProg:(i)=>{ tgIdx=i; if(tgDrill){ tgDrill.presetIdx=i; tgDrill.bars=tgBuildBars(SEQ_PRESETS[i]); } },
     // subdivision & timing drill
-    startTiming, sdToggle, exitTiming, getSd:()=>sd, SUBDIVS, SD_BEATS, sdPath,
+    startTiming:()=>drillOpen(drillById('timing')), sdToggle, exitTiming:()=>drillDone(drillById('timing')), getSd:()=>sd, SUBDIVS, SD_BEATS, sdPath,
     setSdSub:(i)=>{ sdSub=i; }, setSdPos:(i)=>{ sdPos=i; }, setSdNotes:(v)=>{ sdNotes=!!v; },
     sdTickNow:(t,c)=>sdTick(t,c),
     CAGED_BY_POS, isCAGEDScale,

@@ -230,6 +230,9 @@
   /* the title band is full width, so the 12-key picker below can wrap without stranding Quit */
   .drill-ctx-lead { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .drill-name { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin-right: 2px; }
+  .drill-name:focus { outline: none; }   /* focused on start for screen readers, not a control */
+  /* read by screen readers, not shown */
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .drill-sess { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); }
   /* Quit sits at the far end */
   #drill-ctx-quit { margin-left: auto; }

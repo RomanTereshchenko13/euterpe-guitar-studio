@@ -55,22 +55,16 @@ function sdClick(when, level){
 }
 
 /* ---- lifecycle ---- */
-function startTiming(){
+function beginTiming(){
   sd={ playing:false, clock:null, count:0, bars:0, div:SUBDIVS[sdSub].div, path:[], pathIdx:0 };
   sdScore.clearScore();
-  const home=document.getElementById('practice-home'), area=document.getElementById('sd-area');
-  if(home) home.hidden=true; if(area) area.hidden=false;
-  drillShellEnter();          // name the header, open the setup, reveal the hint once
   sdRenderBoard();
   renderTiming();
 }
-function exitTiming(){
+function endTiming(){
   sdStop();
   sdScore.release();     // never leave the mic open behind a closed drill
   sd=null; sdLit=null;
-  const home=document.getElementById('practice-home'), area=document.getElementById('sd-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  renderPractice();
 }
 function sdToggle(){ if(sd && sd.playing) sdStop(); else sdPlay(); }
 function sdPlay(){
@@ -97,9 +91,7 @@ function sdStop(){
   if(sd.bars>=1){
     // The score stays "bars played", and a scored run's timing error rides alongside as
     // `err`, so the timing trend can be charted.
-    recordSession('timing:'+SUBDIVS[sdSub].id, sd.bars, undefined, scoredErr(sc));
-    saveState();
-    renderPractice();
+    drillRecord('timing:'+SUBDIVS[sdSub].id, sd.bars, scoredErr(sc));
   }
   renderTiming();
 }
@@ -194,8 +186,8 @@ function refreshTimingLang(){
 
 registerDrill({ id:'timing', area:'sd-area', tempo:true, setup:'sd-setup',
                 tracks:[{ id:'timing', kind:'perf', sess:'timing', label:'drill_timing',
-                          better:'high', unit:'bars', scored:'mic', start:startTiming }],
-                isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang,
+                          better:'high', unit:'bars', scored:'mic' }],
+                begin:beginTiming, end:endTiming, isActive:()=>!!sd, refreshLang:refreshTimingLang,
                 // the header's mic, offered wherever onset detection can run
                 mic:()=>sdScore.available(),
                 // stop first: switching tiers mid-run would change what a score in progress measures

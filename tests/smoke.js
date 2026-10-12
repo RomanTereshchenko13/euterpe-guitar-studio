@@ -404,8 +404,8 @@ if (T) {
     const cardCount = win.document.querySelectorAll('#practice-home .drill-card').length;
     ok('B1: every practice card has a track', tracks.length === cardCount,
        tracks.length + ' tracks vs ' + cardCount + ' cards');
-    ok('B1: every track has an id, a kind and a starter',
-       tracks.every(tr => tr.id && (tr.kind === 'recall' || tr.kind === 'perf') && typeof tr.start === 'function'));
+    ok('B1: every track has an id, a kind and a drill that opens it',
+       tracks.every(tr => tr.id && (tr.kind === 'recall' || tr.kind === 'perf') && tr.drill && typeof tr.drill.begin === 'function'));
     ok('B1: every track is nameable (a label key, for the queue to say what it means)',
        tracks.every(tr => tr.label && T.I18N.en[tr.label] && T.I18N.uk[tr.label]),
        tracks.filter(tr => !tr.label).map(tr => tr.id).join(','));
@@ -783,7 +783,7 @@ if (T) {
        leaving the player staring at the practice home with a session still running */
     T.sessionStart(10, T0);
     const s2 = T.getSession();
-    T.activeDrill().exit();                  // stands in for pressing Done on its summary
+    T.drillDone();                           // pressing Done on its summary
     T.sessionTick(T0 + 1000);
     ok('B3: a drill that finishes early moves the session on',
        T.sessionActive() && T.getSession().idx === 1 && s2.plan.length === 2);
@@ -1514,10 +1514,10 @@ if (T) {
     // no drill-count literal here on purpose: merging or adding a drill changes the
     // count legitimately, and the markup-vs-registry check below already pins it
     // exactly. This one guards the SHAPE of each registration.
-    ok('registry: every drill is registered with an id + area + isActive + exit',
+    ok('registry: every drill is registered with an id + area + isActive + begin + end',
        Array.isArray(R) && R.length > 0 &&
-       R.every(d => d.id && d.area &&
-                    typeof d.isActive === 'function' && typeof d.exit === 'function'));
+       R.every(d => d.id && d.area && typeof d.isActive === 'function' &&
+                    typeof d.begin === 'function' && typeof d.end === 'function'));
 
     // the `mode` field went away with the Ear mode — every drill lives under Practice
     ok('registry: no drill carries a mode field any more',
@@ -2431,6 +2431,56 @@ if (T) {
     T.setMode('reference');
     T.setKey(st0.keyRoot, st0.keyLbl, st0.scIdx);
     T.selectTab('harmony'); T.setHView('chords');
+  })();
+
+  /* ---- PLAN step 7: the registry owns the drill lifecycle ----
+     A drill gives begin() and end(); the registry shows its area, names and focuses the
+     header, closes it back to the card it came from, and says a recorded result aloud. */
+  (function drillLifecycle() {
+    const doc = win.document, L0 = JSON.parse(JSON.stringify(T.getLearner())), lang0 = T.state().lang;
+    const areas = () => T.DRILLS.map(d => d.area).filter(id => !doc.getElementById(id).hidden);
+    T.setMode('practice');
+    doc.querySelector('.langbtn[data-lang="en"]').click();
+    doc.querySelector('#practice-home .drill-card[data-track="changes"]').click();
+    ok('step 7: a card opens its drill\'s area, and only that one', areas().join() === 'cm-area' &&
+       doc.getElementById('practice-home').hidden === true, areas().join());
+    ok('step 7: focus moves to the drill header, which names the track',
+       doc.activeElement === doc.getElementById('drill-ctx-name') && doc.activeElement.textContent === 'One-minute changes',
+       doc.activeElement && doc.activeElement.id);
+    T.cmBegin(); for (let i = 0; i < 6; i++) T.cmTap(); T.finishChanges();
+    const live = doc.getElementById('drill-live');
+    ok('step 7: a recorded result is said in the live region',
+       live.getAttribute('role') === 'status' && /^One-minute changes: \d+\/min$/.test(live.textContent), live.textContent);
+    doc.getElementById('drill-ctx-quit').click();
+    ok('step 7: Quit closes the area and shows the home', areas().length === 0 && !doc.getElementById('practice-home').hidden);
+    ok('step 7: ...and focus goes back to the card that opened it',
+       doc.activeElement === doc.querySelector('#practice-home .drill-card[data-track="changes"]'),
+       doc.activeElement && (doc.activeElement.id || doc.activeElement.className));
+
+    // the finite drills share one summary: Again reopens the same track, Done closes it
+    T.startTrack('chordq');
+    const e = T.getEar();
+    while (T.getEar() && !T.getEar().finished) { T.earAnswer(T.getEar().cur.key); T.earNext(); }
+    const sum = doc.getElementById('ear-summary');
+    ok('step 7: the ear drill ends on the shared summary',
+       !sum.hidden && !!sum.querySelector('[data-sum="again"]') && !!sum.querySelector('[data-sum="done"]') &&
+       doc.getElementById('ear-active').hidden);
+    sum.querySelector('[data-sum="again"]').click();
+    ok('step 7: Again reopens the same track, fresh', !!T.getEar() && T.getEar() !== e && T.getEar().type === 'chordq' &&
+       !T.getEar().finished && sum.hidden && T.getCurTrack() === 'chordq');
+    while (T.getEar() && !T.getEar().finished) { T.earAnswer(T.getEar().cur.key); T.earNext(); }
+    sum.querySelector('[data-sum="done"]').click();
+    ok('step 7: Done closes it back to its card', !T.activeDrill() && areas().length === 0 &&
+       doc.activeElement === doc.querySelector('#practice-home .drill-card[data-track="chordq"]'));
+
+    // opening a drill while another runs ends the first (one drill at a time)
+    T.startTrack('timing'); T.startTrack('note');
+    ok('step 7: a second drill ends the first', !T.getSd() && !!T.getDrill() && areas().join() === 'drill-area');
+    doc.getElementById('drill-ctx-quit').click();
+
+    T.setLearner(L0); T.saveState();
+    doc.querySelector('.langbtn[data-lang="' + lang0 + '"]').click();
+    T.setMode('reference');
   })();
 
   /* ---- PLAN step 6: the key and the chord are separate state ----

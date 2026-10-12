@@ -43,21 +43,15 @@ const spScore = scoredRun({
   onChange:()=>{ if(spDrill) renderStrum(); },
 });
 
-function startStrum(){
+function beginStrum(){
   spDrill={ patIdx:spIdx, slot:-1, bars:0, clock:null, playing:false };
   spScore.clearScore();
-  const home=document.getElementById('practice-home'), area=document.getElementById('sp-area');
-  if(home) home.hidden=true; if(area) area.hidden=false;
-  drillShellEnter();
   renderStrum();
 }
-function exitStrum(){
+function endStrum(){
   spStop();
   spScore.release();     // never leave the mic open behind a closed drill
   spDrill=null;
-  const home=document.getElementById('practice-home'), area=document.getElementById('sp-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  renderPractice();
 }
 function spToggle(){ if(spDrill && spDrill.playing) spStop(); else spPlay(); }
 function spPlay(){
@@ -79,7 +73,7 @@ function spStop(){
   spDrill.playing=false; spDrill.slot=-1;
   const sc=spScore.end();
   // bars played stays the score; a scored run's timing error rides along
-  if(spDrill.bars>=1){ recordSession('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars, undefined, scoredErr(sc)); saveState(); renderPractice(); }
+  if(spDrill.bars>=1) drillRecord('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars, scoredErr(sc));
   renderStrum();
 }
 /* a strum that can be palm-muted (short) or open — pluckAt sets per-note duration,
@@ -164,8 +158,8 @@ function refreshStrumLang(){ if(spDrill){ renderStrum(); spScore.refreshLang(); 
 
 registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',   // the 8th-note clock is beat()-driven
                 tracks:[{ id:'strum', kind:'perf', sess:'strum', label:'drill_strum',
-                          better:'high', unit:'bars', scored:'mic', start:startStrum }],
-                isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang,
+                          better:'high', unit:'bars', scored:'mic' }],
+                begin:beginStrum, end:endStrum, isActive:()=>!!spDrill, refreshLang:refreshStrumLang,
                 mic:()=>spScore.available(),
                 // stop first: switching tiers mid-run would change what a score in progress measures
                 onMic:()=>{ if(spDrill&&spDrill.playing) spStop();

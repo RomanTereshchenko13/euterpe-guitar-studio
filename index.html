@@ -196,6 +196,8 @@
   body.drill-running .practice-panel .panel-head { display: none; }
   .drill-ctx-lead { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .drill-name { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin-right: 2px; }
+  .drill-name:focus { outline: none; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .drill-sess { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); }
   #drill-ctx-quit { margin-left: auto; }
   body:not(.drill-setup-open) .drill-setup { display: none; }
@@ -947,6 +949,7 @@
     <div class="panel-head">
       <div class="ph-top"><h2 id="practice-h" data-i18n="practice_h">Практика</h2></div>
     </div>
+    <p class="sr-only" id="drill-live" role="status" aria-live="polite"></p>
     <div id="practice-home">
       <div id="ph-top-block">
         <div class="practice-session-card">
@@ -1016,7 +1019,7 @@
 
     <div class="row drill-ctx" id="drill-ctx">
       <span class="drill-ctx-lead">
-      <span class="drill-name" id="drill-ctx-name"></span>
+      <span class="drill-name" id="drill-ctx-name" tabindex="-1"></span>
       <span class="drill-sess" id="drill-ctx-sess" hidden></span>
       <button type="button" class="btn" id="drill-ctx-skip" hidden></button>
       <button type="button" class="drill-help" id="drill-ctx-help" aria-expanded="false" title="?">?</button>
@@ -3994,17 +3997,68 @@ function activeDrill(){
   return DRILLS.find(drillIsActive) || null;
 }
 function exitAllDrills(){
-  DRILLS.forEach(d=>{ if(drillIsActive(d) && typeof d.exit==='function') d.exit(); });
+  DRILLS.forEach(d=>{ if(drillIsActive(d)) drillClose(d); });
   drillShellLeft();
 }
 function quitDrill(){
-  const d=activeDrill();
-  if(d && typeof d.exit==='function') d.exit();
+  const d=activeDrill(), tr=curTrack;
+  if(d) drillClose(d);
   drillShellLeft();
+  focusTrackCard(tr);
 }
 function drillShellLeft(){
   sessionInterrupt();
   setCurTrack(null); applyDrillCtx();
+}
+function drillOpen(d, arg){
+  if(!d) return;
+  DRILLS.forEach(o=>{ if(drillIsActive(o)) o.end(); });   
+  const home=document.getElementById('practice-home'); if(home) home.hidden=true;
+  DRILLS.forEach(o=>{ const a=o.area && document.getElementById(o.area); if(a) a.hidden = o!==d; });
+  d.begin(arg);
+  drillShellEnter();
+  const nm=document.getElementById('drill-ctx-name'); if(nm && nm.textContent) nm.focus();
+}
+function drillClose(d){
+  if(drillIsActive(d)) d.end();
+  const a=d.area && document.getElementById(d.area); if(a) a.hidden=true;
+  const home=document.getElementById('practice-home'); if(home) home.hidden=false;
+  renderPractice();
+}
+function drillDone(d){
+  d = d || activeDrill(); if(!d) return;
+  const tr=curTrack;
+  drillClose(d);
+  setCurTrack(null); applyDrillCtx();
+  focusTrackCard(tr);
+}
+function focusTrackCard(id){
+  if(!id) return;
+  const card=document.querySelector('#practice-home .drill-card[data-track="'+id+'"]');
+  if(card && !card.closest('[hidden]')) card.focus();
+}
+function drillById(id){ return DRILLS.find(d=>d.id===id) || null; }
+function drillRecord(sessId, score, err){
+  recordSession(sessId, score, undefined, err);
+  saveState();
+  renderPractice();
+  const tr=trackBySess(sessNs(sessId));
+  const live=document.getElementById('drill-live');
+  if(live) live.textContent=(tr && tr.label ? t(tr.label)+': ' : '')+trendScore({ last:score, unit:tr ? tr.unit : '' });
+}
+function renderDrillSummary(hostId, activeId, o){
+  const el=document.getElementById(hostId); if(!el) return;
+  const act=document.getElementById(activeId); if(act) act.hidden=true;
+  const stat=(v,l)=>'<div class="pp-stat"><div class="pp-val">'+v+'</div><div class="pp-lab">'+l+'</div></div>';
+  const review=o.review || [];
+  el.innerHTML='<div class="drill-done-title">'+t('drill_complete')+'</div>'+
+    '<div class="pp-stats">'+o.stats.map(s=>stat(s[0], s[1])).join('')+'</div>'+
+    drillReviewHTML(review)+
+    '<div class="drill-actions"><button class="btn play" data-sum="again"></button><button class="btn" data-sum="done"></button></div>';
+  el.hidden=false;
+  wireDrillReview(el, review);
+  const ag=el.querySelector('[data-sum="again"]'); ag.textContent=t('drill_again'); ag.onclick=o.again;
+  const dn=el.querySelector('[data-sum="done"]');  dn.textContent=t('drill_done');  dn.onclick=()=>drillDone();
 }
 function drillKeyChanged(){
   const d=activeDrill();
@@ -4254,9 +4308,9 @@ function learnerReview(now){
 }
 function startTrack(id){
   const tr = trackById(id);
-  if(!tr || typeof tr.start!=='function') return false;
+  if(!tr) return false;
   setCurTrack(tr.id);
-  tr.start();
+  drillOpen(tr.drill, tr.arg);
   return true;
 }
 function trendScore(tn){
@@ -4718,23 +4772,15 @@ function buildEarQueue(keys, len){
   const rest=keys.filter(k=>due.indexOf(k)<0);
   return earShuffle(due).concat(earShuffle(rest)).slice(0, len);
 }
-function startEar(type){
+function beginEar(type){
   const cfg=EAR[type]; if(!cfg) return;
   ear={ type, cfg, queue:buildEarQueue(cfg.pool(), cfg.len), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, cur:null, answered:false, missed:[] };
   ear.total=ear.queue.length;
-  const home=document.getElementById('practice-home'), area=document.getElementById('ear-area'),
-        act=document.getElementById('ear-active'), sum=document.getElementById('ear-summary');
-  if(home) home.hidden=true; if(area) area.hidden=false; if(act) act.hidden=false; if(sum) sum.hidden=true;
-  drillShellEnter();
+  const act=document.getElementById('ear-active'), sum=document.getElementById('ear-summary');
+  if(act) act.hidden=false; if(sum) sum.hidden=true;
   nextEarPrompt();
 }
-function exitEar(){
-  ear=null;
-  const area=document.getElementById('ear-area');
-  if(area) area.hidden=true;
-  showDrillHome();
-  renderPractice();
-}
+function endEar(){ ear=null; }
 function nextEarPrompt(){
   if(!ear.queue.length){ finishEar(); return; }
   ear.answered=false;
@@ -4757,9 +4803,7 @@ function finishEar(){
   ear.finished=true;
   const elapsed=Math.max(0, Math.round((Date.now()-ear.startT)/1000));
   const acc=ear.total ? ear.correctPrompts/ear.total : 0;
-  recordSession(ear.cfg.sess, Math.round(acc*100));
-  saveState();
-  renderPractice();
+  drillRecord(ear.cfg.sess, Math.round(acc*100));
   renderEarSummary(elapsed, acc);
 }
 function earAnswerLabel(){
@@ -4799,23 +4843,11 @@ function renderEarAnswered(chosenKey, correct){
   if(nx){ nx.hidden=false; nx.innerHTML = ear.queue.length ? (t('ear_next')+' &rarr;') : t('drill_done'); }
 }
 function renderEarSummary(elapsed, acc){
-  const el=document.getElementById('ear-summary'); if(!el) return;
-  const act=document.getElementById('ear-active'); if(act) act.hidden=true;
-  const stat=(v,l)=>'<div class="pp-stat"><div class="pp-val">'+v+'</div><div class="pp-lab">'+l+'</div></div>';
-  const review=earReview();
-  el.innerHTML='<div class="drill-done-title">'+t('drill_complete')+'</div>'+
-    '<div class="pp-stats">'+
-      stat(Math.round(acc*100)+'%', t('drill_score'))+
-      stat(ear.correctPrompts+' / '+ear.total, t('ear_got'))+
-      stat(elapsed+'s', t('drill_time'))+
-    '</div>'+
-    drillReviewHTML(review)+
-    '<div class="drill-actions"><button class="btn play" id="ear-again"></button><button class="btn" id="ear-done"></button></div>';
-  el.hidden=false;
-  wireDrillReview(el, review);
   const type=ear.type;
-  const ag=document.getElementById('ear-again'); if(ag){ ag.textContent=t('drill_again'); ag.onclick=()=>startEar(type); }
-  const dn=document.getElementById('ear-done');  if(dn){ dn.textContent=t('drill_done');  dn.onclick=exitEar; }
+  renderDrillSummary('ear-summary', 'ear-active', { review:earReview(), again:()=>drillOpen(drillById('ear'), type), stats:[
+    [Math.round(acc*100)+'%', t('drill_score')],
+    [ear.correctPrompts+' / '+ear.total, t('ear_got')],
+    [elapsed+'s', t('drill_time')] ] });
 }
 function earReview(){
   if(!ear || !ear.missed.length) return [];
@@ -4827,10 +4859,10 @@ function earReview(){
 }
 function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPrompt(); }
 registerDrill({ id:'ear', area:'ear-area',
-                isActive:()=>!!ear, exit:exitEar, refreshLang:refreshEarLang,
+                begin:beginEar, end:endEar, isActive:()=>!!ear, refreshLang:refreshEarLang,
                 tracks:[
-                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', scored:'acc', start:()=>startEar('interval') },
-                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    scored:'acc', start:()=>startEar('chordq') }
+                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', scored:'acc', arg:'interval' },
+                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    scored:'acc', arg:'chordq' }
                 ] });
 (function initEar(){
   const area=document.getElementById('ear-area'); if(!area) return;
@@ -4840,20 +4872,15 @@ registerDrill({ id:'ear', area:'ear-area',
   const ch=document.getElementById('ear-choices');
   if(ch) ch.addEventListener('click', e=>{ const b=e.target.closest('.ear-choice'); if(b && !b.disabled) earAnswer(b.dataset.key); });
 })();
-
-
 const DRILL_LEN = 6;
 let drill = null;
-
 function drillShuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=a[i]; a[i]=a[j]; a[j]=tmp; } return a; }
-
 function buildQueue(){
   const now=Date.now(), naturals=NAT.map(n=>NOTES.indexOf(n));
   const due=naturals.filter(pc=>((learner.items['note:'+NOTES[pc]]||{due:0}).due)<=now);
   const rest=naturals.filter(pc=>due.indexOf(pc)<0);
   return drillShuffle(due).concat(drillShuffle(rest)).slice(0, DRILL_LEN);
 }
-
 function drillTargetsFor(pc){
   const set=new Set(), lo=FRET_LO(), hi=FRET_HI(), showOpen=lo<=1;
   for(let si=0; si<6; si++){
@@ -4862,25 +4889,15 @@ function drillTargetsFor(pc){
   }
   return set;
 }
-
-function startDrill(){
+function beginNotes(){
   drill={ queue:buildQueue(), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, targetPc:null, targets:null, wrongThis:0, missed:[] };
   drill.total=drill.queue.length;
-  const home=document.getElementById('practice-home'), area=document.getElementById('drill-area'),
-        act=document.getElementById('drill-active'), sum=document.getElementById('drill-summary');
-  if(home) home.hidden=true; if(area) area.hidden=false; if(act) act.hidden=false; if(sum) sum.hidden=true;
-  drillShellEnter();
+  const act=document.getElementById('drill-active'), sum=document.getElementById('drill-summary');
+  if(act) act.hidden=false; if(sum) sum.hidden=true;
   renderDrillBoard();
   nextPrompt();
 }
-
-function exitDrill(){
-  drill=null;
-  const home=document.getElementById('practice-home'), area=document.getElementById('drill-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  renderPractice();
-}
-
+function endNotes(){ drill=null; }
 function nextPrompt(){
   if(!drill.queue.length){ finishDrill(); return; }
   drill.targetPc=drill.queue.shift();
@@ -4889,7 +4906,6 @@ function nextPrompt(){
   clearDrillMarks();
   setPromptUI();
 }
-
 function drillAnswer(si, f){
   if(!drill || drill.finished) return;
   const key=si+':'+f, pc=(OPEN_MIDI[si]+f)%12;
@@ -4909,18 +4925,13 @@ function drillAnswer(si, f){
     playCue('wrong');
   }
 }
-
 function finishDrill(){
   drill.finished=true;
   const elapsed=Math.max(0, Math.round((Date.now()-drill.startT)/1000));
   const acc=drill.total ? drill.correctPrompts/drill.total : 0;
-  recordSession('notes', Math.round(acc*100));
-  saveState();
-  renderPractice();
-  renderDrillSummary(elapsed, acc);
+  drillRecord('notes', Math.round(acc*100));
+  renderNotesSummary(elapsed, acc);
 }
-
-
 function renderDrillBoard(){
   const el=document.getElementById('drill-board'); if(!el) return;
   renderBoard(el, (pc,si,f)=>{
@@ -4943,33 +4954,19 @@ function markDrillDot(si,f,kind){
   if(kind==='hit'){ d.classList.add('hit'); d.textContent=noteTxt(NOTES[(OPEN_MIDI[si]+f)%12]); rippleDot(d); }
   else { d.classList.remove('hit'); d.classList.add('miss'); setTimeout(()=>{ if(d) d.classList.remove('miss'); }, 480); }
 }
-function renderDrillSummary(elapsed, acc){
-  const el=document.getElementById('drill-summary'); if(!el) return;
-  const act=document.getElementById('drill-active'); if(act) act.hidden=true;
-  const stat=(v,l)=>'<div class="pp-stat"><div class="pp-val">'+v+'</div><div class="pp-lab">'+l+'</div></div>';
+function renderNotesSummary(elapsed, acc){
   const review=drill.missed.map(pc=>({ label:noteTxt(NOTES[pc]),
     open:()=>{ ntRoot=NOTES[pc]; openReference('scales','notes'); saveState(); } }));
-  el.innerHTML='<div class="drill-done-title">'+t('drill_complete')+'</div>'+
-    '<div class="pp-stats">'+
-      stat(Math.round(acc*100)+'%', t('drill_score'))+
-      stat(drill.correctPrompts+' / '+drill.total, t('drill_clean'))+
-      stat(drill.totalWrong, t('drill_misses'))+
-      stat(elapsed+'s', t('drill_time'))+
-    '</div>'+
-    drillReviewHTML(review)+
-    '<div class="drill-actions"><button class="btn play" id="drill-again"></button><button class="btn" id="drill-done"></button></div>';
-  el.hidden=false;
-  wireDrillReview(el, review);
-  const ag=document.getElementById('drill-again'); if(ag){ ag.textContent=t('drill_again'); ag.onclick=startDrill; }
-  const dn=document.getElementById('drill-done');  if(dn){ dn.textContent=t('drill_done');  dn.onclick=exitDrill; }
+  renderDrillSummary('drill-summary', 'drill-active', { review, again:()=>drillOpen(drillById('notes')), stats:[
+    [Math.round(acc*100)+'%', t('drill_score')],
+    [drill.correctPrompts+' / '+drill.total, t('drill_clean')],
+    [drill.totalWrong, t('drill_misses')],
+    [elapsed+'s', t('drill_time')] ] });
 }
-
-
 registerDrill({ id:'notes', area:'drill-area',
-                isActive:()=>!!drill, exit:exitDrill,
+                begin:beginNotes, end:endNotes, isActive:()=>!!drill,
                 tracks:[{ id:'note', kind:'recall', items:'note', sess:'notes', label:'drill_notes',
-                          better:'high', unit:'pct', scored:'acc', start:startDrill }] });
-
+                          better:'high', unit:'pct', scored:'acc' }] });
 (function initDrill(){
   const b=document.getElementById('drill-board'); if(!b) return;
   const fire=d=>{ if(d) drillAnswer(parseInt(d.dataset.si,10), parseInt(d.dataset.f,10)); };
@@ -4988,21 +4985,15 @@ function tgBuildBars(preset){
   preset.steps.forEach(([off,qi,b])=>{ const pc=mod(r+off,12); for(let k=0;k<Math.max(1,b);k++) out.push({pc, qi}); });
   return out;
 }
-function startComp(){
+function beginComp(){
   tgDrill={ presetIdx:tgIdx, bars:tgBuildBars(SEQ_PRESETS[tgIdx]), bar:0, cycles:0, clock:null, playing:false };
   tgScore.clearScore();
-  const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
-  if(home) home.hidden=true; if(area) area.hidden=false;
-  drillShellEnter();
   renderTarget();
 }
-function exitTarget(){
+function endComp(){
   targetStop();
   tgScore.release();     
   tgDrill=null;
-  const home=document.getElementById('practice-home'), area=document.getElementById('tg-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  renderPractice();
 }
 function targetToggle(){ if(tgDrill && tgDrill.playing) targetStop(); else targetPlay(); }
 function targetPlay(){
@@ -5026,9 +5017,7 @@ function targetStop(){
   const sc=tgScore.end();
   const barsPlayed = tgDrill.cycles*tgDrill.bars.length + tgDrill.bar;
   if(barsPlayed>=1){
-    recordSession('comp:'+SEQ_PRESETS[tgDrill.presetIdx].name, barsPlayed, undefined, scoredErr(sc));
-    saveState();
-    renderPractice();
+    drillRecord('comp:'+SEQ_PRESETS[tgDrill.presetIdx].name, barsPlayed, scoredErr(sc));
   }
   renderTarget();
 }
@@ -5076,9 +5065,9 @@ function tgPulseBeat(k){
 function refreshTargetLang(){ if(tgDrill){ renderTarget(); tgScore.refreshLang(); } }
 registerDrill({ id:'overchanges', area:'tg-area', tempo:true,   
                 tracks:[
-                  { id:'comp', kind:'perf', sess:'comp', better:'high', unit:'bars', label:'drill_comp', scored:'mic', start:startComp }
+                  { id:'comp', kind:'perf', sess:'comp', better:'high', unit:'bars', label:'drill_comp', scored:'mic' }
                 ],
-                isActive:()=>!!tgDrill, exit:exitTarget, refreshLang:refreshTargetLang,
+                begin:beginComp, end:endComp, isActive:()=>!!tgDrill, refreshLang:refreshTargetLang,
                 setup:'tg-setup',
                 mic:()=>tgScore.available(),
                 onMic:()=>{ if(tgDrill&&tgDrill.playing) targetStop(); tgScore.toggle(); renderTarget(); },
@@ -5092,9 +5081,6 @@ registerDrill({ id:'overchanges', area:'tg-area', tempo:true,
   const pg=document.getElementById('tg-progs');
   if(pg) pg.addEventListener('click', e=>{ const btn=e.target.closest('.tg-prog'); if(btn){ tgIdx=+btn.dataset.i; if(tgDrill){ tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]); if(tgDrill.bar>=tgDrill.bars.length) tgDrill.bar=0; } renderTarget(); } });
 })();
-
-
-
 const CM_PAIRS = [
   [[9,0],[2,0]],   
   [[9,0],[4,0]],   
@@ -5108,36 +5094,24 @@ const CM_PAIRS = [
   [[2,0],[7,0]],   
 ];
 const CM_DURS = [30, 60, 90];   
-
 let cmDurIdx = 1;        
 let cmPairIdx = 0;       
 let cmClick = false;     
 let cmDrill = null;
-
 function cmChord(spec){ const [pc,qi]=spec, q=QUALITIES[qi]; return { pc, qi, q, short:q.short, lbl:ROOTS[pc]+q.short }; }
 function cmPairName(i){ const p=CM_PAIRS[i]; return cmChord(p[0]).lbl+' ↔ '+cmChord(p[1]).lbl; }
 function cmPairId(i){ const p=CM_PAIRS[i]; return 'changes:'+cmChord(p[0]).lbl+'-'+cmChord(p[1]).lbl; }   
-
-
 function cmPairBest(i){
   const b=learnerBest(cmPairId(i));
   return b ? b.score : 0;
 }
-
-
-function startChanges(){
+function beginChanges(){
   cmDrill={ phase:'setup', pairIdx:cmPairIdx, dur:CM_DURS[cmDurIdx] };
-  const home=document.getElementById('practice-home'), area=document.getElementById('cm-area');
-  if(home) home.hidden=true; if(area) area.hidden=false;
-  drillShellEnter();
   renderCm();
 }
-function exitChanges(){
+function endChanges(){
   cmStopClocks();
   cmDrill=null;
-  const home=document.getElementById('practice-home'), area=document.getElementById('cm-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  renderPractice();
 }
 function cmBegin(){
   if(!cmDrill) return;
@@ -5160,14 +5134,10 @@ function finishChanges(){
   const cpm=Math.round(cmDrill.count / (cmDrill.dur/60));
   const prevBest=cmPairBest(cmDrill.pairIdx);
   cmDrill.cpm=cpm; cmDrill.newBest = cpm>0 && cpm>prevBest; cmDrill.best=Math.max(prevBest, cpm);
-  recordSession(cmPairId(cmDrill.pairIdx), cpm);
-  saveState();
+  drillRecord(cmPairId(cmDrill.pairIdx), cpm);
   if(cmDrill.newBest) playCue('correct');
-  renderPractice();
   renderCm();
 }
-
-
 function cmCountIn(){
   const ctx=audio(); if(!ctx) return;
   const b=beat(), start=ctx.currentTime+0.05;
@@ -5191,8 +5161,6 @@ function cmCountdown(){
   renderCmTime();
 }
 function cmFmtTime(s){ s=Math.max(0,s|0); const m=Math.floor(s/60), ss=s%60; return m+':'+(ss<10?'0':'')+ss; }
-
-
 function renderCm(){
   if(!cmDrill) return;
   const setup=document.getElementById('cm-setup'), active=document.getElementById('cm-active'), sum=document.getElementById('cm-summary');
@@ -5251,16 +5219,13 @@ function renderCmSummary(){
     '</div>'+
     '<div class="drill-actions"><button class="btn play" id="cm-again"></button><button class="btn" id="cm-done"></button></div>';
   const ag=document.getElementById('cm-again'); if(ag){ ag.innerHTML='&#9654; '+t('drill_again'); ag.onclick=cmBegin; }
-  const dn=document.getElementById('cm-done');  if(dn){ dn.textContent=t('drill_done'); dn.onclick=exitChanges; }
+  const dn=document.getElementById('cm-done');  if(dn){ dn.textContent=t('drill_done'); dn.onclick=()=>drillDone(); }
 }
 function refreshChangesLang(){ if(cmDrill) renderCm(); }
-
-
 registerDrill({ id:'changes', area:'cm-area', tempo:true,   
                 tracks:[{ id:'changes', kind:'perf', sess:'changes', label:'drill_changes',
-                          better:'high', unit:'cpm', start:startChanges }],
-                isActive:()=>!!cmDrill, exit:exitChanges, refreshLang:refreshChangesLang });
-
+                          better:'high', unit:'cpm' }],
+                begin:beginChanges, end:endChanges, isActive:()=>!!cmDrill, refreshLang:refreshChangesLang });
 (function initChanges(){
   const area=document.getElementById('cm-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
@@ -5300,21 +5265,15 @@ const spScore = scoredRun({
   tol:()=>beat()/4,
   onChange:()=>{ if(spDrill) renderStrum(); },
 });
-function startStrum(){
+function beginStrum(){
   spDrill={ patIdx:spIdx, slot:-1, bars:0, clock:null, playing:false };
   spScore.clearScore();
-  const home=document.getElementById('practice-home'), area=document.getElementById('sp-area');
-  if(home) home.hidden=true; if(area) area.hidden=false;
-  drillShellEnter();
   renderStrum();
 }
-function exitStrum(){
+function endStrum(){
   spStop();
   spScore.release();     
   spDrill=null;
-  const home=document.getElementById('practice-home'), area=document.getElementById('sp-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  renderPractice();
 }
 function spToggle(){ if(spDrill && spDrill.playing) spStop(); else spPlay(); }
 function spPlay(){
@@ -5335,7 +5294,7 @@ function spStop(){
   clearVisualQ();
   spDrill.playing=false; spDrill.slot=-1;
   const sc=spScore.end();
-  if(spDrill.bars>=1){ recordSession('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars, undefined, scoredErr(sc)); saveState(); renderPractice(); }
+  if(spDrill.bars>=1) drillRecord('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars, scoredErr(sc));
   renderStrum();
 }
 function spStrum(midis, when, vel, dir, muted){
@@ -5408,8 +5367,8 @@ function spHighlightSlot(slot){
 function refreshStrumLang(){ if(spDrill){ renderStrum(); spScore.refreshLang(); } }
 registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',   
                 tracks:[{ id:'strum', kind:'perf', sess:'strum', label:'drill_strum',
-                          better:'high', unit:'bars', scored:'mic', start:startStrum }],
-                isActive:()=>!!spDrill, exit:exitStrum, refreshLang:refreshStrumLang,
+                          better:'high', unit:'bars', scored:'mic' }],
+                begin:beginStrum, end:endStrum, isActive:()=>!!spDrill, refreshLang:refreshStrumLang,
                 mic:()=>spScore.available(),
                 onMic:()=>{ if(spDrill&&spDrill.playing) spStop();
                             spScore.toggle();
@@ -5467,22 +5426,16 @@ function sdClick(when, level){
   g.gain.exponentialRampToValueAtTime(0.0001, when+0.045);
   o.connect(g).connect(cue); o.start(when); o.stop(when+0.06);
 }
-function startTiming(){
+function beginTiming(){
   sd={ playing:false, clock:null, count:0, bars:0, div:SUBDIVS[sdSub].div, path:[], pathIdx:0 };
   sdScore.clearScore();
-  const home=document.getElementById('practice-home'), area=document.getElementById('sd-area');
-  if(home) home.hidden=true; if(area) area.hidden=false;
-  drillShellEnter();          
   sdRenderBoard();
   renderTiming();
 }
-function exitTiming(){
+function endTiming(){
   sdStop();
   sdScore.release();     
   sd=null; sdLit=null;
-  const home=document.getElementById('practice-home'), area=document.getElementById('sd-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  renderPractice();
 }
 function sdToggle(){ if(sd && sd.playing) sdStop(); else sdPlay(); }
 function sdPlay(){
@@ -5507,9 +5460,7 @@ function sdStop(){
   document.querySelectorAll('#sd-grid .sd-cell.on').forEach(c=>c.classList.remove('on'));
   const sc=sdScore.end();
   if(sd.bars>=1){
-    recordSession('timing:'+SUBDIVS[sdSub].id, sd.bars, undefined, scoredErr(sc));
-    saveState();
-    renderPractice();
+    drillRecord('timing:'+SUBDIVS[sdSub].id, sd.bars, scoredErr(sc));
   }
   renderTiming();
 }
@@ -5592,8 +5543,8 @@ function refreshTimingLang(){
 }
 registerDrill({ id:'timing', area:'sd-area', tempo:true, setup:'sd-setup',
                 tracks:[{ id:'timing', kind:'perf', sess:'timing', label:'drill_timing',
-                          better:'high', unit:'bars', scored:'mic', start:startTiming }],
-                isActive:()=>!!sd, exit:exitTiming, refreshLang:refreshTimingLang,
+                          better:'high', unit:'bars', scored:'mic' }],
+                begin:beginTiming, end:endTiming, isActive:()=>!!sd, refreshLang:refreshTimingLang,
                 mic:()=>sdScore.available(),
                 onMic:()=>{ if(sd&&sd.playing) sdStop(); sdScore.toggle(); renderTiming(); },
                 onKey:()=>{ if(!sd) return; sdRenderBoard(); sdRestart(); renderTiming(); } });
@@ -6607,7 +6558,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     setCustomTuning:(arr)=>{ customTuning=arr.slice(); }, setTuningIdx:(i)=>{ tuningIdx=i; applyTuning(); },
     learnerReview, learnerActivity, startReview,
     clearOldShareHash,
-    DRILLS, activeDrill, showDrillHome, exitAllDrills, refreshDrillsLang, drillKeyChanged, applyDrillCtx,
+    DRILLS, activeDrill, showDrillHome, drillOpen, drillDone, drillById, renderDrillSummary, exitAllDrills, refreshDrillsLang, drillKeyChanged, applyDrillCtx,
     drillSetupToggle, drillHintToggle, drillMicToggle, drillRunStarted, setCurTrack, quitDrill,
     getCurTrack:()=>curTrack, getDrillSeen:()=>drillSeen, setDrillSeen:(o)=>{ drillSeen=o||{}; },
     drillTracks, trackById, trackBySess, trackByItems, sessNs, startTrack, learnerTrend, learnerBest, scoredErr,
@@ -6627,19 +6578,19 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     saveState, loadState, snapshotState, migrateSave, progressPayload, progressParse, progressApply, progressFileName, saveFailed,
     BACKUP_FORMAT, getSaveBlocked:()=>saveBlocked, setSaveBlocked:(v)=>{ saveBlocked=!!v; },
     resetSaveFailShown:()=>{ saveFailShown=false; },
-    startDrill, drillAnswer, drillTargetsFor, exitDrill, DRILL_LEN, getDrill:()=>drill,
-    startEar, earAnswer, earNext, earReplay, exitEar, getEar:()=>ear,
+    startDrill:()=>drillOpen(drillById('notes')), drillAnswer, drillTargetsFor, exitDrill:()=>drillDone(drillById('notes')), DRILL_LEN, getDrill:()=>drill,
+    startEar:(type)=>drillOpen(drillById('ear'), type), earAnswer, earNext, earReplay, exitEar:()=>drillDone(drillById('ear')), getEar:()=>ear,
     earChoices:()=>(ear?ear.cfg.choices():[]), INTERVALS, EAR_QUAL_IDX,
-    startChanges, cmBegin, cmTap, cmUntap, finishChanges, exitChanges, getCm:()=>cmDrill,
+    startChanges:()=>drillOpen(drillById('changes')), cmBegin, cmTap, cmUntap, finishChanges, exitChanges:()=>drillDone(drillById('changes')), getCm:()=>cmDrill,
     CM_PAIRS, CM_DURS, cmPairId, cmPairBest,
     setCmPair:(i)=>{ cmPairIdx=i; if(cmDrill) cmDrill.pairIdx=i; }, setCmDur:(i)=>{ cmDurIdx=i; if(cmDrill) cmDrill.dur=CM_DURS[i]; },
-    startStrum, spPlay, spStop, spToggle, exitStrum, getSp:()=>spDrill,
+    startStrum:()=>drillOpen(drillById('strum')), spPlay, spStop, spToggle, exitStrum:()=>drillDone(drillById('strum')), getSp:()=>spDrill,
     STRUM_PATTERNS, setSpPattern:(i)=>{ spIdx=i; if(spDrill) spDrill.patIdx=i; },
     SP_SWINGS, setSpSwing:(i)=>{ spSwing=i; }, setSpAccent:(v)=>{ spAccent=!!v; },
     setSpMute:(v)=>{ spMute=!!v; }, setSpBand:(v)=>{ spBand=!!v; },
-    startComp, targetPlay, targetStop, targetToggle, exitTarget, getTg:()=>tgDrill,
+    startComp:()=>drillOpen(drillById('overchanges')), targetPlay, targetStop, targetToggle, exitTarget:()=>drillDone(drillById('overchanges')), getTg:()=>tgDrill,
     tgBuildBars, setTargetProg:(i)=>{ tgIdx=i; if(tgDrill){ tgDrill.presetIdx=i; tgDrill.bars=tgBuildBars(SEQ_PRESETS[i]); } },
-    startTiming, sdToggle, exitTiming, getSd:()=>sd, SUBDIVS, SD_BEATS, sdPath,
+    startTiming:()=>drillOpen(drillById('timing')), sdToggle, exitTiming:()=>drillDone(drillById('timing')), getSd:()=>sd, SUBDIVS, SD_BEATS, sdPath,
     setSdSub:(i)=>{ sdSub=i; }, setSdPos:(i)=>{ sdPos=i; }, setSdNotes:(v)=>{ sdNotes=!!v; },
     sdTickNow:(t,c)=>sdTick(t,c),
     CAGED_BY_POS, isCAGEDScale,

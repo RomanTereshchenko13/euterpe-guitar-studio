@@ -29,23 +29,15 @@ function drillTargetsFor(pc){
   return set;
 }
 
-function startDrill(){
+function beginNotes(){
   drill={ queue:buildQueue(), total:0, done:0, correctPrompts:0, totalWrong:0, startT:Date.now(), finished:false, targetPc:null, targets:null, wrongThis:0, missed:[] };
   drill.total=drill.queue.length;
-  const home=document.getElementById('practice-home'), area=document.getElementById('drill-area'),
-        act=document.getElementById('drill-active'), sum=document.getElementById('drill-summary');
-  if(home) home.hidden=true; if(area) area.hidden=false; if(act) act.hidden=false; if(sum) sum.hidden=true;
-  drillShellEnter();
+  const act=document.getElementById('drill-active'), sum=document.getElementById('drill-summary');
+  if(act) act.hidden=false; if(sum) sum.hidden=true;
   renderDrillBoard();
   nextPrompt();
 }
-
-function exitDrill(){
-  drill=null;
-  const home=document.getElementById('practice-home'), area=document.getElementById('drill-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  renderPractice();
-}
+function endNotes(){ drill=null; }
 
 function nextPrompt(){
   if(!drill.queue.length){ finishDrill(); return; }
@@ -82,10 +74,8 @@ function finishDrill(){
   drill.finished=true;
   const elapsed=Math.max(0, Math.round((Date.now()-drill.startT)/1000));
   const acc=drill.total ? drill.correctPrompts/drill.total : 0;
-  recordSession('notes', Math.round(acc*100));
-  saveState();
-  renderPractice();
-  renderDrillSummary(elapsed, acc);
+  drillRecord('notes', Math.round(acc*100));
+  renderNotesSummary(elapsed, acc);
 }
 
 /* ---- DOM paint ---- */
@@ -111,34 +101,23 @@ function markDrillDot(si,f,kind){
   if(kind==='hit'){ d.classList.add('hit'); d.textContent=noteTxt(NOTES[(OPEN_MIDI[si]+f)%12]); rippleDot(d); }
   else { d.classList.remove('hit'); d.classList.add('miss'); setTimeout(()=>{ if(d) d.classList.remove('miss'); }, 480); }
 }
-function renderDrillSummary(elapsed, acc){
-  const el=document.getElementById('drill-summary'); if(!el) return;
-  const act=document.getElementById('drill-active'); if(act) act.hidden=true;
-  const stat=(v,l)=>'<div class="pp-stat"><div class="pp-val">'+v+'</div><div class="pp-lab">'+l+'</div></div>';
+function renderNotesSummary(elapsed, acc){
   // each missed note opens Scales ▸ Notes with that note lit (ntRoot), the key untouched
   const review=drill.missed.map(pc=>({ label:noteTxt(NOTES[pc]),
     open:()=>{ ntRoot=NOTES[pc]; openReference('scales','notes'); saveState(); } }));
-  el.innerHTML='<div class="drill-done-title">'+t('drill_complete')+'</div>'+
-    '<div class="pp-stats">'+
-      stat(Math.round(acc*100)+'%', t('drill_score'))+
-      stat(drill.correctPrompts+' / '+drill.total, t('drill_clean'))+
-      stat(drill.totalWrong, t('drill_misses'))+
-      stat(elapsed+'s', t('drill_time'))+
-    '</div>'+
-    drillReviewHTML(review)+
-    '<div class="drill-actions"><button class="btn play" id="drill-again"></button><button class="btn" id="drill-done"></button></div>';
-  el.hidden=false;
-  wireDrillReview(el, review);
-  const ag=document.getElementById('drill-again'); if(ag){ ag.textContent=t('drill_again'); ag.onclick=startDrill; }
-  const dn=document.getElementById('drill-done');  if(dn){ dn.textContent=t('drill_done');  dn.onclick=exitDrill; }
+  renderDrillSummary('drill-summary', 'drill-active', { review, again:()=>drillOpen(drillById('notes')), stats:[
+    [Math.round(acc*100)+'%', t('drill_score')],
+    [drill.correctPrompts+' / '+drill.total, t('drill_clean')],
+    [drill.totalWrong, t('drill_misses')],
+    [elapsed+'s', t('drill_time')] ] });
 }
 
 /* board taps and keys, wired once at load */
 registerDrill({ id:'notes', area:'drill-area',
-                isActive:()=>!!drill, exit:exitDrill,
+                begin:beginNotes, end:endNotes, isActive:()=>!!drill,
                 // one track with both result kinds: per-note SRS items and a per-round accuracy
                 tracks:[{ id:'note', kind:'recall', items:'note', sess:'notes', label:'drill_notes',
-                          better:'high', unit:'pct', scored:'acc', start:startDrill }] });
+                          better:'high', unit:'pct', scored:'acc' }] });
 
 (function initDrill(){
   const b=document.getElementById('drill-board'); if(!b) return;

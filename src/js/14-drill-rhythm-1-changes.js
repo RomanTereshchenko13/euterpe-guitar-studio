@@ -39,19 +39,13 @@ function cmPairBest(i){
 }
 
 /* ---- lifecycle ---- */
-function startChanges(){
+function beginChanges(){
   cmDrill={ phase:'setup', pairIdx:cmPairIdx, dur:CM_DURS[cmDurIdx] };
-  const home=document.getElementById('practice-home'), area=document.getElementById('cm-area');
-  if(home) home.hidden=true; if(area) area.hidden=false;
-  drillShellEnter();
   renderCm();
 }
-function exitChanges(){
+function endChanges(){
   cmStopClocks();
   cmDrill=null;
-  const home=document.getElementById('practice-home'), area=document.getElementById('cm-area');
-  if(area) area.hidden=true; if(home) home.hidden=false;
-  renderPractice();
 }
 function cmBegin(){
   if(!cmDrill) return;
@@ -74,10 +68,8 @@ function finishChanges(){
   const cpm=Math.round(cmDrill.count / (cmDrill.dur/60));
   const prevBest=cmPairBest(cmDrill.pairIdx);
   cmDrill.cpm=cpm; cmDrill.newBest = cpm>0 && cpm>prevBest; cmDrill.best=Math.max(prevBest, cpm);
-  recordSession(cmPairId(cmDrill.pairIdx), cpm);
-  saveState();
+  drillRecord(cmPairId(cmDrill.pairIdx), cpm);
   if(cmDrill.newBest) playCue('correct');
-  renderPractice();
   renderCm();
 }
 
@@ -165,7 +157,7 @@ function renderCmSummary(){
     '</div>'+
     '<div class="drill-actions"><button class="btn play" id="cm-again"></button><button class="btn" id="cm-done"></button></div>';
   const ag=document.getElementById('cm-again'); if(ag){ ag.innerHTML='&#9654; '+t('drill_again'); ag.onclick=cmBegin; }
-  const dn=document.getElementById('cm-done');  if(dn){ dn.textContent=t('drill_done'); dn.onclick=exitChanges; }
+  const dn=document.getElementById('cm-done');  if(dn){ dn.textContent=t('drill_done'); dn.onclick=()=>drillDone(); }
 }
 // re-localize an in-flight drill on a language switch
 function refreshChangesLang(){ if(cmDrill) renderCm(); }
@@ -174,8 +166,8 @@ function refreshChangesLang(){ if(cmDrill) renderCm(); }
 registerDrill({ id:'changes', area:'cm-area', tempo:true,   // the optional click rides pulseSec()
                 // the one coach track: it counts YOUR taps, not your guitar
                 tracks:[{ id:'changes', kind:'perf', sess:'changes', label:'drill_changes',
-                          better:'high', unit:'cpm', start:startChanges }],
-                isActive:()=>!!cmDrill, exit:exitChanges, refreshLang:refreshChangesLang });
+                          better:'high', unit:'cpm' }],
+                begin:beginChanges, end:endChanges, isActive:()=>!!cmDrill, refreshLang:refreshChangesLang });
 
 (function initChanges(){
   const area=document.getElementById('cm-area'); if(!area) return;
