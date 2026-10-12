@@ -64,16 +64,16 @@ function applyAsideState(){
   // drop the suggester column on tabs that don't use it, so the board takes the width
   const layout=document.querySelector('.layout'); if(layout) layout.classList.toggle('no-aside', !show);
 }
-/* Repaint every board-bearing view after a tuning / fret-range / capo / lefty change,
-   via the ONE complete fan-out, so no view can be left off. */
-function renderAllBoards(){ renderContextViews(); }
+/* After a tuning / fret-range / capo / lefty change: the view on screen repaints now,
+   the others when they are shown (renderActiveContext). */
+function renderAllBoards(){ renderActiveContext(); }
 /* re-fit the fret cells when the viewport width changes */
 if(typeof window!=='undefined'){
   let _rzT=null, _rzW=window.innerWidth;
   window.addEventListener('resize', ()=>{
     if(window.innerWidth===_rzW) return;          // ignore height-only changes (mobile URL bar)
     _rzW=window.innerWidth;
-    clearTimeout(_rzT); _rzT=setTimeout(()=>{ renderAllBoards(); renderCircle&&renderCircle(); }, 150);
+    clearTimeout(_rzT); _rzT=setTimeout(()=>{ renderAllBoards(); }, 150);
   });
 }
 
@@ -152,103 +152,160 @@ const LS_KEY='guitarStudio.v1';
 let currentTab='harmony';
 // the mode axis, orthogonal to currentTab; a save with no `mode` opens on Reference
 let currentMode='reference';
-/* The one list of what is saved. Export (13-backup.js) reads the same snapshot, so a
-   backup file can't drift from what the browser keeps. */
-function snapshotState(){ return {
-  lang, mode:currentMode, tab:currentTab, tuningIdx, customTuning, fretRangeIdx, tempo, meterIdx, masterVol, lefty, toolbarOpen, backingOpen, shapesOpen, capo,
-  cbPalette, fnShapes, welcomeSeen,
-  gRoot, gRootLbl, gMode, hView, scView,
-  chQual, arpPos, scIdx, scPos, scOverlay,
-  chVoicing, chTriads,
-  trSet, trInv,
-  ntRoot, ntFilter,
-  seq, seqLoopOn,
-  bassOn, grooveOn,
-  calMs, calKnown,   // round-trip latency + whether it was ever measured
-  drillSeen,         // tracks already run once — the first-run hint reveal
-  sessMins,          // how long your practice session usually is
-  learner   // learner model: saved verbatim, restored via normalizeLearner
-}; }
+/* ---- what is saved: declared once ----
+   One row per saved field: [key in the save, read, get, set]. `read` takes the value
+   out of a save, bounds-checked, and returns undefined to keep the default, so a
+   tampered or half-written save can't set a value the UI has no state for.
+   snapshotState() and loadState() are both derived from this list, and export
+   (13-backup.js) reads the same snapshot, so a backup can't drift from what the browser
+   keeps. Adding a saved setting is one row here. Built per call: the tables the checks
+   name live in later files. */
+const svBool = v => typeof v==='boolean' ? v : undefined;
+const svOneOf = (...xs) => v => xs.includes(v) ? v : undefined;
+const svInt = (lo, hi) => v => Number.isInteger(v) && v>=lo && v<=hi ? v : undefined;
+const svNum = (lo, hi) => v => typeof v==='number' && v>=lo && v<=hi ? v : undefined;
+const svIdx = arr => v => Number.isInteger(v) && arr[v]!==undefined ? v : undefined;
+function savedFields(){ return [
+  ['lang',         svOneOf('uk','en'),                    ()=>lang,         v=>{ lang=v; }],
+  ['mode',         svOneOf('reference','practice'),       ()=>currentMode,  v=>{ currentMode=v; }],
+  // any other tab would open on no panel at all
+  ['tab',          svOneOf('harmony','scales','circle'),  ()=>currentTab,   v=>{ currentTab=v; }],
+  ['tuningIdx',    svIdx(TUNINGS),                        ()=>tuningIdx,    v=>{ tuningIdx=v; }],
+  ['customTuning', v=>Array.isArray(v) && v.length===6 && v.every(m=>svInt(TUNE_LO, TUNE_HI)(m)!==undefined) ? v.slice() : undefined,
+                                                          ()=>customTuning, v=>{ customTuning=v; }],
+  ['fretRangeIdx', svIdx(FRET_RANGES),                    ()=>fretRangeIdx, v=>{ fretRangeIdx=v; }],
+  ['tempo',        svNum(40, 200),                        ()=>tempo,        v=>{ tempo=v; }],
+  ['meterIdx',     svIdx(METERS),                         ()=>meterIdx,     v=>{ meterIdx=v; }],
+  ['masterVol',    svNum(0, 1),                           ()=>masterVol,    v=>{ masterVol=v; }],
+  ['lefty',        svBool,                                ()=>lefty,        v=>{ lefty=v; }],
+  ['toolbarOpen',  svBool,                                ()=>toolbarOpen,  v=>{ toolbarOpen=v; }],
+  ['backingOpen',  svBool,                                ()=>backingOpen,  v=>{ backingOpen=v; }],
+  ['shapesOpen',   svBool,                                ()=>shapesOpen,   v=>{ shapesOpen=v; }],
+  ['capo',         svInt(0, 11),                          ()=>capo,         v=>{ capo=v; }],
+  ['cbPalette',    svBool,                                ()=>cbPalette,    v=>{ cbPalette=v; }],
+  ['fnShapes',     svBool,                                ()=>fnShapes,     v=>{ fnShapes=v; }],
+  ['welcomeSeen',  svBool,                                ()=>welcomeSeen,  v=>{ welcomeSeen=v; }],
+  ['gRoot',        svInt(0, 11),                          ()=>gRoot,        v=>{ gRoot=v; }],
+  // a label only means something next to the root it spells
+  ['gRootLbl',     (v,s)=>typeof v==='string' && svInt(0, 11)(s.gRoot)!==undefined ? v : undefined,
+                                                          ()=>gRootLbl,     v=>{ gRootLbl=v; }],
+  ['gMode',        svOneOf('names','deg'),                ()=>gMode,        v=>{ gMode=v; }],
+  ['hView',        svOneOf('chords','arp'),               ()=>hView,        v=>{ hView=v; }],
+  ['scView',       svOneOf('scale','notes'),              ()=>scView,       v=>{ scView=v; }],
+  ['chQual',       svIdx(QUALITIES),                      ()=>chQual,       v=>{ chQual=v; }],
+  ['arpPos',       svInt(0, 5),                           ()=>arpPos,       v=>{ arpPos=v; }],
+  ['scIdx',        svIdx(SCALES),                         ()=>scIdx,        v=>{ scIdx=v; }],
+  ['scPos',        svInt(0, 5),                           ()=>scPos,        v=>{ scPos=v; }],
+  ['scOverlay',    v=>v && typeof v==='object' && Number.isInteger(v.rootPc) && Array.isArray(v.iv) && typeof v.tag==='string'
+                       ? {rootPc:mod(v.rootPc,12), iv:v.iv.slice(), tag:v.tag} : undefined,
+                                                          ()=>scOverlay,    v=>{ scOverlay=v; }],
+  // clamped again at render against the real list length
+  ['chVoicing',    svInt(0, 5),                           ()=>chVoicing,    v=>{ chVoicing=v; }],
+  ['chTriads',     svBool,                                ()=>chTriads,     v=>{ chTriads=v; }],
+  ['trSet',        svIdx(STRING_SETS),                    ()=>trSet,        v=>{ trSet=v; }],
+  ['trInv',        svInt(0, 3),                           ()=>trInv,        v=>{ trInv=v; }],
+  ['ntRoot',       v=>v==='' || NAT.includes(v) || SHARP.includes(v) || FLAT.includes(v) ? v : undefined,
+                                                          ()=>ntRoot,       v=>{ ntRoot=v; }],
+  ['ntFilter',     svOneOf('all','nat'),                  ()=>ntFilter,     v=>{ ntFilter=v; }],
+  ['seq',          v=>Array.isArray(v) ? v
+                       .filter(st=>st && svInt(0, 11)(st.pc)!==undefined && svIdx(QUALITIES)(st.qi)!==undefined)
+                       .map(st=>({pc:st.pc, lbl:(typeof st.lbl==='string'?st.lbl:ROOTS[st.pc]), qi:st.qi, bars:([1,2,4].includes(st.bars)?st.bars:1)}))
+                       : undefined,                       ()=>seq,          v=>{ seq=v; }],
+  ['seqLoopOn',    svBool,                                ()=>seqLoopOn,    v=>{ seqLoopOn=v; }],
+  ['bassOn',       svBool,                                ()=>bassOn,       v=>{ bassOn=v; }],
+  ['grooveOn',     svBool,                                ()=>grooveOn,     v=>{ grooveOn=v; }],
+  // round-trip latency, bounded by the measurement's own ceiling so a bad save can't skew every score
+  ['calMs',        svNum(0, CAL_MAX_MS),                  ()=>calMs,        v=>{ calMs=v; }],
+  ['calKnown',     svBool,                                ()=>calKnown,     v=>{ calKnown=v; }],
+  // tracks already run once (the first-run hint); rebuilt key by key and bounded
+  ['drillSeen',    v=>{ if(!v || typeof v!=='object' || Array.isArray(v)) return undefined;
+                        const out={}; let n=0;
+                        for(const k of Object.keys(v)){ if(!k.length || k.length>32 || ++n>64) continue; if(v[k]) out[k]=1; }
+                        return out; },                    ()=>drillSeen,    v=>{ drillSeen=v; }],
+  ['sessMins',     v=>SESSION_MINS.includes(v) ? v : undefined, ()=>sessMins, v=>{ sessMins=v; }]
+]; }
+
+/* Old saves, brought up to the current shape before the fields read them. Each rule
+   rewrites keys this build reads from keys an older build wrote; tests/compat.js runs
+   real saves from past releases through it. */
+function migrateSave(raw){
+  const s=Object.assign({}, raw);
+  if(s.mode==='ear') s.mode='practice';                        // the ear drills moved into Practice
+  if(s.tab==='chords') s.tab='harmony';                        // the Chords tab merged into Harmony
+  if(s.tab==='notes'){ s.tab='scales'; s.scView='notes'; }     // Notes became a view of Scales
+  // Triads became a toggle on Chord tones (v2.17.0): a save on the Triads tab or view opens
+  // on Chord tones with triads on, on the triad it had picked
+  if(s.tab==='triads' || s.hView==='triads'){
+    if(s.tab==='triads') s.tab='harmony';
+    s.hView='chords'; s.chTriads=true; s.chVoicing=0;
+    if(svIdx(TRIADS)(s.trQual)!==undefined) s.chQual=TRI_TO_QUAL[s.trQual];
+  }
+  // a save from before calKnown with a real latency was measured: don't re-prompt it
+  if(typeof s.calKnown!=='boolean') s.calKnown = svNum(0, CAL_MAX_MS)(s.calMs)>0;
+  // a save from before onboarding is a returning visitor: no welcome
+  if(typeof s.welcomeSeen!=='boolean') s.welcomeSeen=true;
+  return s;
+}
+
+/* ---- progress under its own key ----
+   The learner model is the one thing clicking around can't rebuild, so it is stored apart
+   from the settings: a settings save that throws, or a settings blob that won't parse,
+   can't take it along. Older builds kept it inside the settings (`learner`); that copy is
+   read until the first save writes this key. */
+const LS_PROGRESS='guitarStudio.progress.v1';
+/* A newer app's progress that this build can't read is left alone rather than
+   overwritten with an empty model (someone opening an older copy, or a rollback). */
+let progressFrozen=false;
+
+function settingsSnapshot(){
+  const o={};
+  savedFields().forEach(([k,,get])=>{ o[k]=get(); });
+  return o;
+}
+/* Everything that is saved, settings and progress, in one object: what export writes
+   and import reads. */
+function snapshotState(){ return Object.assign(settingsSnapshot(), { learner }); }
+
 /* Set by an import just before it reloads, so no save can put the old progress back. */
 let saveBlocked=false;
 function saveState(){ if(saveBlocked) return;
-  try{ localStorage.setItem(LS_KEY, JSON.stringify(snapshotState())); }
-  catch(e){ devWarn('state could not be saved (localStorage unavailable?)', e); saveFailed(); } }
-function loadState(){ try{
-  const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(!s) return false;
-  if(s.lang==='uk'||s.lang==='en') lang=s.lang;
-  // an old save pinned to the retired 'ear' mode opens on Practice, where the ear drills live
-  if(s.mode==='practice'||s.mode==='ear') currentMode='practice';
-  else if(s.mode==='reference') currentMode='reference';
-  if(Number.isInteger(s.tuningIdx)&&TUNINGS[s.tuningIdx]) tuningIdx=s.tuningIdx;
-  if(Array.isArray(s.customTuning)&&s.customTuning.length===6&&s.customTuning.every(m=>Number.isInteger(m)&&m>=TUNE_LO&&m<=TUNE_HI)) customTuning=s.customTuning.slice();
-  if(Number.isInteger(s.fretRangeIdx)&&FRET_RANGES[s.fretRangeIdx]) fretRangeIdx=s.fretRangeIdx;
-  if(Number.isInteger(s.capo)&&s.capo>=0&&s.capo<=11) capo=s.capo;
-  if(typeof s.tempo==='number'&&s.tempo>=40&&s.tempo<=200) tempo=s.tempo;
-  if(Number.isInteger(s.meterIdx)&&METERS[s.meterIdx]) meterIdx=s.meterIdx;
-  if(typeof s.masterVol==='number'&&s.masterVol>=0&&s.masterVol<=1) masterVol=s.masterVol;
-  // bounded by the measurement's own ceiling, so a corrupted save can't skew every score
-  if(typeof s.calMs==='number'&&s.calMs>=0&&s.calMs<=CAL_MAX_MS) calMs=s.calMs;
-  // a save from before calKnown with a real latency was measured: don't re-prompt it
-  calKnown = (typeof s.calKnown==='boolean') ? s.calKnown : (calMs>0);
-  if(typeof s.lefty==='boolean') lefty=s.lefty;
-  if(typeof s.toolbarOpen==='boolean') toolbarOpen=s.toolbarOpen;
-  if(typeof s.backingOpen==='boolean') backingOpen=s.backingOpen;
-  if(typeof s.shapesOpen==='boolean') shapesOpen=s.shapesOpen;
-  if(typeof s.cbPalette==='boolean') cbPalette=s.cbPalette;
-  if(typeof s.fnShapes==='boolean') fnShapes=s.fnShapes;
-  // a save with no welcomeSeen predates onboarding — a returning visitor, so no welcome
-  welcomeSeen = (typeof s.welcomeSeen==='boolean') ? s.welcomeSeen : true;
-  /* rebuilt key by key and bounded, so a tampered blob can't inject arbitrary keys */
-  if(s.drillSeen && typeof s.drillSeen==='object' && !Array.isArray(s.drillSeen)){
-    const out={}; let n=0;
-    for(const k of Object.keys(s.drillSeen)){
-      if(typeof k!=='string' || !k.length || k.length>32 || ++n>64) continue;
-      if(s.drillSeen[k]) out[k]=1;
+  let progressSaved=progressFrozen;
+  if(!progressFrozen){
+    try{ localStorage.setItem(LS_PROGRESS, JSON.stringify(learner)); progressSaved=true; }
+    catch(e){
+      // keep the progress with the settings instead, and drop the stale copy so the next
+      // load can't prefer it
+      devWarn('progress could not be saved under its own key', e);
+      try{ localStorage.removeItem(LS_PROGRESS); }catch(_){ /* the settings copy still loads */ }
     }
-    drillSeen=out;
   }
-  // restored only if it is still a length we offer
-  if(typeof SESSION_MINS!=='undefined' && SESSION_MINS.indexOf(s.sessMins)>=0) sessMins=s.sessMins;
-  if(Number.isInteger(s.gRoot)&&s.gRoot>=0&&s.gRoot<12){ gRoot=s.gRoot; if(typeof s.gRootLbl==='string') gRootLbl=s.gRootLbl; }
-  if(s.gMode==='names'||s.gMode==='deg') gMode=s.gMode;
-  if(s.hView==='chords'||s.hView==='arp') hView=s.hView;
-  if(s.scView==='scale'||s.scView==='notes') scView=s.scView;
-  if(typeof s.tab==='string'){
-    if(s.tab==='chords'||s.tab==='triads') currentTab='harmony';          // old Chords / Triads tabs merged into Harmony
-    else if(s.tab==='notes'){ currentTab='scales'; scView='notes'; }      // Notes became a view of Scales
-    else if(s.tab==='harmony'||s.tab==='scales'||s.tab==='circle') currentTab=s.tab;   // anything else would open on no panel at all
-  }
-  // ---- working musical state ----
-  if(Number.isInteger(s.chQual)&&QUALITIES[s.chQual]) chQual=s.chQual;
-  if(Number.isInteger(s.arpPos)&&s.arpPos>=0&&s.arpPos<=5) arpPos=s.arpPos;
-  if(Number.isInteger(s.chVoicing)&&s.chVoicing>=0&&s.chVoicing<6) chVoicing=s.chVoicing;  // clamped again at render against the real list length
-  if(Number.isInteger(s.scIdx)&&SCALES[s.scIdx]) scIdx=s.scIdx;
-  if(Number.isInteger(s.scPos)&&s.scPos>=0&&s.scPos<=5) scPos=s.scPos;
-  if(s.scOverlay&&typeof s.scOverlay==='object'&&Number.isInteger(s.scOverlay.rootPc)&&Array.isArray(s.scOverlay.iv)&&typeof s.scOverlay.tag==='string')
-    scOverlay={rootPc:mod(s.scOverlay.rootPc,12), iv:s.scOverlay.iv.slice(), tag:s.scOverlay.tag};
-  if(Number.isInteger(s.trSet)&&STRING_SETS[s.trSet]) trSet=s.trSet;
-  if(Number.isInteger(s.trInv)&&s.trInv>=0&&s.trInv<=3) trInv=s.trInv;
-  if(typeof s.chTriads==='boolean') chTriads=s.chTriads;
-  /* Triads became a toggle on Chord tones (v2.17.0): a save that was on the Triads view
-     opens on Chord tones with triads on, on the triad it had picked (trQual). */
-  if(s.hView==='triads' || s.tab==='triads'){
-    hView='chords'; chTriads=true; chVoicing=0;
-    if(Number.isInteger(s.trQual)&&TRIADS[s.trQual]) chQual=TRI_TO_QUAL[s.trQual];
-  }
-  // the circle's selection is derived from gRoot + scIdx; old cofSel/cofMinor are ignored
-  if(s.ntFilter==='all'||s.ntFilter==='nat') ntFilter=s.ntFilter;
-  if(s.ntRoot===''||NAT.includes(s.ntRoot)||SHARP.includes(s.ntRoot)||FLAT.includes(s.ntRoot)) ntRoot=s.ntRoot;
-  learner = normalizeLearner(s.learner);   // bounds-checked restore (garbage → fresh model)
-  if(typeof s.seqLoopOn==='boolean') seqLoopOn=s.seqLoopOn;
-  if(typeof s.bassOn==='boolean') bassOn=s.bassOn;
-  if(typeof s.grooveOn==='boolean') grooveOn=s.grooveOn;
-  if(Array.isArray(s.seq)){
-    seq = s.seq
-      .filter(st=>st&&Number.isInteger(st.pc)&&st.pc>=0&&st.pc<12&&Number.isInteger(st.qi)&&st.qi>=0&&st.qi<QUALITIES.length)
-      .map(st=>({pc:st.pc, lbl:(typeof st.lbl==='string'?st.lbl:ROOTS[st.pc]), qi:st.qi, bars:([1,2,4].includes(st.bars)?st.bars:1)}));
-  }
-}catch(e){ devWarn('saved state could not be restored; using defaults', e); return false; } return true; }
+  try{
+    const s=settingsSnapshot();
+    if(!progressSaved) s.learner=learner;
+    localStorage.setItem(LS_KEY, JSON.stringify(s));
+  }catch(e){ devWarn('state could not be saved (localStorage unavailable?)', e); saveFailed(); } }
+
+/* Returns whether there were saved settings (no settings → the first-visit language guess).
+   Progress loads either way. */
+function loadState(){
+  let raw=null;
+  try{ raw=JSON.parse(localStorage.getItem(LS_KEY)||'null'); }catch(e){ devWarn('saved settings could not be read; using defaults', e); }
+  if(!raw || typeof raw!=='object' || Array.isArray(raw)) raw=null;
+  loadProgress(raw);
+  if(!raw) return false;
+  try{
+    const s=migrateSave(raw);
+    savedFields().forEach(([k,read,,set])=>{ const v=read(s[k], s); if(v!==undefined) set(v); });
+  }catch(e){ devWarn('saved state could not be restored; using defaults', e); return false; }
+  return true;
+}
+function loadProgress(settings){
+  let p=null;
+  try{ p=JSON.parse(localStorage.getItem(LS_PROGRESS)||'null'); }catch(e){ devWarn('saved progress could not be read', e); }
+  if(!p || typeof p!=='object') p = settings ? settings.learner : null;   // saved by an older build, with the settings
+  progressFrozen = !!p && typeof p==='object' && typeof p.v==='number' && p.v>LEARNER_V;
+  learner = normalizeLearner(p);   // bounds-checked (garbage → fresh model)
+}
 
 /* ---- old share links ----
    Cut in v2.17.0. An old #k=…&t=… link still opens the app: the hash is ignored and

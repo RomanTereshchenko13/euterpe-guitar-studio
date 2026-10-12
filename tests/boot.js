@@ -41,7 +41,8 @@ function buildAudioStub() {
   return AC;
 }
 
-/* opts: { save: string|object (the raw localStorage value), hash: '#…', width, height } */
+/* opts: { save: string|object (the settings key's raw value), storage: {key: raw string} (any
+   other keys, e.g. the progress key), hash: '#…', width, height, quiet (no dev warnings) } */
 function boot(html, opts) {
   const o = opts || {};
   const dom = new JSDOM(html, {
@@ -54,11 +55,13 @@ function boot(html, opts) {
       window.AudioContext = AC;
       window.webkitAudioContext = AC;
       window.__AC = AC;
+      if (o.quiet) window.console.warn = () => {};
       if (o.width) window.innerWidth = o.width;
       if (o.height) window.innerHeight = o.height;
       try {
         window.localStorage.clear();
         if (o.save != null) window.localStorage.setItem(LS_KEY, typeof o.save === 'string' ? o.save : JSON.stringify(o.save));
+        Object.keys(o.storage || {}).forEach(k => window.localStorage.setItem(k, o.storage[k]));
       } catch (e) { /* no storage: the app boots on defaults */ }
     }
   });

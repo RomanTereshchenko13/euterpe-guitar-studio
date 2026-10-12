@@ -26,6 +26,9 @@ function ok(name, cond, detail) {
   else { fail++; fails.push(name + (detail ? '  — ' + detail : '')); }
 }
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const PROGRESS_KEY = 'guitarStudio.progress.v1';
+// every key the page has written, raw
+const storageOf = win => { const o = {}; for (let i = 0; i < win.localStorage.length; i++) { const k = win.localStorage.key(i); o[k] = win.localStorage.getItem(k); } return o; };
 
 const html = fs.readFileSync(path.resolve(process.argv[2] || path.join(__dirname, '..', 'index.html')), 'utf8');
 const dir = path.join(__dirname, 'fixtures');
@@ -49,9 +52,9 @@ const ABSENT_DEFAULT = {
   latencyKnown: now => now.latencyMs > 0          // a measured latency counts as known
 };
 
-function bootChecked(save, hash) {
+function bootChecked(save, hash, storage, quiet) {
   const errors = [];
-  const win = boot(html, { save, hash });
+  const win = boot(html, { save, hash, storage, quiet });
   win.addEventListener('error', e => errors.push(e.message));
   return { win, T: win.__GS_TEST__, errors };
 }
@@ -114,17 +117,19 @@ for (const fx of fixtures) {
   const dropped = Object.keys(fx.save).filter(k => !(k in snap) && !RETIRED[k]);
   ok(L + ': every key it saved is still saved (or listed in RETIRED)', dropped.length === 0, dropped.join(','));
 
-  // 4. save → load is lossless
+  // 4. save → load is lossless; the first save moves progress out of the settings
   a.T.saveState();
-  const saved1 = a.win.localStorage.getItem(LS_KEY);
-  const b = bootChecked(saved1);
+  const saved1 = storageOf(a.win);
+  ok(L + ': the first save moves progress under its own key',
+     !!saved1[PROGRESS_KEY] && !('learner' in JSON.parse(saved1[LS_KEY])) && same(JSON.parse(saved1[PROGRESS_KEY]), a.T.getLearner()));
+  const b = bootChecked(null, null, saved1);
   ok(L + ': reboots on its own save without a page error', b.errors.length === 0 && !!b.T, b.errors.join('; '));
   if (b.T) {
-    ok(L + ': save → load restores the same state', same(b.T.snapshotState(), JSON.parse(saved1)),
-       Object.keys(JSON.parse(saved1)).filter(k => !same(b.T.snapshotState()[k], JSON.parse(saved1)[k])).join(','));
+    const s1 = a.T.snapshotState(), s2 = b.T.snapshotState();
+    ok(L + ': save → load restores the same state', same(s2, s1), Object.keys(s1).filter(k => !same(s1[k], s2[k])).join(','));
     ok(L + ': ...and shows the same thing', same(readVisible(b.win), now));
     b.T.saveState();
-    ok(L + ': saving again writes the same bytes', b.win.localStorage.getItem(LS_KEY) === saved1);
+    ok(L + ': saving again writes the same bytes', same(storageOf(b.win), saved1));
     b.win.close();
   }
   a.win.close();
@@ -135,13 +140,57 @@ for (const fx of fixtures) {
  ['the Practice tab name', { tab: 'practice', lang: 'en' }],
  ['a save that is not JSON', '{"tab":"scal'],
  ['a save that is not an object', '42']].forEach(([what, save]) => {
-  const c = bootChecked(save);
+  const c = bootChecked(save, null, null, true);
   ok('damaged save, ' + what + ': boots without a page error', c.errors.length === 0 && !!c.T, c.errors.join('; '));
   if (!c.T) return;
   const shown = [...c.win.document.querySelectorAll('.main > .panel.active')].map(p => p.id);
   ok('damaged save, ' + what + ': opens on one real panel', shown.length === 1, shown.join(',') || 'none');
   c.win.close();
 });
+
+/* Progress lives under its own key, so nothing that happens to the settings takes it along. */
+(function progressKey() {
+  const fx = fixtures.find(f => f.name === 'v2.16-full');
+  const a = bootChecked(JSON.stringify(fx.save));
+  a.T.saveState();
+  const saved = storageOf(a.win), sessions = a.T.getLearner().sessions.length;
+  a.win.close();
+  ok('progress: the fixture has history to lose', sessions >= 4);
+  const keeps = (what, storage) => {
+    const c = bootChecked(null, null, storage, true);
+    ok('progress: ' + what + ': boots', c.errors.length === 0 && !!c.T, c.errors.join('; '));
+    if (c.T) ok('progress: ' + what + ': the history is all there', c.T.getLearner().sessions.length === sessions);
+    return c;
+  };
+  keeps('settings that will not parse', { [LS_KEY]: '{"lang":', [PROGRESS_KEY]: saved[PROGRESS_KEY] }).win.close();
+  keeps('settings gone', { [PROGRESS_KEY]: saved[PROGRESS_KEY] }).win.close();
+  // the progress key wins over a stale copy an older build left inside the settings
+  const stale = JSON.parse(saved[LS_KEY]); stale.learner = { v: 2, items: {}, sessions: [], best: {} };
+  keeps('a stale copy in the settings', { [LS_KEY]: JSON.stringify(stale), [PROGRESS_KEY]: saved[PROGRESS_KEY] }).win.close();
+
+  // a newer app's progress this build can't read is left alone, not overwritten with an empty model
+  const future = JSON.stringify({ v: 99, whatever: [1, 2, 3] });
+  const f = bootChecked(null, null, { [LS_KEY]: saved[LS_KEY], [PROGRESS_KEY]: future });
+  f.T.saveState();
+  ok('progress: a newer version is never overwritten', f.win.localStorage.getItem(PROGRESS_KEY) === future);
+  f.win.close();
+
+  // when the progress key can't be written, progress rides with the settings and the stale copy goes
+  const q = bootChecked(null, null, saved);
+  const SP = q.win.Storage.prototype, setItem = SP.setItem;
+  q.win.console.warn = () => {};
+  SP.setItem = function (k, v) { if (k === PROGRESS_KEY) throw new Error('QuotaExceededError'); return setItem.call(this, k, v); };
+  q.T.recordSession('timing:8ths', 11, 1757000000000);
+  q.T.saveState();
+  SP.setItem = setItem;
+  const after = storageOf(q.win);
+  ok('progress: a failed progress write keeps it in the settings',
+     !after[PROGRESS_KEY] && JSON.parse(after[LS_KEY]).learner.sessions.length === sessions + 1);
+  q.win.close();
+  const r = bootChecked(null, null, after);
+  ok('progress: ...and the next boot reads it from there', r.T.getLearner().sessions.length === sessions + 1);
+  r.win.close();
+})();
 
 ok('compat: at least one fixture per schema era', fixtures.length >= 8, fixtures.length + ' fixtures');
 

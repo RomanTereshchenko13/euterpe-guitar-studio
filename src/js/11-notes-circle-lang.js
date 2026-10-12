@@ -113,7 +113,6 @@ function applyLang(){
   buildToolbar(); setMetroLabel(); setLoopLabel(); setBandLabels(); setBackingToggle(); applyBackingPanel();
   buildSeqPresets(); renderSeq(); setSeqTransport();
   { const o=document.getElementById('cl-overlay'); if(o && !o.hidden) renderChangelog(); }
-  renderChords(); renderArp(); renderScales(); renderNotes(); renderCircle();
   renderPractice();
   refreshDrillsLang();   // re-localize the drill in flight, and the drill header, whose name and setup handle
   // are painted from i18n, not data-i18n

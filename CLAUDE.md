@@ -57,7 +57,7 @@ Skills: `release`, `preflight` (every gate), `visual-review`, `add-i18n-string`,
 | `05-audio` · `06-backing` | synth engine; band, metronome, sequencer, transport |
 | `07-render-shared` | fretboard renderer, legends, root buttons |
 | `08-chords` · `09-triads` · `10-scales` · `11-notes-circle-lang` | reference views, circle, `applyLang` |
-| `12-toolbar-state` | settings, `snapshotState`/`saveState`/`loadState`, old share-link cleanup |
+| `12-toolbar-state` | settings; `savedFields()` (every saved field, one row each), `migrateSave`, save/load; progress under its own key; old share-link cleanup |
 | `13-backup` | progress export/import, storage persistence, failed-save notice |
 | `13-drill-registry` | `DRILLS`/`registerDrill`, the one drill shell, `startTrack` |
 | `13-learner` | learner model (SRS items, sessions, bests), progress card |
@@ -65,7 +65,10 @@ Skills: `release`, `preflight` (every gate), `visual-review`, `add-i18n-string`,
 | `14-calibration` · `14-onset` · `14-mic-tuner` | latency, onset detection, tuner |
 | `14-drill-*` | the drills (each self-registers) |
 | `14-session` | timed practice session |
-| `15-wiring-init` | nav, seams, shortcuts, welcome, init, `__GS_TEST__` hook |
+| `15-1-context` | `setKey`, sub-views, `renderActiveContext` (only the view on screen paints) |
+| `15-2-panels` · `15-3-nav` · `15-4-play` | reference panel wiring · tabs, mode, seams · Jam, no-audio fallback |
+| `15-5-settings` · `15-6-modals` · `15-7-shortcuts` | toolbar · changelog/welcome · keyboard |
+| `15-8-init` | restore, first render, `__GS_TEST__` hook |
 | `16-pwa` | service worker + install prompt |
 
 Also: `src/styles.css`, `src/index.template.html` (markers `@@STYLES@@` `@@SCRIPT@@`

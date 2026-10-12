@@ -140,20 +140,14 @@ later step gets smaller after it.
       lists it as retired), clears an old share link, and that save → load → save is
       byte-identical. It found one bug: a save with an unknown tab opened on no panel;
       `loadState` now accepts only real tabs.
-
-### 5 — State: declared once · M · medium risk
-Smaller than the old "one state store" step, because step 1 removed a lot of the state it would
-have had to model.
-- [ ] Persisted fields **declared once**; `saveState` / `loadState` (and share encoding, if kept)
-      derived from that declaration. Old saves stay valid — step 4's fixtures prove it.
-- [ ] **Learner model under its own storage key**, so a UI-state bug can't take progress with it
-      (read the old combined key as a fallback).
-- [ ] `setKey` and friends stop repainting hidden views: only the visible view renders, the
-      others re-render on show.
-- [ ] Split `15-wiring-init.js` (nav, seams, jam, modals, shortcuts, welcome) into focused files
-      while it is open.
-- **Not in scope:** a general subscription system. Add it only if this step proves it needs it.
-- **Done when:** adding a persisted setting is one declaration plus the code that reads it.
+- [x] **State declared once** — every saved field is one row in `savedFields()` (key,
+      bounds-checked read, get, set); `snapshotState` / `loadState` derive from it, and old saves
+      pass through one pure `migrateSave` first. Progress (the learner model) has its own key,
+      `guitarStudio.progress.v1`: settings that won't parse or vanish can't take it along, an
+      older build's copy inside the settings is read until the first save, a newer app's progress
+      is never overwritten, and if its key can't be written it rides with the settings. Only the
+      view on screen paints (controls and board); the others repaint when shown. The wiring file
+      is eight focused `15-*` files. No subscription system was needed.
 
 ### 6 — Separate key from chord (the model) · M · medium risk
 - [ ] `key = {root, scale}` and `chord = {root, quality}` as distinct state; chord defaults to

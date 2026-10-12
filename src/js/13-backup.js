@@ -6,7 +6,7 @@
    there is history, say so once when saving fails, and export / import a JSON file.
    Local file only — nothing leaves the device.
 
-   The file is the saveState() snapshot in an envelope. Import validates it (envelope,
+   The file is snapshotState() (settings + progress) in an envelope. Import validates it (envelope,
    format, learner version, normalizeLearner, known keys only), writes it and reloads,
    so every preference goes through loadState()'s bounds checks like a normal boot.
 
@@ -85,7 +85,9 @@ function progressExport(){
 /* Write an already-validated state and reload into it. Returns false (and changes
    nothing) if storage refuses the write. */
 function progressApply(state){
-  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+  const settings=Object.assign({}, state); delete settings.learner;
+  // progress first: if the settings then fail, the old settings simply stay
+  try{ localStorage.setItem(LS_PROGRESS, JSON.stringify(state.learner)); localStorage.setItem(LS_KEY, JSON.stringify(settings)); }
   catch(e){ devWarn('import could not be stored', e); return false; }
   saveBlocked = true;
   return true;

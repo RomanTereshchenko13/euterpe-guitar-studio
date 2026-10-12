@@ -54,7 +54,9 @@ localStorage, and records what that build showed (`seen`, read by `boot.js`'s
 - every key the old build saved is still saved, or listed in `RETIRED` with the reason;
 - an old share link is cleared and the save decides what opens;
 - save → load restores the same state, and saving again writes the same bytes;
-- a damaged save (unknown tab, not JSON) still opens on a real view.
+- a damaged save (unknown tab, not JSON) still opens on a real view;
+- progress lives under its own key: settings that break or vanish don't take it along,
+  a newer version is never overwritten, and a failed progress write falls back safely.
 
 A change that is meant to show an old save differently adds its entry to `MIGRATED`;
 it never edits a fixture. To cover a new schema, add a scenario to

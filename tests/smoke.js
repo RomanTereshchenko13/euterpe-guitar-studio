@@ -363,14 +363,16 @@ if (T) {
     ok('3b: normalize rejects unknown version → fresh', fresh.v === T.LEARNER_V && Object.keys(fresh.items).length === 0);
     ok('3b: normalize garbage → fresh', T.normalizeLearner(null).v === T.LEARNER_V && Object.keys(T.normalizeLearner('x').items).length === 0);
 
-    // persistence: learner rides saveState into localStorage
+    // persistence: saveState writes the learner under its own key, apart from the settings
     T.resetLearner();
     T.recordAttempt('persist:test', true, NOW);
     T.setMode('practice');   // any state-mutating call triggers saveState()
-    const saved = JSON.parse(win.localStorage.getItem('guitarStudio.v1') || '{}');
+    const saved = JSON.parse(win.localStorage.getItem('guitarStudio.progress.v1') || '{}');
     ok('3b: learner persists into saveState',
-       saved.learner && saved.learner.items && saved.learner.items['persist:test'] && saved.learner.items['persist:test'].correct === 1);
-    ok('3b: persisted learner carries version', saved.learner.v === T.LEARNER_V);
+       saved.items && saved.items['persist:test'] && saved.items['persist:test'].correct === 1);
+    ok('3b: persisted learner carries version', saved.v === T.LEARNER_V);
+    ok('3b: ...and is not also written into the settings',
+       !('learner' in JSON.parse(win.localStorage.getItem('guitarStudio.v1') || '{}')));
     T.setMode('reference');   // restore mode
     T.resetLearner();         // leave a clean model for later tests
   })();
@@ -1422,6 +1424,8 @@ if (T) {
         best: { 'target:I–V–vi–IV': { score: 72, t: NOW - 2 * DAY }, 'callresp:A': { score: 80, t: NOW - DAY } }
       }
     });
+    // an old build kept progress inside the settings: no progress key of its own yet
+    win.localStorage.removeItem('guitarStudio.progress.v1');
     win.localStorage.setItem('guitarStudio.v1', JSON.stringify(oldSave));
     ok('step 1: the old save loads', T.loadState() === true);
     const L = T.getLearner();
@@ -1440,7 +1444,7 @@ if (T) {
        rows.length === 1 && rows[0] === 'timing', rows.join(','));
     // a save → reload keeps every byte of the cut drills' history
     T.saveState();
-    const again = JSON.parse(win.localStorage.getItem('guitarStudio.v1')).learner;
+    const again = JSON.parse(win.localStorage.getItem('guitarStudio.progress.v1'));
     ok('step 1: saving again keeps the history of the cut drills',
        !!again.items['rhythm:r3'] && again.sessions.length === 4 && !!again.best['callresp:A']);
     win.localStorage.setItem('guitarStudio.v1', JSON.stringify(before));
@@ -1970,14 +1974,12 @@ if (T) {
        !!T.I18N.uk.on_needcal && !!T.I18N.en.on_needcal);
     /* A save written before the flag existed but carrying a real measurement belongs to
        someone already calibrated; re-prompting them would be a regression for the only
-       users who did the work. Pinned at the source rather than exercised: reaching it
-       means running loadState mid-suite, which would reset key, tuning and mode under
-       every assertion that follows — a test that breaks its neighbours is worse than a
-       structural one. The rule is a single expression, so a regex holds it exactly. */
+       users who did the work. migrateSave is pure, so the rule is exercised directly. */
     ok('A4: an older save with a real latency is grandfathered in, not re-prompted',
-       /calKnown\s*=\s*\(typeof s\.calKnown==='boolean'\)\s*\?\s*s\.calKnown\s*:\s*\(calMs>0\)/.test(html));
+       T.migrateSave({ calMs: 87 }).calKnown === true && T.migrateSave({ calMs: 0 }).calKnown === false);
+    ok('A4: ...an explicit flag is never overridden', T.migrateSave({ calMs: 87, calKnown: false }).calKnown === false);
     ok('A4: ...and the flag is persisted alongside the number it qualifies',
-       /calMs,\s*calKnown,/.test(html));
+       ['calMs', 'calKnown'].every(k => k in T.snapshotState()));
     T.setCalKnown(true);
   })();
 
@@ -2398,6 +2400,39 @@ if (T) {
     T.selectTab('harmony'); T.setHView('chords');
   })();
 
+  /* ---- PLAN step 5: only the view on screen paints ----
+     A key, labels or tuning change on Harmony leaves the hidden Scales and Circle panels
+     alone; each is current the moment it is shown. */
+  (function visibleOnly() {
+    const doc = win.document, st0 = T.state();
+    T.setMode('reference'); T.selectTab('harmony'); T.setHView('chords');
+    const mo = new win.MutationObserver(() => {});
+    ['panel-scales', 'panel-circle'].forEach(id =>
+      mo.observe(doc.getElementById(id), { subtree: true, childList: true, characterData: true, attributes: true }));
+    T.setKey(2, 'D', 0);
+    T.setGMode('deg'); T.setGMode('names');
+    T.renderAllBoards();
+    const n = mo.takeRecords().length; mo.disconnect();
+    ok('step 5: key, labels and tuning changes on Harmony leave hidden panels untouched', n === 0, n + ' mutations');
+    T.selectTab('scales'); T.setScView('scale');
+    ok('step 5: ...Scales is current once shown', /^D\s/.test(doc.getElementById('sc-info').textContent),
+       doc.getElementById('sc-info').textContent.slice(0, 40));
+    T.selectTab('circle');
+    const major = T.I18N[T.state().lang].major_word;
+    ok('step 5: ...and so is the Circle', doc.getElementById('cof-info').textContent.includes('D ' + major),
+       doc.getElementById('cof-info').textContent.slice(0, 60));
+    T.setMode('practice');
+    const m2 = new win.MutationObserver(() => {});
+    m2.observe(doc.querySelector('.main'), { subtree: true, childList: true, characterData: true });
+    m2.observe(doc.getElementById('board-region'), { subtree: true, childList: true });
+    T.setKey(7, 'G');
+    const n2 = m2.takeRecords().length; m2.disconnect();
+    ok('step 5: in Practice, a key change paints no reference view', n2 === 0, n2 + ' mutations');
+    T.setMode('reference');
+    T.setKey(st0.gRoot, st0.gRootLbl, st0.scIdx);
+    T.selectTab('harmony'); T.setHView('chords');
+  })();
+
   /* ---- Phase 2 (v1.20.0): arpeggios, CAGED labels, capo ---- */
   (function phase2() {
     // Arpeggio is a fourth Harmony view that owns the shared board
@@ -2419,6 +2454,7 @@ if (T) {
        T.CAGED_BY_POS.join(',') === 'E,D,C,A,G');
     T.setKey(0, 'C', 0);                 // C Ionian
     ok('Phase2: CAGED labels on for the major scale', T.isCAGEDScale() === true);
+    T.selectTab('scales'); T.setScView('scale');   // a hidden view builds its controls when shown
     const pos = win.document.getElementById('sc-pos');
     if (pos) {
       const labels = [...pos.querySelectorAll('button')].slice(1).map(b => b.textContent);
@@ -2428,6 +2464,7 @@ if (T) {
     T.setKey(2, 'D', 1);                 // D Dorian — a mode, not Ionian
     ok('Phase2: CAGED labels off for a mode (anchoring would be wrong)', T.isCAGEDScale() === false);
     T.setKey(9, 'A', 5);
+    T.selectTab('harmony');
 
     // Capo: bounded, persisted, and dims/marks the board without changing cell count
     T.setCapo(3);

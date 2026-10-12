@@ -4,7 +4,7 @@
    "interval:P5"), never by reshaping; a `v` bump + migration in normalizeLearner()
    is the only way the shape changes.
 
-   Saved verbatim by saveState() and restored through normalizeLearner(), which
+   Saved verbatim under its own key (LS_PROGRESS) and restored through normalizeLearner(), which
    bounds-checks everything — a tampered or garbage blob degrades to a fresh model,
    never throws. */
 
