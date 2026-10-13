@@ -45,7 +45,8 @@ const MIGRATED = {
 const RETIRED = {
   trQual: 'Triads became a toggle (v2.17.0): folded into chQual when the save was on Triads',
   cofSel: 'the circle reads its selection from the key (gRoot + scIdx)',
-  cofMinor: 'the circle reads its selection from the key (gRoot + scIdx)'
+  cofMinor: 'the circle reads its selection from the key (gRoot + scIdx)',
+  scOverlay: 'Scales shows the strip\x27s chord with one unsaved toggle (PLAN step 10); the scale opens plain'
 };
 /* Fields a build before them didn't save: what a returning player must get instead. */
 const ABSENT_DEFAULT = {
@@ -123,6 +124,11 @@ for (const fx of fixtures) {
     ok(L + ': opens with the key sheet up, where the circle now lives',
        a.T.sheetShown('key') && a.win.document.getElementById('sheet-key').hidden === false
        && a.win.document.querySelectorAll('#cof-svg .cof-node').length === 24);
+  if (fx.save.scOverlay)
+    ok(L + ': a retired chord overlay opens the plain scale, the chord toggle off',
+       now.view === 'scales' && !a.win.document.querySelector('#board .dot.d-dim')
+       && a.win.document.querySelectorAll('#board .dot').length > 0
+       && a.win.document.getElementById('sc-chord').getAttribute('aria-pressed') === 'false');
   if (fx.hash) {
     ok(L + ': an old share link is cleared from the address', a.win.location.hash === '', a.win.location.hash);
     ok(L + ': ...and the save, not the link, decides what opens', same(now.view, fx.seen.view) && now.root === fx.seen.root);

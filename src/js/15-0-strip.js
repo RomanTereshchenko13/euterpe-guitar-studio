@@ -102,6 +102,8 @@ function renderStrip(){
   const show=(id,on)=>{ const el=document.getElementById(id); if(el) el.hidden=!on; };
   ['key','chord','tempo','play'].forEach(k=>show(SHEET_CHIPS[k], chipOffered(k)));
   show('chip-play', !pr || !!(d && d.play));
+  // the tempo sheet's Metronome is the reference transport's: a drill brings its own click
+  show('tb-metro', !pr);
   const kn=noteTxt(keyLbl)+' '+sKeyName(SCALES[scIdx]);
   const ck=document.getElementById('chip-key');
   if(ck){ ck.innerHTML=chipHTML(kn); ck.setAttribute('aria-label', t('strip_key')+': '+kn); ck.title=t('strip_key'); }

@@ -54,7 +54,7 @@ function setKey(pc, lbl, mode){
   keyRoot=pc; keyLbl=lbl;
   if(Number.isInteger(mode) && SCALES[mode]) scIdx=mode;
   chRoot=pc; chLbl=lbl;
-  chVoicing=0; scOverlay=null;
+  chVoicing=0;
   ntRoot=lbl;                                   // Notes follows the shared root
   renderActiveContext(); renderStrip(); drillKeyChanged();
   saveState();

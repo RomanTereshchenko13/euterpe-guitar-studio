@@ -2527,8 +2527,6 @@ if (T) {
     ok('step 6: the circle shows the key with the chord ringed (Dm, inner ring)',
        ringed.length === 1 && ringed[0].dataset.type === 'min' && T.COF[+ringed[0].dataset.i].minPc === 2
        && /^C\s/.test(doc.getElementById('cof-info').textContent));
-    const on = doc.querySelector('#cof-info .cof-deg.on');
-    ok('step 6: ...and its degree marked in the key\'s chords', !!on && /ii\s*Dm/.test(on.textContent), on && on.textContent);
 
     // persisted on their own, and an older save (one root) opens on the chord it showed
     T.saveState();
@@ -2570,18 +2568,12 @@ if (T) {
        /i–iv–v$/.test(doc.getElementById('cof-cadence').textContent), doc.getElementById('cof-cadence').textContent);
     T.setChQual(1); T.setKey(9, 'A', 5);
     ok('step 6: the key\'s own tonic chord is not marked twice',
-       doc.querySelectorAll('#cof-svg .cof-chord, #cof-info .cof-deg.on').length === 0);
+       doc.querySelectorAll('#cof-svg .cof-chord').length === 0);
     T.setKey(9, 'A', 10);
     ok('step 6: harmonic minor cadences i–iv–V', T.keyCadence()[2].iv[1] === 4);
     T.setKey(0, 'C', 4);
     ok('step 6: Mixolydian cadences I–IV–v', T.keyCadence()[2].iv[1] === 3 && T.keyCadence()[0].iv[1] === 4);
 
-    // the scale's chord and the circle's tonic open in Harmony, in the same key
-    T.setKey(0, 'C', 0); T.selectTab('scales'); T.setScView('scale');
-    doc.querySelectorAll('#sc-diatonic .dia')[4].click();          // V
-    doc.querySelector('#sc-info .sc-open-harmony').click();
-    ok('step 6: Scales\' V opens G in Harmony, still in C',
-       s().currentTab === 'harmony' && s().chRoot === 7 && s().chQual === 0 && s().keyRoot === 0);
     T.setKey(9, 'A', 5);
     ok('step 8: a circle node picks the key and brings the chord home',
        (doc.querySelector('#cof-svg .cof-node[data-type="maj"][data-i="2"]').dispatchEvent(new win.MouseEvent('click', { bubbles: true })),
@@ -2766,6 +2758,83 @@ if (T) {
     T.setChord(st0.chRoot, st0.chLbl, st0.chQual);
     T.selectTab('harmony'); T.setHView('chords');
     T.resetLearner();
+  })();
+
+  /* ---- PLAN step 10: wrong output, and the key's chords in one place ----
+     The key panel names the key by its own scale and reads a mode's signature from its
+     parent major; the key's chords are the chord sheet's degree row only (one roman-numeral
+     system, keyDegrees); Scales shows the strip's chord over the scale with one toggle; the
+     footer claims no tuning; the tempo sheet's free Metronome is not offered in a drill. */
+  (function keyOnePlace() {
+    const doc = win.document, st0 = T.state(), L = T.I18N[st0.lang];
+    const vis = id => { const e = doc.getElementById(id); return !!e && !e.hidden && !e.closest('[hidden]'); };
+    const info = () => doc.getElementById('cof-info').textContent;
+    T.setMode('reference'); T.closeSheets();
+    T.toggleSheet('key');
+
+    /* --- the key panel --- */
+    T.setKey(9, 'A', 5);
+    ok('step 10: A minor is titled by its key, not its tonic chord ("Am minor")',
+       info().startsWith('A ' + T.SCALES[5].kn[st0.lang]) && !/Am\s/.test(info().slice(0, 12)), info().slice(0, 40));
+    T.setKey(9, 'A', 1);
+    ok('step 10: A Dorian is titled A Dorian', info().startsWith('A ' + T.SCALES[1].kn[st0.lang]), info().slice(0, 40));
+    ok('step 10: ...written in its parent\'s signature (G major: one sharp, F♯)', info().includes('1 ♯ — F♯'), info());
+    ok('step 10: ...and names that parent instead of a relative major', info().includes(L.samenotes + ' G ') && !info().includes(L.cof_rel_major), info());
+    // the signature each scale is written in: a mode's parent, any other scale its family's key
+    const sigs = [[4, 'E', 2, 0], [5, 'F', 3, 0], [2, 'D', 4, 1], [11, 'B', 6, 0], [9, 'A', 10, 0], [4, 'E', 7, 1],
+                  [7, 'G', 8, 1], [10, 'Bb', 0, -2], [2, 'D', 9, -1]];
+    const badSig = sigs.filter(([pc, lbl, sc, n]) => {
+      T.setKey(pc, lbl, sc);
+      const want = n === 0 ? L.cof_sig0 : n > 0 ? n + ' ♯' : (-n) + ' ♭';
+      return !info().includes(L.cof_sig + ': ' + want);
+    }).map(x => x[1] + '/' + x[2]);
+    ok('step 10: every scale reads its signature from its parent or family key', badSig.length === 0, badSig.join(' '));
+    T.setKey(9, 'A', 5);
+    ok('step 10: the key panel no longer lists the key\'s chords', !doc.querySelector('#cof-info .cof-deg') && !/\bVII\b/.test(info()), info());
+    T.toggleSheet('chord');
+    const rn = [...doc.querySelectorAll('#h-degrees .deg-rn')].map(e => e.textContent);
+    ok('step 10: ...the chord sheet does, with keyDegrees\' numerals (A minor: ♭III ♭VI ♭VII)',
+       ['♭III', '♭VI', '♭VII'].every(r => rn.includes(r)), rn.join(' '));
+    T.closeSheets();
+
+    /* --- Scales: the strip's chord over the scale, one toggle --- */
+    T.selectTab('scales'); T.setScView('scale');
+    const btn = doc.getElementById('sc-chord');
+    ok('step 10: the Scales chord row is gone, one toggle in its place', !doc.getElementById('sc-diatonic') && vis('sc-chord'));
+    T.setChord(4, 'E', 0);                                     // E over A minor: G♯ is outside the scale
+    ok('step 10: the toggle names the strip\'s chord', btn.textContent.includes('E') && btn.getAttribute('aria-pressed') === 'false', btn.textContent);
+    ok('step 10: ...and is off: the plain scale', !doc.querySelector('#board .dot.d-dim'));
+    btn.click();
+    const byPc = pc => [...doc.querySelectorAll('#board .dot')].filter(d => ((+d.dataset.midi % 12) + 12) % 12 === pc);
+    ok('step 10: on, the chord\'s tones take their chord colours (E root, G♯ third, B fifth)',
+       byPc(4).every(d => d.classList.contains('d-root')) && byPc(11).every(d => d.classList.contains('d-fifth')) && byPc(4).length > 0,
+       byPc(4).map(d => d.className).join());
+    ok('step 10: ...a chord tone outside the scale is shown too (G♯)', byPc(8).length > 0 && byPc(8).every(d => d.classList.contains('d-third')));
+    ok('step 10: ...and the rest of the scale is dimmed', byPc(0).length > 0 && byPc(0).every(d => d.classList.contains('d-dim')));
+    T.setChord(2, 'D', 1);
+    ok('step 10: it follows the chord as it moves (Dm: D is the root, E dimmed, no G♯)', btn.textContent.includes('D') && btn.getAttribute('aria-pressed') === 'true'
+       && byPc(2).length > 0 && byPc(2).every(d => d.classList.contains('d-root'))
+       && byPc(4).every(d => d.classList.contains('d-dim')) && byPc(8).length === 0);
+    ok('step 10: the overlay is not saved', !('scOverlay' in T.snapshotState()) && !('scShowChord' in T.snapshotState()));
+    btn.click();
+    ok('step 10: off again, the plain scale', btn.getAttribute('aria-pressed') === 'false' && !doc.querySelector('#board .dot.d-dim'));
+
+    /* --- the footer --- */
+    const foot = doc.querySelector('footer');
+    ok('step 10: the footer claims no tuning and repeats no brand', !/E A D G B e|Euterpe/.test(foot.textContent), foot.textContent);
+    ok('step 10: ...it holds the version badge and the shortcuts link', !!foot.querySelector('#app-ver') && !!foot.querySelector('#kbd-open'));
+
+    /* --- the tempo sheet's Metronome is the reference transport's --- */
+    ok('step 10: the tempo sheet offers the Metronome in Reference', !doc.getElementById('tb-metro').hidden);
+    T.setMode('practice'); T.startTrack('timing');
+    ok('step 10: ...not inside a drill, which brings its own click', T.chipOffered('tempo') && doc.getElementById('tb-metro').hidden);
+    T.quitDrill(); T.setMode('reference');
+    ok('step 10: ...and back in Reference it is offered again', !doc.getElementById('tb-metro').hidden);
+
+    // put everything back
+    T.setKey(st0.keyRoot, st0.keyLbl, st0.scIdx);
+    T.setChord(st0.chRoot, st0.chLbl, st0.chQual);
+    T.selectTab('harmony'); T.setHView('chords');
   })();
 
   /* ---- Phase 2 (v1.20.0): arpeggios, CAGED labels, capo ---- */

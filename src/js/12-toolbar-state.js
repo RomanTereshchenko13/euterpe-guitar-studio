@@ -189,9 +189,6 @@ function savedFields(){ return [
   ['arpPos',       svInt(0, 5),                           ()=>arpPos,       v=>{ arpPos=v; }],
   ['scIdx',        svIdx(SCALES),                         ()=>scIdx,        v=>{ scIdx=v; }],
   ['scPos',        svInt(0, 5),                           ()=>scPos,        v=>{ scPos=v; }],
-  ['scOverlay',    v=>v && typeof v==='object' && Number.isInteger(v.rootPc) && Array.isArray(v.iv) && typeof v.tag==='string'
-                       ? {rootPc:mod(v.rootPc,12), iv:v.iv.slice(), tag:v.tag} : undefined,
-                                                          ()=>scOverlay,    v=>{ scOverlay=v; }],
   // clamped again at render against the real list length
   ['chVoicing',    svInt(0, 5),                           ()=>chVoicing,    v=>{ chVoicing=v; }],
   ['chTriads',     svBool,                                ()=>chTriads,     v=>{ chTriads=v; }],

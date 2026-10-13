@@ -217,7 +217,7 @@ function chordLegendHTML(){ return legChip('--root','leg_root','1')+legChip('--t
 function triadLegendHTML(){ return legChip('--root','leg_root','1')+legChip('--third','leg_third','3 / ♭3')+legChip('--fifth','leg_fifth','5'); }
 function notesLegendHTML(){ return legChip('--natural','leg_nat')+legChip('--sharp','leg_sharpflat')+legChip('--root','leg_highlight'); }
 function scaleLegendHTML(){
-  if(scOverlay) return legChip('--root','leg_root','1')+legChip('--third','leg_third','3 / ♭3')+legChip('--fifth','leg_fifth','5')+legChip('--seventh','leg_seventh','7 / ♭7')+
+  if(scShowChord) return chordLegendHTML()+
     `<div class="leg"><span class="leg-dot" style="background:rgba(220,200,160,0.4)"></span><span class="leg-nm">${t('leg_sc_other')}</span></div>`;
   const ivs=SCALES[scIdx].iv;
   const present=new Set(ivs.map(iv=>scClass(iv, ivs)));

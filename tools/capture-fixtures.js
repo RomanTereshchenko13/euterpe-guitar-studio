@@ -78,7 +78,10 @@ const SCENARIOS = [
     share: `S('gRoot',0); S('gRootLbl','C'); S('scIdx',3); S('currentTab','scales'); S('scView','notes');` },
   { name: 'v2.17-triads', rev: 'ebf8667', note: 'the current schema: triads as a toggle on Chord tones', js: `
       S('lang','uk'); S('gRoot',1); S('gRootLbl','C#'); S('chQual',2); S('chTriads',true); S('trSet',1); S('trInv',0);
-      S('hView','chords'); S('scView','notes'); S('ntFilter','nat'); S('currentTab','harmony');` }
+      S('hView','chords'); S('scView','notes'); S('ntFilter','nat'); S('currentTab','harmony');` },
+  { name: 'v2.18-overlay', rev: 'dbd83d0', note: 'a Scales chord overlay on (retired in PLAN step 10), a Dorian key', js: `
+      S('lang','en'); setKey(2,'D',1); S('scPos',2); S('scView','scale'); S('currentMode','reference'); S('currentTab','scales');
+      S('scOverlay',{rootPc:7,iv:[0,4,7],tag:'dia3'});` }
 ];
 
 function version(html) { const m = html.match(/APP_VERSION\s*=\s*'([\d.]+)'/); return m ? m[1] : '?'; }

@@ -298,7 +298,8 @@
     <!-- the scale itself is the key's: the strip's key chip picks it -->
     <div id="sub-scale">
       <div class="row"><span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="sc-pos"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="sc-diatonic"></div></div>
+      <!-- the strip's chord over the scale: its tones lit, the rest dimmed -->
+      <div class="row"><button type="button" class="btn" id="sc-chord" aria-pressed="false"></button></div>
       <div class="info" id="sc-info"></div>
       <!-- "drill this" (SEAM_TRACKS in 15-3-nav.js) -->
       <div class="row"><button class="btn seam-btn" data-seam="scale" data-i18n="seam_drill">Тренувати це →</button></div>
@@ -594,12 +595,13 @@
 </div>
 </div>
 
-  <!-- the version opens the changelog -->
-  <footer><span data-i18n="footer">Гітарна студія · стандартний стрій (E A D G B e) · працює офлайн</span> <button class="ver" id="app-ver" aria-haspopup="dialog"></button></footer>
-  <!-- opens the shortcuts cheat-sheet (also "?"); desktop only -->
-  <div class="kbd-hint-bar">
-    <button class="kbd-open-btn" id="kbd-open"><span data-i18n="kbd_hint">Гарячі клавіші</span> <kbd>?</kbd></button>
-  </div>
+  <!-- the version opens the changelog; the shortcuts cheat-sheet (also "?") is desktop only -->
+  <footer>
+    <button class="ver" id="app-ver" aria-haspopup="dialog"></button>
+    <div class="kbd-hint-bar">
+      <button class="kbd-open-btn" id="kbd-open"><span data-i18n="kbd_hint">Гарячі клавіші</span> <kbd>?</kbd></button>
+    </div>
+  </footer>
 </main>
 
 <div class="cl-overlay" id="cl-overlay" role="dialog" aria-modal="true" aria-labelledby="cl-title" hidden>

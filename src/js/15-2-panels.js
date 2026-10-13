@@ -46,20 +46,8 @@ document.getElementById('tr-diagram').addEventListener('click',e=>{
   if(dot && dot.dataset.midi!=null){ pluck(parseInt(dot.dataset.midi)); }
 });
 
-document.getElementById('sc-diatonic').addEventListener('click',e=>{
-  if(e.target.closest('[data-clear]')){ scOverlay=null; renderScales(); saveState(); return; }
-  const b=e.target.closest('.dia'); if(!b) return; const c=diaList[+b.dataset.i];
-  scOverlay = (scOverlay && scOverlay.tag===c.tag) ? null : {rootPc:c.rootPc, iv:c.iv, tag:c.tag};
-  renderScales(); saveState();
-});
-/* Scales → Harmony: open the overlaid diatonic chord in Chord tones, so "the V chord
-   of this key" leads straight to its voicings — in the same key. */
-document.getElementById('sc-info').addEventListener('click', e=>{
-  if(!e.target.closest('.sc-open-harmony') || !scOverlay) return;
-  const pc=scOverlay.rootPc, d=keyDegrees().find(x=>x.rootPc===pc);
-  chVoicing=0; setChord(pc, d?d.lbl:ROOTS[pc], triadQi(scOverlay.iv));
-  setHView('chords'); selectTab('harmony');
-});
+/* the strip's chord over the scale; the chord itself is picked in the chord sheet */
+document.getElementById('sc-chord').onclick=()=>{ scShowChord=!scShowChord; renderScales(); };
 
 /* a circle node (the key sheet) picks the key: major → Ionian, minor → Aeolian */
 function selectCircleNode(g){

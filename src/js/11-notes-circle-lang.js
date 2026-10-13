@@ -28,17 +28,12 @@ const COF=[
   {i:11, maj:'F',  majPc:5,  sig:-1, min:'Dm',  minPc:2},
 ];
 const SHARP_ORDER=['F','C','G','D','A','E','B'], FLAT_ORDER=['B','E','A','D','G','C','F'];
-const ROMAN_MAJ=['I','ii','iii','IV','V','vi','vii°'], ROMAN_MIN=['i','ii°','III','iv','v','VI','VII'];
 const MAJ_IV=[0,2,4,5,7,9,11], MIN_IV=[0,2,3,5,7,8,10];
 function sigText(sig){
   if(sig===0) return t('cof_sig0');
   if(sig===6) return '6 ♯ / 6 ♭';
   if(sig>0) return sig+' ♯ — '+SHARP_ORDER.slice(0,sig).map(x=>x+'♯').join(' ');
   const a=-sig; return a+' ♭ — '+FLAT_ORDER.slice(0,a).map(x=>x+'♭').join(' ');
-}
-function buildDia(rootPc, sc, flat){
-  // the shared diatonicTriads(); the circle spells each chord by key signature
-  return diatonicTriads(rootPc, sc).map(c=> noteName(c.rootPc, flat)+c.suf);
 }
 /* The wheel is the key picker (the strip's key sheet) and shows the current key
    instead of keeping its own selection: the ring comes from the mode (major third →
@@ -91,23 +86,24 @@ function renderCircle(){
   document.getElementById('cof-svg').innerHTML=s;
   renderCofInfo();
 }
+/* The key panel: the key by its own name, the signature it is written in, its relative
+   (for a mode, the major it shares its notes with) and its neighbours on the circle. The
+   key's chords are the chord sheet's degree row (keyDegrees), not repeated here. */
 function renderCofInfo(){
-  const cofSel=ctxCofSel(), cofMinor=ctxCofMinor();
-  const c=COF[cofSel], useFlat=(c.sig<0||c.sig===6);
-  const keyPc=cofMinor?c.minPc:c.majPc;
-  const ring=cofChordRing(), sc=cofMinor?MIN_IV:MAJ_IV, dia=buildDia(keyPc, sc, useFlat), diaPc=diatonicTriads(keyPc, sc).map(x=>x.rootPc);
-  const roman=cofMinor?ROMAN_MIN:ROMAN_MAJ;
-  const keyName=cofMinor?c.min:(c.enh||c.maj), kind=cofMinor?t('min_word'):t('major_word');
-  const rel=cofMinor?`${t('cof_rel_major')}: ${(c.enh||c.maj)} ${t('major_word')}`:`${t('cof_rel_minor')}: ${c.min}`;
+  const cofSel=ctxCofSel(), cofMinor=ctxCofMinor(), c=COF[cofSel];
+  const off=MODE_OFF[scIdx], mode=off!==undefined && scIdx!==5;
+  // the major whose signature the key is written in: a mode's parent; any other scale
+  // (pentatonic, blues, harmonic or melodic minor) its family's major or minor key
+  const sigPc=mod(keyRoot-(off!==undefined ? off : cofMinor ? 9 : 0), 12), sk=COF.find(k=>k.majPc===sigPc);
+  const rel = mode ? `${t('samenotes')} ${sk.enh||sk.maj} ${t('major_word')} ${t('mode_tail')}`
+    : cofMinor ? `${t('cof_rel_major')}: ${c.enh||c.maj} ${t('major_word')}` : `${t('cof_rel_minor')}: ${c.min}`;
   const sub=COF[(cofSel+11)%12], dom=COF[(cofSel+1)%12];
   const subL=cofMinor?sub.min:sub.maj, domL=cofMinor?dom.min:dom.maj;
-  const diaHtml=dia.map((ch,idx)=>`<span class="cof-deg${ring && diaPc[idx]===chRoot?' on':''}"><b style="color:var(--text-faint)">${roman[idx]}</b> ${ch}</span>`).join(' ');
   document.getElementById('cof-info').innerHTML=
-    `<div class="big">${keyName} ${kind}</div>`+
-    `<div class="sub">${t('cof_sig')}: ${sigText(c.sig)}</div>`+
+    `<div class="big">${noteTxt(keyLbl)} ${sKeyName(SCALES[scIdx])}</div>`+
+    `<div class="sub">${t('cof_sig')}: ${sigText(sk.sig)}</div>`+
     `<div class="sub">${rel}</div>`+
-    `<div class="sub">${t('cof_neighbors')}: ${subL} (${t('cof_subdom')}) · ${domL} (${t('cof_dom')})</div>`+
-    `<div class="sub" style="margin-top:9px;line-height:2">${diaHtml}</div>`;
+    `<div class="sub">${t('cof_neighbors')}: ${subL} (${t('cof_subdom')}) · ${domL} (${t('cof_dom')})</div>`;
 }
 
 /* ===================== APPLY LANGUAGE ===================== */

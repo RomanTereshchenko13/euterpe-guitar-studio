@@ -492,11 +492,8 @@
   /* a repaint in the same key (the chord moved) leaves the arc drawn */
   .cof-arc.still { animation: none; stroke-dashoffset: 0; }
   @keyframes cof-draw { to { stroke-dashoffset: 0; } }
-  #cof-info .sub b { font-weight: 700; }
-  /* the chord, marked on top of the key: a dashed ring on its node, an underline in the list */
+  /* the chord, marked on top of the key: a dashed ring on its node */
   .cof-node.cof-chord circle { stroke: var(--text); stroke-width: 3; stroke-dasharray: 5 3; }
-  .cof-deg { display: inline-block; min-width: 48px; }
-  .cof-deg.on { box-shadow: inset 0 -2px 0 var(--third); }
 
   /* ---- THE CONTEXT STRIP: key · chord · tempo · ▶ · tuner · ⚙ (15-0-strip.js) ----
      One row, the same above the neck and above a drill stage. On a narrow screen it
@@ -780,7 +777,7 @@
     .langbtn { padding: 7px 12px; }
     .seq-chip .x { padding: 4px 6px; opacity: 0.85; }
   }
-  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-faint); }
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-faint); display: flex; align-items: center; gap: 18px; }
 
   /* ---- changelog modal ---- */
   .cl-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.62); display: none; align-items: flex-start; justify-content: center; padding: 60px 16px; z-index: 100; }
@@ -814,12 +811,12 @@
   .kbd-row { display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--text-dim); }
   .kbd-keys { display: flex; align-items: center; gap: 4px; flex: 0 0 104px; }
   .kbd-row kbd { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--text); background: var(--bg-panel-2); border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 6px; padding: 3px 7px; min-width: 22px; text-align: center; line-height: 1.2; }
-  /* the desktop link below the footer; no keyboard on phones */
+  /* the desktop link in the footer; no keyboard on phones */
   .kbd-hint-bar { display: none; }
   .kbd-open-btn { display: inline-flex; align-items: center; gap: 8px; font-family: inherit; font-size: 12px; color: var(--text-faint); background: transparent; border: none; cursor: pointer; padding: 4px 0; transition: color 0.12s; }
   .kbd-open-btn:hover { color: var(--text-dim); }
   .kbd-open-btn kbd { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--text-dim); background: var(--bg-panel-2); border: 1px solid var(--border-strong); border-radius: 5px; padding: 1px 6px; }
-  @media (min-width: 941px) { .kbd-hint-bar { display: block; margin-top: 12px; } }
+  @media (min-width: 941px) { .kbd-hint-bar { display: block; } }
 
   /* ===================== Accessibility =====================
      The note-function colours carry meaning by hue alone, so two opt-in body classes

@@ -47,7 +47,7 @@ function labClass(lab){
      display   : gMode (note-names vs degrees)
      view      : hView (chords|arp), scView (scale|notes)
      triads    : trSet, trInv                      (the Chord-tones Triads toggle)
-     scales    : scPos, scOverlay
+     scales    : scPos
      notes     : ntFilter, ntRoot
      transport : tempo, lefty, bassOn, grooveOn, seqLoopOn, seq[] (the progression), playSrc
      ui        : lang, currentTab, tuningIdx, fretRangeIdx, toolbarOpen, backingOpen
@@ -64,7 +64,6 @@ let chVoicing=0;   // index of the selected voicing card (open / E-barre / A-bar
 let chShapesExpanded=false;   // collapsed by default: show the first few shapes, expand for the rest
 let chTriads=false;   // Chord tones shows the chord's triad shapes instead of every chord tone
 let arpPos=0;      // Arpeggio view: isolated practice box (0 = whole neck, 1..5)
-function chDegClass(iv){ if(iv===0)return'd-root'; if(iv===3||iv===4)return'd-third'; if([6,7,8].includes(iv))return'd-fifth'; return'd-sev'; }
 
 /* The chord the "Play over this" suggester reacts to: the chosen root + quality,
    shared by Chord tones (and its triads) and Arpeggio. */

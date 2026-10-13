@@ -87,7 +87,7 @@ foundation work makes that work smaller.
 | Rhythm ear | — | **Cut (v2.17.0)** |
 | Chord-tone targeting (tap, answer lit) | — | **Cut (v2.17.0)** — the lit version is Harmony ▸ Arpeggio + Jam |
 | Call & response (tap, call lit) | — | **Cut (v2.17.0)** |
-| Sessions · SRS learner · progress card | — | **Freeze** — no new work until fewer, better drills feed them |
+| Sessions · SRS learner · progress card | — | **Freeze** — no new work until fewer, better drills feed them; the timed session may give way to a "Next up" card (step 12, open) |
 | Latency calibration | heard | **Keep** — in the mic flow since step 8 |
 | Export / import · persistent storage | — | **Keep** — data safety |
 | Share links | — | **Cut (v2.17.0)** — an old link opens the app, hash ignored and cleared |
@@ -103,8 +103,9 @@ The open questions (Triads, Identify, share links) were settled for step 1 on 20
 Each step ships on its own, keeps all gates green (`npm run lint`, `npm test`, `tools/shoot.js`
 review), and changes no saved data unless it says so.
 
-**Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9. Steps 1–3 are small; 1 goes first because every
-later step gets smaller after it.
+**Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 (done) → 10 → 11 → 12 → 13. Steps 1–3 are small; 1
+goes first because every later step gets smaller after it. Step 10 goes first of the rest because
+it fixes wrong output; 12 waits on its open question; 13 is done before any new drill work.
 
 ### Done
 - [x] **Protect progress** (v2.16.0) — `navigator.storage.persist()`, Settings ▸ Export / Import
@@ -202,7 +203,77 @@ later step gets smaller after it.
       _Data:_ additive — `cmCustom` is new; old strum/comp sessions and bests are untouched
       and read by the new track. Still to do by hand: a check on a real phone.
 
+### Next (review of v2.18.0, 2026-10-13)
 
+The dead code is gone (no unused CSS selector or i18n key). What is left is duplication on screen:
+the same choice offered in two or three places, and wrappers around little content. Three of the
+findings are bugs.
+
+- [x] **10. Wrong output, and the key's chords in one place** (patch; done 2026-10-13, unreleased)
+  - The key panel (`renderCofInfo`, `11-notes-circle-lang.js`) treats every non-major scale as
+    natural minor: A Dorian shows no sharps and VI F · VII G. It also titles the key "Am мінор"
+    (chord name + "minor"). Fix the title; for a mode, show its parent key's signature or none.
+  - Two roman-numeral systems for one key: the chord sheet says ♭III ♭VI ♭VII (`keyDegrees`),
+    the key panel says III VI VII (hard-coded `ROMAN_MIN`/`ROMAN_MAJ`). One source: `keyDegrees`.
+  - The key's chords are listed three times (chord sheet degrees, key panel line, Scales ▸
+    "Chords in key"). Keep the chord sheet's. Cut the key panel's line. Replace the Scales row with
+    one toggle, "Show the chord (Am) over the scale", reading the strip's chord — `scOverlay`, its
+    row and the "Open in Harmony" link go.
+  - The footer always says "standard tuning (E A D G B e)", whatever the tuning or capo. Cut it to
+    the version badge (+ shortcuts on desktop); the brand isn't repeated either.
+  - Inside a drill the tempo sheet's Metronome still starts the free reference click beside the
+    drill's own (only the M shortcut is gated). Fixed for good by step 11's one metronome; until
+    then, disable it in Practice.
+  - _Data:_ `scOverlay` is retired (left in the store, listed in `RETIRED`); compat checks a
+    fixture saved with an overlay on (`v2.18-overlay`). The Metronome is hidden, not disabled,
+    in Practice; the chord toggle (`scShowChord`) is UI-only, not saved.
+
+- [ ] **11. Layout pass: the neck higher, one control per job** (minor)
+  - 🎵 Tuner and ⚙ Settings move into the app header (on a phone it holds only the brand). The
+    strip is key · chord · tempo · ▶ and always fits one row; a drill that declares none of them
+    (note naming, Practice home) has no strip row at all.
+  - The reference view heading ("Тони акорду на грифі ?") goes — the active lens button already
+    names the view; the `?` moves into the lens row. Target: neck at ~140px on 390×844 (now ~216).
+  - Harmony's three views are one switch: Chord tones · Triads · Arpeggio. The "Показати: Full
+    chord / Triads" row under the neck goes (Triads stays disabled for sus/11).
+  - One metronome: the tempo sheet's Metronome becomes "click with ▶", honoured by the reference
+    loop and every drill. The drills' own Metronome buttons (`cm-click`, `sp-click`) go.
+  - The ▶ drawer: Jam goes (it is Bass + Drums at once — three buttons for two flags); the
+    progression editor shows only when the source is Progression.
+  - Practice home: the four section labels (two hold one card) and the intro paragraph go — one
+    list of six cards.
+  - Desktop header: nav on the brand's line (brand + subtitle + nav now take ~240px at 1280×800).
+  - The drill header's "Параметри" becomes an icon so the drill name isn't cut off on a phone.
+  - One-minute changes drops "оцінку з мікрофоном додамо згодом" — mic scoring is parked, not
+    promised.
+  - Orientation matrix review (`tools/shoot.js tabs …`) before shipping.
+  - _Data:_ `sp`/`cm` click flags were never saved; the metronome-with-▶ flag is new (additive).
+
+- [ ] **12. Smaller seams** (patch or minor, with 11 or after)
+  - Rhythm guitar's own "Гурт" follows the drawer's Bass/Drums instead of keeping its own flag.
+  - Key sheet on a phone: the root row stays, the circle sits behind a "Circle of fifths" toggle
+    (today both pick the root and the circle is below the fold). Desktop unchanged.
+  - The circle's colours stop reusing the degree palette with other meanings (blue is the 5th on
+    the neck, IV on the circle): V takes the fifth's colour, IV and the relative key go neutral.
+  - Welcome: "Look at a chord or scale" does what "Just look around" does — two choices, or a
+    one-line hint instead of the modal.
+  - Note naming on a phone shows frets 0–7 of a "find all" board: fit the drill board to the
+    screen, or limit it to frets 0–12.
+  - **Open question — the timed session.** Six drills don't need a planner, countdown, block
+    chaining and report; on a fresh profile it proposes "Changes + Rhythm guitar, 5 min each".
+    Proposal: one "Next up: ⟨most due drill⟩ →" card (`sessionQueue()` already finds it) and
+    retire `14-session.js`, the header's block counter + Next, and the report. Stored session
+    history stays and is ignored. Lifts the "Freeze" on sessions in the verdicts table either way.
+  - _Data:_ the session cut retires `sessMins`; `seqLoopOn` only if progressions always loop.
+
+- [ ] **13. Project overhead + the real phone**
+  - `tests/smoke.js` is 210 KB (186 KB at step 2) — larger than any app module. Split by area and
+    drop pins that the steps above make moot.
+  - `tools/shoot.js`'s header narrates "Phase 3 / 4 / 5 / 10/B3"; step 2 cleaned `src/`, not
+    `tools/`.
+  - `02-changelog.js` is 95 KB of source; the build ships only the newest entries. Older entries
+    could live in `CHANGELOG.md` only.
+  - The check on a real phone (left over from step 9), before any new drill work.
 
 ---
 

@@ -47,9 +47,9 @@ const BOX_OFFSETS=[0,3,5,7,10];
 const CAGED_BY_POS=['E','D','C','A','G'];
 function isCAGEDScale(){ return scIdx===0; }
 function cagedShapeName(letter){ return lang==='en' ? letter+'-shape' : 'форма '+letter; }
-let scIdx=5, scPos=0, scOverlay=null;
+let scIdx=5, scPos=0;
 let scView='scale';   // Scales sub-view: 'scale' | 'notes'
-let diaList=[];
+let scShowChord=false;   // the strip's chord over the scale; UI-only, not saved
 /* Colour the 1·3·5·7 skeleton with the interval colours and leave 2·4·6 neutral. The
    fifth is iv 7, or iv 6 only when there is no perfect fifth (Locrian, blues); Lydian's
    ♯4 and any ♭6 stay passing tones. */
@@ -61,18 +61,10 @@ function scClass(iv, ivs){
   return 'd-other';
 }
 function boxWindow(pos){ if(!pos) return null; const anchor=(keyRoot-4+12)%12; const start=anchor+BOX_OFFSETS[pos-1]; return [start, start+4]; }
-function diatonic(){
-  const iv=SCALES[scIdx].iv; if(iv.length!==7) return [];
-  // the shared diatonicTriads() gives quality; this view spells each root by degree
-  return diatonicTriads(keyRoot, iv).map(c=>({
-    label: spellNote(keyLbl, c.rootPc, c.deg+1)+c.suf,
-    rootPc: c.rootPc, iv: c.iv, tag: 'dia'+c.deg
-  }));
-}
-function renderDiatonic(){
-  const cont=document.getElementById('sc-diatonic'); diaList=diatonic();
-  if(diaList.length===0){ cont.innerHTML=`<span class="muted">${t('dia_na')}</span>`; return; }
-  cont.innerHTML = diaList.map((c,i)=>`<button class="btn dia${scOverlay&&scOverlay.tag===c.tag?' active':''}" data-i="${i}">${c.label}</button>`).join('') + `<button class="btn" data-clear="1">${t('b_clear')}</button>`;
+function renderScChordBtn(){
+  const b=document.getElementById('sc-chord'); if(!b) return;
+  b.textContent=t('sc_show_chord').replace('{ch}', noteTxt(chLbl)+QUALITIES[chQual].short);
+  b.classList.toggle('active', scShowChord); b.setAttribute('aria-pressed', scShowChord?'true':'false');
 }
 function renderScales(){
   const s=SCALES[scIdx], flat=useFlatFor(keyLbl);
@@ -85,20 +77,22 @@ function renderScales(){
   let html=`<div class="big">${noteTxt(keyLbl)} ${sName(s)}: ${notes}</div><div class="sub">${t('degrees_word')}: ${degs}</div>`;
   if(MODE_OFF[scIdx]!==undefined){ const pr=noteName((keyRoot-MODE_OFF[scIdx]+120)%12,flat); html+=`<div class="sub">${t('samenotes')} ${pr} ${t('major_word')} ${t('mode_tail')}</div>`; }
   if(isCAGEDScale() && scPos>0){ const letter=CAGED_BY_POS[scPos-1]; html+=`<div class="sub">CAGED · ${cagedShapeName(letter)} — ${t('caged_desc')}</div>`; }
-  if(scOverlay){ html+=`<div class="sub" style="color:var(--third)">${t('overlay_msg')} <button class="btn dia sc-open-harmony" type="button">${t('b_open_harmony')} →</button></div>`; }
   document.getElementById('sc-info').innerHTML=html;
-  renderDiatonic();
+  renderScChordBtn();
   // the shared board, only in the Scale view
   if(isBoardMode('scale')){
     const win=boxWindow(scPos);
-    let ovMap=null; if(scOverlay){ ovMap={}; scOverlay.iv.forEach(iv=>ovMap[(scOverlay.rootPc+iv)%12]=iv); }
+    // the chord over the scale: its tones in their chord colours — one outside the scale
+    // too, spelled from the chord — and the rest of the scale dimmed
+    const q=QUALITIES[chQual];
+    let chMap=null; if(scShowChord){ chMap={}; q.iv.forEach((iv,i)=>{ chMap[mod(chRoot+iv,12)]=i; }); }
     paintBoard((pc,si,f)=>{
-      if(map[pc]===undefined) return null;
+      const inSc=map[pc]!==undefined, inCh=!!chMap && chMap[pc]!==undefined;
+      if(!inSc && !inCh) return null;
       if(win && (f<win[0]||f>win[1])) return null;
-      let cls;
-      if(ovMap){ cls = (ovMap[pc]!==undefined) ? chDegClass(ovMap[pc]) : 'd-dim'; }
-      else { cls = scClass(map[pc], s.iv); }
-      return makeDot(cls, gMode==='names'?scName(pc):SDEG[map[pc]], OPEN_MIDI[si]+f);
+      const cls = !chMap ? scClass(map[pc], s.iv) : inCh ? labClass(q.lab[chMap[pc]]) : 'd-dim';
+      const lbl = gMode==='names' ? (inSc ? scName(pc) : spellNote(chLbl, pc, q.deg[chMap[pc]])) : SDEG[mod(pc-keyRoot,12)];
+      return makeDot(cls, lbl, OPEN_MIDI[si]+f);
     }, scaleLegendHTML(), '', win);
   }
 }
@@ -118,7 +112,7 @@ function buildScFams(){
    a new tonic. */
 function setScale(i){
   if(!SCALES[i]) return;
-  scIdx=i; scOverlay=null;
+  scIdx=i;
   renderActiveContext(); renderStrip(); drillKeyChanged();
   saveState();
 }

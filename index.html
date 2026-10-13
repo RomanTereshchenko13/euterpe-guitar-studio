@@ -402,10 +402,7 @@
   .cof-arc { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; stroke-dasharray: 320; stroke-dashoffset: 320; animation: cof-draw 0.55s ease forwards; pointer-events: none; }
   .cof-arc.still { animation: none; stroke-dashoffset: 0; }
   @keyframes cof-draw { to { stroke-dashoffset: 0; } }
-  #cof-info .sub b { font-weight: 700; }
   .cof-node.cof-chord circle { stroke: var(--text); stroke-width: 3; stroke-dasharray: 5 3; }
-  .cof-deg { display: inline-block; min-width: 48px; }
-  .cof-deg.on { box-shadow: inset 0 -2px 0 var(--third); }
   .strip { margin-bottom: 10px; }
   .strip-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
   .strip-row::-webkit-scrollbar { display: none; }
@@ -614,7 +611,7 @@
     .langbtn { padding: 7px 12px; }
     .seq-chip .x { padding: 4px 6px; opacity: 0.85; }
   }
-  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-faint); }
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-faint); display: flex; align-items: center; gap: 18px; }
   .cl-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.62); display: none; align-items: flex-start; justify-content: center; padding: 60px 16px; z-index: 100; }
   .cl-overlay.open { display: flex; animation: fade 0.18s ease; }
   .cl-modal { background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 14px; max-width: 560px; width: 100%; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 18px 50px rgba(0,0,0,0.5); }
@@ -647,7 +644,7 @@
   .kbd-open-btn { display: inline-flex; align-items: center; gap: 8px; font-family: inherit; font-size: 12px; color: var(--text-faint); background: transparent; border: none; cursor: pointer; padding: 4px 0; transition: color 0.12s; }
   .kbd-open-btn:hover { color: var(--text-dim); }
   .kbd-open-btn kbd { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--text-dim); background: var(--bg-panel-2); border: 1px solid var(--border-strong); border-radius: 5px; padding: 1px 6px; }
-  @media (min-width: 941px) { .kbd-hint-bar { display: block; margin-top: 12px; } }
+  @media (min-width: 941px) { .kbd-hint-bar { display: block; } }
   body.cb-palette {
     --root: #0072B2; --third: #E69F00; --fifth: #009E73; --seventh: #D55E00;
     --ext: #CC79A7; --sc-other: #9b9486; --natural: #56B4E9; --sharp: #E69F00;
@@ -940,7 +937,7 @@
   <section class="panel" id="panel-scales">
     <div id="sub-scale">
       <div class="row"><span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="sc-pos"></div></div>
-      <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="sc-diatonic"></div></div>
+      <div class="row"><button type="button" class="btn" id="sc-chord" aria-pressed="false"></button></div>
       <div class="info" id="sc-info"></div>
       <div class="row"><button class="btn seam-btn" data-seam="scale" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
@@ -1187,10 +1184,12 @@
 </div>
 </div>
 
-  <footer><span data-i18n="footer">Гітарна студія · стандартний стрій (E A D G B e) · працює офлайн</span> <button class="ver" id="app-ver" aria-haspopup="dialog"></button></footer>
-  <div class="kbd-hint-bar">
-    <button class="kbd-open-btn" id="kbd-open"><span data-i18n="kbd_hint">Гарячі клавіші</span> <kbd>?</kbd></button>
-  </div>
+  <footer>
+    <button class="ver" id="app-ver" aria-haspopup="dialog"></button>
+    <div class="kbd-hint-bar">
+      <button class="kbd-open-btn" id="kbd-open"><span data-i18n="kbd_hint">Гарячі клавіші</span> <kbd>?</kbd></button>
+    </div>
+  </footer>
 </main>
 
 <div class="cl-overlay" id="cl-overlay" role="dialog" aria-modal="true" aria-labelledby="cl-title" hidden>
@@ -1922,7 +1921,7 @@ const I18N = {
     cof_sig:'Ключові знаки', cof_sig0:'без ключових знаків',
     cof_rel_minor:'Паралельний мінор', cof_rel_major:'Паралельний мажор',
     cof_neighbors:'Сусіди по колу', cof_subdom:'субдомінанта', cof_dom:'домінанта',
-    min_word:'мінор', b_cadence:'♪ Прослухати {cad}', b_open_harmony:'Відкрити в акордах',
+    b_cadence:'♪ Прослухати {cad}',
     leg_tonic:'Тоніка', leg_dom:'Домінанта (V)', leg_subdom:'Субдомінанта (IV)', leg_rel:'Паралель',
     ch_h:'Тони акорду на грифі',
     ch_p:'Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу. Натисни на ноту, щоб почути її.',
@@ -1943,16 +1942,14 @@ const I18N = {
     audio_off:'Звук недоступний у цьому браузері — відтворення вимкнено.',
     seq_title:'Прогресія', seq_add:'Додати акорд', seq_clear:'Очистити',
     seq_loop:'Цикл', seq_bars:'тактів', seq_empty:'Порожньо — додай поточний акорд або вибери пресет',
-    b_natonly:'Тільки натуральні', b_clear:'Зняти',
+    b_natonly:'Тільки натуральні',
     pos_all:'Вся', inv_all:'Всі', inv_root:'Основне', inv_1st:'1-ше', inv_2nd:'2-ге',
     leg_root:'Тоніка', leg_third:'Терція', leg_fifth:'Квінта', leg_seventh:'Септима', leg_ext:'Розширення',
     leg_nat:'Натуральна нота', leg_sharpflat:'Дієз / бемоль', leg_highlight:'Виділена нота',
     leg_sc_other:'Інші ноти гами',
-    footer:'Euterpe · гітарна студія · стандартний стрій (E A D G B e) · працює офлайн',
     intervals_word:'Інтервали', degrees_word:'Ступені',
     samenotes:'Ті самі ноти, що й', major_word:'мажор', mode_tail:'— змінюється лише тоніка',
-    overlay_msg:'Накладено акорд: цільові ноти підсвічені, решта гами приглушена',
-    dia_na:'недоступно для пентатоніки / блюзу',
+    sc_show_chord:'Показати акорд {ch} поверх гами',
     strings_word:'струни',
     inv_all_desc:'Усі три обернення на цьому наборі струн',
     inv_root_desc:'Основне положення — у басу тоніка',
@@ -2083,7 +2080,7 @@ const I18N = {
     cof_sig:'Key signature', cof_sig0:'no sharps or flats',
     cof_rel_minor:'Relative minor', cof_rel_major:'Relative major',
     cof_neighbors:'Neighbours on the circle', cof_subdom:'subdominant', cof_dom:'dominant',
-    min_word:'minor', b_cadence:'♪ Hear {cad}', b_open_harmony:'Open in chords',
+    b_cadence:'♪ Hear {cad}',
     leg_tonic:'Tonic', leg_dom:'Dominant (V)', leg_subdom:'Subdominant (IV)', leg_rel:'Relative key',
     ch_h:'Chord tones across the neck',
     ch_p:'Pick a root and a chord type — the root, third, fifth (and seventh for seventh chords) light up across the whole neck. Tap a note to hear it.',
@@ -2104,16 +2101,14 @@ const I18N = {
     audio_off:'Audio is unavailable in this browser — playback is disabled.',
     seq_title:'Progression', seq_add:'Add chord', seq_clear:'Clear',
     seq_loop:'Cycle', seq_bars:'bars', seq_empty:'Empty — add the current chord or pick a preset',
-    b_natonly:'Naturals only', b_clear:'Clear',
+    b_natonly:'Naturals only',
     pos_all:'All', inv_all:'All', inv_root:'Root', inv_1st:'1st', inv_2nd:'2nd',
     leg_root:'Root', leg_third:'Third', leg_fifth:'Fifth', leg_seventh:'Seventh', leg_ext:'Extensions',
     leg_nat:'Natural note', leg_sharpflat:'Sharp / flat', leg_highlight:'Selected note',
     leg_sc_other:'Other scale tones',
-    footer:'Euterpe · guitar studio · standard tuning (E A D G B e) · works offline',
     intervals_word:'Intervals', degrees_word:'Scale degrees',
     samenotes:'Same notes as', major_word:'major', mode_tail:'— only the tonic changes',
-    overlay_msg:'Chord overlaid: target tones highlighted, the rest of the scale dimmed',
-    dia_na:'not available for pentatonic / blues',
+    sc_show_chord:'Show the chord ({ch}) over the scale',
     strings_word:'strings',
     inv_all_desc:'All three inversions on this string set',
     inv_root_desc:'Root position — root in the bass',
@@ -2928,7 +2923,7 @@ function chordLegendHTML(){ return legChip('--root','leg_root','1')+legChip('--t
 function triadLegendHTML(){ return legChip('--root','leg_root','1')+legChip('--third','leg_third','3 / ♭3')+legChip('--fifth','leg_fifth','5'); }
 function notesLegendHTML(){ return legChip('--natural','leg_nat')+legChip('--sharp','leg_sharpflat')+legChip('--root','leg_highlight'); }
 function scaleLegendHTML(){
-  if(scOverlay) return legChip('--root','leg_root','1')+legChip('--third','leg_third','3 / ♭3')+legChip('--fifth','leg_fifth','5')+legChip('--seventh','leg_seventh','7 / ♭7')+
+  if(scShowChord) return chordLegendHTML()+
     `<div class="leg"><span class="leg-dot" style="background:rgba(220,200,160,0.4)"></span><span class="leg-nm">${t('leg_sc_other')}</span></div>`;
   const ivs=SCALES[scIdx].iv;
   const present=new Set(ivs.map(iv=>scClass(iv, ivs)));
@@ -2999,7 +2994,6 @@ let chVoicing=0;
 let chShapesExpanded=false;   
 let chTriads=false;   
 let arpPos=0;      
-function chDegClass(iv){ if(iv===0)return'd-root'; if(iv===3||iv===4)return'd-third'; if([6,7,8].includes(iv))return'd-fifth'; return'd-sev'; }
 function currentHarmonyChord(){
   const q=QUALITIES[chQual]; return {rootPc:chRoot, rootLbl:chLbl, short:q.short, pcs:q.iv.map(iv=>mod(chRoot+iv,12))};
 }
@@ -3419,9 +3413,9 @@ const BOX_OFFSETS=[0,3,5,7,10];
 const CAGED_BY_POS=['E','D','C','A','G'];
 function isCAGEDScale(){ return scIdx===0; }
 function cagedShapeName(letter){ return lang==='en' ? letter+'-shape' : 'форма '+letter; }
-let scIdx=5, scPos=0, scOverlay=null;
+let scIdx=5, scPos=0;
 let scView='scale';   
-let diaList=[];
+let scShowChord=false;   
 function scClass(iv, ivs){
   if(iv===0) return 'd-root';
   if(iv===3||iv===4) return 'd-third';
@@ -3430,17 +3424,10 @@ function scClass(iv, ivs){
   return 'd-other';
 }
 function boxWindow(pos){ if(!pos) return null; const anchor=(keyRoot-4+12)%12; const start=anchor+BOX_OFFSETS[pos-1]; return [start, start+4]; }
-function diatonic(){
-  const iv=SCALES[scIdx].iv; if(iv.length!==7) return [];
-  return diatonicTriads(keyRoot, iv).map(c=>({
-    label: spellNote(keyLbl, c.rootPc, c.deg+1)+c.suf,
-    rootPc: c.rootPc, iv: c.iv, tag: 'dia'+c.deg
-  }));
-}
-function renderDiatonic(){
-  const cont=document.getElementById('sc-diatonic'); diaList=diatonic();
-  if(diaList.length===0){ cont.innerHTML=`<span class="muted">${t('dia_na')}</span>`; return; }
-  cont.innerHTML = diaList.map((c,i)=>`<button class="btn dia${scOverlay&&scOverlay.tag===c.tag?' active':''}" data-i="${i}">${c.label}</button>`).join('') + `<button class="btn" data-clear="1">${t('b_clear')}</button>`;
+function renderScChordBtn(){
+  const b=document.getElementById('sc-chord'); if(!b) return;
+  b.textContent=t('sc_show_chord').replace('{ch}', noteTxt(chLbl)+QUALITIES[chQual].short);
+  b.classList.toggle('active', scShowChord); b.setAttribute('aria-pressed', scShowChord?'true':'false');
 }
 function renderScales(){
   const s=SCALES[scIdx], flat=useFlatFor(keyLbl);
@@ -3452,19 +3439,19 @@ function renderScales(){
   let html=`<div class="big">${noteTxt(keyLbl)} ${sName(s)}: ${notes}</div><div class="sub">${t('degrees_word')}: ${degs}</div>`;
   if(MODE_OFF[scIdx]!==undefined){ const pr=noteName((keyRoot-MODE_OFF[scIdx]+120)%12,flat); html+=`<div class="sub">${t('samenotes')} ${pr} ${t('major_word')} ${t('mode_tail')}</div>`; }
   if(isCAGEDScale() && scPos>0){ const letter=CAGED_BY_POS[scPos-1]; html+=`<div class="sub">CAGED · ${cagedShapeName(letter)} — ${t('caged_desc')}</div>`; }
-  if(scOverlay){ html+=`<div class="sub" style="color:var(--third)">${t('overlay_msg')} <button class="btn dia sc-open-harmony" type="button">${t('b_open_harmony')} →</button></div>`; }
   document.getElementById('sc-info').innerHTML=html;
-  renderDiatonic();
+  renderScChordBtn();
   if(isBoardMode('scale')){
     const win=boxWindow(scPos);
-    let ovMap=null; if(scOverlay){ ovMap={}; scOverlay.iv.forEach(iv=>ovMap[(scOverlay.rootPc+iv)%12]=iv); }
+    const q=QUALITIES[chQual];
+    let chMap=null; if(scShowChord){ chMap={}; q.iv.forEach((iv,i)=>{ chMap[mod(chRoot+iv,12)]=i; }); }
     paintBoard((pc,si,f)=>{
-      if(map[pc]===undefined) return null;
+      const inSc=map[pc]!==undefined, inCh=!!chMap && chMap[pc]!==undefined;
+      if(!inSc && !inCh) return null;
       if(win && (f<win[0]||f>win[1])) return null;
-      let cls;
-      if(ovMap){ cls = (ovMap[pc]!==undefined) ? chDegClass(ovMap[pc]) : 'd-dim'; }
-      else { cls = scClass(map[pc], s.iv); }
-      return makeDot(cls, gMode==='names'?scName(pc):SDEG[map[pc]], OPEN_MIDI[si]+f);
+      const cls = !chMap ? scClass(map[pc], s.iv) : inCh ? labClass(q.lab[chMap[pc]]) : 'd-dim';
+      const lbl = gMode==='names' ? (inSc ? scName(pc) : spellNote(chLbl, pc, q.deg[chMap[pc]])) : SDEG[mod(pc-keyRoot,12)];
+      return makeDot(cls, lbl, OPEN_MIDI[si]+f);
     }, scaleLegendHTML(), '', win);
   }
 }
@@ -3480,7 +3467,7 @@ function buildScFams(){
 }
 function setScale(i){
   if(!SCALES[i]) return;
-  scIdx=i; scOverlay=null;
+  scIdx=i;
   renderActiveContext(); renderStrip(); drillKeyChanged();
   saveState();
 }
@@ -3519,16 +3506,12 @@ const COF=[
   {i:11, maj:'F',  majPc:5,  sig:-1, min:'Dm',  minPc:2},
 ];
 const SHARP_ORDER=['F','C','G','D','A','E','B'], FLAT_ORDER=['B','E','A','D','G','C','F'];
-const ROMAN_MAJ=['I','ii','iii','IV','V','vi','vii°'], ROMAN_MIN=['i','ii°','III','iv','v','VI','VII'];
 const MAJ_IV=[0,2,4,5,7,9,11], MIN_IV=[0,2,3,5,7,8,10];
 function sigText(sig){
   if(sig===0) return t('cof_sig0');
   if(sig===6) return '6 ♯ / 6 ♭';
   if(sig>0) return sig+' ♯ — '+SHARP_ORDER.slice(0,sig).map(x=>x+'♯').join(' ');
   const a=-sig; return a+' ♭ — '+FLAT_ORDER.slice(0,a).map(x=>x+'♭').join(' ');
-}
-function buildDia(rootPc, sc, flat){
-  return diatonicTriads(rootPc, sc).map(c=> noteName(c.rootPc, flat)+c.suf);
 }
 function ctxCofMinor(){ return !isMajorFamily(scIdx); }
 function ctxCofSel(){ const minor=ctxCofMinor(); const i=COF.findIndex(c=>(minor?c.minPc:c.majPc)===keyRoot); return i<0?0:i; }
@@ -3573,22 +3556,18 @@ function renderCircle(){
   renderCofInfo();
 }
 function renderCofInfo(){
-  const cofSel=ctxCofSel(), cofMinor=ctxCofMinor();
-  const c=COF[cofSel], useFlat=(c.sig<0||c.sig===6);
-  const keyPc=cofMinor?c.minPc:c.majPc;
-  const ring=cofChordRing(), sc=cofMinor?MIN_IV:MAJ_IV, dia=buildDia(keyPc, sc, useFlat), diaPc=diatonicTriads(keyPc, sc).map(x=>x.rootPc);
-  const roman=cofMinor?ROMAN_MIN:ROMAN_MAJ;
-  const keyName=cofMinor?c.min:(c.enh||c.maj), kind=cofMinor?t('min_word'):t('major_word');
-  const rel=cofMinor?`${t('cof_rel_major')}: ${(c.enh||c.maj)} ${t('major_word')}`:`${t('cof_rel_minor')}: ${c.min}`;
+  const cofSel=ctxCofSel(), cofMinor=ctxCofMinor(), c=COF[cofSel];
+  const off=MODE_OFF[scIdx], mode=off!==undefined && scIdx!==5;
+  const sigPc=mod(keyRoot-(off!==undefined ? off : cofMinor ? 9 : 0), 12), sk=COF.find(k=>k.majPc===sigPc);
+  const rel = mode ? `${t('samenotes')} ${sk.enh||sk.maj} ${t('major_word')} ${t('mode_tail')}`
+    : cofMinor ? `${t('cof_rel_major')}: ${c.enh||c.maj} ${t('major_word')}` : `${t('cof_rel_minor')}: ${c.min}`;
   const sub=COF[(cofSel+11)%12], dom=COF[(cofSel+1)%12];
   const subL=cofMinor?sub.min:sub.maj, domL=cofMinor?dom.min:dom.maj;
-  const diaHtml=dia.map((ch,idx)=>`<span class="cof-deg${ring && diaPc[idx]===chRoot?' on':''}"><b style="color:var(--text-faint)">${roman[idx]}</b> ${ch}</span>`).join(' ');
   document.getElementById('cof-info').innerHTML=
-    `<div class="big">${keyName} ${kind}</div>`+
-    `<div class="sub">${t('cof_sig')}: ${sigText(c.sig)}</div>`+
+    `<div class="big">${noteTxt(keyLbl)} ${sKeyName(SCALES[scIdx])}</div>`+
+    `<div class="sub">${t('cof_sig')}: ${sigText(sk.sig)}</div>`+
     `<div class="sub">${rel}</div>`+
-    `<div class="sub">${t('cof_neighbors')}: ${subL} (${t('cof_subdom')}) · ${domL} (${t('cof_dom')})</div>`+
-    `<div class="sub" style="margin-top:9px;line-height:2">${diaHtml}</div>`;
+    `<div class="sub">${t('cof_neighbors')}: ${subL} (${t('cof_subdom')}) · ${domL} (${t('cof_dom')})</div>`;
 }
 function applyLang(){
   document.documentElement.lang = lang;
@@ -3759,9 +3738,6 @@ function savedFields(){ return [
   ['arpPos',       svInt(0, 5),                           ()=>arpPos,       v=>{ arpPos=v; }],
   ['scIdx',        svIdx(SCALES),                         ()=>scIdx,        v=>{ scIdx=v; }],
   ['scPos',        svInt(0, 5),                           ()=>scPos,        v=>{ scPos=v; }],
-  ['scOverlay',    v=>v && typeof v==='object' && Number.isInteger(v.rootPc) && Array.isArray(v.iv) && typeof v.tag==='string'
-                       ? {rootPc:mod(v.rootPc,12), iv:v.iv.slice(), tag:v.tag} : undefined,
-                                                          ()=>scOverlay,    v=>{ scOverlay=v; }],
   ['chVoicing',    svInt(0, 5),                           ()=>chVoicing,    v=>{ chVoicing=v; }],
   ['chTriads',     svBool,                                ()=>chTriads,     v=>{ chTriads=v; }],
   ['trSet',        svIdx(STRING_SETS),                    ()=>trSet,        v=>{ trSet=v; }],
@@ -6188,6 +6164,7 @@ function renderStrip(){
   const show=(id,on)=>{ const el=document.getElementById(id); if(el) el.hidden=!on; };
   ['key','chord','tempo','play'].forEach(k=>show(SHEET_CHIPS[k], chipOffered(k)));
   show('chip-play', !pr || !!(d && d.play));
+  show('tb-metro', !pr);
   const kn=noteTxt(keyLbl)+' '+sKeyName(SCALES[scIdx]);
   const ck=document.getElementById('chip-key');
   if(ck){ ck.innerHTML=chipHTML(kn); ck.setAttribute('aria-label', t('strip_key')+': '+kn); ck.title=t('strip_key'); }
@@ -6283,7 +6260,7 @@ function setKey(pc, lbl, mode){
   keyRoot=pc; keyLbl=lbl;
   if(Number.isInteger(mode) && SCALES[mode]) scIdx=mode;
   chRoot=pc; chLbl=lbl;
-  chVoicing=0; scOverlay=null;
+  chVoicing=0;
   ntRoot=lbl;                                   
   renderActiveContext(); renderStrip(); drillKeyChanged();
   saveState();
@@ -6371,18 +6348,7 @@ document.getElementById('tr-diagram').addEventListener('click',e=>{
   const dot=e.target.closest('.cd-dot');
   if(dot && dot.dataset.midi!=null){ pluck(parseInt(dot.dataset.midi)); }
 });
-document.getElementById('sc-diatonic').addEventListener('click',e=>{
-  if(e.target.closest('[data-clear]')){ scOverlay=null; renderScales(); saveState(); return; }
-  const b=e.target.closest('.dia'); if(!b) return; const c=diaList[+b.dataset.i];
-  scOverlay = (scOverlay && scOverlay.tag===c.tag) ? null : {rootPc:c.rootPc, iv:c.iv, tag:c.tag};
-  renderScales(); saveState();
-});
-document.getElementById('sc-info').addEventListener('click', e=>{
-  if(!e.target.closest('.sc-open-harmony') || !scOverlay) return;
-  const pc=scOverlay.rootPc, d=keyDegrees().find(x=>x.rootPc===pc);
-  chVoicing=0; setChord(pc, d?d.lbl:ROOTS[pc], triadQi(scOverlay.iv));
-  setHView('chords'); selectTab('harmony');
-});
+document.getElementById('sc-chord').onclick=()=>{ scShowChord=!scShowChord; renderScales(); };
 function selectCircleNode(g){
   const i=+g.dataset.i, minor=(g.dataset.type==='min'), pc=minor?COF[i].minPc:COF[i].majPc;
   setKey(pc, pcToRootLabel(pc), minor?5:0);
