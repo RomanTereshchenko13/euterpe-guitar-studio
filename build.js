@@ -215,8 +215,9 @@ const CHANGELOG = new Function('return ' + arrMatch[1])();
 
 // …but only the newest few releases ship in the bundle. The full history was
 // 15% of index.html — release notes nobody scrolls back through, downloaded by
-// every visitor. CHANGELOG.md (written below) still gets all of it, and the
-// modal links there. Keep this >= 1 so the current version always has an entry.
+// every visitor. CHANGELOG.md (written below) gets all of it — these entries, then
+// the older ones frozen in src/changelog-archive.md — and the modal links there.
+// Keep this >= 1 so the current version always has an entry.
 const CHANGELOG_KEEP = 5;
 const changelogJs = 'const CHANGELOG = ' + JSON.stringify(CHANGELOG.slice(0, CHANGELOG_KEEP)) + ';\n';
 
@@ -285,14 +286,16 @@ fs.writeFileSync(path.join(distDir, versioned), standalone);
 // CHANGELOG.md: a human-facing changelog generated from the same CHANGELOG array
 // that powers the in-app "What's new" modal, so the two never drift. English
 // bullets only (the modal localizes; the repo doc is English). Unlike the
-// bundle, this gets the FULL history — it costs the visitor nothing.
+// bundle, this gets the FULL history — it costs the visitor nothing. Releases older
+// than the source's list are English only, in src/changelog-archive.md.
 let md = '# Changelog\n\n' +
-  '_Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._\n\n';
+  '_Generated from `src/js/02-changelog.js` and `src/changelog-archive.md` by `build.js` — do not edit by hand._\n\n';
 CHANGELOG.forEach(rel => {
   md += '## v' + rel.v + ' — ' + rel.date + '\n\n';
   rel.en.forEach(b => { md += '- ' + b + '\n'; });
   md += '\n';
 });
+md += fs.readFileSync(path.join(root, 'src', 'changelog-archive.md'), 'utf8').replace(/\r\n/g, '\n');
 fs.writeFileSync(path.join(root, 'CHANGELOG.md'), md);
 
 console.log('Built from styles.css + ' + jsFiles.length + ' JS modules:');

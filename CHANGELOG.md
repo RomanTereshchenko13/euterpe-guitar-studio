@@ -1,6 +1,6 @@
 # Changelog
 
-_Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
+_Generated from `src/js/02-changelog.js` and `src/changelog-archive.md` by `build.js` — do not edit by hand._
 
 ## v2.18.0 — 2026-10-13
 

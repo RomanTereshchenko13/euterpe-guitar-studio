@@ -23,15 +23,16 @@ Architecture write-up: `README.md`.
   past releases (`tests/fixtures/`, written by `tools/capture-fixtures.js`). A change meant to
   show something different lists itself in its `MIGRATED` / `RETIRED` tables.
 - **Versioning:** `APP_VERSION` in `01-version.js` is the only version (`package.json` has
-  none). Each release gets a paired EN/UK entry in `02-changelog.js`. Fix/polish = patch,
-  new feature = minor. Use the `release` skill.
+  none). Each release gets a paired EN/UK entry in `02-changelog.js`, which holds the 5
+  releases the app ships; older ones live in English in `src/changelog-archive.md`.
+  Fix/polish = patch, new feature = minor. Use the `release` skill.
 
 ## Commands
 
 ```bash
 node build.js      # regenerate everything from src/
 npm run lint       # src/js linted as ONE concatenated scope + hygiene checks
-npm test           # rebuilds, then the jsdom suites: tests/smoke.js + tests/compat.js (old saves)
+npm test           # rebuilds, then the jsdom suites: tests/smoke.js (+ smoke/*.js by area) + tests/compat.js (old saves)
 ```
 
 One-time: `npm install` (root, ESLint), `cd tests && npm install` (jsdom),

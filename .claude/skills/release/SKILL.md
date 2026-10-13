@@ -33,6 +33,10 @@ When unsure, prefer patch — see the project's "small changes = patch" rule.
    - **At most 3 bullets, one sentence each.** Say what changed and where to find
      it; no backstory, no "it used to". The modal ships the newest 5 releases, so
      every word here is downloaded by every visitor.
+   - The list holds the **5 releases the app ships**. With the new entry there are
+     six: move the oldest to the **top** of `src/changelog-archive.md`, English only,
+     in its format (`## vX.Y.Z — YYYY-MM-DD`, a blank line, `- ` bullets, a blank
+     line). `CHANGELOG.md` comes out the same; the Ukrainian of that entry retires.
 3. `PLAN.md` — update the `_Shipping: vX.Y.Z_` line at the top.
 4. `package.json` deliberately has **no** `version` field (the package is private and
    never published) — don't add one; `APP_VERSION` is the only version.

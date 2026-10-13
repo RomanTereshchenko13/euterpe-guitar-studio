@@ -275,7 +275,7 @@ findings are bugs.
     reading (`RETIRED_SEEN`). `seqLoopOn` stays (progressions can still play once). Note naming
     is capped at frets 0–12 (`withFretCap`) rather than fitted to the screen.
 
-- [ ] **13. Project overhead + the real phone**
+- [x] **13. Project overhead + the real phone** (done 2026-10-13, but for the phone)
   - `tests/smoke.js` is 210 KB (186 KB at step 2) — larger than any app module. Split by area and
     drop pins that the steps above make moot.
   - `tools/shoot.js`'s header narrates "Phase 3 / 4 / 5 / 10/B3"; step 2 cleaned `src/`, not
@@ -283,6 +283,12 @@ findings are bugs.
   - `02-changelog.js` is 95 KB of source; the build ships only the newest entries. Older entries
     could live in `CHANGELOG.md` only.
   - The check on a real phone (left over from step 9), before any new drill work.
+  - _As built:_ `tests/smoke.js` is the harness (16 KB); the runtime checks run in order from
+    `tests/smoke/*.js` by area (none over 45 KB; the moot session pins went in step 12).
+    `shoot.js`'s header is a token table; its `session` tokens went, `triads` clicks the lens.
+    `02-changelog.js` holds the 5 shipped releases (8 KB); the rest are English in
+    `src/changelog-archive.md`, appended to `CHANGELOG.md` (same history). **Still open: the
+    real phone**, by hand.
 
 ---
 

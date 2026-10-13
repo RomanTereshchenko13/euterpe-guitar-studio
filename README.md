@@ -151,7 +151,8 @@ guitar-studio/
 └── tests/                  dev-only test harness
     ├── package.json
     ├── package-lock.json   committed for reproducible CI
-    ├── smoke.js            the suite
+    ├── smoke.js            the suite's harness (static checks, boot, i18n)
+    ├── smoke/              its runtime checks by area, run in order on one page
     └── README.md           what it covers
 ```
 

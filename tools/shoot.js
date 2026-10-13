@@ -1,53 +1,31 @@
-/* Dev-only visual-inspection tool: render the built index.html at one or more
-   viewport widths and save PNGs under tools/shots/, so layout (especially
-   responsive / mobile) can be eyeballed without a manual browser.
+/* Dev-only visual-inspection tool: render the built index.html at one or more viewport
+   sizes and save PNGs under tools/shots/ (gitignored), so layout can be eyeballed without
+   a manual browser. Uses the system Edge/Chrome headless — no npm install, nothing added
+   to the shipped app.
 
-   Uses the system Edge/Chrome in headless mode — NO npm install, no bundled
-   browser download, nothing added to the shipped single-file app. tools/shots/
-   is gitignored (throwaway output).
+   Why the iframe: headless `--window-size` sets only the screenshot canvas, not the
+   layout viewport, so a naive shot crops a wider layout and looks falsely "clipped". The
+   app renders inside a fixed-width <iframe> (its real viewport) on a canvas sized to
+   match. A probe prints HORIZONTAL OVERFLOW, and the widest culprit, if the page itself
+   (not the board's own scroller) is wider than the viewport.
 
-   Why the iframe: headless `--window-size` controls only the screenshot canvas,
-   NOT the layout viewport (innerWidth stays pinned at a default), so a naive
-   screenshot crops a wider layout and looks falsely "clipped". Rendering the app
-   inside a fixed-width <iframe> makes the iframe width the app's real viewport,
-   and we size the canvas to match — so the picture is faithful. The wrapper also
-   measures scrollWidth vs innerWidth and prints HORIZONTAL OVERFLOW if the page
-   itself (not the in-board scroller) exceeds the viewport.
+   Tokens (any order; each adds its name to the file, w{W}[-panel][-token…].png):
+     sizes      390  390x844  1280x800 …       default 390 768 1280, height 3200
+     tabs       harmony · scales · tabs (both)  default: the first-load tab
+     Practice   practice (the home) · drill (note naming) · ear · ear-interval · ear-chordq
+                changes · changes-run (pressed ▶) · rhythm · rhythm-run · rhythm-prog
+                timing · timing-run
+     sheets     settings · key · chord · tempo · drawer — opened last, in whatever mode
+                was picked, so `settings practice` checks Settings from Practice
+     views      triads (Harmony's Triads view) · tuner · pos4 (Scales position 4) ·
+                shape3 (the third chord-shape card) — on a phone the neck scrolls to it
+     display    cbpalette · shapes · a11y (both)
+     meter      3/4, 6/8 … — set before anything starts
+   Every capture but the bare default dismisses the first-run welcome; the bare one keeps
+   it, to photograph the welcome itself.
 
-   Tabs: by default only the first-load tab (harmony) is captured. Pass tab tokens
-   to reach the others — `harmony` / `scales`, or `tabs` for both.
-   With a tab token the file is `w{W}-{panel}.png`; without, `w{W}.png` (unchanged).
-   This is how the visual review covers ALL tabs across orientations.
-
-   Mode axis (Phase 3): pass `practice` to capture the Practice surface, or `drill`
-   to start the note-naming drill (clicks the bottom-nav Practice button, then the
-   drill card, after load); the file gains a `-practice` / `-drill` suffix.
-   `reference` is the default and needs no token. Phase 4 Ear: pass `ear` for the
-   Ear home, or `ear-interval` / `ear-chordq` to start that drill.
-   Phase 5 Rhythm: pass `changes` for the one-minute-changes setup, or `changes-run`
-   to also press Start and land on the running tally; `rhythm` for rhythm guitar (step 9:
-   strumming + comping), `rhythm-run` to also press ▶ and land on the looping grid, or
-   `rhythm-prog` to switch it to the progression with your own rhythm and press ▶ (NOW/NEXT).
-   Phase 7 Timing: `timing` for the subdivision & timing coach, or `timing-run` to also press Play
-   and land on the ticking grid with the scale walking the neck.
-
-   Phase 10/B3 sessions: pass `session` to start a timed practice session (the shot lands on the
-   first drill of it, with the header's block counter + Next visible), or `session-report` to start
-   one and quit straight out of it, which is how the closing report is photographed.
-   Phase 10/A4 Settings: pass `settings` to open the Settings sheet (Instrument / Sound / Display /
-   Progress). Combines with a mode token — `settings practice` checks it is reachable from Practice.
-   Adds a `-settings` suffix. Step 8, the strip's other sheets: `key` (root, scale, the circle),
-   `chord`, `tempo` and `drawer` (what ▶ plays); each adds its own suffix.
-   Step 1: pass `triads` to turn on Chord tones' Triads toggle (adds `-triads`), or `tuner` to open
-   the one tuner panel (adds `-tuner`; on file:// it is the by-ear strings).
-   Step 3: `pos4` picks Scales position 4 and `shape3` the third chord-shape card (adds
-   `-pos4` / `-shape3`) — on a phone the neck should have scrolled to the window.
-
-   Run:  node tools/shoot.js                       # default widths 390 768 1280, harmony
-         node tools/shoot.js 360 414 820           # custom widths
-         node tools/shoot.js 390x3200              # explicit width x height
-         node tools/shoot.js tabs 390x844 1280x800 # all 3 tabs at those viewports
-         node tools/shoot.js practice 390x844 1280x800 # the Practice surface */
+   The orientation matrix for a layout change:
+     node tools/shoot.js tabs 390x844 844x390 360x740 768x1024 1024x768 1280x800 1920x1080 */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -74,23 +52,23 @@ const tabArgs = [];
 const sizeArgs = [];
 const a11yArgs = [];                              // accessibility toggles (additive): cbpalette / shapes / a11y (both)
 let mode = null;                                  // null = reference (default), 'practice' = Practice surface
-let openSettings = false;                         // 'settings' token: open the Settings sheet (A4)
-let openSheet = null;                             // step 8: 'key' / 'chord' / 'tempo' / 'drawer' — one of the strip's sheets
-let openTriads = false, openTuner = false;          // step 1: 'triads' / 'tuner' tokens
-let pickPos = false, pickShape = false;             // step 3: 'pos4' / 'shape3' tokens (neck auto-scroll)
+let openSettings = false;                         // 'settings': open the Settings sheet
+let openSheet = null;                             // 'key' / 'chord' / 'tempo' / 'drawer' — one of the strip's sheets
+let openTriads = false, openTuner = false;          // 'triads' / 'tuner' tokens
+let pickPos = false, pickShape = false;             // 'pos4' / 'shape3' tokens (neck auto-scroll)
 let meterArg = null;                              // optional time signature (e.g. '3/4') set before the drill starts
 for (const a of process.argv.slice(2)) {
   if (a === 'tabs') tabArgs.push(...PANELS);
   else if (PANELS.includes(a)) tabArgs.push(a);
   else if (a === 'cbpalette' || a === 'shapes' || a === 'a11y') a11yArgs.push(a);
-  else if (a === 'settings') openSettings = true;          // A4: open the Settings sheet
-  else if (a === 'key' || a === 'chord' || a === 'tempo' || a === 'drawer') openSheet = a;   // step 8: a strip sheet
-  else if (a === 'triads') openTriads = true;              // step 1: Chord tones' Triads toggle
-  else if (a === 'tuner') openTuner = true;                // step 1: the one tuner panel
-  else if (a === 'pos4') pickPos = true;                   // step 3: Scales position 4 (the neck scrolls to it)
-  else if (a === 'shape3') pickShape = true;               // step 3: the third chord-shape card
-  else if (/^\d+\/\d+$/.test(a)) meterArg = a;              // time signature, e.g. 3/4 (Phase 7b)
-  else if (a === 'practice' || a === 'reference' || a === 'drill' || a === 'session' || a === 'session-report'
+  else if (a === 'settings') openSettings = true;          // the Settings sheet
+  else if (a === 'key' || a === 'chord' || a === 'tempo' || a === 'drawer') openSheet = a;   // one of the strip's sheets
+  else if (a === 'triads') openTriads = true;              // Harmony's Triads view
+  else if (a === 'tuner') openTuner = true;                // the one tuner
+  else if (a === 'pos4') pickPos = true;                   // Scales position 4 (the neck scrolls to it)
+  else if (a === 'shape3') pickShape = true;               // the third chord-shape card
+  else if (/^\d+\/\d+$/.test(a)) meterArg = a;              // time signature, e.g. 3/4
+  else if (a === 'practice' || a === 'reference' || a === 'drill'
            || a === 'changes' || a === 'changes-run'
            || a === 'rhythm' || a === 'rhythm-run' || a === 'rhythm-prog'
            || a === 'timing' || a === 'timing-run'
@@ -114,40 +92,34 @@ function appFor(panel) {
   // click the tab first (sets the reference sub-view), then — if requested — the
   // bottom-nav Practice button, so the shot lands on the Practice surface.
   const clicks = [];
-  if (panel) clicks.push(`var b=document.querySelector('.navbtn[data-panel="${panel}"]');if(b)b.click();`);   // A2: one nav strip
+  if (panel) clicks.push(`var b=document.querySelector('.navbtn[data-panel="${panel}"]');if(b)b.click();`);   // the one nav
   // every drill lives under Practice now (the Ear mode folded in), so any non-reference
   // token starts by entering Practice — the ear tokens included.
-  if (mode) clicks.push(`var m=document.querySelector('.navbtn[data-panel="practice"]');if(m)m.click();`);   // A2: one nav strip
+  if (mode) clicks.push(`var m=document.querySelector('.navbtn[data-panel="practice"]');if(m)m.click();`);   // the one nav
   if (mode === 'drill') clicks.push(`var s=document.getElementById('start-notes');if(s)s.click();`);
   if (mode === 'changes' || mode === 'changes-run') clicks.push(`var s=document.getElementById('start-changes');if(s)s.click();`);
-  // every drill's Play / Start is the strip's ▶ (step 8)
+  // every drill's Play / Start is the strip's ▶
   if (mode === 'changes-run') clicks.push(`var g=document.getElementById('g-play');if(g)g.click();`);
   if (/^rhythm/.test(mode || '')) clicks.push(`var s=document.getElementById('start-rhythm-guitar');if(s)s.click();`);
   if (mode === 'rhythm-prog') clicks.push(`var o=document.querySelectorAll('#sp-over .btn')[1];if(o)o.click();var f=document.querySelector('#sp-patterns [data-i="-1"]');if(f)f.click();`);
   if (mode === 'rhythm-run' || mode === 'rhythm-prog') clicks.push(`var g=document.getElementById('g-play');if(g)g.click();`);
   if (mode === 'timing' || mode === 'timing-run') clicks.push(`var s=document.getElementById('start-timing');if(s)s.click();`);
   if (mode === 'timing-run') clicks.push(`var g=document.getElementById('g-play');if(g)g.click();`);
-  /* Phase 10/B3, the timed session. `session` photographs a drill running INSIDE one —
-     the only way to see the header's block counter and Next, which are hidden otherwise.
-     `session-report` ends it immediately so the closing screen is what lands in the shot.
-     Both go through the app's own buttons, so they exercise the real path. */
-  if (mode === 'session' || mode === 'session-report') clicks.push(`var s=document.getElementById('sess-start');if(s)s.click();`);
-  if (mode === 'session-report') clicks.push(`var q=document.getElementById('drill-ctx-quit');if(q)q.click();`);
   const earStart = { 'ear-interval': 'start-interval', 'ear-chordq': 'start-chordq' }[mode];
   if (earStart) clicks.push(`var s=document.getElementById('${earStart}');if(s)s.click();`);
-  // Settings (A4) and the other strip sheets (step 8): opened LAST, in whichever mode was
+  // Settings and the strip's sheets: opened LAST, in whichever mode was
   // selected above — `settings practice` checks Settings is reachable from Practice
   if (openSettings) clicks.push(`var st=document.getElementById('tb-toggle');if(st)st.click();`);
   const SHEET_CHIP = { key: 'chip-key', chord: 'chip-chord', tempo: 'chip-tempo', drawer: 'backing-toggle' };
   if (openSheet) clicks.push(`var sc=document.getElementById('${SHEET_CHIP[openSheet]}');if(sc)sc.click();`);
-  if (openTriads) clicks.push(`var tr=document.querySelectorAll('#ch-shape .btn')[1];if(tr)tr.click();`);
+  if (openTriads) clicks.push(`var tr=document.getElementById('hv-triads');if(tr)tr.click();`);
   if (openTuner) clicks.push(`var tu=document.getElementById('tb-tuner');if(tu)tu.click();`);
   if (pickPos) clicks.push(`var p=document.querySelectorAll('#sc-pos .btn')[4];if(p)p.click();`);
   if (pickShape) clicks.push(`var c=document.querySelectorAll('#ch-diagram .chordbox')[2];if(c)c.click();`);
   // accessibility toggles (additive): flip the colour-blind palette and/or dot shapes
   if (a11yArgs.includes('cbpalette') || a11yArgs.includes('a11y')) clicks.push(`var b=document.getElementById('tb-cbpalette');if(b)b.click();`);
   if (a11yArgs.includes('shapes') || a11yArgs.includes('a11y')) clicks.push(`var b=document.getElementById('tb-shapes');if(b)b.click();`);
-  // time signature (Phase 7b): set #tb-meter to the requested option BEFORE the drill
+  // time signature: set #tb-meter to the requested option BEFORE the drill
   // starts, so the backing band / sequencer pick up the meter as they spin up.
   if (meterArg) clicks.unshift(`var ms=document.getElementById('tb-meter');if(ms){for(var i=0;i<ms.options.length;i++){if(ms.options[i].textContent==='${meterArg}'||ms.options[i].value==='${meterArg}'){ms.selectedIndex=i;break;}}ms.dispatchEvent(new Event('change'));}`);
   // any non-default capture: dismiss the first-run welcome first so it doesn't block
@@ -156,7 +128,7 @@ function appFor(panel) {
   const switcher = clicks.length
     ? `<script>addEventListener('load',function(){try{${clicks.join('')}}catch(e){}});</script>`
     : '';
-  /* Freeze animation (Phase 10/A4). Everything above is a CLICK after load, and any
+  /* Freeze animation. Everything above is a CLICK after load, and any
      panel revealed by one carries `animation: fade 0.25s` — which does not advance
      under --virtual-time-budget, so the shot catches the keyframe's `from` state and
      the surface photographs blank or half-faded. That produced a "blank Practice page"
