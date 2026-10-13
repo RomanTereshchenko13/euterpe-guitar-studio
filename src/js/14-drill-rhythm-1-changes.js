@@ -1,5 +1,6 @@
 /* ===================== Drill: Chord-change fluency =====================
-   One-minute changes: pick a chord pair, the timer runs, switch between the shapes as
+   One-minute changes: pick a chord pair — a classic open pair, or your own, any root and
+   quality, so barre chords too — the timer runs, switch between the shapes as
    cleanly as you can and tap the counter on each clean change. At the end: changes,
    changes per minute, and your best for that pair. It counts your taps, not your guitar
    — and counting yourself to beat your record is the exercise. */
@@ -19,17 +20,23 @@ const CM_PAIRS = [
   [[2,0],[7,0]],   // D  – G
 ];
 const CM_DURS = [30, 60, 90];   // selectable session lengths (seconds)
+/* the qualities your own pair can use, by QUALITIES index: maj · m · 7 · maj7 · m7 · sus2 · sus4 */
+const CM_QUALS = [0, 1, 6, 7, 8, 2, 3];
 
 let cmDurIdx = 1;        // default 60 s
-let cmPairIdx = 0;       // selected pair
+let cmPairIdx = 0;       // selected pair; -1 = your own (cmCustom)
+let cmCustom = [[5,0],[10,0]];   // your pair, [[pc,qi],[pc,qi]] (persisted) — F – B♭: two barres
 let cmClick = false;     // optional metronome reference during the run
 let cmDrill = null;
 // cmDrill = { phase:'setup'|'run'|'done', pairIdx, dur, count, remaining, startT,
 //             finished, ticker, clock, cpm, best, newBest }
 
-function cmChord(spec){ const [pc,qi]=spec, q=QUALITIES[qi]; return { pc, qi, q, short:q.short, lbl:ROOTS[pc]+q.short }; }
-function cmPairName(i){ const p=CM_PAIRS[i]; return cmChord(p[0]).lbl+' ↔ '+cmChord(p[1]).lbl; }
-function cmPairId(i){ const p=CM_PAIRS[i]; return 'changes:'+cmChord(p[0]).lbl+'-'+cmChord(p[1]).lbl; }   // stable session id
+/* `lbl` is ASCII ('Bbm'), as session ids need; noteTxt() it for display. A root spelled
+   in a key (a progression's) can be passed in. */
+function cmChord(spec, root){ const [pc,qi]=spec, q=QUALITIES[qi]; return { pc, qi, q, short:q.short, lbl:(root||ROOTS[pc])+q.short }; }
+function cmPair(i){ return i<0 ? cmCustom : CM_PAIRS[i]; }
+function cmPairName(i){ const p=cmPair(i); return noteTxt(cmChord(p[0]).lbl)+' ↔ '+noteTxt(cmChord(p[1]).lbl); }
+function cmPairId(i){ const p=cmPair(i); return 'changes:'+cmChord(p[0]).lbl+'-'+cmChord(p[1]).lbl; }   // stable session id
 
 /* The best changes-per-minute for a pair: a stored per-id best, so it outlives the
    history it came from. */
@@ -114,7 +121,19 @@ function renderCm(){
 function renderCmSetup(){
   if(!cmDrill) return;
   const pp=document.getElementById('cm-pairs');
-  if(pp) pp.innerHTML=CM_PAIRS.map((p,i)=>`<button type="button" class="btn cm-pair${i===cmDrill.pairIdx?' active':''}" data-i="${i}" aria-pressed="${i===cmDrill.pairIdx}">${cmPairName(i)}</button>`).join('');
+  if(pp) pp.innerHTML=CM_PAIRS.map((p,i)=>`<button type="button" class="btn cm-pair${i===cmDrill.pairIdx?' active':''}" data-i="${i}" aria-pressed="${i===cmDrill.pairIdx}">${cmPairName(i)}</button>`).join('')+
+    `<button type="button" class="btn cm-pair${cmDrill.pairIdx<0?' active':''}" data-i="-1" aria-pressed="${cmDrill.pairIdx<0}">${t('cm_yours')}</button>`;
+  // your own pair: a root and a quality for each chord
+  const cu=document.getElementById('cm-custom');
+  if(cu){
+    cu.hidden = cmDrill.pairIdx>=0;
+    if(cmDrill.pairIdx<0) cu.innerHTML=cmCustom.map(([pc,qi],k)=>
+      `<select class="cm-sel" data-k="${k}" data-part="pc" aria-label="${t('lbl_root')} ${k+1}">`+
+        ROOTS.map(r=>{ const p=FLAT_ROOTS[r]!==undefined?FLAT_ROOTS[r]:NOTES.indexOf(r); return `<option value="${p}"${p===pc?' selected':''}>${noteTxt(r)}</option>`; }).join('')+'</select>'+
+      `<select class="cm-sel" data-k="${k}" data-part="qi" aria-label="${t('lbl_quality')} ${k+1}">`+
+        CM_QUALS.map(i=>`<option value="${i}"${i===qi?' selected':''}>${QUALITIES[i].short||'maj'}</option>`).join('')+'</select>'
+    ).join('<span class="cm-swap" aria-hidden="true">↔</span>');
+  }
   const dd=document.getElementById('cm-durs');
   if(dd) dd.innerHTML=CM_DURS.map((d,i)=>`<button type="button" class="btn cm-dur${i===cmDurIdx?' active':''}" data-i="${i}" aria-pressed="${i===cmDurIdx}">${d}${t('cm_sec')}</button>`).join('');
   const ck=document.getElementById('cm-click');
@@ -126,11 +145,11 @@ function cmChordBox(c){
   const q=c.q, funcMap={};
   q.iv.forEach((iv,i)=>{ funcMap[mod(c.pc+iv,12)]=labClass(q.lab[i]); });
   const list=chordVoicings(c.pc, c.short, q.iv), v=list[0];
-  return `<div class="cm-chordname">${c.lbl}</div>${v?chordBoxSVG(v, funcMap):''}`;
+  return `<div class="cm-chordname">${noteTxt(c.lbl)}</div>${v?chordBoxSVG(v, funcMap):''}`;
 }
 function renderCmActive(){
   if(!cmDrill) return;
-  const p=CM_PAIRS[cmDrill.pairIdx];
+  const p=cmPair(cmDrill.pairIdx);
   const a=document.getElementById('cm-chord-a'), b=document.getElementById('cm-chord-b');
   if(a) a.innerHTML=cmChordBox(cmChord(p[0]));
   if(b) b.innerHTML=cmChordBox(cmChord(p[1]));
@@ -180,6 +199,12 @@ registerDrill({ id:'changes', area:'cm-area', tempo:true,   // the optional clic
   wire('cm-click',     ()=>{ cmClick=!cmClick; renderCmSetup(); });
   const pp=document.getElementById('cm-pairs');
   if(pp) pp.addEventListener('click', e=>{ const btn=e.target.closest('.cm-pair'); if(btn){ cmPairIdx=+btn.dataset.i; if(cmDrill) cmDrill.pairIdx=cmPairIdx; renderCmSetup(); } });
+  const cu=document.getElementById('cm-custom');
+  if(cu) cu.addEventListener('change', e=>{ const s=e.target.closest('.cm-sel'); if(!s) return;
+    const k=+s.dataset.k, v=+s.value;
+    if(s.dataset.part==='pc' && v>=0 && v<12) cmCustom[k][0]=v;
+    if(s.dataset.part==='qi' && CM_QUALS.includes(v)) cmCustom[k][1]=v;
+    cmCustom=cmCustom.map(x=>x.slice()); renderCmSetup(); saveState(); });
   const dd=document.getElementById('cm-durs');
   if(dd) dd.addEventListener('click', e=>{ const btn=e.target.closest('.cm-dur'); if(btn){ cmDurIdx=+btn.dataset.i; if(cmDrill) cmDrill.dur=CM_DURS[cmDurIdx]; renderCmSetup(); } });
 })();

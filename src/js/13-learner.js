@@ -115,37 +115,47 @@ function learnerBest(id){ return learner.best[String(id)] || null; }
    Turns a session id (or a whole namespace) into: latest, best, timing error and
    `dir` — the mean of the last PERF_TREND_N runs against the runs before them,
    oriented by the track's `better`. Within TREND_EPS it reads 'flat': a 1% wobble is
-   not improvement. */
+   not improvement.
+
+   A track's namespace includes the ones it carries on (`reads`: rhythm reads strum and
+   comp). A track with `metric:'err'` (timing) is read on its timing error, lower is
+   better, from the runs that have one; its other runs still count for when it was last
+   played (`n`, staleness), so a coach run keeps it from falling due. */
 const TREND_EPS = 0.03;
 function learnerTrend(idOrNs, now){
   now = (typeof now==='number') ? now : Date.now();
   const key = String(idOrNs);
-  // exact session id first; fall back to every session in that namespace
+  // exact session id first; fall back to every session in that namespace (and its family)
   let runs = learner.sessions.filter(s => s.drill===key);
   const exact = runs.length>0;
-  if(!exact) runs = learner.sessions.filter(s => sessNs(s.drill)===key);
+  if(!exact){ const fam=sessFamily(key); runs = learner.sessions.filter(s => fam.includes(sessNs(s.drill))); }
   const tr = trackBySess(exact ? sessNs(key) : key);
-  const low = !!(tr && tr.better==='low');
-  const out = { id:key, n:runs.length, unit:(tr&&tr.unit)||'', better:low?'low':'high',
+  const byErr = !!(tr && tr.metric==='err');
+  const low = byErr || !!(tr && tr.better==='low');
+  const val = byErr ? (s=>s.err) : (s=>s.score);
+  const scored = byErr ? runs.filter(s=>typeof s.err==='number') : runs;
+  const out = { id:key, n:runs.length, scored:scored.length, unit:byErr ? 'ms' : (tr&&tr.unit)||'', better:low?'low':'high',
                 last:null, lastT:0, best:null, bestErr:null, lastErr:null,
                 dir:'flat', staleDays:null };
   if(!runs.length) return out;
   const last = runs[runs.length-1];
-  out.last = last.score; out.lastT = last.t;
+  out.lastT = last.t;
   out.lastErr = (typeof last.err==='number') ? last.err : null;
   out.staleDays = Math.max(0, (now - last.t) / DAY_MS);
   // the stored best when there is one (it outlives the buffer), else the buffer's own
   const stored = exact ? learnerBest(key) : null;
-  out.best = stored ? stored.score
-    : runs.reduce((b,s)=> b===null ? s.score : (low ? Math.min(b,s.score) : Math.max(b,s.score)), null);
   const errs = runs.filter(s=>typeof s.err==='number').map(s=>s.err);
   if(stored && typeof stored.err==='number') errs.push(stored.err);
   if(errs.length) out.bestErr = Math.min.apply(null, errs);
+  if(!scored.length) return out;
+  out.last = val(scored[scored.length-1]);
+  out.best = byErr ? out.bestErr : stored ? stored.score
+    : scored.reduce((b,s)=> b===null ? s.score : (low ? Math.min(b,s.score) : Math.max(b,s.score)), null);
   // direction: recent mean vs the mean of what came before it
-  if(runs.length >= 2){
-    const cut = Math.max(1, runs.length - PERF_TREND_N);
-    const mean = a => a.reduce((x,s)=>x+s.score, 0) / a.length;
-    const recent = mean(runs.slice(cut)), earlier = mean(runs.slice(0, cut));
+  if(scored.length >= 2){
+    const cut = Math.max(1, scored.length - PERF_TREND_N);
+    const mean = a => a.reduce((x,s)=>x+val(s), 0) / a.length;
+    const recent = mean(scored.slice(cut)), earlier = mean(scored.slice(0, cut));
     const delta = (recent - earlier) * (low ? -1 : 1);
     const scale = Math.abs(earlier) || 1;
     out.dir = Math.abs(delta)/scale < TREND_EPS ? 'flat' : (delta > 0 ? 'up' : 'down');
@@ -219,6 +229,7 @@ function trendScore(tn){
   if(tn.unit==='pct') return v+'%';
   if(tn.unit==='bars') return v+' '+t('unit_bars');
   if(tn.unit==='cpm') return v+t('unit_cpm');
+  if(tn.unit==='ms') return '±'+v+' '+t('on_ms');
   return String(v);
 }
 // ▲ / ▼ / → , already oriented by the track's `better`
@@ -262,15 +273,15 @@ function renderProgressInto(hostId){
     html+=rows.map(({tr,tn})=>{
       const sub=[];
       if(tn.best!==null) sub.push(t('prog_best')+' '+trendScore({ last:tn.best, unit:tn.unit }));
-      // a mic tier's best timing error
-      if(tn.bestErr!==null) sub.push(t('prog_timing')+' ±'+Math.round(tn.bestErr)+' '+t('on_ms'));
+      // a mic tier's best timing error, unless that is the headline already
+      if(tn.bestErr!==null && tn.unit!=='ms') sub.push(t('prog_timing')+' ±'+Math.round(tn.bestErr)+' '+t('on_ms'));
       sub.push(tn.n+' '+t('prog_runs'));
       /* a real <button> with data-track, so the row opens its drill (the delegated
          #practice-home listener handles it) */
       return '<button type="button" class="pp-row" data-track="'+esc(tr.id)+'">'+
         '<span class="pp-row-name">'+esc(t(tr.label))+'</span>'+
-        '<span class="pp-row-val">'+esc(trendScore(tn))+
-          ' <span class="pp-dir '+tn.dir+'">'+trendArrow(tn.dir)+'</span></span>'+
+        '<span class="pp-row-val">'+(tn.last===null ? esc(t('prog_unscored')) : esc(trendScore(tn))+
+          ' <span class="pp-dir '+tn.dir+'">'+trendArrow(tn.dir)+'</span>')+'</span>'+
         '<span class="pp-row-sub">'+esc(sub.join(' · '))+'</span>'+
       '</button>';
     }).join('');

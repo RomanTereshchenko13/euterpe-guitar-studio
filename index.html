@@ -146,6 +146,7 @@
   .practice-list li { display: flex; }
   .practice-progress-card, .practice-session-card { padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); }
   .ps-lead { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
+  .ps-plan { color: var(--text-dim); font-size: 12.5px; line-height: 1.5; margin: -4px 0 12px; }
   #ph-top-block { display: grid; gap: 14px; margin-bottom: 8px; }
   @media (min-width: 941px) {
     #ph-top-block { grid-template-columns: 340px minmax(0,1fr); align-items: start; }
@@ -175,14 +176,15 @@
   .sr-row { display: flex; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border); }
   .sr-name { flex: 1 1 auto; font-size: 14px; }
   .sr-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); }
-  .drill-card { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; padding: 15px 18px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); color: var(--text); cursor: pointer; font-family: inherit; transition: border-color 0.15s, background 0.15s; }
+  .drill-card { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 3px 10px; width: 100%; text-align: left; padding: 15px 18px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); color: var(--text); cursor: pointer; font-family: inherit; transition: border-color 0.15s, background 0.15s; }
   .drill-card:hover { border-color: var(--accent); background: var(--bg-panel-2); }
   .dc-name { font-size: 16px; font-weight: 600; }
-  .dc-meta { font-size: 12.5px; color: var(--text-dim); }
-  .dc-badge { align-self: flex-start; margin-top: 2px; padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.03em; border: 1px solid var(--border-strong); color: var(--text-dim); }
-  .dc-badge.b-mic { border-color: var(--accent); color: var(--accent); }
-  .dc-badge.b-acc { border-color: var(--border-strong); color: var(--text); }
-  .dc-badge:empty { display: none; }
+  .dc-meta, .dc-last { grid-column: 1 / -1; font-size: 12.5px; color: var(--text-dim); }
+  .dc-tags { display: inline-flex; align-items: center; gap: 8px; }
+  .dc-mic { font-size: 14px; line-height: 1; }
+  .dc-due { width: 9px; height: 9px; border-radius: 50%; background: var(--third); box-shadow: 0 0 0 3px rgba(224,150,43,0.22); }
+  .dc-last { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
+  .dc-last:empty { display: none; }
   .seam-btn { border-color: var(--accent); color: var(--accent); }
   .drill-ctx { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; min-width: 0; }
   body.drill-running .practice-panel .panel-head { display: none; }
@@ -227,6 +229,8 @@
   .practice-section { margin-top: 22px; }
   .ps-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
   .practice-section .practice-list { margin-top: 0; }
+  .cm-custom { gap: 6px; }
+  .cm-custom .cm-swap { font-size: 16px; margin: 0 4px; }
   .cm-best-line { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); margin: 12px 0; min-height: 18px; }
   #cm-setup .drill-actions { margin-top: 10px; }
   #cm-setup-note { max-width: 620px; }
@@ -985,6 +989,7 @@
           <div class="pp-title" data-i18n="sess_title">Заняття</div>
           <p class="ps-lead" data-i18n="sess_lead">Скажи, скільки маєш часу — застосунок збере вправи, які варто повторити, відлічить час і підсумує.</p>
           <div class="row"><span class="ctrl-label" data-i18n="sess_len">Тривалість</span><div class="group" id="sess-mins"></div></div>
+          <p class="ps-plan" id="sess-plan"></p>
           <div class="drill-bar"><button type="button" class="btn play" id="sess-start">Почати заняття</button></div>
         </div>
         <div class="practice-progress-card">
@@ -999,8 +1004,9 @@
         <div class="ps-label" data-i18n="practice_grp_fretboard">Гриф</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-notes" data-track="note">
-            <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span><span class="dc-badge"></span>
+            <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span><span class="dc-tags"></span>
             <span class="dc-meta" data-i18n="drill_notes_meta">Грифознавство · рахунок за точністю</span>
+            <span class="dc-last"></span>
           </button></li>
         </ul>
       </div>
@@ -1008,8 +1014,9 @@
         <div class="ps-label" data-i18n="practice_grp_timing">Таймінг</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-timing" data-track="timing">
-            <span class="dc-name" data-i18n="drill_timing">Поділ і таймінг</span><span class="dc-badge"></span>
+            <span class="dc-name" data-i18n="drill_timing">Поділ і таймінг</span><span class="dc-tags"></span>
             <span class="dc-meta" data-i18n="drill_timing_meta">Вісімки · тріолі · шістнадцятки · коуч</span>
+            <span class="dc-last"></span>
           </button></li>
         </ul>
       </div>
@@ -1017,16 +1024,14 @@
         <div class="ps-label" data-i18n="practice_grp_rhythm">Ритм</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-changes" data-track="changes">
-            <span class="dc-name" data-i18n="drill_changes">Зміна акордів за хвилину</span><span class="dc-badge"></span>
+            <span class="dc-name" data-i18n="drill_changes">Зміна акордів за хвилину</span><span class="dc-tags"></span>
             <span class="dc-meta" data-i18n="drill_changes_meta">Чисті зміни за хвилину · коуч (без оцінки)</span>
+            <span class="dc-last"></span>
           </button></li>
-          <li><button type="button" class="drill-card" id="start-strum" data-track="strum">
-            <span class="dc-name" data-i18n="drill_strum">Бій і відчуття</span><span class="dc-badge"></span>
-            <span class="dc-meta" data-i18n="drill_strum_meta">Малюнки · свінг · акценти · глушіння · коуч</span>
-          </button></li>
-          <li><button type="button" class="drill-card" id="start-comp" data-track="comp">
-            <span class="dc-name" data-i18n="drill_comp">Акомпанемент прогресії</span><span class="dc-badge"></span>
-            <span class="dc-meta" data-i18n="drill_comp_meta">Потрібний акорд вчасно · коуч</span>
+          <li><button type="button" class="drill-card" id="start-rhythm-guitar" data-track="rhythm-guitar">
+            <span class="dc-name" data-i18n="drill_rhythm">Ритм-гітара</span><span class="dc-tags"></span>
+            <span class="dc-meta" data-i18n="drill_rhythm_meta">Малюнок або свій ритм · над акордом чи прогресією</span>
+            <span class="dc-last"></span>
           </button></li>
         </ul>
       </div>
@@ -1034,12 +1039,14 @@
         <div class="ps-label" data-i18n="practice_grp_ear">Слух</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-interval" data-track="interval">
-            <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span><span class="dc-badge"></span>
+            <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span><span class="dc-tags"></span>
             <span class="dc-meta" data-i18n="ear_intervals_meta">Почуй дві ноти · назви інтервал</span>
+            <span class="dc-last"></span>
           </button></li>
           <li><button type="button" class="drill-card" id="start-chordq" data-track="chordq">
-            <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span><span class="dc-badge"></span>
+            <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span><span class="dc-tags"></span>
             <span class="dc-meta" data-i18n="ear_chords_meta">Почуй акорд · визнач його тип</span>
+            <span class="dc-last"></span>
           </button></li>
         </ul>
       </div>
@@ -1049,6 +1056,7 @@
     <div id="cm-area" hidden>
       <div id="cm-setup">
         <div class="row"><span class="ctrl-label" data-i18n="cm_pair">Пара акордів</span><div class="group" id="cm-pairs"></div></div>
+        <div class="row cm-custom" id="cm-custom" hidden></div>
         <div class="row">
           <span class="ctrl-label" data-i18n="cm_dur">Тривалість</span><div class="group" id="cm-durs"></div>
           <div class="divider"></div>
@@ -1080,6 +1088,8 @@
 
     <div id="sp-area" hidden>
       <div class="drill-setup" id="sp-setup">
+        <div class="row"><span class="ctrl-label" data-i18n="sp_over">Грати над</span><div class="group" id="sp-over"></div></div>
+        <div class="row" id="sp-progs-row" hidden><span class="ctrl-label" data-i18n="tg_prog">Прогресія</span><div class="group" id="sp-progs"></div></div>
         <div class="row"><span class="ctrl-label" data-i18n="sp_pattern">Малюнок</span><div class="group" id="sp-patterns"></div></div>
         <div class="row">
           <span class="ctrl-label" data-i18n="sp_swing">Свінг</span><div class="group" id="sp-swings"></div>
@@ -1092,34 +1102,24 @@
       <p class="drill-hint" id="sp-hint"></p>
       <div class="sp-name" id="sp-name"></div>
       <div class="sp-chord" id="sp-chord"></div>
+      <div class="co-stage" id="sp-stage" hidden>
+        <div class="co-slot">
+          <div class="co-lab" id="sp-now-lab" data-i18n="co_now">Зараз</div>
+          <div class="co-chord co-now" id="sp-now"></div>
+        </div>
+        <div class="co-arrow" aria-hidden="true">→</div>
+        <div class="co-slot co-next-slot">
+          <div class="co-lab" id="sp-next-lab" data-i18n="co_next">Далі</div>
+          <div class="co-chord co-next" id="sp-next"></div>
+        </div>
+      </div>
       <div class="sp-grid" id="sp-grid"></div>
+      <div class="co-beats" id="sp-beats" hidden></div>
       <p class="scored-status" id="sp-status" role="status" hidden></p>
       <div class="scored-panel" id="sp-score" hidden></div>
       <div class="drill-bar">
         <button type="button" class="btn" id="sp-click" aria-pressed="false"></button>
       </div>
-    </div>
-
-    <div id="tg-area" hidden>
-      <div class="drill-setup" id="tg-setup">
-        <div class="row"><span class="ctrl-label" data-i18n="tg_prog">Прогресія</span><div class="group" id="tg-progs"></div></div>
-      </div>
-      <p class="drill-hint" id="tg-hint"></p>
-      <div class="drill-count" id="tg-hits"></div>
-      <div class="co-stage">
-        <div class="co-slot">
-          <div class="co-lab" id="tg-now-lab" data-i18n="co_now">Зараз</div>
-          <div class="co-chord co-now" id="tg-now"></div>
-        </div>
-        <div class="co-arrow" aria-hidden="true">→</div>
-        <div class="co-slot co-next-slot">
-          <div class="co-lab" id="tg-next-lab" data-i18n="co_next">Далі</div>
-          <div class="co-chord co-next" id="tg-next"></div>
-        </div>
-      </div>
-      <div class="co-beats" id="tg-beats"></div>
-      <p class="scored-status" id="tg-status" role="status" hidden></p>
-      <div class="scored-panel" id="tg-score" hidden></div>
     </div>
 
     <div id="sd-area" hidden>
@@ -1882,6 +1882,7 @@ const I18N = {
     ear_intervals:'Інтервали на слух', ear_intervals_meta:'Почуй дві ноти · назви інтервал',
     ear_chords:'Якість акорду на слух', ear_chords_meta:'Почуй акорд · визнач його тип',
     ear_int_prompt:'Який це інтервал?', ear_chord_prompt:'Який це акорд?',
+    ear_level:'Рівень {n}/{m}', ear_dir_down:'вниз', ear_dir_harm:'разом',
     ear_replay:'Ще раз', ear_next:'Далі', ear_right:'Правильно!', ear_wrong:'Не зовсім', ear_got:'Правильно',
     drill_notes:'Назви ноти на грифі', drill_notes_meta:'Грифознавство · рахунок за точністю',
     drill_quit:'Вийти', drill_find_pre:'Знайди всі', drill_find_sub:'Познач усі такі ноти на грифі',
@@ -1892,27 +1893,27 @@ const I18N = {
     sess_title:'Заняття', sess_lead:'Скажи, скільки маєш часу — застосунок збере вправи, які варто повторити, відлічить час і підсумує.',
     sess_len:'Тривалість', sess_min:'хв', sess_start:'Почати заняття', sess_next:'Далі →',
     sess_done_h:'Заняття завершено', sess_none:'Цього разу нічого не зараховано — але час на інструменті все одно зарахований.',
-    sess_drills:'Вправ', sess_norun:'без результату',
-    badge_mic:'🎤 З мікрофоном', badge_acc:'З оцінкою', badge_coach:'Коуч',
+    sess_drills:'Вправ', sess_norun:'без результату', sess_will:'Буде: {list} — по {m} хв',
+    badge_mic:'Слухає через мікрофон',
     practice_grp_fretboard:'Гриф', practice_grp_rhythm:'Ритм', practice_grp_ear:'Слух',
-    drill_changes:'Зміна акордів за хвилину', drill_changes_meta:'Скільки чистих змін встигаєш за хвилину',
+    drill_changes:'Зміна акордів за хвилину', drill_changes_meta:'Будь-які два акорди · скільки чистих змін за хвилину',
     cm_pair:'Пара акордів', cm_dur:'Тривалість', cm_sec:'с', cm_click:'Метроном', cm_start:'Почати', cm_stop:'Завершити',
     cm_setup_note:'Перемикайся між акордами якомога чистіше й натискай велику кнопку на кожній чистій зміні. Лічильник рахує твої натискання, а не звук гітари — оцінку з мікрофоном додамо згодом.',
-    cm_changes:'Зміни', cm_cpm:'За хвилину', cm_best:'Рекорд', cm_tap_hint:'Натискай на кожній чистій зміні', cm_undo:'Скасувати', cm_newbest:'Новий рекорд!',
-    drill_strum:'Бій і відчуття', drill_strum_meta:'Малюнки · свінг · акценти · глушіння',
+    cm_changes:'Зміни', cm_cpm:'За хвилину', cm_best:'Рекорд', cm_tap_hint:'Натискай на кожній чистій зміні', cm_undo:'Скасувати', cm_newbest:'Новий рекорд!', cm_yours:'Своя пара',
+    drill_rhythm:'Ритм-гітара', drill_rhythm_meta:'Малюнок або свій ритм · над акордом чи прогресією',
+    sp_over:'Грати над', sp_free:'Свій ритм', sp_yours:'Твоя (▶)',
     practice_grp_timing:'Таймінг', drill_timing:'Поділ і таймінг', drill_timing_meta:'Вісімки · тріолі · шістнадцятки',
     sd_subdiv:'Поділ', sd_notes:'Ноти',
     sd_hint:'Тримайся клацання — акцентований удар це «раз», тихі — поділи долі. Грай підсвічені ноти гами рівно по сітці. Увімкни 🎤 угорі, щоб застосунок слухав і оцінював твій таймінг.',
     sp_pattern:'Малюнок', sp_chord:'Акорд', sp_play:'Грати', sp_stop:'Стоп',
     sp_swing:'Свінг', sp_accent:'Бекбіт', sp_mute:'Глушіння', sp_band:'Гурт',
     sp_hint:'Грай разом — ↓ вниз, ↑ вгору; над порожніми клітинами рука рухається, але струн не торкається. Спробуй свінг, бекбіт-акцент, глушіння та гурт.',
-    drill_comp:'Акомпанемент прогресії', drill_comp_meta:'Потрібний акорд вчасно, під гурт',
     co_now:'Зараз', co_next:'Далі',
-    co_hint:'Акомпануй показаний акорд — змінюй вчасно, поки гурт веде прогресію.',
+    co_hint:'Грай свій ритм над показаним акордом — і влучай у кожну зміну на «раз».',
     tg_prog:'Прогресія', tg_pos:'Позиція',
     prog_title:'Прогрес',
     prog_accuracy:'Точність', prog_streak:'Найкраща серія', prog_sessions:'Сесій',
-    prog_yours:'Твої вправи', prog_best:'рекорд', prog_runs:'спроб', prog_timing:'таймінг',
+    prog_yours:'Твої вправи', prog_best:'рекорд', prog_runs:'спроб', prog_timing:'таймінг', prog_unscored:'без оцінки',
     unit_bars:'тактів', unit_cpm:'/хв',
     tab_harmony:'Акорди', lbl_view:'Вид', view_chords:'Тони акорду',
     view_scale:'Гама', view_notes:'Ноти',
@@ -2042,6 +2043,7 @@ const I18N = {
     ear_intervals:'Intervals by ear', ear_intervals_meta:'Hear two notes · name the interval',
     ear_chords:'Chord quality by ear', ear_chords_meta:'Hear a chord · name its quality',
     ear_int_prompt:'Which interval?', ear_chord_prompt:'Which chord?',
+    ear_level:'Level {n}/{m}', ear_dir_down:'descending', ear_dir_harm:'together',
     ear_replay:'Replay', ear_next:'Next', ear_right:'Correct!', ear_wrong:'Not quite', ear_got:'Correct',
     drill_notes:'Name notes on the fretboard', drill_notes_meta:'Fretboard knowledge · scored on accuracy',
     drill_quit:'Quit', drill_find_pre:'Find every', drill_find_sub:'Tap every one of them on the neck',
@@ -2052,27 +2054,27 @@ const I18N = {
     sess_title:'Practice session', sess_lead:'Say how long you have — the app lines up what is due, runs the clock, and tells you how it went.',
     sess_len:'Length', sess_min:'min', sess_start:'Start session', sess_next:'Next →',
     sess_done_h:'Session complete', sess_none:'Nothing scored this time — but the time on the instrument still counts.',
-    sess_drills:'Drills', sess_norun:'no run recorded',
-    badge_mic:'🎤 Scored', badge_acc:'Scored', badge_coach:'Coach',
+    sess_drills:'Drills', sess_norun:'no run recorded', sess_will:'Plan: {list} — {m} min each',
+    badge_mic:'Listens through the mic',
     practice_grp_fretboard:'Fretboard', practice_grp_rhythm:'Rhythm', practice_grp_ear:'Ear',
-    drill_changes:'One-minute changes', drill_changes_meta:'How many clean changes you get in a minute',
+    drill_changes:'One-minute changes', drill_changes_meta:'Any two chords · how many clean changes in a minute',
     cm_pair:'Chord pair', cm_dur:'Length', cm_sec:'s', cm_click:'Click', cm_start:'Start', cm_stop:'Finish',
     cm_setup_note:'Switch between the chords as cleanly as you can and tap the big button on each clean change. The counter counts your taps, not your guitar — mic scoring comes later.',
-    cm_changes:'Changes', cm_cpm:'Per minute', cm_best:'Best', cm_tap_hint:'Tap on each clean change', cm_undo:'Undo', cm_newbest:'New best!',
-    drill_strum:'Strumming & feel', drill_strum_meta:'Patterns · swing · accents · muting',
+    cm_changes:'Changes', cm_cpm:'Per minute', cm_best:'Best', cm_tap_hint:'Tap on each clean change', cm_undo:'Undo', cm_newbest:'New best!', cm_yours:'Your pair',
+    drill_rhythm:'Rhythm guitar', drill_rhythm_meta:'A pattern or your own rhythm · over a chord or a progression',
+    sp_over:'Over', sp_free:'Your own', sp_yours:'Yours (▶)',
     practice_grp_timing:'Timing', drill_timing:'Subdivision & timing', drill_timing_meta:'Eighths · triplets · sixteenths',
     sd_subdiv:'Subdivision', sd_notes:'Notes',
     sd_hint:'Lock to the click — the accented tick is beat 1, the soft ticks are the subdivisions. Play the lit scale notes evenly across the grid. Turn on 🎤 above and the app listens and scores your timing.',
     sp_pattern:'Pattern', sp_chord:'Chord', sp_play:'Play', sp_stop:'Stop',
     sp_swing:'Swing', sp_accent:'Backbeat', sp_mute:'Palm mute', sp_band:'Band',
     sp_hint:'Strum along — ↓ down, ↑ up; over the empty slots your hand keeps moving but misses the strings. Try swing, the backbeat accent, palm-muting and the band.',
-    drill_comp:'Comp the progression', drill_comp_meta:'The right chord, right on time, over a band',
     co_now:'Now', co_next:'Next',
-    co_hint:'Comp the chord shown — switch on time as the band cycles the progression.',
+    co_hint:'Play your own rhythm over the chord shown — and land every change on beat 1.',
     tg_prog:'Progression', tg_pos:'Position',
     prog_title:'Progress',
     prog_accuracy:'Accuracy', prog_streak:'Best streak', prog_sessions:'Sessions',
-    prog_yours:'Your drills', prog_best:'best', prog_runs:'runs', prog_timing:'timing',
+    prog_yours:'Your drills', prog_best:'best', prog_runs:'runs', prog_timing:'timing', prog_unscored:'unscored',
     unit_bars:'bars', unit_cpm:'/min',
     tab_harmony:'Chords', lbl_view:'View', view_chords:'Chord tones',
     view_scale:'Scale', view_notes:'Notes',
@@ -3781,7 +3783,9 @@ function savedFields(){ return [
                         const out={}; let n=0;
                         for(const k of Object.keys(v)){ if(!k.length || k.length>32 || ++n>64) continue; if(v[k]) out[k]=1; }
                         return out; },                    ()=>drillSeen,    v=>{ drillSeen=v; }],
-  ['sessMins',     v=>SESSION_MINS.includes(v) ? v : undefined, ()=>sessMins, v=>{ sessMins=v; }]
+  ['sessMins',     v=>SESSION_MINS.includes(v) ? v : undefined, ()=>sessMins, v=>{ sessMins=v; }],
+  ['cmCustom',     v=>Array.isArray(v) && v.length===2 && v.every(c=>Array.isArray(c) && svInt(0, 11)(c[0])!==undefined && CM_QUALS.includes(c[1]))
+                       ? v.map(c=>[c[0], c[1]]) : undefined, ()=>cmCustom, v=>{ cmCustom=v; }]
 ]; }
 function migrateSave(raw){
   const s=Object.assign({}, raw);
@@ -4011,8 +4015,9 @@ function drillRecord(sessId, score, err){
   saveState();
   renderPractice();
   const tr=trackBySess(sessNs(sessId));
+  const said = tr && tr.metric==='err' && err ? { last:err.err, unit:'ms' } : { last:score, unit:tr ? tr.unit : '' };
   const live=document.getElementById('drill-live');
-  if(live) live.textContent=(tr && tr.label ? t(tr.label)+': ' : '')+trendScore({ last:score, unit:tr ? tr.unit : '' });
+  if(live) live.textContent=(tr && tr.label ? t(tr.label)+': ' : '')+trendScore(said);
 }
 function renderDrillSummary(hostId, activeId, o){
   const el=document.getElementById(hostId); if(!el) return;
@@ -4101,12 +4106,10 @@ function drillTracks(){
   return out;
 }
 function trackByItems(ns){ return drillTracks().find(tr => tr.items===ns) || null; }
-function trackBySess(ns){ return drillTracks().find(tr => tr.sess===ns) || null; }
+function trackBySess(ns){ return drillTracks().find(tr => tr.sess===ns || (tr.reads||[]).includes(ns)) || null; }
+function sessFamily(ns){ const tr=drillTracks().find(x=>x.sess===ns); return tr ? [tr.sess].concat(tr.reads||[]) : [ns]; }
 function trackById(id){ return drillTracks().find(tr => tr.id===id) || null; }
-function trackBadge(tr){
-  const s = tr && tr.scored;
-  return s==='mic' ? 'badge_mic' : s==='acc' ? 'badge_acc' : 'badge_coach';
-}
+function trackMic(tr){ return !!(tr && tr.scored==='mic'); }
 function sessNs(drillId){
   const s=String(drillId||''), i=s.indexOf(':');
   return i<0 ? s : s.slice(0,i);
@@ -4217,27 +4220,32 @@ function learnerTrend(idOrNs, now){
   const key = String(idOrNs);
   let runs = learner.sessions.filter(s => s.drill===key);
   const exact = runs.length>0;
-  if(!exact) runs = learner.sessions.filter(s => sessNs(s.drill)===key);
+  if(!exact){ const fam=sessFamily(key); runs = learner.sessions.filter(s => fam.includes(sessNs(s.drill))); }
   const tr = trackBySess(exact ? sessNs(key) : key);
-  const low = !!(tr && tr.better==='low');
-  const out = { id:key, n:runs.length, unit:(tr&&tr.unit)||'', better:low?'low':'high',
+  const byErr = !!(tr && tr.metric==='err');
+  const low = byErr || !!(tr && tr.better==='low');
+  const val = byErr ? (s=>s.err) : (s=>s.score);
+  const scored = byErr ? runs.filter(s=>typeof s.err==='number') : runs;
+  const out = { id:key, n:runs.length, scored:scored.length, unit:byErr ? 'ms' : (tr&&tr.unit)||'', better:low?'low':'high',
                 last:null, lastT:0, best:null, bestErr:null, lastErr:null,
                 dir:'flat', staleDays:null };
   if(!runs.length) return out;
   const last = runs[runs.length-1];
-  out.last = last.score; out.lastT = last.t;
+  out.lastT = last.t;
   out.lastErr = (typeof last.err==='number') ? last.err : null;
   out.staleDays = Math.max(0, (now - last.t) / DAY_MS);
   const stored = exact ? learnerBest(key) : null;
-  out.best = stored ? stored.score
-    : runs.reduce((b,s)=> b===null ? s.score : (low ? Math.min(b,s.score) : Math.max(b,s.score)), null);
   const errs = runs.filter(s=>typeof s.err==='number').map(s=>s.err);
   if(stored && typeof stored.err==='number') errs.push(stored.err);
   if(errs.length) out.bestErr = Math.min.apply(null, errs);
-  if(runs.length >= 2){
-    const cut = Math.max(1, runs.length - PERF_TREND_N);
-    const mean = a => a.reduce((x,s)=>x+s.score, 0) / a.length;
-    const recent = mean(runs.slice(cut)), earlier = mean(runs.slice(0, cut));
+  if(!scored.length) return out;
+  out.last = val(scored[scored.length-1]);
+  out.best = byErr ? out.bestErr : stored ? stored.score
+    : scored.reduce((b,s)=> b===null ? s.score : (low ? Math.min(b,s.score) : Math.max(b,s.score)), null);
+  if(scored.length >= 2){
+    const cut = Math.max(1, scored.length - PERF_TREND_N);
+    const mean = a => a.reduce((x,s)=>x+val(s), 0) / a.length;
+    const recent = mean(scored.slice(cut)), earlier = mean(scored.slice(0, cut));
     const delta = (recent - earlier) * (low ? -1 : 1);
     const scale = Math.abs(earlier) || 1;
     out.dir = Math.abs(delta)/scale < TREND_EPS ? 'flat' : (delta > 0 ? 'up' : 'down');
@@ -4291,6 +4299,7 @@ function trendScore(tn){
   if(tn.unit==='pct') return v+'%';
   if(tn.unit==='bars') return v+' '+t('unit_bars');
   if(tn.unit==='cpm') return v+t('unit_cpm');
+  if(tn.unit==='ms') return '±'+v+' '+t('on_ms');
   return String(v);
 }
 function trendArrow(dir){ return dir==='up' ? '▲' : dir==='down' ? '▼' : '→'; }
@@ -4325,12 +4334,12 @@ function renderProgressInto(hostId){
     html+=rows.map(({tr,tn})=>{
       const sub=[];
       if(tn.best!==null) sub.push(t('prog_best')+' '+trendScore({ last:tn.best, unit:tn.unit }));
-      if(tn.bestErr!==null) sub.push(t('prog_timing')+' ±'+Math.round(tn.bestErr)+' '+t('on_ms'));
+      if(tn.bestErr!==null && tn.unit!=='ms') sub.push(t('prog_timing')+' ±'+Math.round(tn.bestErr)+' '+t('on_ms'));
       sub.push(tn.n+' '+t('prog_runs'));
       return '<button type="button" class="pp-row" data-track="'+esc(tr.id)+'">'+
         '<span class="pp-row-name">'+esc(t(tr.label))+'</span>'+
-        '<span class="pp-row-val">'+esc(trendScore(tn))+
-          ' <span class="pp-dir '+tn.dir+'">'+trendArrow(tn.dir)+'</span></span>'+
+        '<span class="pp-row-val">'+(tn.last===null ? esc(t('prog_unscored')) : esc(trendScore(tn))+
+          ' <span class="pp-dir '+tn.dir+'">'+trendArrow(tn.dir)+'</span>')+'</span>'+
         '<span class="pp-row-sub">'+esc(sub.join(' · '))+'</span>'+
       '</button>';
     }).join('');
@@ -4745,22 +4754,45 @@ const INTERVALS = [
 function earIvName(iv){ return lang==='en' ? iv.en : iv.uk; }
 const EAR_QUAL_IDX = [0, 1, 10, 12, 6, 7, 8, 9];   
 function earQualKey(qi){ const q=QUALITIES[qi]; return 'chordq:'+(q.short||'maj'); }
+const EAR_LEVELS = {
+  interval: [['M3','P5','P8'], ['m3','P4'], ['M2','M6','m7'], ['m2','m6','M7','TT']].map(l=>l.map(n=>'interval:'+n)),
+  chordq:   [[0,1], [10,12], [6,7,8], [9]].map(l=>l.map(earQualKey)),   
+};
+const EAR_MASTERED = 2;      
+function earMastered(key){ const it=learner.items[key]; return !!it && it.streak>=EAR_MASTERED; }
+function earLevel(type){
+  const lv=EAR_LEVELS[type]; let k=0;
+  while(k<lv.length-1 && lv[k].every(earMastered)) k++;
+  return k;
+}
+function earPool(type){ return [].concat(...EAR_LEVELS[type].slice(0, earLevel(type)+1)); }
+const EAR_DIRS = [{ id:'up', from:0 }, { id:'down', from:1 }, { id:'harm', from:2 }];
 const EAR = {
   interval: {
-    len:8, sess:'ear-interval', prompt:()=>t('ear_int_prompt'),
-    pool:()=>INTERVALS.map(iv=>'interval:'+iv.name),
-    make(key){ const iv=INTERVALS.find(x=>'interval:'+x.name===key); const base=48+Math.floor(Math.random()*13); return {key, iv, base}; },
-    play(cur){ pluck(cur.base, 0, 1.5); pluck(cur.base+cur.iv.st, 0.6, 1.5); },                 
-    choices(){ return INTERVALS.map(iv=>({ key:'interval:'+iv.name, html:iv.name, label:earIvName(iv) })); }
+    len:8, sess:'ear-interval',
+    prompt:cur=>t('ear_int_prompt')+(cur && cur.dir!=='up' ? ' · '+t('ear_dir_'+cur.dir) : ''),
+    pool:()=>earPool('interval'),
+    make(key){ const iv=INTERVALS.find(x=>'interval:'+x.name===key);
+      const lv=earLevel('interval'), dirs=EAR_DIRS.filter(d=>d.from<=lv);
+      const dir=dirs[Math.floor(Math.random()*dirs.length)].id;
+      const base=(dir==='down' ? 60 : 48)+Math.floor(Math.random()*13); return {key, iv, base, dir}; },
+    play(cur){
+      const lo=cur.dir==='down' ? cur.base-cur.iv.st : cur.base, hi=lo+cur.iv.st;
+      if(cur.dir==='harm'){ pluck(lo, 0, 1.8); pluck(hi, 0.01, 1.8); }                         
+      else if(cur.dir==='down'){ pluck(hi, 0, 1.5); pluck(lo, 0.6, 1.5); }                    
+      else { pluck(lo, 0, 1.5); pluck(hi, 0.6, 1.5); } },                                       
+    choices(){ const pool=earPool('interval');
+      return INTERVALS.filter(iv=>pool.includes('interval:'+iv.name)).map(iv=>({ key:'interval:'+iv.name, html:iv.name, label:earIvName(iv) })); }
   },
   chordq: {
     len:8, sess:'ear-chordq', prompt:()=>t('ear_chord_prompt'),
-    pool:()=>EAR_QUAL_IDX.map(earQualKey),
+    pool:()=>earPool('chordq'),
     make(key){ const qi=EAR_QUAL_IDX.find(i=>earQualKey(i)===key); const root=Math.floor(Math.random()*12); return {key, qi, root, base:48+root}; },
     play(cur){ const q=QUALITIES[cur.qi], n=q.iv.length;
       q.iv.forEach((iv,i)=>pluck(cur.base+iv, i*0.16, 1.6));                                    
       q.iv.forEach(iv=>pluck(cur.base+iv, n*0.16+0.28, 1.9)); },                                
-    choices(){ return EAR_QUAL_IDX.map(qi=>{ const q=QUALITIES[qi]; return { key:earQualKey(qi), html:(q.short||'maj'), label:qName(q) }; }); }
+    choices(){ const pool=earPool('chordq');
+      return EAR_QUAL_IDX.filter(qi=>pool.includes(earQualKey(qi))).map(qi=>{ const q=QUALITIES[qi]; return { key:earQualKey(qi), html:(q.short||'maj'), label:qName(q) }; }); }
   }
 };
 let ear = null;
@@ -4769,7 +4801,13 @@ function buildEarQueue(keys, len){
   const now=Date.now();
   const due=keys.filter(k=>((learner.items[k]||{due:0}).due)<=now);
   const rest=keys.filter(k=>due.indexOf(k)<0);
-  return earShuffle(due).concat(earShuffle(rest)).slice(0, len);
+  const q=earShuffle(due).concat(earShuffle(rest)).slice(0, len);
+  while(keys.length && q.length<len){
+    let deal=earShuffle(keys);
+    if(deal.length>1 && deal[0]===q[q.length-1]) deal=deal.slice(1).concat(deal[0]);
+    q.push(...deal.slice(0, len-q.length));
+  }
+  return q;
 }
 function beginEar(type){
   const cfg=EAR[type]; if(!cfg) return;
@@ -4812,8 +4850,9 @@ function earAnswerLabel(){
   return '';
 }
 function renderEarPrompt(){
-  const p=document.getElementById('ear-prompt'); if(p) p.textContent=ear.cfg.prompt();
-  const c=document.getElementById('ear-count'); if(c) c.textContent=Math.min(ear.done+1, ear.total)+' / '+ear.total;
+  const p=document.getElementById('ear-prompt'); if(p) p.textContent=ear.cfg.prompt(ear.cur);
+  const lv=EAR_LEVELS[ear.type];
+  const c=document.getElementById('ear-count'); if(c) c.textContent=t('ear_level').replace('{n}', earLevel(ear.type)+1).replace('{m}', lv.length)+' · '+Math.min(ear.done+1, ear.total)+' / '+ear.total;
   const h=document.getElementById('ear-hint'); if(h) h.textContent=t('ear_hint');
   const fb=document.getElementById('ear-feedback'); if(fb){ fb.textContent=''; fb.className='ear-feedback'; }
   const nx=document.getElementById('ear-next'); if(nx) nx.hidden=true;
@@ -4860,8 +4899,8 @@ registerDrill({ id:'ear', area:'ear-area',
                 begin:beginEar, end:endEar, isActive:()=>!!ear, refreshLang:refreshEarLang,
                 play:earReplay, playKey:()=>'ear_replay',
                 tracks:[
-                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', scored:'acc', arg:'interval' },
-                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    scored:'acc', arg:'chordq' }
+                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', arg:'interval' },
+                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    arg:'chordq' }
                 ] });
 (function initEar(){
   const area=document.getElementById('ear-area'); if(!area) return;
@@ -4964,119 +5003,12 @@ function renderNotesSummary(elapsed, acc){
 registerDrill({ id:'notes', area:'drill-area',
                 begin:beginNotes, end:endNotes, isActive:()=>!!drill,
                 tracks:[{ id:'note', kind:'recall', items:'note', sess:'notes', label:'drill_notes',
-                          better:'high', unit:'pct', scored:'acc' }] });
+                          better:'high', unit:'pct' }] });
 (function initDrill(){
   const b=document.getElementById('drill-board'); if(!b) return;
   const fire=d=>{ if(d) drillAnswer(parseInt(d.dataset.si,10), parseInt(d.dataset.f,10)); };
   b.addEventListener('click', e=>fire(e.target.closest('.dot.quiz')));
   b.addEventListener('keydown', e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const d=e.target.closest('.dot.quiz'); if(!d) return; e.preventDefault(); fire(d); });
-})();
-let tgIdx = 1;          
-let tgDrill = null;
-const tgScore = scoredRun({
-  micId:'drill-ctx-mic', statusId:'tg-status', scoreId:'tg-score', countKey:'on_changes',
-  tol:()=>pulseSec()/2,
-  onChange:()=>{ if(tgDrill) renderTarget(); },
-});
-function tgBuildBars(preset){
-  const r=keyRoot, out=[];
-  preset.steps.forEach(([off,qi,b])=>{ const pc=mod(r+off,12); for(let k=0;k<Math.max(1,b);k++) out.push({pc, qi}); });
-  return out;
-}
-function beginComp(){
-  tgDrill={ presetIdx:tgIdx, bars:tgBuildBars(SEQ_PRESETS[tgIdx]), bar:0, cycles:0, clock:null, playing:false };
-  tgScore.clearScore();
-  renderTarget();
-}
-function endComp(){
-  targetStop();
-  tgScore.release();     
-  tgDrill=null;
-}
-function targetToggle(){ if(tgDrill && tgDrill.playing) targetStop(); else targetPlay(); }
-function targetPlay(){
-  if(!tgDrill || tgDrill.playing) return;
-  audio();
-  stopLoop();       
-  seqStop();
-  drillRunStarted();                                 
-  tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
-  tgDrill.bar=0; tgDrill.cycles=0; tgDrill.playing=true;
-  tgScore.begin();                               
-  tgDrill.clock={ interval:()=>barSec(), tick:(time,count)=>targetTick(time,count) };
-  addClock(tgDrill.clock);   
-  renderTarget();
-}
-function targetStop(){
-  if(!tgDrill || !tgDrill.playing) return;
-  if(tgDrill.clock){ removeClock(tgDrill.clock); tgDrill.clock=null; }
-  clearVisualQ();
-  tgDrill.playing=false;
-  const sc=tgScore.end();
-  const barsPlayed = tgDrill.cycles*tgDrill.bars.length + tgDrill.bar;
-  if(barsPlayed>=1){
-    drillRecord('comp:'+SEQ_PRESETS[tgDrill.presetIdx].name, barsPlayed, scoredErr(sc));
-  }
-  renderTarget();
-}
-function targetTick(when, count){
-  if(!tgDrill) return;
-  const bars=tgDrill.bars; if(!bars.length) return;
-  const i=count%bars.length;
-  if(i===0 && count>0) tgDrill.cycles++;
-  tgDrill.bar=i;
-  const cur=bars[i], nxt=bars[(i+1)%bars.length], p=pulseSec();
-  const ivs=QUALITIES[cur.qi].iv, base=48+cur.pc;
-  if(tgScore.on()){
-    if(tgDrill.playing) tgScore.mark(when);
-  } else {
-    compStrum(base, ivs, when, 0.9, 0.028);                  
-    compStrum(base, ivs, when+midPulseSec(), 0.55, 0.022);   
-  }
-  scheduleBand(cur.pc, cur.qi, when, true);                  
-  for(let k=0;k<barBeats();k++) enqueueVisual(when+k*p, ()=>tgPulseBeat(k));
-  enqueueVisual(when, ()=>renderTargetStage(cur, nxt));
-}
-function renderTarget(){
-  if(!tgDrill) return;
-  const chips=document.getElementById('tg-progs');
-  if(chips) chips.innerHTML=SEQ_PRESETS.map((p,i)=>`<button type="button" class="btn tg-prog${i===tgIdx?' active':''}" data-i="${i}" aria-pressed="${i===tgIdx}">${p.name}</button>`).join('');
-  const beats=document.getElementById('tg-beats');
-  if(beats) beats.innerHTML=Array.from({length:barBeats()},(_,k)=>`<span class="co-beat" data-k="${k}"></span>`).join('');
-  renderTargetStage(tgDrill.bars[tgDrill.bar], tgDrill.bars[(tgDrill.bar+1)%tgDrill.bars.length]);
-  const h=document.getElementById('tg-hits'); if(h) h.textContent = tgDrill.playing ? ('↻ '+tgDrill.cycles) : '';
-  const hint=document.getElementById('tg-hint'); if(hint) hint.textContent=t(tgScore.on()?'co_hint_scored':'co_hint');
-  tgScore.render();
-  applyDrillCtx();
-}
-function renderTargetStage(cur, nxt){
-  const paint=(el, st)=>{ if(el) el.innerHTML = st ? cmChordBox(cmChord([st.pc, st.qi])) : ''; };
-  paint(document.getElementById('tg-now'), cur);
-  paint(document.getElementById('tg-next'), nxt);
-  const nl=document.getElementById('tg-now-lab'); if(nl) nl.textContent=t('co_now');
-  const xl=document.getElementById('tg-next-lab'); if(xl) xl.textContent=t('co_next');
-}
-function tgPulseBeat(k){
-  document.querySelectorAll('#tg-beats .co-beat').forEach(d=>d.classList.toggle('on', +d.dataset.k===k));
-}
-function refreshTargetLang(){ if(tgDrill){ renderTarget(); tgScore.refreshLang(); } }
-registerDrill({ id:'overchanges', area:'tg-area', tempo:true, key:true,   
-                play:targetToggle, playing:()=>!!(tgDrill && tgDrill.playing),
-                tracks:[
-                  { id:'comp', kind:'perf', sess:'comp', better:'high', unit:'bars', label:'drill_comp', scored:'mic' }
-                ],
-                begin:beginComp, end:endComp, isActive:()=>!!tgDrill, refreshLang:refreshTargetLang,
-                setup:'tg-setup',
-                mic:()=>tgScore.available(), micOn:()=>tgScore.on(),
-                onMic:()=>{ if(tgDrill&&tgDrill.playing) targetStop(); tgScore.toggle(); renderTarget(); },
-                onKey:()=>{ if(!tgDrill) return;
-                            tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
-                            if(tgDrill.bar>=tgDrill.bars.length) tgDrill.bar=0;
-                            renderTarget(); } });
-(function initOverChanges(){
-  const area=document.getElementById('tg-area'); if(!area) return;
-  const pg=document.getElementById('tg-progs');
-  if(pg) pg.addEventListener('click', e=>{ const btn=e.target.closest('.tg-prog'); if(btn){ tgIdx=+btn.dataset.i; if(tgDrill){ tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]); if(tgDrill.bar>=tgDrill.bars.length) tgDrill.bar=0; } renderTarget(); } });
 })();
 const CM_PAIRS = [
   [[9,0],[2,0]],   
@@ -5091,13 +5023,16 @@ const CM_PAIRS = [
   [[2,0],[7,0]],   
 ];
 const CM_DURS = [30, 60, 90];   
+const CM_QUALS = [0, 1, 6, 7, 8, 2, 3];
 let cmDurIdx = 1;        
 let cmPairIdx = 0;       
+let cmCustom = [[5,0],[10,0]];   
 let cmClick = false;     
 let cmDrill = null;
-function cmChord(spec){ const [pc,qi]=spec, q=QUALITIES[qi]; return { pc, qi, q, short:q.short, lbl:ROOTS[pc]+q.short }; }
-function cmPairName(i){ const p=CM_PAIRS[i]; return cmChord(p[0]).lbl+' ↔ '+cmChord(p[1]).lbl; }
-function cmPairId(i){ const p=CM_PAIRS[i]; return 'changes:'+cmChord(p[0]).lbl+'-'+cmChord(p[1]).lbl; }   
+function cmChord(spec, root){ const [pc,qi]=spec, q=QUALITIES[qi]; return { pc, qi, q, short:q.short, lbl:(root||ROOTS[pc])+q.short }; }
+function cmPair(i){ return i<0 ? cmCustom : CM_PAIRS[i]; }
+function cmPairName(i){ const p=cmPair(i); return noteTxt(cmChord(p[0]).lbl)+' ↔ '+noteTxt(cmChord(p[1]).lbl); }
+function cmPairId(i){ const p=cmPair(i); return 'changes:'+cmChord(p[0]).lbl+'-'+cmChord(p[1]).lbl; }   
 function cmPairBest(i){
   const b=learnerBest(cmPairId(i));
   return b ? b.score : 0;
@@ -5173,7 +5108,18 @@ function renderCm(){
 function renderCmSetup(){
   if(!cmDrill) return;
   const pp=document.getElementById('cm-pairs');
-  if(pp) pp.innerHTML=CM_PAIRS.map((p,i)=>`<button type="button" class="btn cm-pair${i===cmDrill.pairIdx?' active':''}" data-i="${i}" aria-pressed="${i===cmDrill.pairIdx}">${cmPairName(i)}</button>`).join('');
+  if(pp) pp.innerHTML=CM_PAIRS.map((p,i)=>`<button type="button" class="btn cm-pair${i===cmDrill.pairIdx?' active':''}" data-i="${i}" aria-pressed="${i===cmDrill.pairIdx}">${cmPairName(i)}</button>`).join('')+
+    `<button type="button" class="btn cm-pair${cmDrill.pairIdx<0?' active':''}" data-i="-1" aria-pressed="${cmDrill.pairIdx<0}">${t('cm_yours')}</button>`;
+  const cu=document.getElementById('cm-custom');
+  if(cu){
+    cu.hidden = cmDrill.pairIdx>=0;
+    if(cmDrill.pairIdx<0) cu.innerHTML=cmCustom.map(([pc,qi],k)=>
+      `<select class="cm-sel" data-k="${k}" data-part="pc" aria-label="${t('lbl_root')} ${k+1}">`+
+        ROOTS.map(r=>{ const p=FLAT_ROOTS[r]!==undefined?FLAT_ROOTS[r]:NOTES.indexOf(r); return `<option value="${p}"${p===pc?' selected':''}>${noteTxt(r)}</option>`; }).join('')+'</select>'+
+      `<select class="cm-sel" data-k="${k}" data-part="qi" aria-label="${t('lbl_quality')} ${k+1}">`+
+        CM_QUALS.map(i=>`<option value="${i}"${i===qi?' selected':''}>${QUALITIES[i].short||'maj'}</option>`).join('')+'</select>'
+    ).join('<span class="cm-swap" aria-hidden="true">↔</span>');
+  }
   const dd=document.getElementById('cm-durs');
   if(dd) dd.innerHTML=CM_DURS.map((d,i)=>`<button type="button" class="btn cm-dur${i===cmDurIdx?' active':''}" data-i="${i}" aria-pressed="${i===cmDurIdx}">${d}${t('cm_sec')}</button>`).join('');
   const ck=document.getElementById('cm-click');
@@ -5185,11 +5131,11 @@ function cmChordBox(c){
   const q=c.q, funcMap={};
   q.iv.forEach((iv,i)=>{ funcMap[mod(c.pc+iv,12)]=labClass(q.lab[i]); });
   const list=chordVoicings(c.pc, c.short, q.iv), v=list[0];
-  return `<div class="cm-chordname">${c.lbl}</div>${v?chordBoxSVG(v, funcMap):''}`;
+  return `<div class="cm-chordname">${noteTxt(c.lbl)}</div>${v?chordBoxSVG(v, funcMap):''}`;
 }
 function renderCmActive(){
   if(!cmDrill) return;
-  const p=CM_PAIRS[cmDrill.pairIdx];
+  const p=cmPair(cmDrill.pairIdx);
   const a=document.getElementById('cm-chord-a'), b=document.getElementById('cm-chord-b');
   if(a) a.innerHTML=cmChordBox(cmChord(p[0]));
   if(b) b.innerHTML=cmChordBox(cmChord(p[1]));
@@ -5233,6 +5179,12 @@ registerDrill({ id:'changes', area:'cm-area', tempo:true,
   wire('cm-click',     ()=>{ cmClick=!cmClick; renderCmSetup(); });
   const pp=document.getElementById('cm-pairs');
   if(pp) pp.addEventListener('click', e=>{ const btn=e.target.closest('.cm-pair'); if(btn){ cmPairIdx=+btn.dataset.i; if(cmDrill) cmDrill.pairIdx=cmPairIdx; renderCmSetup(); } });
+  const cu=document.getElementById('cm-custom');
+  if(cu) cu.addEventListener('change', e=>{ const s=e.target.closest('.cm-sel'); if(!s) return;
+    const k=+s.dataset.k, v=+s.value;
+    if(s.dataset.part==='pc' && v>=0 && v<12) cmCustom[k][0]=v;
+    if(s.dataset.part==='qi' && CM_QUALS.includes(v)) cmCustom[k][1]=v;
+    cmCustom=cmCustom.map(x=>x.slice()); renderCmSetup(); saveState(); });
   const dd=document.getElementById('cm-durs');
   if(dd) dd.addEventListener('click', e=>{ const btn=e.target.closest('.cm-dur'); if(btn){ cmDurIdx=+btn.dataset.i; if(cmDrill) cmDrill.dur=CM_DURS[cmDurIdx]; renderCmSetup(); } });
 })();
@@ -5251,19 +5203,49 @@ const SP_SWINGS = [
 function spName(p){ return lang==='en'?p.en:p.uk; }
 function strumArrow(d){ return d==='D'?'↓':d==='U'?'↑':''; }   
 let spIdx = 0;          
+let spOver = 'chord';   
+let spProg = 1;         
 let spSwing = 0;        
 let spAccent = false;   
 let spMute = false;     
 let spBand = false;     
 let spClick = false;    
 let spDrill = null;
+function spFree(){ return spIdx < 0; }
 const spScore = scoredRun({
-  micId:'drill-ctx-mic', statusId:'sp-status', scoreId:'sp-score', countKey:'on_played',
-  tol:()=>beat()/4,
+  micId:'drill-ctx-mic', statusId:'sp-status', scoreId:'sp-score',
+  countKey:()=>spFree() ? 'on_changes' : 'on_played',
+  tol:()=>spFree() ? beat()/2 : beat()/4,
   onChange:()=>{ if(spDrill) renderStrum(); },
 });
+function presetBars(preset){
+  const dg=keyDegrees(), out=[];
+  preset.steps.forEach(([off,qi,b])=>{
+    const pc=mod(keyRoot+off,12), d=dg.find(x=>x.rootPc===pc);
+    for(let k=0;k<Math.max(1,b);k++) out.push({ pc, qi, lbl:d?d.lbl:ROOTS[pc] });
+  });
+  return out;
+}
+function spYoursOffered(){ return seq.length>0; }
+function spBars(){
+  if(spOver!=='prog') return [{ pc:chRoot, qi:chQual, lbl:chLbl }];
+  if(spProg<0 && spYoursOffered()){
+    const out=[]; seq.forEach(st=>{ for(let k=0;k<Math.max(1,st.bars);k++) out.push({ pc:st.pc, qi:st.qi, lbl:st.lbl }); });
+    return out;
+  }
+  return presetBars(SEQ_PRESETS[spProg] || SEQ_PRESETS[1]);
+}
+function spMidis(ch){
+  if(spDrill && spDrill.over!=='prog') return currentChordVoicing().midis;
+  const q=QUALITIES[ch.qi], v=chordVoicings(ch.pc, q.short, q.iv)[0];
+  return v ? voicingMidi(v) : q.iv.map(iv=>48+ch.pc+iv);
+}
+function spSessId(){
+  const d=spDrill, what = d.over!=='prog' ? 'chord' : (d.prog<0 ? 'yours' : SEQ_PRESETS[d.prog].name);
+  return 'rhythm:'+what+':'+(d.patIdx<0 ? 'free' : STRUM_PATTERNS[d.patIdx].id);
+}
 function beginStrum(){
-  spDrill={ patIdx:spIdx, slot:-1, bars:0, clock:null, playing:false };
+  spDrill={ patIdx:spIdx, over:spOver, prog:spProg, bars:spBars(), bar:0, slot:-1, barsPlayed:0, clock:null, playing:false };
   spScore.clearScore();
   renderStrum();
 }
@@ -5279,7 +5261,7 @@ function spPlay(){
   stopLoop();   
   seqStop();
   drillRunStarted();                             
-  spDrill.patIdx=spIdx; spDrill.slot=-1; spDrill.bars=0; spDrill.playing=true;
+  Object.assign(spDrill, { patIdx:spIdx, over:spOver, prog:spProg, bars:spBars(), bar:0, slot:-1, barsPlayed:0, playing:true });
   spScore.begin();                               
   spDrill.clock={ interval:()=>beat()/2, tick:(time,count)=>spTick(time,count) };
   addClock(spDrill.clock);   
@@ -5291,7 +5273,17 @@ function spStop(){
   clearVisualQ();
   spDrill.playing=false; spDrill.slot=-1;
   const sc=spScore.end();
-  if(spDrill.bars>=1) drillRecord('strum:'+STRUM_PATTERNS[spDrill.patIdx].id, spDrill.bars, scoredErr(sc));
+  if(spDrill.barsPlayed>=1) drillRecord(spSessId(), spDrill.barsPlayed, scoredErr(sc));
+  renderStrum();
+}
+function spSet(fn){
+  const wasFree=spFree();
+  fn();
+  if(spDrill && spDrill.playing && wasFree!==spFree()) spStop();
+  if(spDrill){
+    spDrill.patIdx=spIdx; spDrill.over=spOver; spDrill.prog=spProg;
+    spDrill.bars=spBars(); if(spDrill.bar>=spDrill.bars.length) spDrill.bar=0;
+  }
   renderStrum();
 }
 function spStrum(midis, when, vel, dir, muted){
@@ -5302,19 +5294,31 @@ function spStrum(midis, when, vel, dir, muted){
 }
 function spTick(time, count){
   if(!spDrill) return;
-  const seg=STRUM_PATTERNS[spDrill.patIdx].seg, slot=count%8;
-  if(slot===0 && count>0) spDrill.bars++;        
+  const slot=count%8;
+  if(slot===0 && count>0){ spDrill.barsPlayed++; spDrill.bar=(spDrill.bar+1)%spDrill.bars.length; }   
   spDrill.slot=slot;
+  const ch=spDrill.bars[spDrill.bar], nxt=spDrill.bars[(spDrill.bar+1)%spDrill.bars.length];
   const b=beat(), beatPos=slot%2===0;
   const swDelay = beatPos ? 0 : SP_SWINGS[spSwing].amt*(b/2);   
   const backbeat = (slot===2 || slot===6);
-  const dir=seg[slot];
-  if(dir){
-    if(spDrill.playing) spScore.mark(time+swDelay);
-    if(!spScore.on()){
-      let vel = dir==='D' ? 0.9 : 0.72;          
-      if(spAccent && backbeat) vel += 0.12;
-      spStrum(currentChordVoicing().midis, time+swDelay, vel, dir==='D'?+1:-1, spMute);
+  if(spDrill.patIdx<0){
+    if(slot===0){
+      if(spDrill.playing) spScore.mark(time);
+      if(!spScore.on()){
+        const base=48+ch.pc, ivs=QUALITIES[ch.qi].iv;
+        compStrum(base, ivs, time, 0.9, 0.028);
+        compStrum(base, ivs, time+2*b, 0.55, 0.022);             
+      }
+    }
+  } else {
+    const dir=STRUM_PATTERNS[spDrill.patIdx].seg[slot];
+    if(dir){
+      if(spDrill.playing) spScore.mark(time+swDelay);
+      if(!spScore.on()){
+        let vel = dir==='D' ? 0.9 : 0.72;          
+        if(spAccent && backbeat) vel += 0.12;
+        spStrum(spMidis(ch), time+swDelay, vel, dir==='D'?+1:-1, spMute);
+      }
     }
   }
   if(spBand){
@@ -5322,20 +5326,36 @@ function spTick(time, count){
     if(slot===0) kickHit(time, 1);
     if(slot===4) kickHit(time, 0.9);
     if(backbeat) snareHit(time, spAccent ? 1.0 : 0.8);
-    if(slot===0) bassNote(time, 36+chRoot, b*1.9, 0.95);
-    if(slot===4) bassNote(time, 36+chRoot+fifthInterval(chQual), b*1.7, 0.8);
+    if(slot===0) bassNote(time, 36+ch.pc, b*1.9, 0.95);
+    if(slot===4) bassNote(time, 36+ch.pc+fifthInterval(ch.qi), b*1.7, 0.8);
   }
   if(spClick && beatPos) metroClick(time, slot===0);              
-  enqueueVisual(time, ()=>spHighlightSlot(slot));
+  enqueueVisual(time, ()=>{ spHighlightSlot(slot); if(beatPos) spPulseBeat(slot/2); if(slot===0) renderSpStage(ch, nxt); });
 }
 function renderStrum(){
   if(!spDrill) return;
+  segButtons('sp-over', [{label:t('pl_chord')},{label:t('pl_prog')}], spOver==='prog'?1:0, i=>spSet(()=>{ spOver=i?'prog':'chord'; }));
+  const pr=document.getElementById('sp-progs-row'); if(pr) pr.hidden = spOver!=='prog';
+  const pg=document.getElementById('sp-progs');
+  if(pg){
+    const yours=spYoursOffered(), cur=(spProg<0 && !yours) ? 1 : spProg;
+    pg.innerHTML=SEQ_PRESETS.map((p,i)=>`<button type="button" class="btn sp-prog${i===cur?' active':''}" data-i="${i}" aria-pressed="${i===cur}">${p.name}</button>`).join('')+
+      (yours ? `<button type="button" class="btn sp-prog${cur<0?' active':''}" data-i="-1" aria-pressed="${cur<0}">${t('sp_yours')}</button>` : '');
+  }
   const chips=document.getElementById('sp-patterns');
-  if(chips) chips.innerHTML=STRUM_PATTERNS.map((p,i)=>`<button type="button" class="btn sp-pat${i===spIdx?' active':''}" data-i="${i}" aria-pressed="${i===spIdx}" title="${spName(p)}" aria-label="${spName(p)}">${p.seg.map(d=>d?strumArrow(d):'·').join('')}</button>`).join('');
+  if(chips) chips.innerHTML=STRUM_PATTERNS.map((p,i)=>`<button type="button" class="btn sp-pat${i===spIdx?' active':''}" data-i="${i}" aria-pressed="${i===spIdx}" title="${spName(p)}" aria-label="${spName(p)}">${p.seg.map(d=>d?strumArrow(d):'·').join('')}</button>`).join('')+
+    `<button type="button" class="btn sp-pat${spFree()?' active':''}" data-i="-1" aria-pressed="${spFree()}">${t('sp_free')}</button>`;
   const sw=document.getElementById('sp-swings');
   if(sw) sw.innerHTML=SP_SWINGS.map((s,i)=>`<button type="button" class="btn sp-swing${i===spSwing?' active':''}" data-i="${i}" aria-pressed="${i===spSwing}">${spName(s)}</button>`).join('');
-  const nm=document.getElementById('sp-name'); if(nm) nm.textContent=spName(STRUM_PATTERNS[spIdx]);
-  const ch=document.getElementById('sp-chord'); if(ch) ch.textContent=t('sp_chord')+' · '+noteTxt(chLbl)+QUALITIES[chQual].short;
+  const nm=document.getElementById('sp-name'); if(nm) nm.textContent = spFree() ? t('sp_free') : spName(STRUM_PATTERNS[spIdx]);
+  const prog=spOver==='prog';
+  const ch=document.getElementById('sp-chord');
+  if(ch){ ch.hidden=prog; ch.textContent=t('sp_chord')+' · '+noteTxt(chLbl)+QUALITIES[chQual].short; }
+  const stage=document.getElementById('sp-stage'); if(stage) stage.hidden=!prog;
+  if(prog) renderSpStage(spDrill.bars[spDrill.bar], spDrill.bars[(spDrill.bar+1)%spDrill.bars.length]);
+  const g=document.getElementById('sp-grid'); if(g) g.hidden=spFree();
+  const bt=document.getElementById('sp-beats');
+  if(bt){ bt.hidden=!spFree(); bt.innerHTML=Array.from({length:4},(_,k)=>`<span class="co-beat" data-k="${k}"></span>`).join(''); }
   renderStrumGrid();
   const toggle=(id,on,label)=>{ const el=document.getElementById(id); if(!el) return;
     el.textContent=t(label); el.classList.toggle('active', on); el.setAttribute('aria-pressed', on?'true':'false'); };
@@ -5343,12 +5363,14 @@ function renderStrum(){
   toggle('sp-mute',   spMute,   'sp_mute');
   toggle('sp-band',   spBand,   'sp_band');
   const ck=document.getElementById('sp-click'); if(ck){ ck.classList.toggle('active', spClick); ck.setAttribute('aria-pressed', spClick?'true':'false'); ck.innerHTML='&#9833; '+t('cm_click'); }
-  const hint=document.getElementById('sp-hint'); if(hint) hint.textContent=t(spScore.on()?'sp_hint_scored':'sp_hint');
+  const hint=document.getElementById('sp-hint');
+  if(hint) hint.textContent=t(spFree() ? (spScore.on()?'co_hint_scored':'co_hint') : (spScore.on()?'sp_hint_scored':'sp_hint'));
   spScore.render();
   applyDrillCtx();     
 }
 function renderStrumGrid(){
   const g=document.getElementById('sp-grid'); if(!g) return;
+  if(spFree()){ g.innerHTML=''; return; }
   const seg=STRUM_PATTERNS[spIdx].seg;
   g.innerHTML=seg.map((d,i)=>{
     const isBeat=i%2===0, accent=spAccent&&(i===2||i===6);
@@ -5357,14 +5379,23 @@ function renderStrumGrid(){
       `<span class="sp-beat">${isBeat?(i/2+1):'&'}</span></div>`;
   }).join('');
 }
+function renderSpStage(cur, nxt){
+  const paint=(id, st)=>{ const el=document.getElementById(id); if(el) el.innerHTML = st ? cmChordBox(cmChord([st.pc, st.qi], st.lbl)) : ''; };
+  paint('sp-now', cur); paint('sp-next', nxt);
+  const nl=document.getElementById('sp-now-lab'); if(nl) nl.textContent=t('co_now');
+  const xl=document.getElementById('sp-next-lab'); if(xl) xl.textContent=t('co_next');
+}
 function spHighlightSlot(slot){
   document.querySelectorAll('#sp-grid .sp-cell').forEach(c=>c.classList.toggle('on', +c.dataset.i===slot));
 }
+function spPulseBeat(k){
+  document.querySelectorAll('#sp-beats .co-beat').forEach(d=>d.classList.toggle('on', +d.dataset.k===k));
+}
 function refreshStrumLang(){ if(spDrill){ renderStrum(); spScore.refreshLang(); } }
-registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',   
-                chord:true,   
+registerDrill({ id:'rhythm-guitar', area:'sp-area', tempo:true, setup:'sp-setup',   
+                chord:()=>spOver!=='prog', key:()=>spOver==='prog',
                 play:spToggle, playing:()=>!!(spDrill && spDrill.playing),
-                tracks:[{ id:'strum', kind:'perf', sess:'strum', label:'drill_strum',
+                tracks:[{ id:'rhythm-guitar', kind:'perf', sess:'rhythm', reads:['strum','comp'], label:'drill_rhythm',
                           better:'high', unit:'bars', scored:'mic' }],
                 begin:beginStrum, end:endStrum, isActive:()=>!!spDrill, refreshLang:refreshStrumLang,
                 mic:()=>spScore.available(), micOn:()=>spScore.on(),
@@ -5372,7 +5403,7 @@ registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',
                             spScore.toggle();
                             if(spScore.on() && !spClick && !spBand) spClick=true;
                             renderStrum(); },
-                onKey:()=>{ if(spDrill) renderStrum(); } });
+                onKey:()=>{ if(!spDrill) return; spSet(()=>{}); } });
 (function initStrum(){
   const area=document.getElementById('sp-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
@@ -5381,9 +5412,10 @@ registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',
   wire('sp-mute',   ()=>{ spMute=!spMute;     renderStrum(); });
   wire('sp-band',   ()=>{ spBand=!spBand;     renderStrum(); });
   const pick=(hostId, cls, set)=>{ const h=document.getElementById(hostId); if(!h) return;
-    h.addEventListener('click', e=>{ const btn=e.target.closest('.'+cls); if(btn){ set(+btn.dataset.i); renderStrum(); } }); };
-  pick('sp-patterns', 'sp-pat',   i=>{ spIdx=i; if(spDrill) spDrill.patIdx=i; });
+    h.addEventListener('click', e=>{ const btn=e.target.closest('.'+cls); if(btn) spSet(()=>set(+btn.dataset.i)); }); };
+  pick('sp-patterns', 'sp-pat',   i=>{ spIdx=i; });
   pick('sp-swings',   'sp-swing', i=>{ spSwing=i; });
+  pick('sp-progs',    'sp-prog',  i=>{ spProg=i; });
 })();
 const SUBDIVS = [
   { id:'quarter',   div:1, en:'Quarter notes', uk:'Чвертки' },
@@ -5540,7 +5572,7 @@ function refreshTimingLang(){
 registerDrill({ id:'timing', area:'sd-area', tempo:true, key:true, setup:'sd-setup',
                 play:sdToggle, playing:()=>!!(sd && sd.playing),
                 tracks:[{ id:'timing', kind:'perf', sess:'timing', label:'drill_timing',
-                          better:'high', unit:'bars', scored:'mic' }],
+                          better:'high', unit:'bars', metric:'err', scored:'mic' }],
                 begin:beginTiming, end:endTiming, isActive:()=>!!sd, refreshLang:refreshTimingLang,
                 mic:()=>sdScore.available(), micOn:()=>sdScore.on(),
                 onMic:()=>{ if(sd&&sd.playing) sdStop(); sdScore.toggle(); renderTiming(); },
@@ -6038,6 +6070,12 @@ function renderSessionCard(){
   if(host) host.innerHTML=SESSION_MINS.map(m=>
     '<button type="button" class="btn'+(m===sessMins?' active':'')+'" data-mins="'+m+'">'+m+' '+t('sess_min')+'</button>').join('');
   const b=document.getElementById('sess-start'); if(b) b.textContent=t('sess_start');
+  const pl=document.getElementById('sess-plan');
+  if(pl){
+    const plan=sessionPlan(sessMins);
+    pl.textContent = plan.length ? t('sess_will').replace('{list}', plan.map(x=>t(trackById(x.track).label)).join(' · '))
+      .replace('{m}', Math.round(plan[0].secs/60*10)/10) : '';
+  }
 }
 function renderSessionReport(){
   const host=document.getElementById('session-report'); if(!host || !sessLast) return;
@@ -6049,12 +6087,13 @@ function renderSessionReport(){
   const rows=sessLast.blocks.map(id=>{
     const tr=trackById(id);
     if(!tr) return '';
-    const mine=runs.filter(s=>sessNs(s.drill)===tr.sess);
+    const fam=sessFamily(tr.sess), mine=runs.filter(s=>fam.includes(sessNs(s.drill)));
     let val=t('sess_norun');
     if(mine.length){
+      const errs=tr.metric==='err' ? mine.filter(s=>typeof s.err==='number').map(s=>s.err) : [];
       const low=tr.better==='low';
       const best=mine.reduce((b,s)=> b===null ? s.score : (low?Math.min(b,s.score):Math.max(b,s.score)), null);
-      val=trendScore({ last:best, unit:tr.unit });
+      val = errs.length ? trendScore({ last:Math.min.apply(null, errs), unit:'ms' }) : trendScore({ last:best, unit:tr.unit });
     }
     return '<div class="sr-row"><span class="sr-name">'+esc(t(tr.label))+'</span>'+
            '<span class="sr-val">'+esc(val)+'</span></div>';
@@ -6079,7 +6118,8 @@ function chipOffered(k){
   if(k==='settings' || currentMode!=='practice') return true;
   if(k==='play') return false;                     
   const d=activeDrill(); if(!d) return false;
-  return k==='key' ? !!d.key : k==='chord' ? !!d.chord : k==='tempo' ? !!d.tempo : false;
+  const v = k==='key' ? d.key : k==='chord' ? d.chord : k==='tempo' ? d.tempo : false;
+  return typeof v==='function' ? !!v() : !!v;
 }
 function sheetShown(k){ return sheetIsOpen(k) && chipOffered(k); }
 function toggleSheet(k){
@@ -6222,16 +6262,21 @@ function renderPractice(){
   renderProgressInto('practice-progress');
   renderSessionCard();
   applySessionViews();
-  paintDrillBadges();
+  paintDrillCards();
 }
-function paintDrillBadges(){
+function paintDrillCards(){
+  const due=new Set((learnerReview().due||[]).filter(d=>d.reason!=='new').map(d=>d.track));
   document.querySelectorAll('#practice-home .drill-card[data-track]').forEach(card=>{
-    const slot=card.querySelector('.dc-badge'); if(!slot) return;
     const tr=trackById(card.dataset.track);
-    if(!tr){ slot.textContent=''; return; }
-    const key=trackBadge(tr);
-    slot.textContent=t(key);
-    slot.className='dc-badge '+(key==='badge_mic'?'b-mic':key==='badge_acc'?'b-acc':'b-coach');
+    const tags=card.querySelector('.dc-tags'), last=card.querySelector('.dc-last');
+    if(tags) tags.innerHTML = !tr ? '' :
+      (trackMic(tr) ? '<span class="dc-mic" title="'+t('badge_mic')+'" role="img" aria-label="'+t('badge_mic')+'">🎤</span>' : '')+
+      (due.has(tr.id) ? '<span class="dc-due" title="'+t('prog_due')+'" role="img" aria-label="'+t('prog_due')+'"></span>' : '');
+    if(!last) return;
+    const tn = tr && tr.sess ? learnerTrend(tr.sess) : null;
+    if(!tn || !tn.n){ last.textContent=''; return; }
+    last.innerHTML = tn.last===null ? t('prog_unscored')
+      : trendScore(tn)+(tn.scored>1 ? ' <span class="pp-dir '+tn.dir+'">'+trendArrow(tn.dir)+'</span>' : '');
   });
 }
 function setKey(pc, lbl, mode){
@@ -6430,7 +6475,7 @@ function applyNav(){
   });
   applyNav();
 })();
-const SEAM_TRACKS = { chords:'comp', scale:'timing', notes:'note' };
+const SEAM_TRACKS = { chords:'rhythm-guitar', scale:'timing', notes:'note' };
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-seam]'); if(!b) return;
   const track=SEAM_TRACKS[b.dataset.seam]; if(!track) return;
@@ -6640,7 +6685,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     getSession:()=>psess, getSessReport:()=>sessLast,
     getSessMins:()=>sessMins, setSessMins:(m)=>{ sessMins=m; },
     SEAM_TRACKS,
-    trackBadge, paintDrillBadges, renderProgressInto, renderPractice, trendScore,
+    trackMic, paintDrillCards, renderProgressInto, renderPractice, trendScore, sessFamily,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord, seqClear,
     getSeq:()=>seq, setSeq:(a)=>{ seq=a; renderSeq(); },
     setTempo, getTempo:()=>tempo, stopReferenceTransport, transportActive, applyBoardRegion,
@@ -6655,14 +6700,16 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     startEar:(type)=>drillOpen(drillById('ear'), type), earAnswer, earNext, earReplay, exitEar:()=>drillDone(drillById('ear')), getEar:()=>ear,
     earChoices:()=>(ear?ear.cfg.choices():[]), INTERVALS, EAR_QUAL_IDX,
     startChanges:()=>drillOpen(drillById('changes')), cmBegin, cmTap, cmUntap, finishChanges, exitChanges:()=>drillDone(drillById('changes')), getCm:()=>cmDrill,
-    CM_PAIRS, CM_DURS, cmPairId, cmPairBest,
+    CM_PAIRS, CM_DURS, CM_QUALS, cmPairId, cmPairBest, cmPairName,
+    getCmCustom:()=>cmCustom.map(c=>c.slice()), setCmCustom:(p)=>{ cmCustom=p.map(c=>c.slice()); },
     setCmPair:(i)=>{ cmPairIdx=i; if(cmDrill) cmDrill.pairIdx=i; }, setCmDur:(i)=>{ cmDurIdx=i; if(cmDrill) cmDrill.dur=CM_DURS[i]; },
-    startStrum:()=>drillOpen(drillById('strum')), spPlay, spStop, spToggle, exitStrum:()=>drillDone(drillById('strum')), getSp:()=>spDrill,
-    STRUM_PATTERNS, setSpPattern:(i)=>{ spIdx=i; if(spDrill) spDrill.patIdx=i; },
+    startRhythm:()=>drillOpen(drillById('rhythm-guitar')), spPlay, spStop, spToggle, exitRhythm:()=>drillDone(drillById('rhythm-guitar')), getSp:()=>spDrill,
+    STRUM_PATTERNS, setSpPattern:(i)=>spSet(()=>{ spIdx=i; }), presetBars, spBars, spSessId:()=>spSessId(),
+    setSpOver:(v)=>spSet(()=>{ spOver=v; }), setSpProg:(i)=>spSet(()=>{ spProg=i; }),
     SP_SWINGS, setSpSwing:(i)=>{ spSwing=i; }, setSpAccent:(v)=>{ spAccent=!!v; },
     setSpMute:(v)=>{ spMute=!!v; }, setSpBand:(v)=>{ spBand=!!v; },
-    startComp:()=>drillOpen(drillById('overchanges')), targetPlay, targetStop, targetToggle, exitTarget:()=>drillDone(drillById('overchanges')), getTg:()=>tgDrill,
-    tgBuildBars, setTargetProg:(i)=>{ tgIdx=i; if(tgDrill){ tgDrill.presetIdx=i; tgDrill.bars=tgBuildBars(SEQ_PRESETS[i]); } },
+    spTickNow:(t,c)=>spTick(t,c),
+    EAR_LEVELS, earLevel, earPool,
     startTiming:()=>drillOpen(drillById('timing')), sdToggle, exitTiming:()=>drillDone(drillById('timing')), getSd:()=>sd, SUBDIVS, SD_BEATS, sdPath,
     setSdSub:(i)=>{ sdSub=i; }, setSdPos:(i)=>{ sdPos=i; }, setSdNotes:(v)=>{ sdNotes=!!v; },
     sdTickNow:(t,c)=>sdTick(t,c),
@@ -6681,7 +6728,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     calOffsetSec, calSetMs, calCancel, calMedian, getCalMs:()=>calMs, CAL_MAX_MS, CAL_MIN_HITS,
     calMeasured, setCalKnown:(v)=>{ calKnown=!!v; }, calOffer, calBoxToggle, getCalOpen:()=>calOpen,
     scoredRun, SC_TOL_MAX,
-    sdScore, spScore, tgScore,
+    sdScore, spScore,
     applyA11y, showWelcome, dismissWelcome,
     setCbPalette:(v)=>{ cbPalette=!!v; }, setFnShapes:(v)=>{ fnShapes=!!v; }, setWelcomeSeen:(v)=>{ welcomeSeen=!!v; },
     getA11y:()=>({ cbPalette, fnShapes, welcomeSeen }),

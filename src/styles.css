@@ -165,6 +165,8 @@
   /* the progress card and the session starter */
   .practice-progress-card, .practice-session-card { padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); }
   .ps-lead { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
+  /* what a session will run */
+  .ps-plan { color: var(--text-dim); font-size: 12.5px; line-height: 1.5; margin: -4px 0 12px; }
   /* the session starter and progress share a row on desktop ("what now?" first), and
      stack below 940px */
   #ph-top-block { display: grid; gap: 14px; margin-bottom: 8px; }
@@ -201,15 +203,17 @@
   .sr-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); }
 
   /* ---- note-naming drill ---- */
-  .drill-card { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; padding: 15px 18px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); color: var(--text); cursor: pointer; font-family: inherit; transition: border-color 0.15s, background 0.15s; }
+  /* name · 🎤 · due dot on the first line, then what it is, then how you did last time */
+  .drill-card { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 3px 10px; width: 100%; text-align: left; padding: 15px 18px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius); color: var(--text); cursor: pointer; font-family: inherit; transition: border-color 0.15s, background 0.15s; }
   .drill-card:hover { border-color: var(--accent); background: var(--bg-panel-2); }
   .dc-name { font-size: 16px; font-weight: 600; }
-  .dc-meta { font-size: 12.5px; color: var(--text-dim); }
-  /* a drill's tier, painted from the registry */
-  .dc-badge { align-self: flex-start; margin-top: 2px; padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.03em; border: 1px solid var(--border-strong); color: var(--text-dim); }
-  .dc-badge.b-mic { border-color: var(--accent); color: var(--accent); }
-  .dc-badge.b-acc { border-color: var(--border-strong); color: var(--text); }
-  .dc-badge:empty { display: none; }
+  .dc-meta, .dc-last { grid-column: 1 / -1; font-size: 12.5px; color: var(--text-dim); }
+  /* painted from the registry and the learner model (paintDrillCards) */
+  .dc-tags { display: inline-flex; align-items: center; gap: 8px; }
+  .dc-mic { font-size: 14px; line-height: 1; }
+  .dc-due { width: 9px; height: 9px; border-radius: 50%; background: var(--third); box-shadow: 0 0 0 3px rgba(224,150,43,0.22); }
+  .dc-last { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
+  .dc-last:empty { display: none; }
   .seam-btn { border-color: var(--accent); color: var(--accent); }
 
   /* ---- the drill shell: header (#drill-ctx) · strip · setup · hint · stage · summary ---- */
@@ -274,6 +278,9 @@
   .practice-section .practice-list { margin-top: 0; }
 
   /* ---- chord-change fluency / one-minute changes ---- */
+  /* one-minute changes: your own pair */
+  .cm-custom { gap: 6px; }
+  .cm-custom .cm-swap { font-size: 16px; margin: 0 4px; }
   .cm-best-line { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); margin: 12px 0; min-height: 18px; }
   #cm-setup .drill-actions { margin-top: 10px; }
   #cm-setup-note { max-width: 620px; }

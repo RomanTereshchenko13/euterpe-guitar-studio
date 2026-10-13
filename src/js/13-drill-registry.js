@@ -9,8 +9,9 @@
        isActive:()=>boolean,       // is this drill running right now?
        refreshLang:fn|undefined,   // optional: re-paint an in-flight drill
        onKey:fn|undefined,         // optional: re-derive from a new key or chord
-       key:true|undefined,         // optional: it reads the key → the strip's key chip
-       chord:true|undefined,       // optional: it reads the chord → the strip's chord chip
+       key:true|fn|undefined,      // optional: it reads the key → the strip's key chip
+       chord:true|fn|undefined,    // optional: it reads the chord → the strip's chord chip
+                                   //   (a function when it depends on the drill's setup)
        tempo:true|undefined,       // optional: it runs on the shared tempo → the tempo chip
        play:fn|undefined,          // optional: the strip's ▶ in this drill
        playing:()=>boolean|undefined,  // optional: ▶ is a play/stop toggle (■ while true)
@@ -28,14 +29,15 @@
        kind:'recall'|'perf',      // recall → SRS-scheduled · perf → trended, with a best
        items:'note',              // recall only: the item-id namespace ("note:E")
        sess:'notes',              // the session drill-id namespace ("timing:8ths")
+       reads:['strum',…],         // optional: older namespaces this track carries on
        better:'high'|'low',       // perf only: which direction is improvement
        unit:'pct'|'bars'|'cpm',   // perf only: what the number is, for the readout
-       scored:'mic'|'acc',        // optional: what tier this track offers
+       metric:'err',              // optional: the headline and trend are the timing error
+       scored:'mic',              // optional: it listens — the card's 🎤
        arg:any }                  // optional: handed to the drill's begin()
 
    `scored` is declared, not derived from mic(): mic() says whether the tier can run on
-   this device right now, the card badge says what kind of drill this is on any device.
-   Omitted means 'coach' — the drill hands you a number to beat and judges nothing.
+   this device right now, the card's 🎤 says what kind of drill this is on any device.
 
    Slot 13 is load-bearing: DRILLS is a const, so it must exist before the slot-14
    drill files register into it. */
@@ -117,8 +119,10 @@ function drillRecord(sessId, score, err){
   saveState();
   renderPractice();
   const tr=trackBySess(sessNs(sessId));
+  // a track scored on its timing error says that, when the run has one
+  const said = tr && tr.metric==='err' && err ? { last:err.err, unit:'ms' } : { last:score, unit:tr ? tr.unit : '' };
   const live=document.getElementById('drill-live');
-  if(live) live.textContent=(tr && tr.label ? t(tr.label)+': ' : '')+trendScore({ last:score, unit:tr ? tr.unit : '' });
+  if(live) live.textContent=(tr && tr.label ? t(tr.label)+': ' : '')+trendScore(said);
 }
 
 /* The finite drills' summary (notes, ear): stats, a way back to what teaches the misses,
@@ -251,16 +255,16 @@ function drillTracks(){
 }
 // the track whose recall items live under this id namespace ("note", "interval")
 function trackByItems(ns){ return drillTracks().find(tr => tr.items===ns) || null; }
-// the track whose sessions are recorded under this drill-id namespace ("timing", "comp")
-function trackBySess(ns){ return drillTracks().find(tr => tr.sess===ns) || null; }
+// the track whose sessions are recorded under this drill-id namespace ("timing"), or
+// that carries it on from a drill it replaced ("comp" → rhythm)
+function trackBySess(ns){ return drillTracks().find(tr => tr.sess===ns || (tr.reads||[]).includes(ns)) || null; }
+// the namespaces a track's history lives under: its own, then the ones it carries on
+function sessFamily(ns){ const tr=drillTracks().find(x=>x.sess===ns); return tr ? [tr.sess].concat(tr.reads||[]) : [ns]; }
 // a track by its own id
 function trackById(id){ return drillTracks().find(tr => tr.id===id) || null; }
-/* What tier a track offers, as a badge key — derived from the registry, so a card
-   can't claim a tier its drill doesn't have. */
-function trackBadge(tr){
-  const s = tr && tr.scored;
-  return s==='mic' ? 'badge_mic' : s==='acc' ? 'badge_acc' : 'badge_coach';
-}
+/* Does this track listen? The card's one 🎤, derived from the registry, so a card can't
+   claim a mic its drill doesn't have. */
+function trackMic(tr){ return !!(tr && tr.scored==='mic'); }
 /* Session ids are "<namespace>:<variant>" ("timing:8ths"), except the ear tracks,
    which have no variant. One splitter, so every reader agrees. */
 function sessNs(drillId){

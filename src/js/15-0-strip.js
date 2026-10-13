@@ -22,7 +22,8 @@ function chipOffered(k){
   if(k==='settings' || currentMode!=='practice') return true;
   if(k==='play') return false;                     // the drawer is the reference transport's
   const d=activeDrill(); if(!d) return false;
-  return k==='key' ? !!d.key : k==='chord' ? !!d.chord : k==='tempo' ? !!d.tempo : false;
+  const v = k==='key' ? d.key : k==='chord' ? d.chord : k==='tempo' ? d.tempo : false;
+  return typeof v==='function' ? !!v() : !!v;
 }
 function sheetShown(k){ return sheetIsOpen(k) && chipOffered(k); }
 

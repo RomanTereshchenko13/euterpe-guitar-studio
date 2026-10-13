@@ -198,7 +198,8 @@ if (T) {
    'drill_misses','drill_time','drill_again','drill_done','seam_drill',
    'sess_title','sess_lead','sess_len','sess_min','sess_start','sess_next',
    'sess_done_h','sess_none','sess_drills','sess_norun',
-   'badge_mic','badge_acc','badge_coach','unit_bars','unit_cpm',
+   'badge_mic','unit_bars','unit_cpm','drill_rhythm','drill_rhythm_meta','sp_over','sp_free','sp_yours',
+   'cm_yours','ear_level','ear_dir_down','ear_dir_harm','prog_unscored','sess_will',
    'prog_title','prog_accuracy','prog_streak','prog_sessions',
    'prog_yours','prog_best','prog_runs','prog_timing',
    'practice_grp_ear','ear_intervals','ear_intervals_meta','ear_chords','ear_chords_meta',
@@ -209,8 +210,8 @@ if (T) {
    'practice_grp_fretboard','practice_grp_rhythm','drill_changes','drill_changes_meta',
    'cm_pair','cm_dur','cm_sec','cm_click','cm_start','cm_stop','cm_setup_note',
    'cm_changes','cm_cpm','cm_best','cm_tap_hint','cm_undo','cm_newbest',
-   'drill_strum','drill_strum_meta','sp_pattern','sp_chord','sp_play','sp_stop','sp_hint',
-   'drill_comp','drill_comp_meta','co_now','co_next','co_hint',
+   'sp_pattern','sp_chord','sp_play','sp_stop','sp_hint',
+   'co_now','co_next','co_hint',
    'sp_swing','sp_accent','sp_mute','sp_band',
    'tg_prog','tg_pos',
    'a11y_palette','a11y_shapes',
@@ -429,7 +430,7 @@ if (T) {
     ok('B1: a never-practised performance track is in the queue',
        rev.due.some(d => d.track === 'timing' && d.reason === 'new'));
     ok('B1: ...and so is every other one',
-       ['timing', 'strum', 'changes', 'comp']
+       ['timing', 'rhythm-guitar', 'changes']
          .every(id => rev.due.some(d => d.track === id)));
     // a fresh run takes it out of the queue; going cold puts it back
     T.recordSession('timing:8ths', 12, NOW);
@@ -441,7 +442,7 @@ if (T) {
     T.resetLearner();
     [40, 42, 41, 30, 28, 27].forEach((v, i) => T.recordSession('strum:common', v, NOW + i * 1000));
     ok('B1: a slipping track is flagged even while it is fresh',
-       T.learnerReview(NOW + 6000).due.some(d => d.track === 'strum' && d.reason === 'slipping'));
+       T.learnerReview(NOW + 6000).due.some(d => d.track === 'rhythm-guitar' && d.reason === 'slipping'));
     // recall still outranks performance — an overdue SRS item is a fact, a cold drill a hint
     T.resetLearner();
     T.recordAttempt('note:A', false, NOW - 120000);
@@ -604,7 +605,7 @@ if (T) {
 
     /* --- the setup disclosure: open before Play, folded during the run --- */
     T.setDrillSeen({});
-    doc.getElementById('start-strum').click();
+    doc.getElementById('start-rhythm-guitar').click();
     ok('B2: the setup handle is offered for a drill that has a setup', vis('drill-ctx-setup'));
     ok('B2: the setup opens on entry — you are about to configure a run', bodyHas('drill-setup-open'));
     T.drillRunStarted();
@@ -641,12 +642,12 @@ if (T) {
     T.setDrillSeen({});
 
     /* --- the mic: one button, routed to whichever drill is running --- */
-    doc.getElementById('start-comp').click();
-    const micWasOn = T.tgScore.on();
+    doc.getElementById('start-rhythm-guitar').click();
+    const micWasOn = T.spScore.on();
     T.drillMicToggle();
-    ok('B2: the shared mic button reaches the running drill', T.tgScore.on() !== micWasOn);
+    ok('B2: the shared mic button reaches the running drill', T.spScore.on() !== micWasOn);
     T.drillMicToggle();
-    ok('B2: the mic is offered while comping', T.DRILLS.find(d => d.id === 'overchanges').mic() === T.tgScore.available());
+    ok('B2: the mic is offered in rhythm guitar', T.DRILLS.find(d => d.id === 'rhythm-guitar').mic() === T.spScore.available());
     T.exitAllDrills();
     /* ...and it is hidden where the running drill has no tier at all */
     doc.getElementById('start-interval').click();
@@ -839,17 +840,12 @@ if (T) {
     /* --- the badge is DERIVED, so a card cannot drift from its drill --- */
     T.setMode('practice');
     const cards = [...doc.querySelectorAll('#practice-home .drill-card[data-track]')];
-    ok('B4: every practice card carries a badge slot',
-       cards.length === 7 && cards.every(c => !!c.querySelector('.dc-badge')));
-    ok('B4: ...filled from the registry, not written into the markup',
-       cards.every(c => c.querySelector('.dc-badge').textContent
-                        === T.I18N[T.state().lang][T.trackBadge(T.trackById(c.dataset.track))]),
-       cards.filter(c => !c.querySelector('.dc-badge').textContent).map(c => c.id).join(','));
-    ok('B4: the three mic tiers are the three badged 🎤 Scored',
-       T.drillTracks().filter(tr => T.trackBadge(tr) === 'badge_mic').map(tr => tr.id).sort().join(',')
-       === 'comp,strum,timing');
-    ok('B4: and one-minute changes is the coach it says it is',
-       T.trackBadge(T.trackById('changes')) === 'badge_coach');
+    ok('step 9: six practice cards, each with a tag slot and a last-result line',
+       cards.length === 6 && cards.every(c => !!c.querySelector('.dc-tags') && !!c.querySelector('.dc-last')));
+    ok('step 9: one 🎤 where the drill listens — from the registry, not the markup',
+       cards.filter(c => !!c.querySelector('.dc-mic')).map(c => c.dataset.track).sort().join(',') === 'rhythm-guitar,timing'
+       && T.drillTracks().filter(T.trackMic).map(tr => tr.id).sort().join(',') === 'rhythm-guitar,timing');
+    ok('step 9: the three badge kinds are gone', !doc.querySelector('.dc-badge') && T.I18N.en.badge_acc === undefined && T.I18N.en.badge_coach === undefined);
 
     /* --- the narrative: a row per drill you have run --- */
     T.resetLearner();
@@ -865,15 +861,15 @@ if (T) {
        !doc.querySelector('.practice-progress-card').hidden);
     ok('B4: only the drills you have actually run get a row',
        rows.length === 2, rows.map(r => r.dataset.track).join(','));
-    ok('B4: most recently practised first', rows[0].dataset.track === 'strum');
+    ok('B4: most recently practised first', rows[0].dataset.track === 'rhythm-guitar');
     const timing = rows.find(r => r.dataset.track === 'timing');
-    ok('B4: the row reports the latest score in the track\'s own unit',
-       /^12 /.test(timing.querySelector('.pp-row-val').textContent),
+    ok('step 9: the timing row leads with the timing error, its main score',
+       /^±35 ms/.test(timing.querySelector('.pp-row-val').textContent),
        timing.querySelector('.pp-row-val').textContent);
     ok('B4: ...with the direction of travel B1 computed and nothing rendered',
        timing.querySelector('.pp-dir').classList.contains('up'));
-    ok('B4: ...the personal best',
-       timing.querySelector('.pp-row-sub').textContent.includes('12'));
+    ok('B4: ...the personal best, in the same terms',
+       timing.querySelector('.pp-row-sub').textContent.includes(T.I18N[T.state().lang].prog_best + ' ±35'));
     /* the number the app computed, displayed once and threw away until B1 kept it —
        "your timing went from 45 ms to 28 ms" is finally a sentence it can form */
     ok('B4: ...and the timing error, which used to be shown once and discarded',
@@ -1001,11 +997,11 @@ if (T) {
     T.startEar('interval');
     let e = T.getEar();
     ok('P4: interval drill starts active', !!e && !e.finished && e.type === 'interval');
-    ok('P4: interval session length = 8', e.total === 8);
+    ok('P4: interval session length = 8 (a narrow pool is dealt again)', e.total === 8);
     ok('P4: interval prompt has an interval + base midi',
        e.cur && typeof e.cur.iv === 'object' && Number.isInteger(e.cur.base));
     ok('P4: interval id is namespaced interval:*', /^interval:/.test(e.cur.key));
-    ok('P4: interval choices = all 12 intervals', T.earChoices().length === 12);
+    ok('step 9: a new player starts narrow: three intervals (M3, P5, P8)', T.earChoices().map(c => c.html).join() === 'M3,P5,P8');
 
     // a wrong guess records a miss and never the prompt's item as correct
     const wrongKey = T.INTERVALS.map(iv => 'interval:' + iv.name).find(k => k !== e.cur.key);
@@ -1024,7 +1020,8 @@ if (T) {
     const fin = T.getEar();
     ok('P4: interval drill finishes after all prompts', fin.finished && fin.done === fin.total);
     ok('P4: exactly one prompt was non-clean (the wrong guess)', fin.correctPrompts === fin.total - 1);
-    ok('P4: per-interval attempts written to the learner', T.learnerStats().items === fin.total);
+    ok('P4: every prompt is an attempt in the learner, on the narrow pool',
+       T.learnerStats().seen === fin.total && T.learnerStats().items <= 3);
     const sess = T.getLearner().sessions;
     ok('P4: an ear session was recorded with ear-interval label',
        sess.length === 1 && sess[0].drill === 'ear-interval');
@@ -1035,9 +1032,9 @@ if (T) {
     T.resetLearner();
     T.startEar('chordq');
     const ec = T.getEar();
-    ok('P4: chordq drill starts (8 qualities)', ec.type === 'chordq' && ec.total === 8);
+    ok('P4: chordq drill starts, 8 prompts', ec.type === 'chordq' && ec.total === 8);
     ok('P4: chordq id is namespaced chordq:*', /^chordq:/.test(ec.cur.key));
-    ok('P4: chordq choices = 8 qualities', T.earChoices().length === 8);
+    ok('step 9: ...and major vs minor', T.earChoices().map(c => c.html).join() === 'maj,m');
     ok('P4: chordq prompt carries a quality index + root', Number.isInteger(ec.cur.qi) && Number.isInteger(ec.cur.root));
 
     // the rhythm-ear drill was cut in step 1: no starter, no card
@@ -1228,153 +1225,183 @@ if (T) {
     T.resetLearner();
   })();
 
-  /* ---- Phase 5b: strumming-pattern trainer (coach visualizer) ---- */
-  (function strumDrill() {
+  /* ---- PLAN step 9: rhythm guitar — strumming & feel and comp, one drill ----
+     A pattern of down/up strums, or your own rhythm, over one chord or a progression (a
+     preset in the key, or the one built in the ▶ drawer); the feel layer (swing, accent,
+     palm mute, band) over all of it. It records rhythm:<over>:<pattern>, and its track
+     reads the strum:* and comp:* history of the two drills it replaced. */
+  (function rhythmGuitar() {
     const doc = win.document;
-    ok('5b: strum drill card present (start-strum)', !!doc.getElementById('start-strum'));
-    ok('5b: strum area + grid present', !!doc.getElementById('sp-area') && !!doc.getElementById('sp-grid'));
-
+    ok('step 9: one rhythm card instead of two', !!doc.getElementById('start-rhythm-guitar')
+       && !doc.getElementById('start-strum') && !doc.getElementById('start-comp') && !doc.getElementById('start-rhythm'));
+    ok('step 9: the comp drill and its area are gone', !doc.getElementById('tg-area') && !T.DRILLS.some(d => d.id === 'overchanges' || d.id === 'strum' || d.id === 'rhythm'));
+    ok('step 9: the rhythm area carries the grid, the NOW/NEXT stage and the beats',
+       ['sp-area', 'sp-grid', 'sp-stage', 'sp-now', 'sp-next', 'sp-beats', 'sp-over', 'sp-progs'].every(id => !!doc.getElementById(id)));
+    ok('step 9: the feel controls are still there', ['sp-swings', 'sp-accent', 'sp-mute', 'sp-band'].every(id => !!doc.getElementById(id)));
     // patterns are well-formed: 8 eighth-note slots, only D/U/'' and inline en+uk names
     ok('5b: at least 4 strum patterns', T.STRUM_PATTERNS.length >= 4);
     ok('5b: every pattern is one 4/4 bar of 8 slots',
        T.STRUM_PATTERNS.every(p => p.seg.length === 8 && p.seg.every(s => s === 'D' || s === 'U' || s === '')));
-    ok('5b: every pattern carries en + uk names',
-       T.STRUM_PATTERNS.every(p => p.en && p.uk));
+    ok('5b: every pattern carries en + uk names', T.STRUM_PATTERNS.every(p => p.en && p.uk));
+    ok('5d: three swing feels, straight first', T.SP_SWINGS.length === 3 && T.SP_SWINGS[0].amt === 0 && T.SP_SWINGS[2].amt > 0
+       && T.SP_SWINGS.every(s => s.en && s.uk));
+    // the track carries the old history on
+    const tr = T.trackById('rhythm-guitar');
+    ok('step 9: one rhythm track, reading the strum and comp history', !!tr && tr.sess === 'rhythm'
+       && tr.reads.join() === 'strum,comp' && !T.trackById('strum') && !T.trackById('comp'));
+    ok('step 9: an old strum or comp session belongs to it', T.trackBySess('strum').id === tr.id && T.trackBySess('comp').id === tr.id);
+
+    // a preset is laid on the key, spelled in it
+    T.setKey(0, 'C');
+    const bars = T.presetBars(T.SEQ_PRESETS[1]);
+    ok('5c: I–V–vi–IV is four bars in the key (C G Am F)', bars.map(b => b.lbl).join(' ') === 'C G A F'
+       && bars.map(b => b.qi).join() === '0,0,1,0', JSON.stringify(bars));
 
     T.resetLearner();
     T.initAudio();
     T.setCtxNow(0);
     T.setMode('practice');
-    T.startStrum();
-    ok('5b: startStrum opens the trainer, not yet playing', !!T.getSp() && T.getSp().playing === false);
-    T.setSpPattern(2);
-    T.spPlay();
-    let sp = T.getSp();
-    ok('5b: play starts the loop on the chosen pattern', sp.playing === true && sp.patIdx === 2);
-
-    // drive the scheduler forward; over ~10s even a slow tempo clears one full bar (8 slots)
-    for (let s = 0; s <= 10; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
-    sp = T.getSp();
-    ok('5b: the playhead advances through the 8 slots', sp.slot >= 0 && sp.slot < 8);
-    ok('5b: at least one full bar elapses', sp.bars >= 1);
-
-    T.spStop();
-    ok('5b: stop ends the loop', T.getSp().playing === false);
-    const ss = T.getLearner().sessions;
-    ok('5b: a practiced strum session is recorded (bars >= 1)',
-       ss.length >= 1 && /^strum:/.test(ss[ss.length - 1].drill) && ss[ss.length - 1].score >= 1);
-    ok('5b: strum coach mints no per-item SRS', T.learnerStats().items === 0);
-
-    // leaving Practice stops + clears a running trainer
-    T.spPlay();
-    T.setMode('reference');
-    ok('5b: leaving Practice exits a running strum trainer', T.getSp() === null);
-    T.setCtxNow(0);
-    T.resetLearner();
-  })();
-
-  /* ---- Phase 5c: comp the progression ----
-     Its card opens the drill, there is no neck and no tap scoring, and it records under
-     the `comp:` session namespace. */
-  (function compMode() {
-    const doc = win.document;
-    ok('5c: comp drill card present (start-comp)', !!doc.getElementById('start-comp'));
-    ok('5c: the separate comp area is gone', !doc.getElementById('co-area'));
-    ok('5c: comp shares the over-the-changes area + stage',
-       !!doc.getElementById('tg-area') && !!doc.getElementById('tg-now') && !!doc.getElementById('tg-next'));
-    ok('5c: three rhythm-group drill cards',
-       ['start-changes', 'start-strum', 'start-comp'].every(id => !!doc.getElementById(id)));
-
-    // tgBuildBars expands a preset (offsets, qi, bars) into one chord per bar, in the key
-    T.setKey(0, 'C');                       // context root C → I–V–vi–IV = C G Am F
-    const bars = T.tgBuildBars(T.SEQ_PRESETS[1]);
-    ok('5c: I–V–vi–IV expands to 4 bars', bars.length === 4);
-    ok('5c: bars are resolved to the context key (C G Am F)',
-       bars[0].pc === 0 && bars[1].pc === 7 && bars[2].pc === 9 && bars[3].pc === 5,
-       bars.map(b => b.pc).join(','));
-
-    T.resetLearner();
-    T.initAudio();
-    T.setCtxNow(0);
-    T.setMode('practice');
-    T.startComp();
-    ok('5c: startComp opens the drill, not yet playing', !!T.getTg() && T.getTg().playing === false);
-    ok('5c: comping has no neck, no mode switch and no lead-only rows',
-       !doc.getElementById('tg-board') && !doc.getElementById('tg-mode') && !doc.getElementById('tg-tone-rows'));
-    T.setTargetProg(2);                      // I–IV–V (3 bars)
-    T.targetPlay();
-    let co = T.getTg();
-    ok('5c: play starts the progression loop', co.playing === true && co.presetIdx === 2 && co.bars.length === 3);
-
-    // drive ~10s of the scheduler → the bar index advances and at least one cycle wraps
-    for (let s = 0; s <= 10; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
-    co = T.getTg();
-    ok('5c: the bar pointer stays in range', co.bar >= 0 && co.bar < co.bars.length);
-    ok('5c: at least one full progression cycle elapses', co.cycles >= 1);
-
-    T.targetStop();
-    ok('5c: stop ends the loop', T.getTg().playing === false);
-    const ss = T.getLearner().sessions;
-    ok('5c: a practiced comp session is recorded (bars comped)',
-       ss.length >= 1 && /^comp:/.test(ss[ss.length - 1].drill) && ss[ss.length - 1].score >= 1);
-    ok('5c: comp coach mints no per-item SRS', T.learnerStats().items === 0);
-
-    // leaving Practice stops + clears a running drill
-    T.targetPlay();
-    T.setMode('reference');
-    ok('5c: leaving Practice exits a running comp drill', T.getTg() === null);
-    T.setCtxNow(0);
-    T.resetLearner();
-  })();
-
-  /* ---- Phase 5b+5d merged: the feel half of the Strumming & feel lab ----
-     Groove & feel used to be its own card driving its own 8th-note clock; it is now
-     the swing/accent/mute/band layer over the pattern grid. These checks guard that
-     the merge kept the feel controls working AND that the old card is really gone
-     (a stray start-groove would mean the practice home and the drill disagreed). */
-  (function strumFeel() {
-    const doc = win.document;
-    ok('5d: the separate groove card is gone', !doc.getElementById('start-groove'));
-    ok('5d: the separate groove area is gone', !doc.getElementById('gf-area'));
-    ok('5d: feel controls live in the strum area',
-       !!doc.getElementById('sp-swings') && !!doc.getElementById('sp-accent') &&
-       !!doc.getElementById('sp-mute') && !!doc.getElementById('sp-band'));
-    // swing settings: straight → shuffle, each named in both languages, amount ascending
-    ok('5d: three swing feels (straight/swing/shuffle)', T.SP_SWINGS.length === 3);
-    ok('5d: swing feels carry en + uk names + an amount',
-       T.SP_SWINGS.every(s => s.en && s.uk && typeof s.amt === 'number'));
-    ok('5d: straight feel has zero swing', T.SP_SWINGS[0].amt === 0 && T.SP_SWINGS[T.SP_SWINGS.length - 1].amt > 0);
-
-    T.resetLearner();
-    T.initAudio();
-    T.setCtxNow(0);
-    T.setMode('practice');
-    T.startStrum();
-    // the combination neither drill could reach before: a swung, palm-muted,
-    // band-backed pattern — all four feel controls on at once over a chosen pattern.
+    T.startRhythm();
+    ok('step 9: it opens over the chord, not yet playing', !!T.getSp() && T.getSp().playing === false && T.getSp().over === 'chord');
+    ok('step 9: ...so the strip offers the chord, not the key', !doc.getElementById('chip-chord').hidden && doc.getElementById('chip-key').hidden);
+    // a pattern over one chord, with the whole feel layer on
     T.setSpPattern(2); T.setSpSwing(2); T.setSpAccent(true); T.setSpMute(true); T.setSpBand(true);
     T.spPlay();
-    ok('5d: play starts the loop with the feel layer engaged', T.getSp().playing === true);
-
-    // drive ~10s of the scheduler → the 8th-note playhead moves and a bar wraps
+    ok('5b: play starts the loop on the chosen pattern', T.getSp().playing === true && T.getSp().patIdx === 2);
     for (let s = 0; s <= 10; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
-    const sp = T.getSp();
-    ok('5d: the 8th-note playhead stays in range', sp.slot >= 0 && sp.slot < 8);
-    ok('5d: at least one bar elapses with swing + band on', sp.bars >= 1);
-
+    ok('5b: the playhead stays in the bar', T.getSp().slot >= 0 && T.getSp().slot < 8);
+    ok('5b: at least one bar elapses with the feel layer on', T.getSp().barsPlayed >= 1);
     T.spStop();
-    ok('5d: stop ends the loop', T.getSp().playing === false);
-    const ss = T.getLearner().sessions;
-    ok('5d: a practiced session is recorded under the strum namespace',
-       ss.length >= 1 && /^strum:/.test(ss[ss.length - 1].drill) && ss[ss.length - 1].score >= 1);
-    ok('5d: the merged coach still mints no per-item SRS', T.learnerStats().items === 0);
+    let ss = T.getLearner().sessions;
+    ok('step 9: a run records rhythm:<over>:<pattern>', ss.length === 1 && ss[0].drill === 'rhythm:chord:common' && ss[0].score >= 1, ss.map(s => s.drill).join());
+    T.setSpSwing(0); T.setSpAccent(false); T.setSpMute(false); T.setSpBand(false);
 
+    // the progression, with your own rhythm
+    T.setSpOver('prog'); T.setSpProg(2); T.setSpPattern(-1);
+    ok('step 9: over a preset progression the strip offers the key, not the chord',
+       !doc.getElementById('chip-key').hidden && doc.getElementById('chip-chord').hidden);
+    ok('step 9: ...the stage shows NOW and NEXT, and free shows beats, not a pattern grid',
+       !doc.getElementById('sp-stage').hidden && doc.getElementById('sp-grid').hidden && !doc.getElementById('sp-beats').hidden
+       && /^C/.test(doc.getElementById('sp-now').textContent));
+    T.setCtxNow(0);
+    T.spPlay();
+    ok('step 9: I–IV–V is three bars', T.getSp().bars.length === 3);
+    for (let s = 0; s <= 10; s += 0.05) { T.setCtxNow(s); T.schedAdvance(); }
+    ok('step 9: the bar moves through the progression', T.getSp().barsPlayed >= 3 && T.getSp().bar >= 0 && T.getSp().bar < 3);
+    T.spStop();
+    ss = T.getLearner().sessions;
+    ok('step 9: ...and records under its name', ss[ss.length - 1].drill === 'rhythm:I–IV–V:free', ss[ss.length - 1].drill);
+    // the drawer's own progression, once there is one
+    const seq0 = JSON.parse(JSON.stringify(T.getSeq()));
+    T.setSeq([{ pc: 2, lbl: 'D', qi: 1, bars: 2 }, { pc: 7, lbl: 'G', qi: 6, bars: 1 }]);
+    T.setSpProg(-1);
+    ok('step 9: "yours" is the ▶ drawer\'s progression, bar for bar', T.spBars().map(b => b.lbl).join() === 'D,D,G'
+       && !!doc.querySelector('#sp-progs [data-i="-1"].active'));
+    T.setSeq([]);
+    T.setSpProg(-1);
+    ok('step 9: ...and with none built it is not offered', !doc.querySelector('#sp-progs [data-i="-1"]') && T.spBars().length === 4);
+    T.setSeq(seq0);
+    // a key change re-lays a preset progression
+    T.setSpProg(1);
+    T.setKey(7, 'G');
+    ok('step 9: a new key re-lays the progression (G D Em C)', T.getSp().bars.map(b => b.lbl).join(' ') === 'G D E C');
+    T.setKey(0, 'C');
+    T.setSpOver('chord'); T.setSpPattern(0);
+
+    // the history it carries on
+    T.resetLearner();
+    T.recordSession('strum:common', 8, 1700000000000);
+    T.recordSession('comp:ii–V–I', 12, 1700000001000);
+    T.recordSession('rhythm:chord:folk', 10, 1700000002000);
+    ok('step 9: the track\'s trend reads all three namespaces', T.learnerTrend('rhythm', 1700000003000).n === 3);
+    T.renderPractice();
+    ok('step 9: ...so the progress card has one rhythm row', [...doc.querySelectorAll('#practice-progress .pp-row')].map(r => r.dataset.track).join() === 'rhythm-guitar');
+
+    // leaving Practice stops + clears a running drill
     T.spPlay();
     T.setMode('reference');
-    ok('5d: leaving Practice exits the running lab', T.getSp() === null);
+    ok('5b: leaving Practice exits a running rhythm drill', T.getSp() === null);
     T.setCtxNow(0);
     T.resetLearner();
-    T.setSpSwing(0); T.setSpAccent(false); T.setSpMute(false); T.setSpBand(false);
+  })();
+
+  /* ---- PLAN step 9: timing by its error, your own pair, ear that widens, a home that
+     says how you are doing ---- */
+  (function practiceStep9() {
+    const doc = win.document, DAY = 86400000, T0 = Date.now() - 3 * DAY;
+
+    /* --- timing: with the mic the score and trend are the timing error; without, a run
+       is recorded unscored and still keeps the track from falling due --- */
+    T.resetLearner();
+    T.recordSession('timing:eighth', 9, T0);                         // a coach run: bars, no error
+    let tn = T.learnerTrend('timing');
+    ok('step 9: a coach timing run is recorded but unscored', tn.n === 1 && tn.last === null && tn.unit === 'ms');
+    ok('step 9: ...and keeps the track from falling due', !T.learnerReview().due.some(d => d.track === 'timing'));
+    [40, 34, 30, 24].forEach((e, i) => T.recordSession('timing:eighth', 9, T0 + (i + 1) * 1000, { err: e }));
+    tn = T.learnerTrend('timing');
+    ok('step 9: scored runs are read on their timing error, lower is better',
+       tn.last === 24 && tn.best === 24 && tn.dir === 'up' && tn.better === 'low', JSON.stringify(tn));
+    T.setMode('practice');
+    T.startTiming(); T.sdScore.setOn(true); T.setCalKnown(true);
+    T.getSd().bars = 2; T.getSd().playing = true;
+    T.sdScore._set([1, 2, 3], [1.01, 2.01, 3.01]);
+    T.sdToggle();
+    ok('step 9: a scored run is said aloud as its timing error', /±\d+ ms$/.test(doc.getElementById('drill-live').textContent), doc.getElementById('drill-live').textContent);
+    T.sdScore.setOn(false); T.exitTiming();
+
+    /* --- the practice home: last result, trend and a due dot on each card --- */
+    T.renderPractice();
+    const card = id => doc.querySelector('#practice-home .drill-card[data-track="' + id + '"]');
+    ok('step 9: a card shows its last result and the direction of travel',
+       /^±\d+ ms/.test(card('timing').querySelector('.dc-last').textContent) && !!card('timing').querySelector('.dc-last .pp-dir.up'));
+    ok('step 9: an untouched drill shows no result, and no dot for merely being new',
+       card('changes').querySelector('.dc-last').textContent === '' && !card('changes').querySelector('.dc-due'));
+    T.recordAttempt('interval:M3', false, Date.now() - 120000);   // overdue
+    T.recordSession('changes:C-G', 30, Date.now() - 9 * DAY);     // gone cold
+    T.renderPractice();
+    ok('step 9: a due dot on a drill with overdue items, and on one gone cold',
+       !!card('interval').querySelector('.dc-due') && !!card('changes').querySelector('.dc-due') && !card('timing').querySelector('.dc-due'));
+    /* --- the session card says what it will do --- */
+    T.setSessMins(10); T.renderSessionCard();
+    const plan = doc.getElementById('sess-plan').textContent, p = T.sessionPlan(10);
+    ok('step 9: the session card names the drills it will run, and for how long',
+       p.every(b => plan.includes(T.I18N[T.state().lang][T.trackById(b.track).label])) && plan.includes(String(p[0].secs / 60)), plan);
+
+    /* --- one-minute changes: any two chords, barre chords included --- */
+    T.startChanges();
+    T.setCmPair(-1); T.setCmCustom([[6, 1], [11, 0]]);   // F♯m – B
+    T.cmBegin();
+    ok('step 9: your own pair runs, shapes and all', T.getCm().phase === 'run'
+       && /F♯m/.test(doc.getElementById('cm-chord-a').textContent) && !!doc.querySelector('#cm-chord-b svg'));
+    ok('step 9: ...under its own session id', T.cmPairId(-1) === 'changes:F#m-B');
+    T.finishChanges(); T.exitChanges();
+    T.startChanges();
+    T.setCmPair(-1);
+    doc.querySelector('#cm-pairs [data-i="-1"]').click();
+    ok('step 9: the pair picker offers it, with a root and quality per chord',
+       !doc.getElementById('cm-custom').hidden && doc.querySelectorAll('#cm-custom select').length === 4);
+    const sel = doc.querySelector('#cm-custom select[data-k="0"][data-part="pc"]');
+    sel.value = '5'; sel.dispatchEvent(new win.Event('change', { bubbles: true }));
+    ok('step 9: ...and it is remembered', T.getCmCustom()[0][0] === 5
+       && JSON.stringify(JSON.parse(win.localStorage.getItem('guitarStudio.v1')).cmCustom) === JSON.stringify(T.getCmCustom()));
+    T.exitChanges(); T.setCmPair(0);
+
+    /* --- ear: narrow first, wider as each level is mastered, more directions with it --- */
+    T.resetLearner();
+    ok('step 9: intervals start at level 1 of 4', T.earLevel('interval') === 0 && T.earPool('interval').length === 3);
+    T.EAR_LEVELS.interval[0].forEach(k => { T.recordAttempt(k, true); T.recordAttempt(k, true); });
+    ok('step 9: mastering a level widens the pool', T.earLevel('interval') === 1 && T.earPool('interval').length === 5);
+    T.startEar('interval');
+    const dirs = new Set(); for (let i = 0; i < 40; i++) { dirs.add(T.getEar().cfg.make('interval:P5').dir); }
+    ok('step 9: descending joins ascending at level 2, harmonic not yet', dirs.has('up') && dirs.has('down') && !dirs.has('harm'), [...dirs].join());
+    ok('step 9: the drill says the level', new RegExp('^' + T.I18N[T.state().lang].ear_level.replace('{n}', '2').replace('{m}', '4')).test(doc.getElementById('ear-count').textContent),
+       doc.getElementById('ear-count').textContent);
+    T.exitEar();
+    T.EAR_LEVELS.chordq.forEach(l => l.forEach(k => { T.recordAttempt(k, true); T.recordAttempt(k, true); }));
+    ok('step 9: chord quality widens to all eight', T.earPool('chordq').length === 8);
+    T.setMode('reference');
+    T.resetLearner();
+    T.setCalKnown(true);
   })();
 
   /* ---- PLAN step 1: three drills cut, their history kept ----
@@ -1386,8 +1413,8 @@ if (T) {
     const doc = win.document;
     ['start-target', 'start-callresp', 'start-rhythm', 'cr-area', 'cr-board', 'tg-board']
       .forEach(id => ok('step 1: removed from the markup: #' + id, !doc.getElementById(id)));
-    ok('step 1: Practice has 7 cards or fewer',
-       doc.querySelectorAll('#practice-home .drill-card').length <= 7);
+    ok('step 1: Practice has 7 cards or fewer (6 since step 9)',
+       doc.querySelectorAll('#practice-home .drill-card').length <= 6);
     ok('step 1: no Lead group left behind', !doc.querySelector('[data-i18n="practice_grp_lead"]'));
 
     const NOW = 1760000000000, DAY = 86400000;
@@ -1422,7 +1449,7 @@ if (T) {
     ok('step 1: ...and their personal bests', L.best['target:I–V–vi–IV'].score === 72 && L.best['callresp:A'].score === 80);
     const rev = T.learnerReview(NOW);
     ok('step 1: an overdue item of a cut track is not offered for review',
-       rev.total === 0 && !rev.due.some(d => /rhythm|target|callresp/.test(d.track)), JSON.stringify(rev.due));
+       rev.total === 0 && !rev.due.some(d => /^(rhythm|target|callresp)$/.test(d.track)), JSON.stringify(rev.due));
     ok('step 1: the session planner only plans registered tracks',
        T.sessionPlan(20, NOW).every(b => !!T.trackById(b.track)));
     T.setMode('practice');
@@ -1554,9 +1581,9 @@ if (T) {
 
     // activeDrill() reports the running drill
     T.setMode('practice');
-    T.startStrum();
+    T.startRhythm();
     const a = T.activeDrill();
-    ok('registry: activeDrill() finds the running drill', !!a && a.id === 'strum');
+    ok('registry: activeDrill() finds the running drill', !!a && a.id === 'rhythm-guitar');
 
     // refreshDrillsLang is what applyLang now calls — it must repaint, not throw
     let threw = false;
@@ -1627,16 +1654,17 @@ if (T) {
     T.initAudio();
     T.setMode('practice');
     T.setKey(0, 'C');
-    T.setTargetProg(1);                     // I–V–vi–IV
-    T.startComp();
-    ok('drill ctx: bars start in the context key (C)', T.getTg().bars[0].pc === 0);
+    T.startRhythm();
+    T.setSpOver('prog'); T.setSpProg(1);     // I–V–vi–IV
+    ok('drill ctx: bars start in the context key (C)', T.getSp().bars[0].pc === 0);
     T.setKey(7, 'G');
     T.drillKeyChanged();
     ok('drill ctx: a key change re-resolves the running drill into the new key (G)',
-       T.getTg().bars[0].pc === 7, String(T.getTg().bars[0].pc));
+       T.getSp().bars[0].pc === 7, String(T.getSp().bars[0].pc));
 
     // a drill with nothing key-dependent simply omits onKey — that must not throw
-    T.exitTarget();
+    T.setSpOver('chord');
+    T.exitRhythm();
     T.startChanges();
     let threw = false;
     try { T.drillKeyChanged(); } catch (e) { threw = true; }
@@ -1689,8 +1717,8 @@ if (T) {
     ok('A1: returning to the practice home hides it too', !tempoShown());
     // every drill that rides the shared scheduler must declare it, or it silently loses
     // the only tempo control it has left
-    const timed = ['timing', 'strum', 'overchanges', 'changes'];
-    ok('A1: all four scheduler-driven drills declare tempo:true',
+    const timed = ['timing', 'rhythm-guitar', 'changes'];
+    ok('A1: all three scheduler-driven drills declare tempo:true',
        timed.every(id => { const d = T.DRILLS.find(x => x.id === id); return d && d.tempo === true; }),
        T.DRILLS.filter(d => d.tempo).map(d => d.id).join(','));
     ok('A1: and no untimed drill declares it',
@@ -2682,7 +2710,7 @@ if (T) {
     ok('step 8: ...and folds its setup and hint so the stage moves up', !doc.body.classList.contains('drill-setup-open') && !doc.body.classList.contains('drill-help-open'));
     T.stripPlay();
     ok('step 8: ■ stops it', T.getSd().playing === false);
-    T.startTrack('strum');
+    T.startTrack('rhythm-guitar');
     ok('step 8: strumming reads the chord: chord, tempo and ▶ — no key', vis('chip-chord') && vis('chip-tempo') && vis('chip-play') && !vis('chip-key'));
     T.toggleSheet('chord');
     quals().find(b => b.textContent === 'maj').click();
@@ -3268,12 +3296,12 @@ if (T) {
     const doc = win.document;
     const near = (a, b, eps) => Math.abs(a - b) < eps;
     ok('rhythm: the strum drill has a scored-run controller', !!T.spScore);
-    ok('rhythm: the comp drill has a scored-run controller', !!T.tgScore);
+
 
     /* B2: the status line and the score panel stay per-drill (they sit inside the
        drill's own stage), but the mic TOGGLE is one button in the shared header — it
        was the same control drawn three times, in three drills' control rows. */
-    ['sp-status', 'sp-score', 'tg-status', 'tg-score', 'drill-ctx-mic'].forEach(id => {
+    ['sp-status', 'sp-score', 'drill-ctx-mic'].forEach(id => {
       ok('rhythm: markup carries #' + id, !!doc.getElementById(id));
     });
     ok('B2: the per-drill mic buttons are gone', !doc.getElementById('sp-mic') && !doc.getElementById('tg-mic') && !doc.getElementById('sd-mic'));
@@ -3281,7 +3309,8 @@ if (T) {
     // Strumming: only the pattern's own slots are expected — the empty ones are
     // where the hand deliberately misses, and scoring them would be nonsense.
     T.setMode('practice');
-    T.startStrum();
+    T.startRhythm();
+    T.setSpPattern(2);
     T.spScore.setOn(true);
     T.calSetMs(0);
     // "the common one" = D · D-U · _-U-D-U over 8 slots: 6 strums, not 8
@@ -3299,16 +3328,16 @@ if (T) {
        busy && near(busy.meanAbsMs, sp.meanAbsMs, 0.01) && busy.extra === 2,
        busy ? JSON.stringify(busy) : 'null');
     T.spScore.setOn(false);
-    T.exitStrum();
 
-    // Comping: the scored slot is the CHANGE. What you play between changes is
-    // your rhythm, so it lands in `extra` rather than being marked wrong.
-    T.startComp();
-    T.tgScore.setOn(true);
+    // Your own rhythm (step 9: what Comp was): the scored slot is the CHANGE. What you
+    // play between changes is your rhythm, so it lands in `extra` rather than being
+    // marked wrong.
+    T.setSpPattern(-1);
+    T.spScore.setOn(true);
     const bars = [0, 2, 4, 6];                        // four bar downbeats
     const inBetween = [0.5, 1, 1.5, 2.5, 3, 3.5];     // your own comping in between
-    T.tgScore._set(bars, bars.map(b => b + 0.030).concat(inBetween));
-    const comp = T.tgScore._compute();
+    T.spScore._set(bars, bars.map(b => b + 0.030).concat(inBetween));
+    const comp = T.spScore._compute();
     ok('comp: the changes are what get scored', comp && comp.n === bars.length,
        comp ? String(comp.n) : 'null');
     ok('comp: ...at the accuracy the changes were landed with',
@@ -3317,13 +3346,14 @@ if (T) {
        comp && comp.hitRate === 1 && comp.extra === inBetween.length,
        comp ? JSON.stringify(comp) : 'null');
     // a change you never played is a miss, which is the whole point of the drill
-    T.tgScore._set(bars, [bars[0], bars[1], bars[3]].map(b => b + 0.030));
-    const dropped = T.tgScore._compute();
+    T.spScore._set(bars, [bars[0], bars[1], bars[3]].map(b => b + 0.030));
+    const dropped = T.spScore._compute();
     ok('comp: a change you never played counts as missed',
        dropped && dropped.n === 3 && near(dropped.hitRate, 0.75, 1e-9),
        dropped ? JSON.stringify(dropped) : 'null');
-    T.tgScore.setOn(false);
-    T.exitTarget();
+    T.spScore.setOn(false);
+    T.setSpPattern(0);
+    T.exitRhythm();
     T.setMode('reference');
   })();
 

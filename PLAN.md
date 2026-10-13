@@ -79,11 +79,11 @@ foundation work makes that work smaller.
 | Listen / Loop / Backing / progression Play / Cycle / Jam | play along | **Done (step 8)** — one ▶ + the progression drawer |
 | Mic tuner | heard | **Keep** |
 | Reference-tone tuner | — | **Merged (v2.17.0)** — "Tune by ear" inside the one tuner panel |
-| Timing & subdivision | heard | **Keep — the best drill**; scored on timing error (step 9) |
-| One-minute changes | heard | **Keep**; user-chosen chord pairs (step 9) |
-| Strumming & feel + Comp the progression | heard | **Merge** into one "Rhythm guitar" drill (step 9) |
+| Timing & subdivision | heard | **Done (step 9)** — read on its timing error |
+| One-minute changes | heard | **Done (step 9)** — your own pair, any chords |
+| Strumming & feel + Comp the progression | heard | **Done (step 9)** — one Rhythm guitar drill |
 | Note naming (tap) | — | **Freeze** — keep as is, no new work |
-| Interval ear · Chord-quality ear | heard (by ear) | **Keep**; start narrow, widen with mastery (step 9) |
+| Interval ear · Chord-quality ear | heard (by ear) | **Done (step 9)** — narrow first, widening with mastery |
 | Rhythm ear | — | **Cut (v2.17.0)** |
 | Chord-tone targeting (tap, answer lit) | — | **Cut (v2.17.0)** — the lit version is Harmony ▸ Arpeggio + Jam |
 | Call & response (tap, call lit) | — | **Cut (v2.17.0)** |
@@ -186,21 +186,23 @@ later step gets smaller after it.
       _Data:_ a save on the circle tab opens Scales with the key sheet up (compat lists it in
       MIGRATED); `playSrc` is new; `backingOpen` now means the drawer. On a 390×844 phone the
       neck starts at ~216px (Reference) and ~236px (timing run).
+- [x] **Practice: fewer, better drills** — **Rhythm guitar** replaces Strumming & feel and
+      Comp: a pattern or your own rhythm, over the chord or a progression (a preset in the key,
+      or the one built in the ▶ drawer), the feel layer over all of it; with the mic it scores
+      a pattern's strums or, free, the changes. Its track (`rhythm-guitar`, sessions
+      `rhythm:<over>:<pattern>`) reads the `strum:*` and `comp:*` history (`reads`). **Timing**
+      is read on its timing error (`metric:'err'`): headline, best and trend; a coach run is
+      recorded unscored and still keeps the track from falling due. **One-minute changes**
+      adds "your pair": any root and quality, barre chords included (`cmCustom`, saved).
+      **Ear** starts narrow (M3 · P5 · P8; major vs minor) and widens a level once each item
+      is answered right twice running; intervals add descending at level 2 and harmonic at 3.
+      **The home**: each card shows its last result and trend, a dot when due (overdue,
+      cold or slipping — not merely new), and one 🎤 where the drill listens instead of three
+      badge kinds; the session card says what it will run. Practice has six cards.
+      _Data:_ additive — `cmCustom` is new; old strum/comp sessions and bests are untouched
+      and read by the new track. Still to do by hand: a check on a real phone.
 
 
-### 9 — Practice: fewer, better drills · M
-- [ ] **Rhythm guitar** = Strumming & feel + Comp: a pattern (or free) over one chord *or* the
-      progression from step 6. With the mic, scored on timing error.
-      _Data:_ `strum:*` and `comp:*` histories are read by the new track.
-- [ ] **Timing:** with the mic, the main score and trend are the mean timing error (already
-      recorded as `err`). Without the mic, record a scoreless session so the track is not due
-      forever.
-- [ ] **One-minute changes:** any two chords the player picks, barre chords included.
-- [ ] **Ear drills:** start narrow (a few intervals / major vs minor) and widen with mastery;
-      add descending and harmonic intervals.
-- [ ] **Practice home:** each card shows last result, trend and a "due" dot; one mic icon where
-      the mic is used replaces the three badge kinds; the session card says what it will do.
-- **Done when:** checked on a real phone as well as by the headless tools.
 
 ---
 

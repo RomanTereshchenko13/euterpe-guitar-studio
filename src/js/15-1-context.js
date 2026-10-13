@@ -17,25 +17,30 @@ function renderActiveContext(){
   markScrollables();
 }
 /* The Practice home, painted from the model in one pass: progress from the learner
-   model, badges and the session queue from the registry. Re-run on a mode switch and
+   model, the cards and the session queue from the registry. Re-run on a mode switch and
    a language change. */
 function renderPractice(){
   renderProgressInto('practice-progress');
   renderSessionCard();
   applySessionViews();
-  paintDrillBadges();
+  paintDrillCards();
 }
-/* The practice cards' tier badge comes from the registry (trackBadge), never from
-   markup, so a card can't claim a tier its drill doesn't have. */
-function paintDrillBadges(){
+/* Each card says, from the model and never from markup: whether the drill listens (one
+   🎤), whether it is due (a dot — overdue items, gone cold, or slipping; not merely
+   new), and its last result with the direction of travel. */
+function paintDrillCards(){
+  const due=new Set((learnerReview().due||[]).filter(d=>d.reason!=='new').map(d=>d.track));
   document.querySelectorAll('#practice-home .drill-card[data-track]').forEach(card=>{
-    const slot=card.querySelector('.dc-badge'); if(!slot) return;
     const tr=trackById(card.dataset.track);
-    if(!tr){ slot.textContent=''; return; }
-    const key=trackBadge(tr);
-    slot.textContent=t(key);
-    // spelled out, not assembled: a runtime-built class is invisible to the lint's dead-CSS check
-    slot.className='dc-badge '+(key==='badge_mic'?'b-mic':key==='badge_acc'?'b-acc':'b-coach');
+    const tags=card.querySelector('.dc-tags'), last=card.querySelector('.dc-last');
+    if(tags) tags.innerHTML = !tr ? '' :
+      (trackMic(tr) ? '<span class="dc-mic" title="'+t('badge_mic')+'" role="img" aria-label="'+t('badge_mic')+'">🎤</span>' : '')+
+      (due.has(tr.id) ? '<span class="dc-due" title="'+t('prog_due')+'" role="img" aria-label="'+t('prog_due')+'"></span>' : '');
+    if(!last) return;
+    const tn = tr && tr.sess ? learnerTrend(tr.sess) : null;
+    if(!tn || !tn.n){ last.textContent=''; return; }
+    last.innerHTML = tn.last===null ? t('prog_unscored')
+      : trendScore(tn)+(tn.scored>1 ? ' <span class="pp-dir '+tn.dir+'">'+trendArrow(tn.dir)+'</span>' : '');
   });
 }
 

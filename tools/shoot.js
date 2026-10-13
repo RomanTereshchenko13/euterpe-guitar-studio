@@ -25,9 +25,9 @@
    `reference` is the default and needs no token. Phase 4 Ear: pass `ear` for the
    Ear home, or `ear-interval` / `ear-chordq` to start that drill.
    Phase 5 Rhythm: pass `changes` for the one-minute-changes setup, or `changes-run`
-   to also press Start and land on the running tally; `strum` for the strumming-pattern
-   trainer, or `strum-run` to also press Play and land on the looping grid; `comp` for the
-   comp-the-progression drill, or `comp-run` to also press Play and land on the cycling now/next.
+   to also press Start and land on the running tally; `rhythm` for rhythm guitar (step 9:
+   strumming + comping), `rhythm-run` to also press ▶ and land on the looping grid, or
+   `rhythm-prog` to switch it to the progression with your own rhythm and press ▶ (NOW/NEXT).
    Phase 7 Timing: `timing` for the subdivision & timing coach, or `timing-run` to also press Play
    and land on the ticking grid with the scale walking the neck.
 
@@ -92,7 +92,7 @@ for (const a of process.argv.slice(2)) {
   else if (/^\d+\/\d+$/.test(a)) meterArg = a;              // time signature, e.g. 3/4 (Phase 7b)
   else if (a === 'practice' || a === 'reference' || a === 'drill' || a === 'session' || a === 'session-report'
            || a === 'changes' || a === 'changes-run'
-           || a === 'strum' || a === 'strum-run' || a === 'comp' || a === 'comp-run'
+           || a === 'rhythm' || a === 'rhythm-run' || a === 'rhythm-prog'
            || a === 'timing' || a === 'timing-run'
            || a === 'ear' || a === 'ear-interval' || a === 'ear-chordq')
     mode = (a === 'reference') ? null : a;
@@ -122,10 +122,9 @@ function appFor(panel) {
   if (mode === 'changes' || mode === 'changes-run') clicks.push(`var s=document.getElementById('start-changes');if(s)s.click();`);
   // every drill's Play / Start is the strip's ▶ (step 8)
   if (mode === 'changes-run') clicks.push(`var g=document.getElementById('g-play');if(g)g.click();`);
-  if (mode === 'strum' || mode === 'strum-run') clicks.push(`var s=document.getElementById('start-strum');if(s)s.click();`);
-  if (mode === 'strum-run') clicks.push(`var g=document.getElementById('g-play');if(g)g.click();`);
-  if (mode === 'comp' || mode === 'comp-run') clicks.push(`var s=document.getElementById('start-comp');if(s)s.click();`);
-  if (mode === 'comp-run') clicks.push(`var g=document.getElementById('g-play');if(g)g.click();`);
+  if (/^rhythm/.test(mode || '')) clicks.push(`var s=document.getElementById('start-rhythm-guitar');if(s)s.click();`);
+  if (mode === 'rhythm-prog') clicks.push(`var o=document.querySelectorAll('#sp-over .btn')[1];if(o)o.click();var f=document.querySelector('#sp-patterns [data-i="-1"]');if(f)f.click();`);
+  if (mode === 'rhythm-run' || mode === 'rhythm-prog') clicks.push(`var g=document.getElementById('g-play');if(g)g.click();`);
   if (mode === 'timing' || mode === 'timing-run') clicks.push(`var s=document.getElementById('start-timing');if(s)s.click();`);
   if (mode === 'timing-run') clicks.push(`var g=document.getElementById('g-play');if(g)g.click();`);
   /* Phase 10/B3, the timed session. `session` photographs a drill running INSIDE one —

@@ -2,7 +2,9 @@
    Pick a subdivision (quarters → 16ths) and a tempo; an accented click ticks the grid
    (bar downbeat > beat > subdivision), a visual grid pulses each slot, and the key's
    scale is walked note by note in one box so there is something to play. With the mic
-   on, a scored run (13-scored.js). A run of ≥1 bar records a session. */
+   on, a scored run (13-scored.js). A run of ≥1 bar records a session: its score is the
+   bars, its `err` the mean timing error — and the track is read on that error (metric
+   'err'), so a coach run is recorded unscored, which still keeps it from falling due. */
 
 /* subdivisions per beat; en/uk inline so the i18n check only guards the I18N table */
 const SUBDIVS = [
@@ -186,7 +188,7 @@ function refreshTimingLang(){
 registerDrill({ id:'timing', area:'sd-area', tempo:true, key:true, setup:'sd-setup',
                 play:sdToggle, playing:()=>!!(sd && sd.playing),
                 tracks:[{ id:'timing', kind:'perf', sess:'timing', label:'drill_timing',
-                          better:'high', unit:'bars', scored:'mic' }],
+                          better:'high', unit:'bars', metric:'err', scored:'mic' }],
                 begin:beginTiming, end:endTiming, isActive:()=>!!sd, refreshLang:refreshTimingLang,
                 // the header's mic, offered wherever onset detection can run
                 mic:()=>sdScore.available(), micOn:()=>sdScore.on(),

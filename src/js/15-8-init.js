@@ -88,7 +88,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     getSessMins:()=>sessMins, setSessMins:(m)=>{ sessMins=m; },
     SEAM_TRACKS,
     // progress narrative + card badges
-    trackBadge, paintDrillBadges, renderProgressInto, renderPractice, trendScore,
+    trackMic, paintDrillCards, renderProgressInto, renderPractice, trendScore, sessFamily,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord, seqClear,
     getSeq:()=>seq, setSeq:(a)=>{ seq=a; renderSeq(); },
     // shell
@@ -110,16 +110,18 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     earChoices:()=>(ear?ear.cfg.choices():[]), INTERVALS, EAR_QUAL_IDX,
     // chord-change fluency drill
     startChanges:()=>drillOpen(drillById('changes')), cmBegin, cmTap, cmUntap, finishChanges, exitChanges:()=>drillDone(drillById('changes')), getCm:()=>cmDrill,
-    CM_PAIRS, CM_DURS, cmPairId, cmPairBest,
+    CM_PAIRS, CM_DURS, CM_QUALS, cmPairId, cmPairBest, cmPairName,
+    getCmCustom:()=>cmCustom.map(c=>c.slice()), setCmCustom:(p)=>{ cmCustom=p.map(c=>c.slice()); },
     setCmPair:(i)=>{ cmPairIdx=i; if(cmDrill) cmDrill.pairIdx=i; }, setCmDur:(i)=>{ cmDurIdx=i; if(cmDrill) cmDrill.dur=CM_DURS[i]; },
-    // strumming & feel lab
-    startStrum:()=>drillOpen(drillById('strum')), spPlay, spStop, spToggle, exitStrum:()=>drillDone(drillById('strum')), getSp:()=>spDrill,
-    STRUM_PATTERNS, setSpPattern:(i)=>{ spIdx=i; if(spDrill) spDrill.patIdx=i; },
+    // rhythm guitar (strumming & comping as one drill)
+    startRhythm:()=>drillOpen(drillById('rhythm-guitar')), spPlay, spStop, spToggle, exitRhythm:()=>drillDone(drillById('rhythm-guitar')), getSp:()=>spDrill,
+    STRUM_PATTERNS, setSpPattern:(i)=>spSet(()=>{ spIdx=i; }), presetBars, spBars, spSessId:()=>spSessId(),
+    setSpOver:(v)=>spSet(()=>{ spOver=v; }), setSpProg:(i)=>spSet(()=>{ spProg=i; }),
     SP_SWINGS, setSpSwing:(i)=>{ spSwing=i; }, setSpAccent:(v)=>{ spAccent=!!v; },
     setSpMute:(v)=>{ spMute=!!v; }, setSpBand:(v)=>{ spBand=!!v; },
-    // comp-the-progression drill
-    startComp:()=>drillOpen(drillById('overchanges')), targetPlay, targetStop, targetToggle, exitTarget:()=>drillDone(drillById('overchanges')), getTg:()=>tgDrill,
-    tgBuildBars, setTargetProg:(i)=>{ tgIdx=i; if(tgDrill){ tgDrill.presetIdx=i; tgDrill.bars=tgBuildBars(SEQ_PRESETS[i]); } },
+    spTickNow:(t,c)=>spTick(t,c),
+    // ear levels
+    EAR_LEVELS, earLevel, earPool,
     // subdivision & timing drill
     startTiming:()=>drillOpen(drillById('timing')), sdToggle, exitTiming:()=>drillDone(drillById('timing')), getSd:()=>sd, SUBDIVS, SD_BEATS, sdPath,
     setSdSub:(i)=>{ sdSub=i; }, setSdPos:(i)=>{ sdPos=i; }, setSdNotes:(v)=>{ sdNotes=!!v; },
@@ -145,7 +147,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     // the shared scored-run layer and its consumers; _set() injects a run, so scoring
     // is driven end to end with no microphone
     scoredRun, SC_TOL_MAX,
-    sdScore, spScore, tgScore,
+    sdScore, spScore,
     // accessibility + onboarding
     applyA11y, showWelcome, dismissWelcome,
     setCbPalette:(v)=>{ cbPalette=!!v; }, setFnShapes:(v)=>{ fnShapes=!!v; }, setWelcomeSeen:(v)=>{ welcomeSeen=!!v; },

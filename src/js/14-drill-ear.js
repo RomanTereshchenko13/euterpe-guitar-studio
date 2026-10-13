@@ -4,7 +4,12 @@
      • interval — two notes played melodically; name the interval.
      • chordq   — a chord arpeggiated then strummed; name its quality.
    A multiple-choice answer, never a timing window, so it is scored on accuracy. Each
-   prompt is a learner item (interval:P5 / chordq:m7), so due items come back first. */
+   prompt is a learner item (interval:P5 / chordq:m7), so due items come back first.
+
+   Both start narrow and widen with mastery (EAR_LEVELS): the pool — and the answer grid —
+   is every level up to the first one not yet mastered, and mastering an item means
+   answering it right twice in a row. Intervals add direction as they widen: ascending
+   from the start, descending from level 2, played together (harmonic) from level 3. */
 
 /* The twelve ascending intervals. `name` (m2…P8) is the button label and the stable id
    tail (interval:P5); en/uk carry the full name, inline so the i18n check only guards
@@ -30,23 +35,50 @@ function earIvName(iv){ return lang==='en' ? iv.en : iv.uk; }
 const EAR_QUAL_IDX = [0, 1, 10, 12, 6, 7, 8, 9];   // maj · m · dim · aug · 7 · maj7 · m7 · m7♭5
 function earQualKey(qi){ const q=QUALITIES[qi]; return 'chordq:'+(q.short||'maj'); }
 
+/* The levels, cumulative: each adds its items once every item before it is mastered. */
+const EAR_LEVELS = {
+  interval: [['M3','P5','P8'], ['m3','P4'], ['M2','M6','m7'], ['m2','m6','M7','TT']].map(l=>l.map(n=>'interval:'+n)),
+  chordq:   [[0,1], [10,12], [6,7,8], [9]].map(l=>l.map(earQualKey)),   // maj m · dim aug · 7 maj7 m7 · m7♭5
+};
+const EAR_MASTERED = 2;      // right this many times in a row
+function earMastered(key){ const it=learner.items[key]; return !!it && it.streak>=EAR_MASTERED; }
+/* 0-based: the first level with an item not yet mastered (the last when all are) */
+function earLevel(type){
+  const lv=EAR_LEVELS[type]; let k=0;
+  while(k<lv.length-1 && lv[k].every(earMastered)) k++;
+  return k;
+}
+function earPool(type){ return [].concat(...EAR_LEVELS[type].slice(0, earLevel(type)+1)); }
+/* the ways an interval can be played, by the level they arrive at */
+const EAR_DIRS = [{ id:'up', from:0 }, { id:'down', from:1 }, { id:'harm', from:2 }];
+
 /* per-type config; the engine below only reads cfg.pool/make/play/choices/prompt */
 const EAR = {
   interval: {
-    len:8, sess:'ear-interval', prompt:()=>t('ear_int_prompt'),
-    pool:()=>INTERVALS.map(iv=>'interval:'+iv.name),
-    make(key){ const iv=INTERVALS.find(x=>'interval:'+x.name===key); const base=48+Math.floor(Math.random()*13); return {key, iv, base}; },
-    play(cur){ pluck(cur.base, 0, 1.5); pluck(cur.base+cur.iv.st, 0.6, 1.5); },                 // melodic, ascending
-    choices(){ return INTERVALS.map(iv=>({ key:'interval:'+iv.name, html:iv.name, label:earIvName(iv) })); }
+    len:8, sess:'ear-interval',
+    prompt:cur=>t('ear_int_prompt')+(cur && cur.dir!=='up' ? ' · '+t('ear_dir_'+cur.dir) : ''),
+    pool:()=>earPool('interval'),
+    make(key){ const iv=INTERVALS.find(x=>'interval:'+x.name===key);
+      const lv=earLevel('interval'), dirs=EAR_DIRS.filter(d=>d.from<=lv);
+      const dir=dirs[Math.floor(Math.random()*dirs.length)].id;
+      const base=(dir==='down' ? 60 : 48)+Math.floor(Math.random()*13); return {key, iv, base, dir}; },
+    play(cur){
+      const lo=cur.dir==='down' ? cur.base-cur.iv.st : cur.base, hi=lo+cur.iv.st;
+      if(cur.dir==='harm'){ pluck(lo, 0, 1.8); pluck(hi, 0.01, 1.8); }                         // together
+      else if(cur.dir==='down'){ pluck(hi, 0, 1.5); pluck(lo, 0.6, 1.5); }                    // melodic, descending
+      else { pluck(lo, 0, 1.5); pluck(hi, 0.6, 1.5); } },                                       // melodic, ascending
+    choices(){ const pool=earPool('interval');
+      return INTERVALS.filter(iv=>pool.includes('interval:'+iv.name)).map(iv=>({ key:'interval:'+iv.name, html:iv.name, label:earIvName(iv) })); }
   },
   chordq: {
     len:8, sess:'ear-chordq', prompt:()=>t('ear_chord_prompt'),
-    pool:()=>EAR_QUAL_IDX.map(earQualKey),
+    pool:()=>earPool('chordq'),
     make(key){ const qi=EAR_QUAL_IDX.find(i=>earQualKey(i)===key); const root=Math.floor(Math.random()*12); return {key, qi, root, base:48+root}; },
     play(cur){ const q=QUALITIES[cur.qi], n=q.iv.length;
       q.iv.forEach((iv,i)=>pluck(cur.base+iv, i*0.16, 1.6));                                    // arpeggio up
       q.iv.forEach(iv=>pluck(cur.base+iv, n*0.16+0.28, 1.9)); },                                // then the block
-    choices(){ return EAR_QUAL_IDX.map(qi=>{ const q=QUALITIES[qi]; return { key:earQualKey(qi), html:(q.short||'maj'), label:qName(q) }; }); }
+    choices(){ const pool=earPool('chordq');
+      return EAR_QUAL_IDX.filter(qi=>pool.includes(earQualKey(qi))).map(qi=>{ const q=QUALITIES[qi]; return { key:earQualKey(qi), html:(q.short||'maj'), label:qName(q) }; }); }
   }
 };
 
@@ -55,12 +87,19 @@ let ear = null;
 //         startT, finished, cur, answered, missed:[cur…] }
 
 function earShuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=a[i]; a[i]=a[j]; a[j]=tmp; } return a; }
-// SRS-weighted queue: due items first, then the rest, each shuffled, capped at the length
+/* SRS-weighted queue: due items first, then the rest, each shuffled; a narrow pool is
+   dealt again (never the same prompt twice running) until the round is full */
 function buildEarQueue(keys, len){
   const now=Date.now();
   const due=keys.filter(k=>((learner.items[k]||{due:0}).due)<=now);
   const rest=keys.filter(k=>due.indexOf(k)<0);
-  return earShuffle(due).concat(earShuffle(rest)).slice(0, len);
+  const q=earShuffle(due).concat(earShuffle(rest)).slice(0, len);
+  while(keys.length && q.length<len){
+    let deal=earShuffle(keys);
+    if(deal.length>1 && deal[0]===q[q.length-1]) deal=deal.slice(1).concat(deal[0]);
+    q.push(...deal.slice(0, len-q.length));
+  }
+  return q;
 }
 
 function beginEar(type){
@@ -110,8 +149,10 @@ function earAnswerLabel(){
 
 /* ---- DOM paint ---- */
 function renderEarPrompt(){
-  const p=document.getElementById('ear-prompt'); if(p) p.textContent=ear.cfg.prompt();
-  const c=document.getElementById('ear-count'); if(c) c.textContent=Math.min(ear.done+1, ear.total)+' / '+ear.total;
+  const p=document.getElementById('ear-prompt'); if(p) p.textContent=ear.cfg.prompt(ear.cur);
+  // the count, and the level the pool has widened to
+  const lv=EAR_LEVELS[ear.type];
+  const c=document.getElementById('ear-count'); if(c) c.textContent=t('ear_level').replace('{n}', earLevel(ear.type)+1).replace('{m}', lv.length)+' · '+Math.min(ear.done+1, ear.total)+' / '+ear.total;
   // the first-run instruction, folded behind ? for a regular
   const h=document.getElementById('ear-hint'); if(h) h.textContent=t('ear_hint');
   const fb=document.getElementById('ear-feedback'); if(fb){ fb.textContent=''; fb.className='ear-feedback'; }
@@ -167,8 +208,8 @@ registerDrill({ id:'ear', area:'ear-area',
                 play:earReplay, playKey:()=>'ear_replay',
                 /* two tracks, two SRS queues; session ids keep their historic `ear-` prefix */
                 tracks:[
-                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', scored:'acc', arg:'interval' },
-                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    scored:'acc', arg:'chordq' }
+                  { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', arg:'interval' },
+                  { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    arg:'chordq' }
                 ] });
 
 (function initEar(){

@@ -371,6 +371,8 @@
           <div class="pp-title" data-i18n="sess_title">Заняття</div>
           <p class="ps-lead" data-i18n="sess_lead">Скажи, скільки маєш часу — застосунок збере вправи, які варто повторити, відлічить час і підсумує.</p>
           <div class="row"><span class="ctrl-label" data-i18n="sess_len">Тривалість</span><div class="group" id="sess-mins"></div></div>
+          <!-- what the session will run, from the plan it would start (renderSessionCard) -->
+          <p class="ps-plan" id="sess-plan"></p>
           <div class="drill-bar"><button type="button" class="btn play" id="sess-start">Почати заняття</button></div>
         </div>
         <!-- progress: what's next, a row per drill you have run, then the aggregates -->
@@ -388,8 +390,9 @@
         <div class="ps-label" data-i18n="practice_grp_fretboard">Гриф</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-notes" data-track="note">
-            <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span><span class="dc-badge"></span>
+            <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span><span class="dc-tags"></span>
             <span class="dc-meta" data-i18n="drill_notes_meta">Грифознавство · рахунок за точністю</span>
+            <span class="dc-last"></span>
           </button></li>
         </ul>
       </div>
@@ -397,8 +400,9 @@
         <div class="ps-label" data-i18n="practice_grp_timing">Таймінг</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-timing" data-track="timing">
-            <span class="dc-name" data-i18n="drill_timing">Поділ і таймінг</span><span class="dc-badge"></span>
+            <span class="dc-name" data-i18n="drill_timing">Поділ і таймінг</span><span class="dc-tags"></span>
             <span class="dc-meta" data-i18n="drill_timing_meta">Вісімки · тріолі · шістнадцятки · коуч</span>
+            <span class="dc-last"></span>
           </button></li>
         </ul>
       </div>
@@ -406,16 +410,14 @@
         <div class="ps-label" data-i18n="practice_grp_rhythm">Ритм</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-changes" data-track="changes">
-            <span class="dc-name" data-i18n="drill_changes">Зміна акордів за хвилину</span><span class="dc-badge"></span>
+            <span class="dc-name" data-i18n="drill_changes">Зміна акордів за хвилину</span><span class="dc-tags"></span>
             <span class="dc-meta" data-i18n="drill_changes_meta">Чисті зміни за хвилину · коуч (без оцінки)</span>
+            <span class="dc-last"></span>
           </button></li>
-          <li><button type="button" class="drill-card" id="start-strum" data-track="strum">
-            <span class="dc-name" data-i18n="drill_strum">Бій і відчуття</span><span class="dc-badge"></span>
-            <span class="dc-meta" data-i18n="drill_strum_meta">Малюнки · свінг · акценти · глушіння · коуч</span>
-          </button></li>
-          <li><button type="button" class="drill-card" id="start-comp" data-track="comp">
-            <span class="dc-name" data-i18n="drill_comp">Акомпанемент прогресії</span><span class="dc-badge"></span>
-            <span class="dc-meta" data-i18n="drill_comp_meta">Потрібний акорд вчасно · коуч</span>
+          <li><button type="button" class="drill-card" id="start-rhythm-guitar" data-track="rhythm-guitar">
+            <span class="dc-name" data-i18n="drill_rhythm">Ритм-гітара</span><span class="dc-tags"></span>
+            <span class="dc-meta" data-i18n="drill_rhythm_meta">Малюнок або свій ритм · над акордом чи прогресією</span>
+            <span class="dc-last"></span>
           </button></li>
         </ul>
       </div>
@@ -423,12 +425,14 @@
         <div class="ps-label" data-i18n="practice_grp_ear">Слух</div>
         <ul class="practice-list">
           <li><button type="button" class="drill-card" id="start-interval" data-track="interval">
-            <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span><span class="dc-badge"></span>
+            <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span><span class="dc-tags"></span>
             <span class="dc-meta" data-i18n="ear_intervals_meta">Почуй дві ноти · назви інтервал</span>
+            <span class="dc-last"></span>
           </button></li>
           <li><button type="button" class="drill-card" id="start-chordq" data-track="chordq">
-            <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span><span class="dc-badge"></span>
+            <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span><span class="dc-tags"></span>
             <span class="dc-meta" data-i18n="ear_chords_meta">Почуй акорд · визнач його тип</span>
+            <span class="dc-last"></span>
           </button></li>
         </ul>
       </div>
@@ -440,6 +444,8 @@
       <!-- its setup is a whole step, not a disclosure, so it declares no shell setup element -->
       <div id="cm-setup">
         <div class="row"><span class="ctrl-label" data-i18n="cm_pair">Пара акордів</span><div class="group" id="cm-pairs"></div></div>
+        <!-- your own pair: root + quality for each chord (barre chords included) -->
+        <div class="row cm-custom" id="cm-custom" hidden></div>
         <div class="row">
           <span class="ctrl-label" data-i18n="cm_dur">Тривалість</span><div class="group" id="cm-durs"></div>
           <div class="divider"></div>
@@ -471,11 +477,14 @@
       <div class="drill-summary" id="cm-summary" hidden></div>
     </div>
 
-    <!-- Strumming & feel: a pattern of down/up strums loops over the current chord, each
-         8th-note slot lit in time; swing, backbeat, palm mute and band shape the feel. -->
+    <!-- Rhythm guitar: a pattern of down/up strums, or your own rhythm, over the chord or a
+         progression; each 8th-note slot lit in time; swing, backbeat, palm mute and band
+         shape the feel. Over a progression NOW/NEXT show the shapes. -->
     <div id="sp-area" hidden>
-      <!-- SETUP: folded away once you press Play -->
+      <!-- SETUP: folded away once you press ▶ -->
       <div class="drill-setup" id="sp-setup">
+        <div class="row"><span class="ctrl-label" data-i18n="sp_over">Грати над</span><div class="group" id="sp-over"></div></div>
+        <div class="row" id="sp-progs-row" hidden><span class="ctrl-label" data-i18n="tg_prog">Прогресія</span><div class="group" id="sp-progs"></div></div>
         <div class="row"><span class="ctrl-label" data-i18n="sp_pattern">Малюнок</span><div class="group" id="sp-patterns"></div></div>
         <div class="row">
           <span class="ctrl-label" data-i18n="sp_swing">Свінг</span><div class="group" id="sp-swings"></div>
@@ -489,7 +498,19 @@
       <!-- STAGE -->
       <div class="sp-name" id="sp-name"></div>
       <div class="sp-chord" id="sp-chord"></div>
+      <div class="co-stage" id="sp-stage" hidden>
+        <div class="co-slot">
+          <div class="co-lab" id="sp-now-lab" data-i18n="co_now">Зараз</div>
+          <div class="co-chord co-now" id="sp-now"></div>
+        </div>
+        <div class="co-arrow" aria-hidden="true">→</div>
+        <div class="co-slot co-next-slot">
+          <div class="co-lab" id="sp-next-lab" data-i18n="co_next">Далі</div>
+          <div class="co-chord co-next" id="sp-next"></div>
+        </div>
+      </div>
       <div class="sp-grid" id="sp-grid"></div>
+      <div class="co-beats" id="sp-beats" hidden></div>
       <!-- filled after a scored run only (13-scored.js), plus the mic-error line -->
       <p class="scored-status" id="sp-status" role="status" hidden></p>
       <div class="scored-panel" id="sp-score" hidden></div>
@@ -497,29 +518,6 @@
       <div class="drill-bar">
         <button type="button" class="btn" id="sp-click" aria-pressed="false"></button>
       </div>
-    </div>
-
-    <!-- Comp the progression: a progression loops with a band; NOW/NEXT show the diagrams -->
-    <div id="tg-area" hidden>
-      <div class="drill-setup" id="tg-setup">
-        <div class="row"><span class="ctrl-label" data-i18n="tg_prog">Прогресія</span><div class="group" id="tg-progs"></div></div>
-      </div>
-      <p class="drill-hint" id="tg-hint"></p>
-      <div class="drill-count" id="tg-hits"></div>
-      <div class="co-stage">
-        <div class="co-slot">
-          <div class="co-lab" id="tg-now-lab" data-i18n="co_now">Зараз</div>
-          <div class="co-chord co-now" id="tg-now"></div>
-        </div>
-        <div class="co-arrow" aria-hidden="true">→</div>
-        <div class="co-slot co-next-slot">
-          <div class="co-lab" id="tg-next-lab" data-i18n="co_next">Далі</div>
-          <div class="co-chord co-next" id="tg-next"></div>
-        </div>
-      </div>
-      <div class="co-beats" id="tg-beats"></div>
-      <p class="scored-status" id="tg-status" role="status" hidden></p>
-      <div class="scored-panel" id="tg-score" hidden></div>
     </div>
 
     <!-- Subdivision & timing: an accented click and grid tick the subdivision while the

@@ -89,13 +89,13 @@ function applyNav(){
 /* ---- "Drill this": a reference view opens the drill about what is on screen ----
    The one curated view → track map:
 
-     chord tones (+ triads) → comp     the chord on screen, changed on time under a band
+     chord tones (+ triads) → rhythm-guitar   the chord on screen, strummed in time
      scale                  → timing   this scale, walked in one box on the beat
      notes                  → note     find every instance of the note
 
    Arpeggio has no drill seam: its notes are practised over the band (▶ with the Jam).
    Everything else goes through startTrack(), like every door. */
-const SEAM_TRACKS = { chords:'comp', scale:'timing', notes:'note' };
+const SEAM_TRACKS = { chords:'rhythm-guitar', scale:'timing', notes:'note' };
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-seam]'); if(!b) return;
   const track=SEAM_TRACKS[b.dataset.seam]; if(!track) return;

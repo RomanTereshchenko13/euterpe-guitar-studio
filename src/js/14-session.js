@@ -148,6 +148,13 @@ function renderSessionCard(){
   if(host) host.innerHTML=SESSION_MINS.map(m=>
     '<button type="button" class="btn'+(m===sessMins?' active':'')+'" data-mins="'+m+'">'+m+' '+t('sess_min')+'</button>').join('');
   const b=document.getElementById('sess-start'); if(b) b.textContent=t('sess_start');
+  // what it will do: the blocks the plan would open, and how long each gets
+  const pl=document.getElementById('sess-plan');
+  if(pl){
+    const plan=sessionPlan(sessMins);
+    pl.textContent = plan.length ? t('sess_will').replace('{list}', plan.map(x=>t(trackById(x.track).label)).join(' · '))
+      .replace('{m}', Math.round(plan[0].secs/60*10)/10) : '';
+  }
 }
 function renderSessionReport(){
   const host=document.getElementById('session-report'); if(!host || !sessLast) return;
@@ -160,12 +167,14 @@ function renderSessionReport(){
   const rows=sessLast.blocks.map(id=>{
     const tr=trackById(id);
     if(!tr) return '';
-    const mine=runs.filter(s=>sessNs(s.drill)===tr.sess);
+    const fam=sessFamily(tr.sess), mine=runs.filter(s=>fam.includes(sessNs(s.drill)));
     let val=t('sess_norun');
     if(mine.length){
+      // a track read on its timing error reports the best error, when a run has one
+      const errs=tr.metric==='err' ? mine.filter(s=>typeof s.err==='number').map(s=>s.err) : [];
       const low=tr.better==='low';
       const best=mine.reduce((b,s)=> b===null ? s.score : (low?Math.min(b,s.score):Math.max(b,s.score)), null);
-      val=trendScore({ last:best, unit:tr.unit });
+      val = errs.length ? trendScore({ last:Math.min.apply(null, errs), unit:'ms' }) : trendScore({ last:best, unit:tr.unit });
     }
     return '<div class="sr-row"><span class="sr-name">'+esc(t(tr.label))+'</span>'+
            '<span class="sr-val">'+esc(val)+'</span></div>';
