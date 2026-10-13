@@ -1,6 +1,13 @@
 /* Changelog — single source of truth for the in-app "What's new" modal.
    Newest first; add a new entry on top each release. Bullets are localized. */
 const CHANGELOG = [
+  { v:'2.18.0', date:'2026-10-13',
+    en:['One row above the neck now holds the key (with the circle of fifths as its picker), the chord, the tempo, a single ▶ for the chord or your progression with an optional band, the tuner and Settings — and drills use the same row.',
+        'Rhythm guitar replaces Strumming and Comp: play a pattern or your own rhythm over a chord or a progression, and your earlier strumming and comping history carries over.',
+        'Timing is now scored on how close you land, one-minute changes takes any two chords you pick, the ear drills start with a few intervals and widen as you master them, and each Practice card shows your last result and when it is due.'],
+    uk:['Один рядок над грифом тепер містить тональність (з колом квінт для вибору), акорд, темп, одну кнопку ▶ для акорду чи твоєї прогресії з гуртом за бажанням, тюнер і налаштування — і вправи користуються тим самим рядком.',
+        '«Ритм-гітара» замінює «Бій» і «Акомпанемент»: грай малюнок або свій ритм над акордом чи прогресією, а попередня історія з бою й акомпанементу зберігається.',
+        'Таймінг тепер оцінюється за тим, наскільки точно ти влучаєш, «Зміна акордів за хвилину» бере будь-які два обрані акорди, вправи на слух починаються з кількох інтервалів і розширюються, коли їх опановуєш, а кожна картка «Практики» показує останній результат і коли час повторити.'] },
   { v:'2.17.0', date:'2026-10-09',
     en:['Fewer, better drills: Rhythm by ear, Chord tones over changes and Call & response are gone — for chord tones over a band, open Arpeggio and press "Jam over this" — and your history from them is kept.',
         'One tuner: Settings ▸ Tools ▸ Tuner listens through the microphone, and "Tune by ear" in the same panel plays each open string when there is no mic.',

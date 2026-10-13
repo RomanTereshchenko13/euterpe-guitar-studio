@@ -2,6 +2,12 @@
 
 _Generated from `src/js/02-changelog.js` by `build.js` — do not edit by hand._
 
+## v2.18.0 — 2026-10-13
+
+- One row above the neck now holds the key (with the circle of fifths as its picker), the chord, the tempo, a single ▶ for the chord or your progression with an optional band, the tuner and Settings — and drills use the same row.
+- Rhythm guitar replaces Strumming and Comp: play a pattern or your own rhythm over a chord or a progression, and your earlier strumming and comping history carries over.
+- Timing is now scored on how close you land, one-minute changes takes any two chords you pick, the ear drills start with a few intervals and widen as you master them, and each Practice card shows your last result and when it is due.
+
 ## v2.17.0 — 2026-10-09
 
 - Fewer, better drills: Rhythm by ear, Chord tones over changes and Call & response are gone — for chord tones over a band, open Arpeggio and press "Jam over this" — and your history from them is kept.
