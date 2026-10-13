@@ -42,9 +42,13 @@ const FRET_RANGES = [
 let fretRangeIdx = 0;
 /* true only while withFretsFor() paints a window the saved range can't hold */
 let fretZoomOff = false;
+/* a ceiling a view sets only while it paints (the note-naming drill: frets 0–12, where
+   every note already appears twice); 0 = none */
+let fretCap = 0;
 function fretRange(){ return FRET_RANGES[fretZoomOff ? 0 : fretRangeIdx]; }
 function FRET_LO(){ return fretRange().lo; }
-function FRET_HI(){ return fretRange().hi; }
+function FRET_HI(){ const hi=fretRange().hi; return fretCap ? Math.min(hi, fretCap) : hi; }
+function withFretCap(cap, fn){ const was=fretCap; fretCap=cap; try{ return fn(); } finally{ fretCap=was; } }
 
 /* capo: a movable nut at fret `capo` (0 = none). It moves your hand, not the pitches,
    so the note at every fret is unchanged; the board only dims the frets behind it. */

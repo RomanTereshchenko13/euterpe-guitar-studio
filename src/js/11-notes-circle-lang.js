@@ -62,26 +62,28 @@ function renderCircle(){
   const arcR=cofMinor?RI:RO;
   const [asx,asy]=cofXY(sub,arcR), [atx,aty]=cofXY(cofSel,arcR), [adx,ady]=cofXY(dom,arcR);
   s+=`<path class="cof-arc${still?' still':''}" d="M ${asx.toFixed(1)} ${asy.toFixed(1)} L ${atx.toFixed(1)} ${aty.toFixed(1)} L ${adx.toFixed(1)} ${ady.toFixed(1)}"/>`;
+  /* The colours mean on the circle what they mean on the neck: the tonic is the root's
+     green, V the fifth's blue. IV and the relative key carry no colour of their own,
+     only a ring. */
+  const MARK='var(--text-dim)';
   COF.forEach(c=>{
     const i=c.i;
     let mfill='var(--bg-panel-2)', mtext='var(--text)', nfill='var(--bg-panel)', ntext='var(--text-dim)';
-    const setRole=()=>{
-      if(i===cofSel) return ['var(--root)','#0e1408'];
-      if(i===dom) return ['var(--third)','#1f1405'];
-      if(i===sub) return ['var(--fifth)','#07203a'];
-      return null;
-    };
+    let mstroke='var(--border-strong)', mw=1.5, nstroke='var(--border)', nw=1.2;
+    const role = i===cofSel ? ['var(--root)','#0e1408'] : i===dom ? ['var(--fifth)','#07203a'] : null;
     if(!cofMinor){
-      const r=setRole(); if(r){mfill=r[0];mtext=r[1];}
-      if(i===cofSel){nfill='var(--seventh)';ntext='#2a0a16';}
+      if(role){ mfill=role[0]; mtext=role[1]; }
+      if(i===sub){ mstroke=MARK; mw=2.5; }
+      if(i===cofSel){ nstroke=MARK; nw=2.5; ntext='var(--text)'; }
     } else {
-      const r=setRole(); if(r){nfill=r[0];ntext=r[1];}
-      if(i===cofSel){mfill='var(--seventh)';mtext='#2a0a16';}
+      if(role){ nfill=role[0]; ntext=role[1]; }
+      if(i===sub){ nstroke=MARK; nw=2.5; ntext='var(--text)'; }
+      if(i===cofSel){ mstroke=MARK; mw=2.5; }
     }
     const [mx,my]=cofXY(i,RO), [nx,ny]=cofXY(i,RI);
     const majCh=ring==='maj' && c.majPc===chRoot, minCh=ring==='min' && c.minPc===chRoot;
-    s+=`<g class="cof-node${majCh?' cof-chord':''}" data-i="${i}" data-type="maj" tabindex="0" role="button" aria-label="${c.maj} ${t('major_word')}"><circle cx="${mx}" cy="${my}" r="${rMaj}" fill="${mfill}" stroke="var(--border-strong)" stroke-width="1.5"/><text x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="central" font-size="15" fill="${mtext}">${c.maj}</text></g>`;
-    s+=`<g class="cof-node${minCh?' cof-chord':''}" data-i="${i}" data-type="min" tabindex="0" role="button" aria-label="${c.min}"><circle cx="${nx}" cy="${ny}" r="${rMin}" fill="${nfill}" stroke="var(--border)" stroke-width="1.2"/><text x="${nx}" y="${ny}" text-anchor="middle" dominant-baseline="central" font-size="10.5" fill="${ntext}">${c.min}</text></g>`;
+    s+=`<g class="cof-node${majCh?' cof-chord':''}" data-i="${i}" data-type="maj" tabindex="0" role="button" aria-label="${c.maj} ${t('major_word')}"><circle cx="${mx}" cy="${my}" r="${rMaj}" fill="${mfill}" stroke="${mstroke}" stroke-width="${mw}"/><text x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="central" font-size="15" fill="${mtext}">${c.maj}</text></g>`;
+    s+=`<g class="cof-node${minCh?' cof-chord':''}" data-i="${i}" data-type="min" tabindex="0" role="button" aria-label="${c.min}"><circle cx="${nx}" cy="${ny}" r="${rMin}" fill="${nfill}" stroke="${nstroke}" stroke-width="${nw}"/><text x="${nx}" y="${ny}" text-anchor="middle" dominant-baseline="central" font-size="10.5" fill="${ntext}">${c.min}</text></g>`;
   });
   document.getElementById('cof-svg').innerHTML=s;
   renderCofInfo();

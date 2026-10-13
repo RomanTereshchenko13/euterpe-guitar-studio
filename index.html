@@ -393,6 +393,9 @@
   .cof-wrap { flex: 0 1 320px; min-width: 0; }
   #cof-svg { width: 100%; max-width: 320px; height: auto; display: block; margin: 0 auto; }
   .cof-wrap .legend { margin-top: 10px; gap: 10px 14px; }
+  .leg-dot.leg-ring { background: transparent; box-shadow: inset 0 0 0 2px var(--text-dim); }
+  .cof-toggle { display: none; }
+  .cof-toggle[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
   .cof-node { cursor: pointer; }
   .cof-node circle { transition: fill 0.15s, stroke 0.15s; }
   .cof-node:hover circle { stroke: var(--text); }
@@ -448,6 +451,8 @@
     .sheet { border-radius: 14px; box-shadow: 0 -10px 30px rgba(0,0,0,0.55); }
     .key-layout { gap: 12px; }
     .cof-wrap { flex-basis: 100%; }
+    .cof-toggle { display: inline-flex; }
+    .key-layout:not(.cof-open) .cof-wrap { display: none; }
     #cof-svg { max-width: 260px; }
   }
   .sheet.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
@@ -761,15 +766,18 @@
               <div id="sc-fams"></div>
             </div>
             <div class="info" id="cof-info"></div>
-            <div class="row"><button type="button" class="btn" id="cof-cadence"></button></div>
+            <div class="row">
+              <button type="button" class="btn" id="cof-cadence"></button>
+              <button type="button" class="btn cof-toggle" id="cof-toggle" aria-expanded="false" aria-controls="cof-wrap" data-i18n="cof_h">Коло квінт</button>
+            </div>
           </div>
-          <div class="cof-wrap">
+          <div class="cof-wrap" id="cof-wrap">
             <svg id="cof-svg" viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg" aria-label="Circle of fifths"></svg>
             <div class="legend">
               <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_tonic">Тоніка</span></div>
-              <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="leg_subdom">Субдомінанта (IV)</span></div>
-              <div class="leg"><span class="leg-dot" style="background:var(--third)"></span><span data-i18n="leg_dom">Домінанта (V)</span></div>
-              <div class="leg"><span class="leg-dot" style="background:var(--seventh)"></span><span data-i18n="leg_rel">Паралель</span></div>
+              <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="leg_dom">Домінанта (V)</span></div>
+              <div class="leg"><span class="leg-dot leg-ring"></span><span data-i18n="leg_subdom">Субдомінанта (IV)</span></div>
+              <div class="leg"><span class="leg-dot leg-ring"></span><span data-i18n="leg_rel">Паралель</span></div>
             </div>
           </div>
         </div>
@@ -1071,7 +1079,8 @@
           <div class="divider"></div>
           <button type="button" class="btn" id="sp-accent" aria-pressed="false"></button>
           <button type="button" class="btn" id="sp-mute" aria-pressed="false"></button>
-          <button type="button" class="btn" id="sp-band" aria-pressed="false"></button>
+          <button type="button" class="btn" id="sp-bass" aria-pressed="false"></button>
+          <button type="button" class="btn" id="sp-drums" aria-pressed="false"></button>
         </div>
       </div>
       <p class="drill-hint" id="sp-hint"></p>
@@ -1186,10 +1195,6 @@
     <div class="cl-body wc-body">
       <p class="wc-lead" data-i18n="wc_lead">Що хочеш зробити зараз?</p>
       <div class="wc-choices">
-        <button type="button" class="drill-card" id="wc-go-look">
-          <span class="dc-name" data-i18n="wc_look">Подивитись акорд або гаму</span>
-          <span class="dc-meta" data-i18n="wc_look_d">Обери тональність — гриф покаже тони акорду, гами й коло квінт.</span>
-        </button>
         <button type="button" class="drill-card" id="wc-go-practice">
           <span class="dc-name" data-i18n="wc_drill">Повправлятися</span>
           <span class="dc-meta" data-i18n="wc_drill_d">Вправи з рахунком — гриф, таймінг, ритм і слух.</span>
@@ -1879,8 +1884,8 @@ const I18N = {
     sd_subdiv:'Поділ', sd_notes:'Ноти',
     sd_hint:'Тримайся клацання — акцентований удар це «раз», тихі — поділи долі. Грай підсвічені ноти гами рівно по сітці. Увімкни 🎤 угорі, щоб застосунок слухав і оцінював твій таймінг.',
     sp_pattern:'Малюнок', sp_chord:'Акорд', sp_play:'Грати', sp_stop:'Стоп',
-    sp_swing:'Свінг', sp_accent:'Бекбіт', sp_mute:'Глушіння', sp_band:'Гурт',
-    sp_hint:'Грай разом — ↓ вниз, ↑ вгору; над порожніми клітинами рука рухається, але струн не торкається. Спробуй свінг, бекбіт-акцент, глушіння та гурт.',
+    sp_swing:'Свінг', sp_accent:'Бекбіт', sp_mute:'Глушіння',
+    sp_hint:'Грай разом — ↓ вниз, ↑ вгору; над порожніми клітинами рука рухається, але струн не торкається. Спробуй свінг, бекбіт-акцент, глушіння, бас і барабани.',
     co_now:'Зараз', co_next:'Далі',
     co_hint:'Грай свій ритм над показаним акордом — і влучай у кожну зміну на «раз».',
     tg_prog:'Прогресія', tg_pos:'Позиція',
@@ -1891,7 +1896,7 @@ const I18N = {
     tab_harmony:'Акорди', lbl_view:'Вид', view_chords:'Тони акорду', view_tones:'Тони',
     view_scale:'Гама', view_notes:'Ноти',
     suggest_title:'Що грати над цим', suggest_arp:'Арпеджіо', suggest_scales:'Гами, що підходять',
-    cof_sig:'Ключові знаки', cof_sig0:'без ключових знаків',
+    cof_h:'Коло квінт', cof_sig:'Ключові знаки', cof_sig0:'без ключових знаків',
     cof_rel_minor:'Паралельний мінор', cof_rel_major:'Паралельний мажор',
     cof_neighbors:'Сусіди по колу', cof_subdom:'субдомінанта', cof_dom:'домінанта',
     b_cadence:'♪ Прослухати {cad}',
@@ -1969,8 +1974,6 @@ const I18N = {
     bk_save_fail:'Цей браузер не зберігає ваш прогрес (приватний режим або забракло місця). Експортуйте його, щоб не втратити.',
     wc_title:'Вітаємо в Euterpe',
     wc_lead:'Що хочеш зробити зараз?',
-    wc_look:'Подивитись акорд або гаму',
-    wc_look_d:'Обери тональність — гриф покаже тони акорду, гами й коло квінт.',
     wc_drill:'Повправлятися',
     wc_drill_d:'Вправи з рахунком — гриф, таймінг, ритм і слух.',
     wc_tune:'Налаштувати гітару',
@@ -2032,8 +2035,8 @@ const I18N = {
     sd_subdiv:'Subdivision', sd_notes:'Notes',
     sd_hint:'Lock to the click — the accented tick is beat 1, the soft ticks are the subdivisions. Play the lit scale notes evenly across the grid. Turn on 🎤 above and the app listens and scores your timing.',
     sp_pattern:'Pattern', sp_chord:'Chord', sp_play:'Play', sp_stop:'Stop',
-    sp_swing:'Swing', sp_accent:'Backbeat', sp_mute:'Palm mute', sp_band:'Band',
-    sp_hint:'Strum along — ↓ down, ↑ up; over the empty slots your hand keeps moving but misses the strings. Try swing, the backbeat accent, palm-muting and the band.',
+    sp_swing:'Swing', sp_accent:'Backbeat', sp_mute:'Palm mute',
+    sp_hint:'Strum along — ↓ down, ↑ up; over the empty slots your hand keeps moving but misses the strings. Try swing, the backbeat accent, palm-muting, bass and drums.',
     co_now:'Now', co_next:'Next',
     co_hint:'Play your own rhythm over the chord shown — and land every change on beat 1.',
     tg_prog:'Progression', tg_pos:'Position',
@@ -2044,7 +2047,7 @@ const I18N = {
     tab_harmony:'Chords', lbl_view:'View', view_chords:'Chord tones', view_tones:'Tones',
     view_scale:'Scale', view_notes:'Notes',
     suggest_title:'Play over this', suggest_arp:'Arpeggio', suggest_scales:'Scales that fit',
-    cof_sig:'Key signature', cof_sig0:'no sharps or flats',
+    cof_h:'Circle of fifths', cof_sig:'Key signature', cof_sig0:'no sharps or flats',
     cof_rel_minor:'Relative minor', cof_rel_major:'Relative major',
     cof_neighbors:'Neighbours on the circle', cof_subdom:'subdominant', cof_dom:'dominant',
     b_cadence:'♪ Hear {cad}',
@@ -2122,8 +2125,6 @@ const I18N = {
     bk_save_fail:"This browser isn't saving your progress (private mode or storage full). Export it to keep a copy.",
     wc_title:'Welcome to Euterpe',
     wc_lead:'What do you want to do right now?',
-    wc_look:'Look up a chord or scale',
-    wc_look_d:'Pick a key — the neck shows its chord tones, scales and the circle of fifths.',
     wc_drill:'Practise something',
     wc_drill_d:'Scored drills — fretboard, timing, rhythm and ear.',
     wc_tune:'Tune the guitar',
@@ -2193,9 +2194,11 @@ const FRET_RANGES = [
 ];
 let fretRangeIdx = 0;
 let fretZoomOff = false;
+let fretCap = 0;
 function fretRange(){ return FRET_RANGES[fretZoomOff ? 0 : fretRangeIdx]; }
 function FRET_LO(){ return fretRange().lo; }
-function FRET_HI(){ return fretRange().hi; }
+function FRET_HI(){ const hi=fretRange().hi; return fretCap ? Math.min(hi, fretCap) : hi; }
+function withFretCap(cap, fn){ const was=fretCap; fretCap=cap; try{ return fn(); } finally{ fretCap=was; } }
 let capo = 0;
 let tempo = 90;
 function beat(){ return 60/tempo; }
@@ -3486,26 +3489,25 @@ function renderCircle(){
   const arcR=cofMinor?RI:RO;
   const [asx,asy]=cofXY(sub,arcR), [atx,aty]=cofXY(cofSel,arcR), [adx,ady]=cofXY(dom,arcR);
   s+=`<path class="cof-arc${still?' still':''}" d="M ${asx.toFixed(1)} ${asy.toFixed(1)} L ${atx.toFixed(1)} ${aty.toFixed(1)} L ${adx.toFixed(1)} ${ady.toFixed(1)}"/>`;
+  const MARK='var(--text-dim)';
   COF.forEach(c=>{
     const i=c.i;
     let mfill='var(--bg-panel-2)', mtext='var(--text)', nfill='var(--bg-panel)', ntext='var(--text-dim)';
-    const setRole=()=>{
-      if(i===cofSel) return ['var(--root)','#0e1408'];
-      if(i===dom) return ['var(--third)','#1f1405'];
-      if(i===sub) return ['var(--fifth)','#07203a'];
-      return null;
-    };
+    let mstroke='var(--border-strong)', mw=1.5, nstroke='var(--border)', nw=1.2;
+    const role = i===cofSel ? ['var(--root)','#0e1408'] : i===dom ? ['var(--fifth)','#07203a'] : null;
     if(!cofMinor){
-      const r=setRole(); if(r){mfill=r[0];mtext=r[1];}
-      if(i===cofSel){nfill='var(--seventh)';ntext='#2a0a16';}
+      if(role){ mfill=role[0]; mtext=role[1]; }
+      if(i===sub){ mstroke=MARK; mw=2.5; }
+      if(i===cofSel){ nstroke=MARK; nw=2.5; ntext='var(--text)'; }
     } else {
-      const r=setRole(); if(r){nfill=r[0];ntext=r[1];}
-      if(i===cofSel){mfill='var(--seventh)';mtext='#2a0a16';}
+      if(role){ nfill=role[0]; ntext=role[1]; }
+      if(i===sub){ nstroke=MARK; nw=2.5; ntext='var(--text)'; }
+      if(i===cofSel){ mstroke=MARK; mw=2.5; }
     }
     const [mx,my]=cofXY(i,RO), [nx,ny]=cofXY(i,RI);
     const majCh=ring==='maj' && c.majPc===chRoot, minCh=ring==='min' && c.minPc===chRoot;
-    s+=`<g class="cof-node${majCh?' cof-chord':''}" data-i="${i}" data-type="maj" tabindex="0" role="button" aria-label="${c.maj} ${t('major_word')}"><circle cx="${mx}" cy="${my}" r="${rMaj}" fill="${mfill}" stroke="var(--border-strong)" stroke-width="1.5"/><text x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="central" font-size="15" fill="${mtext}">${c.maj}</text></g>`;
-    s+=`<g class="cof-node${minCh?' cof-chord':''}" data-i="${i}" data-type="min" tabindex="0" role="button" aria-label="${c.min}"><circle cx="${nx}" cy="${ny}" r="${rMin}" fill="${nfill}" stroke="var(--border)" stroke-width="1.2"/><text x="${nx}" y="${ny}" text-anchor="middle" dominant-baseline="central" font-size="10.5" fill="${ntext}">${c.min}</text></g>`;
+    s+=`<g class="cof-node${majCh?' cof-chord':''}" data-i="${i}" data-type="maj" tabindex="0" role="button" aria-label="${c.maj} ${t('major_word')}"><circle cx="${mx}" cy="${my}" r="${rMaj}" fill="${mfill}" stroke="${mstroke}" stroke-width="${mw}"/><text x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="central" font-size="15" fill="${mtext}">${c.maj}</text></g>`;
+    s+=`<g class="cof-node${minCh?' cof-chord':''}" data-i="${i}" data-type="min" tabindex="0" role="button" aria-label="${c.min}"><circle cx="${nx}" cy="${ny}" r="${rMin}" fill="${nfill}" stroke="${nstroke}" stroke-width="${nw}"/><text x="${nx}" y="${ny}" text-anchor="middle" dominant-baseline="central" font-size="10.5" fill="${ntext}">${c.min}</text></g>`;
   });
   document.getElementById('cof-svg').innerHTML=s;
   renderCofInfo();
@@ -4853,7 +4855,9 @@ function buildQueue(){
   const rest=naturals.filter(pc=>due.indexOf(pc)<0);
   return drillShuffle(due).concat(drillShuffle(rest)).slice(0, DRILL_LEN);
 }
-function drillTargetsFor(pc){
+const DRILL_FRET_CAP = 12;
+function drillTargetsFor(pc){ return withFretCap(DRILL_FRET_CAP, ()=>drillTargetsIn(pc)); }
+function drillTargetsIn(pc){
   const set=new Set(), lo=FRET_LO(), hi=FRET_HI(), showOpen=lo<=1;
   for(let si=0; si<6; si++){
     if(showOpen && (OPEN_MIDI[si]%12)===pc) set.add(si+':0');
@@ -4906,6 +4910,9 @@ function finishDrill(){
 }
 function renderDrillBoard(){
   const el=document.getElementById('drill-board'); if(!el) return;
+  withFretCap(DRILL_FRET_CAP, ()=>paintDrillBoard(el));
+}
+function paintDrillBoard(el){
   renderBoard(el, (pc,si,f)=>{
     const d=document.createElement('div'); d.className='dot quiz';
     d.dataset.si=si; d.dataset.f=f; d.tabIndex=0; d.setAttribute('role','button');
@@ -5138,7 +5145,6 @@ let spProg = 1;
 let spSwing = 0;        
 let spAccent = false;   
 let spMute = false;     
-let spBand = false;     
 let spDrill = null;
 function spFree(){ return spIdx < 0; }
 const spScore = scoredRun({
@@ -5250,11 +5256,13 @@ function spTick(time, count){
       }
     }
   }
-  if(spBand){
+  if(grooveOn){
     hatHit(time+swDelay, slot===0 ? 1 : (beatPos ? 0.7 : 0.45));
     if(slot===0) kickHit(time, 1);
     if(slot===4) kickHit(time, 0.9);
     if(backbeat) snareHit(time, spAccent ? 1.0 : 0.8);
+  }
+  if(bassOn){
     if(slot===0) bassNote(time, 36+ch.pc, b*1.9, 0.95);
     if(slot===4) bassNote(time, 36+ch.pc+fifthInterval(ch.qi), b*1.7, 0.8);
   }
@@ -5290,7 +5298,8 @@ function renderStrum(){
     el.textContent=t(label); el.classList.toggle('active', on); el.setAttribute('aria-pressed', on?'true':'false'); };
   toggle('sp-accent', spAccent, 'sp_accent');
   toggle('sp-mute',   spMute,   'sp_mute');
-  toggle('sp-band',   spBand,   'sp_band');
+  toggle('sp-bass',   bassOn,   'tb_bass');
+  toggle('sp-drums',  grooveOn, 'tb_drums');
   const hint=document.getElementById('sp-hint');
   if(hint) hint.textContent=t(spFree() ? (spScore.on()?'co_hint_scored':'co_hint') : (spScore.on()?'sp_hint_scored':'sp_hint'));
   spScore.render();
@@ -5329,7 +5338,7 @@ registerDrill({ id:'rhythm-guitar', area:'sp-area', tempo:true, setup:'sp-setup'
                 mic:()=>spScore.available(), micOn:()=>spScore.on(),
                 onMic:()=>{ if(spDrill&&spDrill.playing) spStop();
                             spScore.toggle();
-                            if(spScore.on() && !clickOn && !spBand) clickToggle();
+                            if(spScore.on() && !clickOn && !bandActive()) clickToggle();
                             renderStrum(); },
                 onKey:()=>{ if(!spDrill) return; spSet(()=>{}); } });
 (function initStrum(){
@@ -5337,7 +5346,8 @@ registerDrill({ id:'rhythm-guitar', area:'sp-area', tempo:true, setup:'sp-setup'
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('sp-accent', ()=>{ spAccent=!spAccent; renderStrum(); });
   wire('sp-mute',   ()=>{ spMute=!spMute;     renderStrum(); });
-  wire('sp-band',   ()=>{ spBand=!spBand;     renderStrum(); });
+  wire('sp-bass',   ()=>{ bassToggle();  renderStrum(); });
+  wire('sp-drums',  ()=>{ drumsToggle(); renderStrum(); });
   const pick=(hostId, cls, set)=>{ const h=document.getElementById(hostId); if(!h) return;
     h.addEventListener('click', e=>{ const btn=e.target.closest('.'+cls); if(btn) spSet(()=>set(+btn.dataset.i)); }); };
   pick('sp-patterns', 'sp-pat',   i=>{ spIdx=i; });
@@ -6173,6 +6183,11 @@ function placeStrip(){
   const fams=document.getElementById('sc-fams');
   if(fams) fams.addEventListener('click', e=>{ const b=e.target.closest('[data-sc]'); if(b) setScale(+b.dataset.sc); });
   wire('sc-fams-toggle', ()=>{ scFamsAdv=!scFamsAdv; buildScFams(); markScrollables(); });
+  wire('cof-toggle', ()=>{
+    const kl=document.querySelector('#sheet-key .key-layout'), b=document.getElementById('cof-toggle'); if(!kl || !b) return;
+    const on=!kl.classList.contains('cof-open');
+    kl.classList.toggle('cof-open', on); b.setAttribute('aria-expanded', on?'true':'false');
+  });
 })();
 function renderActiveContext(){
   if(currentMode!=='reference') return;
@@ -6505,12 +6520,11 @@ function closeKbd(){ const o=document.getElementById('kbd-overlay'); if(!o) retu
   const ov=document.getElementById('kbd-overlay'); if(ov) ov.addEventListener('click',e=>{ if(e.target.id==='kbd-overlay') closeKbd(); });
   const ob=document.getElementById('kbd-open'); if(ob) ob.onclick=openKbd; }
 function showWelcome(){ const o=document.getElementById('welcome-overlay'); if(!o) return; o.hidden=false; o.classList.add('open');
-  const f=document.getElementById('wc-go-look'); if(f) try{ f.focus(); }catch(_){} }
+  const f=document.getElementById('wc-go-practice'); if(f) try{ f.focus(); }catch(_){} }
 function dismissWelcome(){ const o=document.getElementById('welcome-overlay'); if(!o||o.hidden) return; o.classList.remove('open'); o.hidden=true; welcomeSeen=true; saveState(); }
 { const g=document.getElementById('wc-got');   if(g) g.onclick=dismissWelcome;
   const c=document.getElementById('wc-close'); if(c) c.onclick=dismissWelcome;
   const route=(id,go)=>{ const b=document.getElementById(id); if(b) b.onclick=()=>{ dismissWelcome(); go(); }; };
-  route('wc-go-look',     ()=>navTo('harmony'));
   route('wc-go-practice', ()=>navTo('practice'));
   route('wc-go-tune',     micOpen);
   const o=document.getElementById('welcome-overlay'); if(o) o.addEventListener('click',e=>{ if(e.target.id==='welcome-overlay') dismissWelcome(); }); }
@@ -6634,7 +6648,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     STRUM_PATTERNS, setSpPattern:(i)=>spSet(()=>{ spIdx=i; }), presetBars, spBars, spSessId:()=>spSessId(),
     setSpOver:(v)=>spSet(()=>{ spOver=v; }), setSpProg:(i)=>spSet(()=>{ spProg=i; }),
     SP_SWINGS, setSpSwing:(i)=>{ spSwing=i; }, setSpAccent:(v)=>{ spAccent=!!v; },
-    setSpMute:(v)=>{ spMute=!!v; }, setSpBand:(v)=>{ spBand=!!v; },
+    setSpMute:(v)=>{ spMute=!!v; }, setSpBand:(v)=>{ bassOn=!!v; grooveOn=!!v; },
     spTickNow:(t,c)=>spTick(t,c),
     EAR_LEVELS, earLevel, earPool,
     startTiming:()=>drillOpen(drillById('timing')), sdToggle, exitTiming:()=>drillDone(drillById('timing')), getSd:()=>sd, SUBDIVS, SD_BEATS, sdPath,

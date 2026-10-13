@@ -169,4 +169,10 @@ function placeStrip(){
   const fams=document.getElementById('sc-fams');
   if(fams) fams.addEventListener('click', e=>{ const b=e.target.closest('[data-sc]'); if(b) setScale(+b.dataset.sc); });
   wire('sc-fams-toggle', ()=>{ scFamsAdv=!scFamsAdv; buildScFams(); markScrollables(); });
+  // a phone's key sheet folds the circle (CSS shows this toggle only there); UI-only
+  wire('cof-toggle', ()=>{
+    const kl=document.querySelector('#sheet-key .key-layout'), b=document.getElementById('cof-toggle'); if(!kl || !b) return;
+    const on=!kl.classList.contains('cof-open');
+    kl.classList.toggle('cof-open', on); b.setAttribute('aria-expanded', on?'true':'false');
+  });
 })();

@@ -29,14 +29,13 @@ function closeKbd(){ const o=document.getElementById('kbd-overlay'); if(!o) retu
    A one-time card for new visitors; dismissing it records welcomeSeen. dismissWelcome
    is a no-op when the card isn't open, so the shared Escape handler can call it. */
 function showWelcome(){ const o=document.getElementById('welcome-overlay'); if(!o) return; o.hidden=false; o.classList.add('open');
-  const f=document.getElementById('wc-go-look'); if(f) try{ f.focus(); }catch(_){} }
+  const f=document.getElementById('wc-go-practice'); if(f) try{ f.focus(); }catch(_){} }
 function dismissWelcome(){ const o=document.getElementById('welcome-overlay'); if(!o||o.hidden) return; o.classList.remove('open'); o.hidden=true; welcomeSeen=true; saveState(); }
 { const g=document.getElementById('wc-got');   if(g) g.onclick=dismissWelcome;
   const c=document.getElementById('wc-close'); if(c) c.onclick=dismissWelcome;
   /* Each answer routes somewhere. Dismiss first, so the destination isn't rendered
      behind the modal. */
   const route=(id,go)=>{ const b=document.getElementById(id); if(b) b.onclick=()=>{ dismissWelcome(); go(); }; };
-  route('wc-go-look',     ()=>navTo('harmony'));
   route('wc-go-practice', ()=>navTo('practice'));
   route('wc-go-tune',     micOpen);
   const o=document.getElementById('welcome-overlay'); if(o) o.addEventListener('click',e=>{ if(e.target.id==='welcome-overlay') dismissWelcome(); }); }

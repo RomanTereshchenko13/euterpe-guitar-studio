@@ -19,8 +19,12 @@ function buildQueue(){
   return drillShuffle(due).concat(drillShuffle(rest)).slice(0, DRILL_LEN);
 }
 
+/* "Find all" asks for every position, so the board stops at the 12th fret: past it each
+   note only repeats, and on a phone the whole neck would leave most of it off screen. */
+const DRILL_FRET_CAP = 12;
 // every (string,fret) position of `pc` in the fret window — the same cell set as renderBoard
-function drillTargetsFor(pc){
+function drillTargetsFor(pc){ return withFretCap(DRILL_FRET_CAP, ()=>drillTargetsIn(pc)); }
+function drillTargetsIn(pc){
   const set=new Set(), lo=FRET_LO(), hi=FRET_HI(), showOpen=lo<=1;
   for(let si=0; si<6; si++){
     if(showOpen && (OPEN_MIDI[si]%12)===pc) set.add(si+':0');
@@ -81,6 +85,9 @@ function finishDrill(){
 /* ---- DOM paint ---- */
 function renderDrillBoard(){
   const el=document.getElementById('drill-board'); if(!el) return;
+  withFretCap(DRILL_FRET_CAP, ()=>paintDrillBoard(el));
+}
+function paintDrillBoard(el){
   renderBoard(el, (pc,si,f)=>{
     const d=document.createElement('div'); d.className='dot quiz';
     d.dataset.si=si; d.dataset.f=f; d.tabIndex=0; d.setAttribute('role','button');

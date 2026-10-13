@@ -37,7 +37,6 @@ let spProg = 1;         // the progression: a SEQ_PRESETS index (default I–V�
 let spSwing = 0;        // index into SP_SWINGS — straight by default, so a pattern reads as written
 let spAccent = false;   // backbeat (2 & 4) accent
 let spMute = false;     // palm-mute the strum
-let spBand = false;     // drums + bass underneath
 let spDrill = null;
 // spDrill = { patIdx, over, prog, bars:[{pc,qi,lbl}…], bar, slot, barsPlayed, clock, playing }
 
@@ -172,11 +171,13 @@ function spTick(time, count){
   }
   // band: hats on every 8th (swung with the guitar), kick 1 & 3, snare on the backbeat,
   // bass on the bar's chord
-  if(spBand){
+  if(grooveOn){
     hatHit(time+swDelay, slot===0 ? 1 : (beatPos ? 0.7 : 0.45));
     if(slot===0) kickHit(time, 1);
     if(slot===4) kickHit(time, 0.9);
     if(backbeat) snareHit(time, spAccent ? 1.0 : 0.8);
+  }
+  if(bassOn){
     if(slot===0) bassNote(time, 36+ch.pc, b*1.9, 0.95);
     if(slot===4) bassNote(time, 36+ch.pc+fifthInterval(ch.qi), b*1.7, 0.8);
   }
@@ -214,7 +215,9 @@ function renderStrum(){
     el.textContent=t(label); el.classList.toggle('active', on); el.setAttribute('aria-pressed', on?'true':'false'); };
   toggle('sp-accent', spAccent, 'sp_accent');
   toggle('sp-mute',   spMute,   'sp_mute');
-  toggle('sp-band',   spBand,   'sp_band');
+  // the band is the ▶ drawer's: the same Bass and Drums, here and in Reference
+  toggle('sp-bass',   bassOn,   'tb_bass');
+  toggle('sp-drums',  grooveOn, 'tb_drums');
   // the hint has to say which tier you're in — and that the guide guitar goes quiet
   const hint=document.getElementById('sp-hint');
   if(hint) hint.textContent=t(spFree() ? (spScore.on()?'co_hint_scored':'co_hint') : (spScore.on()?'sp_hint_scored':'sp_hint'));
@@ -263,7 +266,7 @@ registerDrill({ id:'rhythm-guitar', area:'sp-area', tempo:true, setup:'sp-setup'
                             spScore.toggle();
                             // scoring mutes the guide guitar, so with no click and no band there would be
                             // nothing to play against — turn the click on
-                            if(spScore.on() && !clickOn && !spBand) clickToggle();
+                            if(spScore.on() && !clickOn && !bandActive()) clickToggle();
                             renderStrum(); },
                 // a new key re-lays a preset progression; the chord is read live
                 onKey:()=>{ if(!spDrill) return; spSet(()=>{}); } });
@@ -273,7 +276,8 @@ registerDrill({ id:'rhythm-guitar', area:'sp-area', tempo:true, setup:'sp-setup'
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('sp-accent', ()=>{ spAccent=!spAccent; renderStrum(); });
   wire('sp-mute',   ()=>{ spMute=!spMute;     renderStrum(); });
-  wire('sp-band',   ()=>{ spBand=!spBand;     renderStrum(); });
+  wire('sp-bass',   ()=>{ bassToggle();  renderStrum(); });
+  wire('sp-drums',  ()=>{ drumsToggle(); renderStrum(); });
   const pick=(hostId, cls, set)=>{ const h=document.getElementById(hostId); if(!h) return;
     h.addEventListener('click', e=>{ const btn=e.target.closest('.'+cls); if(btn) spSet(()=>set(+btn.dataset.i)); }); };
   pick('sp-patterns', 'sp-pat',   i=>{ spIdx=i; });

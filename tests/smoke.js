@@ -212,10 +212,10 @@ if (T) {
    'cm_changes','cm_cpm','cm_best','cm_tap_hint','cm_undo','cm_newbest',
    'sp_pattern','sp_chord','sp_play','sp_stop','sp_hint',
    'co_now','co_next','co_hint',
-   'sp_swing','sp_accent','sp_mute','sp_band',
+   'sp_swing','sp_accent','sp_mute','cof_h',
    'tg_prog','tg_pos',
    'a11y_palette','a11y_shapes',
-   'wc_title','wc_lead','wc_look','wc_look_d','wc_drill','wc_drill_d','wc_tune','wc_tune_d','wc_got',
+   'wc_title','wc_lead','wc_drill','wc_drill_d','wc_tune','wc_tune_d','wc_got',
    'tun_custom','cl_older',
    'prog_active','prog_due','prog_review',
    'mic_title','mic_start','mic_stop','mic_cents','mic_string','mic_play_hint',
@@ -1241,7 +1241,7 @@ if (T) {
     ok('step 9: the comp drill and its area are gone', !doc.getElementById('tg-area') && !T.DRILLS.some(d => d.id === 'overchanges' || d.id === 'strum' || d.id === 'rhythm'));
     ok('step 9: the rhythm area carries the grid, the NOW/NEXT stage and the beats',
        ['sp-area', 'sp-grid', 'sp-stage', 'sp-now', 'sp-next', 'sp-beats', 'sp-over', 'sp-progs'].every(id => !!doc.getElementById(id)));
-    ok('step 9: the feel controls are still there', ['sp-swings', 'sp-accent', 'sp-mute', 'sp-band'].every(id => !!doc.getElementById(id)));
+    ok('step 9: the feel controls are still there', ['sp-swings', 'sp-accent', 'sp-mute', 'sp-bass', 'sp-drums'].every(id => !!doc.getElementById(id)));
     // patterns are well-formed: 8 eighth-note slots, only D/U/'' and inline en+uk names
     ok('5b: at least 4 strum patterns', T.STRUM_PATTERNS.length >= 4);
     ok('5b: every pattern is one 4/4 bar of 8 slots',
@@ -1937,8 +1937,8 @@ if (T) {
     ok('A4: the welcome card asks a question rather than listing nouns',
        !!doc.querySelector('#welcome-overlay .wc-lead[data-i18n="wc_lead"]')
        && /\?$/.test(T.I18N.en.wc_lead) && /\?$/.test(T.I18N.uk.wc_lead));
-    const routes = ['wc-go-look', 'wc-go-practice', 'wc-go-tune'];
-    ok('A4: it offers three answers', routes.every(id => !!doc.getElementById(id)));
+    const routes = ['wc-go-practice', 'wc-go-tune'];   // step 12: "look around" is the dismiss button
+    ok('A4: it offers two answers, and no third that only closes it', routes.every(id => !!doc.getElementById(id)) && !doc.getElementById('wc-go-look'));
     ok('A4: ...and every one of them is wired to go somewhere',
        routes.every(id => typeof doc.getElementById(id).onclick === 'function'));
     ok('A4: the answers reuse the card the visitor meets next, not a parallel pattern',

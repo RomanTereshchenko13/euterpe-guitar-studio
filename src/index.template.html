@@ -93,15 +93,19 @@
               <div id="sc-fams"></div>
             </div>
             <div class="info" id="cof-info"></div>
-            <div class="row"><button type="button" class="btn" id="cof-cadence"></button></div>
+            <div class="row">
+              <button type="button" class="btn" id="cof-cadence"></button>
+              <!-- a phone keeps the root row and folds the circle (both pick the root) -->
+              <button type="button" class="btn cof-toggle" id="cof-toggle" aria-expanded="false" aria-controls="cof-wrap" data-i18n="cof_h">Коло квінт</button>
+            </div>
           </div>
-          <div class="cof-wrap">
+          <div class="cof-wrap" id="cof-wrap">
             <svg id="cof-svg" viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg" aria-label="Circle of fifths"></svg>
             <div class="legend">
               <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_tonic">Тоніка</span></div>
-              <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="leg_subdom">Субдомінанта (IV)</span></div>
-              <div class="leg"><span class="leg-dot" style="background:var(--third)"></span><span data-i18n="leg_dom">Домінанта (V)</span></div>
-              <div class="leg"><span class="leg-dot" style="background:var(--seventh)"></span><span data-i18n="leg_rel">Паралель</span></div>
+              <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="leg_dom">Домінанта (V)</span></div>
+              <div class="leg"><span class="leg-dot leg-ring"></span><span data-i18n="leg_subdom">Субдомінанта (IV)</span></div>
+              <div class="leg"><span class="leg-dot leg-ring"></span><span data-i18n="leg_rel">Паралель</span></div>
             </div>
           </div>
         </div>
@@ -467,7 +471,9 @@
           <div class="divider"></div>
           <button type="button" class="btn" id="sp-accent" aria-pressed="false"></button>
           <button type="button" class="btn" id="sp-mute" aria-pressed="false"></button>
-          <button type="button" class="btn" id="sp-band" aria-pressed="false"></button>
+          <!-- the band: the ▶ drawer's own Bass and Drums -->
+          <button type="button" class="btn" id="sp-bass" aria-pressed="false"></button>
+          <button type="button" class="btn" id="sp-drums" aria-pressed="false"></button>
         </div>
       </div>
       <p class="drill-hint" id="sp-hint"></p>
@@ -596,10 +602,6 @@
     <div class="cl-body wc-body">
       <p class="wc-lead" data-i18n="wc_lead">Що хочеш зробити зараз?</p>
       <div class="wc-choices">
-        <button type="button" class="drill-card" id="wc-go-look">
-          <span class="dc-name" data-i18n="wc_look">Подивитись акорд або гаму</span>
-          <span class="dc-meta" data-i18n="wc_look_d">Обери тональність — гриф покаже тони акорду, гами й коло квінт.</span>
-        </button>
         <button type="button" class="drill-card" id="wc-go-practice">
           <span class="dc-name" data-i18n="wc_drill">Повправлятися</span>
           <span class="dc-meta" data-i18n="wc_drill_d">Вправи з рахунком — гриф, таймінг, ритм і слух.</span>

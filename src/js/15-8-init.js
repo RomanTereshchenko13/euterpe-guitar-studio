@@ -118,7 +118,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     STRUM_PATTERNS, setSpPattern:(i)=>spSet(()=>{ spIdx=i; }), presetBars, spBars, spSessId:()=>spSessId(),
     setSpOver:(v)=>spSet(()=>{ spOver=v; }), setSpProg:(i)=>spSet(()=>{ spProg=i; }),
     SP_SWINGS, setSpSwing:(i)=>{ spSwing=i; }, setSpAccent:(v)=>{ spAccent=!!v; },
-    setSpMute:(v)=>{ spMute=!!v; }, setSpBand:(v)=>{ spBand=!!v; },
+    setSpMute:(v)=>{ spMute=!!v; }, setSpBand:(v)=>{ bassOn=!!v; grooveOn=!!v; },
     spTickNow:(t,c)=>spTick(t,c),
     // ear levels
     EAR_LEVELS, earLevel, earPool,
