@@ -255,10 +255,13 @@ const out = tpl
 // index.html: the stable entry point (GitHub Pages URL + what the test suite reads).
 fs.writeFileSync(path.join(root, 'index.html'), out);
 
-// sw.js: the service worker, generated from src/sw.template.js with the version
-// baked into the cache name so every release busts the old offline cache.
+// sw.js: the service worker, generated from src/sw.template.js. Its cache name carries
+// the version AND a hash of the built app: the browser only installs a new worker (and
+// the page only offers the update) when sw.js itself changes, so a version alone would
+// leave every unreleased change stuck behind the old offline cache.
 const swTpl = fs.readFileSync(path.join(root, 'src', 'sw.template.js'), 'utf8');
-fs.writeFileSync(path.join(root, 'sw.js'), swTpl.replace(/@@VERSION@@/g, () => version));
+const buildId = version + '-' + require('crypto').createHash('sha256').update(out).digest('hex').slice(0, 10);
+fs.writeFileSync(path.join(root, 'sw.js'), swTpl.replace(/@@BUILD@@/g, () => buildId).replace(/@@VERSION@@/g, () => version));
 
 // Publish the icon SVG to the served icons/ dir (the manifest + SW reference
 // icons/icon.svg). It's the same editable source used for the favicon and the
