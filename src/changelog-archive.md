@@ -1,3 +1,9 @@
+## v2.14.0 — 2026-08-02
+
+- Strumming & feel and Comp the progression can now score you through the microphone, timing your strums and your chord changes.
+- A run that only hears the app's own click through the speakers is recognised and refused instead of scored; headphones avoid it.
+- In scored runs the guide guitar goes quiet so the app never scores its own sound, while the click and band keep playing.
+
 ## v2.13.0 — 2026-08-02
 
 - Subdivision & timing can listen through the microphone and score your timing: average error in milliseconds, spread, and whether you rush or drag.

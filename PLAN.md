@@ -1,6 +1,6 @@
 # Euterpe — Plan
 
-_Shipping: v2.18.0 · Updated: 2026-10-13_
+_Shipping: v2.19.0 · Updated: 2026-10-13_
 
 ## What Euterpe is
 

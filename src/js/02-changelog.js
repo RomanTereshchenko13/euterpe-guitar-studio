@@ -4,6 +4,13 @@
    CHANGELOG.md; when this list grows past 5, move the oldest entry's English bullets
    there (the release skill says how). */
 const CHANGELOG = [
+  { v:'2.19.0', date:'2026-10-13',
+    en:['The tuner and Settings now sit in the app header, Harmony switches between Chord tones, Triads and Arpeggio in one row above the neck, and on a phone the neck sits higher.',
+        'One metronome: "Click with ▶" in the tempo sheet (or M) clicks along with the chord, your progression or a drill, and Practice opens on a "Next up" card in place of timed sessions.',
+        'The key panel names modes correctly with their own key signature, Scales can show the current chord over the scale, and the circle of fifths uses the same colours as the neck.'],
+    uk:['Тюнер і налаштування тепер у шапці застосунку, «Акорди» перемикаються між тонами акорду, тризвуками й арпеджіо в одному рядку над грифом, а на телефоні гриф стоїть вище.',
+        'Один метроном: «Клік із ▶» у вікні темпу (або M) клацає разом з акордом, твоєю прогресією чи вправою, а «Практика» відкривається карткою «Наступне» замість занять із таймером.',
+        'Панель тональності правильно називає лади з їхніми ключовими знаками, «Гами» можуть показати поточний акорд поверх гами, а коло квінт має ті самі кольори, що й гриф.'] },
   { v:'2.18.0', date:'2026-10-13',
     en:['One row above the neck now holds the key (with the circle of fifths as its picker), the chord, the tempo, a single ▶ for the chord or your progression with an optional band, the tuner and Settings — and drills use the same row.',
         'Rhythm guitar replaces Strumming and Comp: play a pattern or your own rhythm over a chord or a progression, and your earlier strumming and comping history carries over.',
@@ -31,12 +38,5 @@ const CHANGELOG = [
         'The progress card shows each drill\'s latest result, trend and best, and one drill header names the drill and holds its key, tempo, mic and Quit.'],
     uk:['Заняття: скажи, скільки маєш часу, — і Euterpe збере те, що час повторити, відлічить час, переведе з вправи у вправу й підсумує.',
         'Кожен довідковий вид відкриває вправу про те, що на екрані, а «Джем над цим» вмикає гурт під акорд чи прогресію одним натисканням.',
-        'Картка прогресу показує останній результат, напрямок і рекорд кожної вправи, а одна шапка вправи називає її й тримає тональність, темп, мікрофон і вихід.'] },
-  { v:'2.14.0', date:'2026-08-02',
-    en:['Strumming & feel and Comp the progression can now score you through the microphone, timing your strums and your chord changes.',
-        'A run that only hears the app\'s own click through the speakers is recognised and refused instead of scored; headphones avoid it.',
-        'In scored runs the guide guitar goes quiet so the app never scores its own sound, while the click and band keep playing.'],
-    uk:['«Бій і відчуття» та «Акомпанемент прогресії» тепер оцінюють тебе через мікрофон — таймінг ударів і змін акорду.',
-        'Прогон, у якому мікрофон чує лише клацання застосунку з колонок, розпізнається й не оцінюється; навушники цього уникають.',
-        'У прогонах з оцінкою гітара-підказка стихає, щоб застосунок не оцінював власний звук, а клацання й гурт грають далі.'] }
+        'Картка прогресу показує останній результат, напрямок і рекорд кожної вправи, а одна шапка вправи називає її й тримає тональність, темп, мікрофон і вихід.'] }
 ];

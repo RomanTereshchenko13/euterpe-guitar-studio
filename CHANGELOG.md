@@ -2,6 +2,12 @@
 
 _Generated from `src/js/02-changelog.js` and `src/changelog-archive.md` by `build.js` — do not edit by hand._
 
+## v2.19.0 — 2026-10-13
+
+- The tuner and Settings now sit in the app header, Harmony switches between Chord tones, Triads and Arpeggio in one row above the neck, and on a phone the neck sits higher.
+- One metronome: "Click with ▶" in the tempo sheet (or M) clicks along with the chord, your progression or a drill, and Practice opens on a "Next up" card in place of timed sessions.
+- The key panel names modes correctly with their own key signature, Scales can show the current chord over the scale, and the circle of fifths uses the same colours as the neck.
+
 ## v2.18.0 — 2026-10-13
 
 - One row above the neck now holds the key (with the circle of fifths as its picker), the chord, the tempo, a single ▶ for the chord or your progression with an optional band, the tuner and Settings — and drills use the same row.
