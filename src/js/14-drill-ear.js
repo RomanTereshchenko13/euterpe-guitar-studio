@@ -114,7 +114,6 @@ function renderEarPrompt(){
   const c=document.getElementById('ear-count'); if(c) c.textContent=Math.min(ear.done+1, ear.total)+' / '+ear.total;
   // the first-run instruction, folded behind ? for a regular
   const h=document.getElementById('ear-hint'); if(h) h.textContent=t('ear_hint');
-  const rp=document.getElementById('ear-replay'); if(rp){ rp.innerHTML='&#9654; '+t('ear_replay'); rp.setAttribute('aria-label', t('ear_replay')); }
   const fb=document.getElementById('ear-feedback'); if(fb){ fb.textContent=''; fb.className='ear-feedback'; }
   const nx=document.getElementById('ear-next'); if(nx) nx.hidden=true;
   renderEarChoices();
@@ -164,6 +163,8 @@ function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPr
 /* in-drill controls, wired once at load */
 registerDrill({ id:'ear', area:'ear-area',
                 begin:beginEar, end:endEar, isActive:()=>!!ear, refreshLang:refreshEarLang,
+                // the strip's ▶ hears the prompt again — not a toggle
+                play:earReplay, playKey:()=>'ear_replay',
                 /* two tracks, two SRS queues; session ids keep their historic `ear-` prefix */
                 tracks:[
                   { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', scored:'acc', arg:'interval' },
@@ -173,7 +174,6 @@ registerDrill({ id:'ear', area:'ear-area',
 (function initEar(){
   const area=document.getElementById('ear-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('ear-replay', earReplay);
   wire('ear-next',   earNext);
   const ch=document.getElementById('ear-choices');
   if(ch) ch.addEventListener('click', e=>{ const b=e.target.closest('.ear-choice'); if(b && !b.disabled) earAnswer(b.dataset.key); });

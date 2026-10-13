@@ -18,12 +18,7 @@ window.addEventListener('resize', markScrollables);
 try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(markScrollables); }catch(_){}
 applyAudioAvailability();
 applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
-/* the drill header's one key picker: every drill sets the same root, and the running
-   drill only says what to re-derive (onKey) */
-{ const dk=document.getElementById('drill-ctx-key');
-  if(dk) buildRootBtns(dk, keyRoot, (pc,r)=>{ setKey(pc,r); drillKeyChanged(); });
-  const dq=document.getElementById('drill-ctx-quit');
-  if(dq) dq.onclick=quitDrill; }
+{ const dq=document.getElementById('drill-ctx-quit'); if(dq) dq.onclick=quitDrill; }
 /* Every drill starts inside #practice-home — a card or the progress card's Review —
    through one listener: each carries data-track, and startTrack() opens it. */
 { const ph=document.getElementById('practice-home');
@@ -38,6 +33,7 @@ applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
   wire('drill-ctx-setup', drillSetupToggle);
   wire('drill-ctx-help',  drillHintToggle);
   wire('drill-ctx-mic',   drillMicToggle);
+  wire('drill-ctx-cal',   calBoxToggle);
   // end the block early, keep the session
   wire('drill-ctx-skip',  ()=>sessionAdvance()); }
 /* the session's length chips and the report's Done are painted by the session
@@ -63,6 +59,10 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     APP_VERSION, I18N, QUALITIES, TRIADS, SCALES, COF, FRET_RANGES, SEQ_PRESETS,
     fifthInterval, spellNote, rootParts, simpleName,
     diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey, noteTxt, keyDegrees, keyCadence,
+    // the context strip
+    renderStrip, toggleSheet, closeSheets, sheetShown, chipOffered, placeStrip, stripPlay, refPlayToggle,
+    setScale, setChordQual, setPlaySrc, playCadence, jamToggle, bandActive, bassToggle, drumsToggle,
+    getPlaySrc:()=>playSrc,
     scalesOverChord, triadQi, currentHarmonyChord,
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
@@ -86,13 +86,13 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     sessionEnd, sessionActive, sessionDismiss, sessionClock, renderSessionCard,
     getSession:()=>psess, getSessReport:()=>sessLast,
     getSessMins:()=>sessMins, setSessMins:(m)=>{ sessMins=m; },
-    SEAM_TRACKS, jamToggle, jamActive, renderJamBtn,
+    SEAM_TRACKS,
     // progress narrative + card badges
     trackBadge, paintDrillBadges, renderProgressInto, renderPractice, trendScore,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord, seqClear,
     getSeq:()=>seq, setSeq:(a)=>{ seq=a; renderSeq(); },
     // shell
-    setTempo, getTempo:()=>tempo, stopReferenceTransport, transportActive, applyContextBar, updateGlobalPlay,
+    setTempo, getTempo:()=>tempo, stopReferenceTransport, transportActive, applyBoardRegion,
     renderAllBoards,
     // learner model
     recordAttempt, dueItems, recordSession, learnerStats, srsInterval, normalizeLearner,
@@ -141,7 +141,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     ON_REFRACTORY, ON_RATIO, ON_FLOOR, ON_HUMAN_MS, ON_SELF_HITRATE, ON_SELF_MIN_N,
     // latency calibration
     calOffsetSec, calSetMs, calCancel, calMedian, getCalMs:()=>calMs, CAL_MAX_MS, CAL_MIN_HITS,
-    calMeasured, setCalKnown:(v)=>{ calKnown=!!v; },
+    calMeasured, setCalKnown:(v)=>{ calKnown=!!v; }, calOffer, calBoxToggle, getCalOpen:()=>calOpen,
     // the shared scored-run layer and its consumers; _set() injects a run, so scoring
     // is driven end to end with no microphone
     scoredRun, SC_TOL_MAX,
@@ -157,7 +157,8 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     setCtxNow:(t)=>{ if(actx) actx.currentTime=t; },
     setGMode, revealFrets,
     state:()=>({ keyRoot, keyLbl, chRoot, chLbl, scIdx, scView, chQual, chVoicing, chTriads, currentTab, currentMode, hView, gMode, ntRoot,
-                 loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo,
+                 loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo, playSrc, bassOn, grooveOn,
+                 toolbarOpen, backingOpen, keySheetOpen, chordSheetOpen, tempoSheetOpen,
                  cbPalette, fnShapes, welcomeSeen })
   };
 }

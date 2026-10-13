@@ -1,6 +1,6 @@
 /* ===================== KEYBOARD SHORTCUTS ===================== */
 /* ---- keyboard shortcuts ----
-   Space=Listen/Stop · L=Loop · M=Metronome · 1–4=nav · A–G=key · [ ]=transpose · ?=help.
+   Space=the strip's ▶ · M=Metronome · 1–3=nav · K=key sheet · A–G=key · [ ]=transpose · ?=help.
    Ignored while typing, while a modal is open, or with Ctrl/Meta/Alt (browser shortcuts
    survive). Space is taken only when focus is NOT on a control, so a focused dot or
    button keeps its native Space. */
@@ -14,28 +14,28 @@ document.addEventListener('keydown',e=>{
   if(!document.getElementById('cl-overlay').hidden || !document.getElementById('kbd-overlay').hidden) return;
   { const mo=document.getElementById('mic-overlay'); if(mo && !mo.hidden) return; }
   const k=e.key;
-  // Space / L / M drive the REFERENCE transport, which Practice hides; from a drill
-  // they would start a metronome nobody can see or stop.
+  // M drives the REFERENCE metronome, which a drill replaces with its own click; from a
+  // drill it would start a metronome nobody can see or stop.
   const refTransport = currentMode!=='practice';
   if(k===' '||k==='Spacebar'){
     if(tg && tg.closest && tg.closest('button,a,[role="button"],[tabindex]')) return;   // let the focused control keep Space
-    if(!refTransport) return;
+    // the strip's ▶ — the backing in Reference, the running drill's verb in Practice
+    const gp=document.getElementById('g-play');
+    if(!gp || gp.disabled || gp.closest('[hidden]')) return;
     e.preventDefault();
-    if(typeof seqClock!=='undefined' && seqClock) seqStop();
-    else if(typeof loopClock!=='undefined' && loopClock) stopLoop();
-    else globalPlay();
+    stripPlay();
     return;
   }
   if(k==='?'){ e.preventDefault(); openKbd(); return; }
   // the number keys are the nav, in nav order
   if(k==='1'){ navTo('harmony'); return; }
   if(k==='2'){ navTo('scales'); return; }
-  if(k==='3'){ navTo('circle'); return; }
-  if(k==='4'){ navTo('practice'); return; }
+  if(k==='3'){ navTo('practice'); return; }
   if(k==='['){ transposeKey(-1); return; }
   if(k===']'){ transposeKey(1); return; }
   const lk = k.length===1 ? k.toLowerCase() : '';
-  if(lk==='l'){ const lp=document.getElementById('g-loop'); if(refTransport && lp && !lp.hidden && !lp.disabled) loopToggle(); return; }
+  // K opens the key sheet (where the circle lives) wherever the strip offers the key
+  if(lk==='k'){ if(chipOffered('key')) toggleSheet('key'); return; }
   if(lk==='m'){ const mb=document.getElementById('tb-metro'); if(refTransport && mb && !mb.disabled) metroToggle(); return; }
   if(lk && NOTE_KEY[lk]!==undefined){ const pc=NOTE_KEY[lk]; setKey(pc, ROOTS[pc]); return; }
 });

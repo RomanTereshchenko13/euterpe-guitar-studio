@@ -113,11 +113,12 @@ function scoredRun(cfg){
     toggle(){
       st.on = !st.on; st.score = null;
       status(st.on && !calMeasured() ? 'on_needcal' : null);
+      if(st.on && !calMeasured()) calOffer();
       if(!st.on) unlisten();
     },
     setOn(v){ st.on = !!v; },
-    /* called from the drill's play() */
-    begin(){ st.grid = []; st.heard = []; st.score = null; st.live = true; if(st.on) listen(); },
+    /* called from the drill's play(); a scored run with the latency unknown offers the box */
+    begin(){ st.grid = []; st.heard = []; st.score = null; st.live = true; if(st.on){ if(!calMeasured()) calOffer(); listen(); } },
     /* called from the drill's tick with the time it scheduled the sound for */
     mark(when){ if(st.on && st.live && st.grid.length < SC_MAX_MARKS) st.grid.push(when); },
     /* called from the drill's stop() — returns the score and keeps it for the panel */
@@ -132,7 +133,8 @@ function scoredRun(cfg){
     render(){
       const mb = document.getElementById(cfg.micId);
       if(mb){
-        mb.textContent = t('on_listen');
+        mb.textContent = '🎤';
+        mb.setAttribute('aria-label', t('on_listen')); mb.title = t('on_listen');
         mb.classList.toggle('active', st.on);
         mb.setAttribute('aria-pressed', st.on ? 'true' : 'false');
       }

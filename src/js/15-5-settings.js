@@ -1,4 +1,4 @@
-/* ===================== SETTINGS: language, toolbar, tempo, transport ===================== */
+/* ===================== SETTINGS: language, the Settings sheet, tempo, the band ===================== */
 document.getElementById('lang-switch').addEventListener('click',e=>{
   const b=e.target.closest('.langbtn'); if(!b||b.dataset.lang===lang) return;
   lang=b.dataset.lang; applyLang(); saveState();
@@ -27,7 +27,7 @@ document.getElementById('tb-tuning').onchange=function(){
 document.getElementById('tb-frets').onchange=function(){ fretRangeIdx=+this.value; renderAllBoards(); saveState(); };
 { const cp=document.getElementById('tb-capo'); if(cp) cp.onchange=function(){ capo=+this.value; renderAllBoards(); saveState(); }; }
 /* a meter change alters bar length and beat grid, so re-paint the running drill */
-{ const mt=document.getElementById('tb-meter'); if(mt) mt.onchange=function(){ setMeter(+this.value); refreshDrillsLang(); saveState(); }; }
+{ const mt=document.getElementById('tb-meter'); if(mt) mt.onchange=function(){ setMeter(+this.value); paintTempoChip(); refreshDrillsLang(); saveState(); }; }
 /* accessibility: a colour-blind-safe palette and per-function dot shapes, both pure
    body-class switches, both persisted */
 function applyA11y(){
@@ -41,20 +41,15 @@ function applyA11y(){
   const s=document.getElementById('tb-shapes');    if(s) s.onclick=function(){ fnShapes=!fnShapes;  applyA11y(); saveState(); }; }
 
 document.getElementById('tb-lefty').onclick=function(){ lefty=!lefty; this.classList.toggle('active',lefty); this.setAttribute('aria-pressed',lefty); renderAllBoards(); saveState(); };
-/* the clocks read beat() live, so the tempo glides without restarting */
+/* the tempo sheet: the clocks read beat() live, so the tempo glides without restarting;
+   the slider and the ±5 steppers share the one setter */
 document.getElementById('tb-tempo').oninput=function(){ setTempo(+this.value); };
 document.getElementById('tb-tempo').onchange=function(){ saveState(); };
-/* the same tempo, stepped from the drill header; both controls use the one setter */
 { const step=d=>{ setTempo(tempo+d); saveState(); };
-  const sl=document.getElementById('drill-ctx-slower'); if(sl) sl.onclick=()=>step(-5);
-  const fa=document.getElementById('drill-ctx-faster'); if(fa) fa.onclick=()=>step(5); }
+  const sl=document.getElementById('tb-slower'); if(sl) sl.onclick=()=>step(-5);
+  const fa=document.getElementById('tb-faster'); if(fa) fa.onclick=()=>step(5); }
 document.getElementById('tb-metro').onclick=metroToggle;
 document.getElementById('tb-bass').onclick=bassToggle;
 document.getElementById('tb-drums').onclick=drumsToggle;
-document.getElementById('tb-stop').onclick=function(){ if(seqClock) seqStop(); else stopLoop(); };
-document.getElementById('tb-toggle').onclick=function(){ toolbarOpen=!toolbarOpen; applyToolbarState(); saveState(); };
-document.getElementById('backing-toggle').onclick=function(){ backingOpen=!backingOpen; applyBackingPanel(); saveState(); };
-/* "more" on either quality picker flips the shared chQualsAdv, so both stay in step */
-function qualMoreToggle(){ chQualsAdv=!chQualsAdv; buildChQuals(); buildArpQuals(); markScrollables(); }
-{ const a=document.getElementById('ch-quals-toggle'); if(a) a.onclick=qualMoreToggle;
-  const b=document.getElementById('arp-quals-toggle'); if(b) b.onclick=qualMoreToggle; }
+/* the chord sheet's "more" */
+{ const a=document.getElementById('ch-quals-toggle'); if(a) a.onclick=()=>{ chQualsAdv=!chQualsAdv; buildChQuals(); markScrollables(); }; }

@@ -41,4 +41,10 @@ function dismissWelcome(){ const o=document.getElementById('welcome-overlay'); i
   route('wc-go-tune',     micOpen);
   const o=document.getElementById('welcome-overlay'); if(o) o.addEventListener('click',e=>{ if(e.target.id==='welcome-overlay') dismissWelcome(); }); }
 
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeChangelog(); closeKbd(); dismissWelcome(); } });
+/* Escape closes the modal on top; with none open, it shuts the strip's sheet */
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  const modal=['cl-overlay','kbd-overlay','welcome-overlay','mic-overlay'].some(id=>{ const o=document.getElementById(id); return o && !o.hidden; });
+  closeChangelog(); closeKbd(); dismissWelcome();
+  if(!modal) closeSheets();
+});

@@ -1,6 +1,6 @@
 # Euterpe — Plan
 
-_Shipping: v2.17.0 · Updated: 2026-10-12_
+_Shipping: v2.17.0 · Updated: 2026-10-13_
 
 ## What Euterpe is
 
@@ -75,8 +75,8 @@ foundation work makes that work smaller.
 | Chord shapes card | see | **Keep** (make the cards look selectable — step 3) |
 | "What to play over this" + Jam | see, play along | **Keep** — the best seam between the two |
 | Scales (scale, positions, notes) | see | **Keep** |
-| Circle of fifths as a tab | see | **Becomes the key picker** (step 8); nav goes to three tabs |
-| Listen / Loop / Backing / progression Play / Cycle / Jam | play along | **Merge into one ▶ + progression drawer** (step 8) |
+| Circle of fifths as a tab | see | **Done (step 8)** — the key picker, in the strip's key sheet; nav is three tabs |
+| Listen / Loop / Backing / progression Play / Cycle / Jam | play along | **Done (step 8)** — one ▶ + the progression drawer |
 | Mic tuner | heard | **Keep** |
 | Reference-tone tuner | — | **Merged (v2.17.0)** — "Tune by ear" inside the one tuner panel |
 | Timing & subdivision | heard | **Keep — the best drill**; scored on timing error (step 9) |
@@ -88,7 +88,7 @@ foundation work makes that work smaller.
 | Chord-tone targeting (tap, answer lit) | — | **Cut (v2.17.0)** — the lit version is Harmony ▸ Arpeggio + Jam |
 | Call & response (tap, call lit) | — | **Cut (v2.17.0)** |
 | Sessions · SRS learner · progress card | — | **Freeze** — no new work until fewer, better drills feed them |
-| Latency calibration | heard | **Keep**; moves into the mic flow (step 8) |
+| Latency calibration | heard | **Keep** — in the mic flow since step 8 |
 | Export / import · persistent storage | — | **Keep** — data safety |
 | Share links | — | **Cut (v2.17.0)** — an old link opens the app, hash ignored and cleared |
 | Custom tunings · time signatures · colour-blind palette + shapes | see | **Keep** — cheap, and accessibility matters |
@@ -166,34 +166,27 @@ later step gets smaller after it.
       time: opening another ends the first. `drillRecord()` records, saves, repaints the home
       and says the result in a live region (`#drill-live`; there was none, so it is new). The
       note and ear drills share one summary (`renderDrillSummary`: stats, review, Again, Done).
+- [x] **The context strip** — one row directly above the neck (Reference) or under the drill
+      header (Practice): key · chord · tempo · ▶ (+ ▾ drawer) · tuner · ⚙. One element, moved
+      between the two slots (`placeStrip`, `15-0-strip.js`); each chip opens a sheet, one at a
+      time (a bottom sheet on a phone, so the neck stays in view). The key sheet holds the root,
+      the scale (common keys, the modes behind "more") and the circle of fifths as the picker,
+      with its key panel and cadence; nav is Harmony · Scales · Practice. The chord sheet holds
+      the key's degrees and the quality picker (gone from under the neck). The tempo sheet holds
+      BPM (slider ± 5), the meter and the metronome. One ▶ plays the chord on a loop or the
+      progression (the drawer: source, presets/strip, Jam + bass/drums), replacing Listen,
+      Loop, the transport chip, the Backing panel, the progression panel and the Jam buttons.
+      Settings: Instrument · Sound · Display (+ language) · Progress. Latency calibration
+      moved into the mic flow: offered when a scored run is switched on or started unmeasured,
+      ⏱ in the drill header re-opens it. The header is the brand only on phones; the version
+      badge is in the footer. Drills declare `key` / `chord` / `tempo` / `play` (+ `playing`,
+      `playKey`) and lost their own Play/Start/Replay buttons; the drill header is one row
+      (name · ? · setup · 🎤 · ✕); a run folds the setup and the hint. Shortcuts: 1–3 nav,
+      K key sheet, Space = the strip's ▶ (a drill's too); L is gone.
+      _Data:_ a save on the circle tab opens Scales with the key sheet up (compat lists it in
+      MIGRATED); `playSrc` is new; `backingOpen` now means the drawer. On a 390×844 phone the
+      neck starts at ~216px (Reference) and ~236px (timing run).
 
-### 8 — The context strip: one layout grammar · L · medium risk
-One compact row directly above the neck (or the drill stage), the same in Reference and Practice:
-
-```
-[ A minor ▾ ]  [ Am ▾ ]  [ ♩ 90 · 4/4 ▾ ]  [ ▶ ]  [ 🎵 tuner ]          ⚙
-```
-
-- [ ] **Key chip** → root, scale family (chips + "more") and the circle of fifths. **The circle
-      becomes the key picker**; its key panel moves with it. Nav becomes Harmony · Scales ·
-      Practice. _Compat:_ saves pinned to the circle tab open Scales with the key sheet open;
-      shortcuts `1`–`4` become `1`–`3` + a key-sheet key (`tools/kbd-check.js` updated).
-- [ ] **Chord chip** → the key's diatonic degrees first, then quality and "more". The quality
-      row under the neck goes away.
-- [ ] **Tempo chip** → BPM + time signature; the same control in Reference and drills.
-- [ ] **One ▶** plays the chord, the progression or the jam, chosen in a **progression drawer**
-      (presets, user-built, Jam on/off, band parts). Replaces Listen / Loop / Cycle / Jam, the
-      Backing disclosure and the progression panel at the bottom of Harmony.
-- [ ] **⚙ Settings:** Instrument (tuning, capo, frets, left-handed) · Sound (volume) · Display
-      (palette, shapes, **language**) · Progress (export / import). Latency calibration moves
-      into the mic flow (offered the first time a scored run starts).
-- [ ] **Tuner** button in the strip, both layers.
-- [ ] **Header:** brand only on phones; version badge to the footer.
-- [ ] **Drill header in one row:** name · ? · 🎤 · ✕; tempo and ▶ come from the strip, so
-      Start/Stop is at the top, not under the neck.
-- **Done when:** on a 390×844 phone the neck starts in the top third of every Reference view and
-  every drill, and every screen has exactly one tempo control and one play control.
-- **Check:** `node tools/shoot.js tabs practice timing-run 390x844 844x390 1366x768 1920x1080`.
 
 ### 9 — Practice: fewer, better drills · M
 - [ ] **Rhythm guitar** = Strumming & feel + Comp: a pattern (or free) over one chord *or* the

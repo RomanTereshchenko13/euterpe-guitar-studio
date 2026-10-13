@@ -40,7 +40,7 @@ in sync with `src/`).
 
 Browser tools (system Edge/Chrome, headless; build first):
 `tools/shoot.js` (screenshots + overflow probe; tokens: `tabs`, `practice`, `settings`,
-drill names, `WxH` sizes), `tools/scroll-check.js`, `tools/kbd-check.js`,
+`key`/`chord`/`tempo`/`drawer` (strip sheets), drill names, `WxH` sizes), `tools/scroll-check.js`, `tools/kbd-check.js`,
 `tools/mic-check.js`, `tools/onset-check.js`. Orientation matrix for layout changes:
 `node tools/shoot.js tabs 390x844 844x390 360x740 768x1024 1024x768 1280x800 1920x1080`.
 
@@ -65,8 +65,9 @@ Skills: `release`, `preflight` (every gate), `visual-review`, `add-i18n-string`,
 | `14-calibration` · `14-onset` · `14-mic-tuner` | latency, onset detection, tuner |
 | `14-drill-*` | the drills (each self-registers) |
 | `14-session` | timed practice session |
+| `15-0-strip` | the context strip (key · chord · tempo · ▶ · tuner · ⚙), its sheets, `placeStrip`, the one ▶ |
 | `15-1-context` | `setKey` (the key), sub-views, `renderActiveContext` (only the view on screen paints) |
-| `15-2-panels` · `15-3-nav` · `15-4-play` | reference panel wiring · tabs, mode, seams · Jam, no-audio fallback |
+| `15-2-panels` · `15-3-nav` · `15-4-play` | reference panel wiring, progression drawer · tabs, mode, seams · the reference ▶, no-audio fallback |
 | `15-5-settings` · `15-6-modals` · `15-7-shortcuts` | toolbar · changelog/welcome · keyboard |
 | `15-8-init` | restore, first render, `__GS_TEST__` hook |
 | `16-pwa` | service worker + install prompt |
@@ -84,9 +85,11 @@ Also: `src/styles.css`, `src/index.template.html` (markers `@@STYLES@@` `@@SCRIP
   (`.drill-setup`, `.drill-hint`) are invisible to jsdom — the suite pins them by regex.
 - **Adding a drill** = one `14-drill-*.js` calling `registerDrill({begin, end, ...tracks})` +
   its `*-area` markup + a practice card with `data-track`. The suite fails if an area or card
-  has no registered drill. Drills open through `startTrack()`; the registry shows the area,
-  focuses the header and closes back to the card. A drill records a run with
-  `drillRecord()` (saves, repaints, announces) and a finite one ends on `renderDrillSummary()`.
+  has no registered drill. What the strip offers in it is declared (`key`, `chord`, `tempo`,
+  `play`/`playing`/`playKey`); a drill has no Play button of its own. Drills open through
+  `startTrack()`; the registry shows the area, focuses the header and closes back to the
+  card. A drill records a run with `drillRecord()` (saves, repaints, announces) and a finite
+  one ends on `renderDrillSummary()`.
 - **Key ≠ chord.** `setKey()` moves the key (`keyRoot`/`keyLbl`/`scIdx`) and brings the chord
   to its tonic root; `setChord()` moves only the chord (`chRoot`/`chLbl`/`chQual`). Scales,
   the circle, Notes and scale drills read the key; Harmony, the loop, the progression's

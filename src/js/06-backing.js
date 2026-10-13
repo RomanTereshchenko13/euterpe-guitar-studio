@@ -4,6 +4,8 @@
    Everything is scheduled per bar from loopStrum / seqStrumStep, so it shares the bar
    start and the chord and can't drift. */
 let bassOn=false, grooveOn=false;
+/* what the strip's ▶ plays in Reference: the chord on a loop, or the progression */
+let playSrc='chord';
 
 /* the chord's actual fifth — perfect, ♭5 (dim / dim7 / m7♭5) or ♯5 (aug) — so the
    bass never clashes */
@@ -145,21 +147,27 @@ function metroToggle(){
   btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setMetroLabel(); setBackingToggle(); syncWakeLock();
 }
 function setMetroLabel(){ const b=document.getElementById('tb-metro'); b.innerHTML=(metroClock?'&#9632; ':'&#9654; ')+t(metroClock?'tb_metro_on':'tb_metro_off'); b.setAttribute('aria-label', t('tb_metro_off')); }
-/* tint the collapsed Backing toggle while anything in it is running */
-function setBackingToggle(){ const b=document.getElementById('backing-toggle'); if(b) b.classList.toggle('on', !!metroClock || bandActive()); }
-/* ---- bass + drums toggles ----
-   Turning one on while nothing plays starts the single-chord loop, so the band has a
-   bar to ride; turning it off leaves the loop running (Stop or Loop ends it). While
-   something plays they join on the next bar. Persisted. */
-function ensureBacking(){ if(!loopClock && !seqClock) loopToggle(); }   // loopToggle starts when idle
+/* tint the strip while something it hides is on: the drawer's caret for the band, the
+   tempo chip for the metronome */
+function setBackingToggle(){
+  const b=document.getElementById('backing-toggle'); if(b) b.classList.toggle('on', bandActive());
+  const tc=document.getElementById('chip-tempo'); if(tc) tc.classList.toggle('on', !!metroClock);
+}
+/* ---- bass + drums: what the band adds under ▶ ----
+   Settings for the next ▶, not a start of their own; while something plays they join
+   on the next bar. The Jam is both at once. Persisted. */
 function setBandLabels(){
+  const jm=document.getElementById('pl-jam');
+  if(jm){ const on=bandActive(); jm.textContent=t('pl_jam'); jm.classList.toggle('active', on); jm.setAttribute('aria-pressed', on?'true':'false'); }
   const bb=document.getElementById('tb-bass');
   if(bb){ bb.innerHTML='&#9834; '+t('tb_bass'); bb.classList.toggle('active', bassOn); bb.setAttribute('aria-pressed', bassOn?'true':'false'); bb.setAttribute('aria-label', t('tb_bass')); }
   const db=document.getElementById('tb-drums');
   if(db){ db.innerHTML='&#9835; '+t('tb_drums'); db.classList.toggle('active', grooveOn); db.setAttribute('aria-pressed', grooveOn?'true':'false'); db.setAttribute('aria-label', t('tb_drums')); }
 }
-function bassToggle(){ audio(); bassOn=!bassOn; if(bassOn) ensureBacking(); setBandLabels(); setBackingToggle(); saveState(); }
-function drumsToggle(){ audio(); grooveOn=!grooveOn; if(grooveOn) ensureBacking(); setBandLabels(); setBackingToggle(); saveState(); }
+function bassToggle(){ bassOn=!bassOn; setBandLabels(); setBackingToggle(); saveState(); }
+function drumsToggle(){ grooveOn=!grooveOn; setBandLabels(); setBackingToggle(); saveState(); }
+/* the Jam: the whole band on, or off */
+function jamToggle(){ const on=!bandActive(); bassOn=on; grooveOn=on; setBandLabels(); setBackingToggle(); saveState(); }
 
 /* ---- single-chord / single-triad loop: re-strums the current voicing every bar ----
    loopMode (chord vs triad) is captured at start, but the voicing is read live, so a
@@ -185,19 +193,15 @@ function loopStrum(when){
 }
 function stopLoopVisual(){ document.querySelectorAll('#board .dot.playing').forEach(d=>d.classList.remove('playing')); }
 function loopToggle(){
-  const btn=document.getElementById('g-loop');
-  if(loopClock){ removeClock(loopClock); loopClock=null; clearVisualQ(); stopLoopVisual();
-    btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); setLoopLabel(); return; }
+  if(loopClock){ stopLoop(); return; }
   seqStop();
   loopMode = isBoardMode('triads') ? 'triad' : 'chord';
   audio();
   loopClock={ interval:()=>barSec(), tick:(time)=>loopStrum(time) };
   addClock(loopClock);
-  btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setLoopLabel();
+  updateGlobalTransport();
 }
-function stopLoop(){ if(!loopClock) return; removeClock(loopClock); loopClock=null; clearVisualQ(); stopLoopVisual();
-  const b=document.getElementById('g-loop'); if(b){ b.classList.remove('active'); b.setAttribute('aria-pressed','false'); } setLoopLabel(); }
-function setLoopLabel(){ const b=document.getElementById('g-loop'); if(!b) return; b.innerHTML=(loopClock?'&#9632; ':'&#8635; ')+t('b_loop'); b.setAttribute('aria-label', t(loopClock?'b_loop_stop_tip':'b_loop_tip')); b.title=t(loopClock?'b_loop_stop_tip':'b_loop_tip'); updateGlobalTransport(); }
+function stopLoop(){ if(!loopClock) return; removeClock(loopClock); loopClock=null; clearVisualQ(); stopLoopVisual(); updateGlobalTransport(); }
 
 /* Stop everything the reference transport owns, on entering Practice: a drill brings
    its own click and bed on its own scheduler, and the reference loop would play over
@@ -208,26 +212,18 @@ function stopReferenceTransport(){
   if(metroClock) metroToggle();
 }
 
-/* ---- global transport chip: what is sounding, readable and stoppable from any tab ---- */
-/* beat pulse: pump the transport dot on each scheduled beat, from the same per-bar
-   enqueue as the dot-lighting, so the tempo is seen in step with the sound */
+/* ---- what is sounding: the strip's ▶ says it, from either tab ---- */
+/* beat pulse: pump the ▶'s dot on each scheduled beat, from the same per-bar enqueue as
+   the dot-lighting, so the tempo is seen in step with the sound */
 function pulseTransport(strong){
-  const d=document.querySelector('.tb-transport-dot'); if(!d) return;
+  const d=document.querySelector('#g-play .strip-pulse'); if(!d) return;
   d.classList.remove('bp','bp-strong'); void d.offsetWidth;     // restart the animation
   d.classList.add(strong?'bp-strong':'bp');
 }
 function enqueueBeats(when){ const p=pulseSec(), n=barBeats(), starts=meterGroupStarts(); for(let k=0;k<n;k++) enqueueVisual(when+k*p, ()=>pulseTransport(k===0 || starts.has(k))); }
 function loopChordLabel(){ return noteTxt(chLbl)+(loopMode==='triad' && chTriadIdx()>=0 ? curTriad().short : QUALITIES[chQual].short); }
 function updateGlobalTransport(){
-  const wrap=document.getElementById('tb-transport'); if(!wrap) return;
-  const label=document.getElementById('tb-transport-label');
-  const stop=document.getElementById('tb-stop');
-  stop.innerHTML='&#9632; '+t('tb_stop'); stop.setAttribute('aria-label', t('tb_stop'));
-  if(seqClock){ label.textContent=t('tb_now_seq')+' · '+noteTxt(chLbl)+QUALITIES[chQual].short; wrap.hidden=false; }
-  else if(loopClock){ label.textContent=t('tb_now_loop')+' · '+loopChordLabel(); wrap.hidden=false; }
-  else { wrap.hidden=true; }
-  // the Jam buttons follow the transport, including when something else stops it
-  renderJamBtn();
+  renderPlayBtn();
   syncWakeLock();
 }
 
@@ -329,9 +325,6 @@ function seqRebuild(){ if(seqClock){ seqBuildMap(); if(seqBar>=seqBarMap.length)
 function seqLoopToggle(){ seqLoopOn=!seqLoopOn; setSeqTransport(); saveState(); }
 function seqClear(){ seq=[]; if(seqClock) seqStop(); seqStepIdx=-1; renderSeq(); saveState(); }
 function setSeqTransport(){
-  // these act on the whole PROGRESSION, the header's Listen/Loop on the current chord —
-  // the tooltips say so
-  const p=document.getElementById('seq-play'); if(p){ p.innerHTML=(seqClock?'&#9632; ':'&#9654; ')+t('seq_play'); p.setAttribute('aria-label', t('seq_play_tip')); p.title=t('seq_play_tip'); p.classList.toggle('active', !!seqClock); }
   const l=document.getElementById('seq-loopbtn'); if(l){ l.innerHTML='&#8635; '+t('seq_loop'); l.setAttribute('aria-label', t('seq_loop_tip')); l.title=t('seq_loop_tip'); l.classList.toggle('active', seqLoopOn); l.setAttribute('aria-pressed', seqLoopOn?'true':'false'); }
   updateGlobalTransport();
 }

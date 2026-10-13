@@ -40,30 +40,33 @@ function buildDia(rootPc, sc, flat){
   // the shared diatonicTriads(); the circle spells each chord by key signature
   return diatonicTriads(rootPc, sc).map(c=> noteName(c.rootPc, flat)+c.suf);
 }
-/* The wheel shows the current key instead of keeping its own selection: the ring
-   comes from the mode (major third → outer ring), the node from the root. Clicks go
-   through setKey(); nothing here persists. The chord is marked on top of the key: a
+/* The wheel is the key picker (the strip's key sheet) and shows the current key
+   instead of keeping its own selection: the ring comes from the mode (major third →
+   outer ring), the node from the root. Clicks go through setKey(); nothing here persists. The chord is marked on top of the key: a
    major- or minor-triad chord rings its node (ii in C rings Dm). */
 function ctxCofMinor(){ return !isMajorFamily(scIdx); }
 function ctxCofSel(){ const minor=ctxCofMinor(); const i=COF.findIndex(c=>(minor?c.minPc:c.majPc)===keyRoot); return i<0?0:i; }
 function pcToRootLabel(pc){ const i=ROOTS.findIndex(r=> (FLAT_ROOTS[r]!==undefined?FLAT_ROOTS[r]:NOTES.indexOf(r))===pc ); return ROOTS[i]; }
-function activateRoot(container, pc){ [...container.children].forEach(b=>{ b.classList.toggle('active', +b.dataset.pc===pc); }); }
+function activateRoot(container, pc){ [...container.children].forEach(b=>{ const on=+b.dataset.pc===pc; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on?'true':'false'); }); }
 /* the ring the chord sits on, or null: unmarked when it is the key's own tonic chord
    (the key already shows it) or has no plain major/minor triad (sus, dim, aug, 11) */
 function cofChordRing(){
   const iv=QUALITIES[chQual].iv, ring = iv[2]!==7 ? null : iv[1]===4 ? 'maj' : iv[1]===3 ? 'min' : null;
   return (chRoot===keyRoot && ring===(ctxCofMinor()?'min':'maj')) ? null : ring;
 }
+let _cofArcKey='';
 function cofXY(i,r){ const a=(-90+i*30)*Math.PI/180; return [180+r*Math.cos(a), 180+r*Math.sin(a)]; }
 function renderCircle(){
   const cofSel=ctxCofSel(), cofMinor=ctxCofMinor();
   const RO=132, RI=85, rMaj=27, rMin=21, dom=(cofSel+1)%12, sub=(cofSel+11)%12, ring=cofChordRing();
+  // the arc draws in on a new key only; a chord moving under the same key leaves it drawn
+  const arcKey=keyRoot+':'+scIdx, still=arcKey===_cofArcKey; _cofArcKey=arcKey;
   let s=`<circle cx="180" cy="180" r="${RO}" fill="none" stroke="var(--border)" stroke-width="1"/><circle cx="180" cy="180" r="${RI}" fill="none" stroke="var(--border)" stroke-width="1"/>`;
   // an arc through subdominant → tonic → dominant, behind the nodes, animated on each
   // render so a key change reads as a visible relation
   const arcR=cofMinor?RI:RO;
   const [asx,asy]=cofXY(sub,arcR), [atx,aty]=cofXY(cofSel,arcR), [adx,ady]=cofXY(dom,arcR);
-  s+=`<path class="cof-arc" d="M ${asx.toFixed(1)} ${asy.toFixed(1)} L ${atx.toFixed(1)} ${aty.toFixed(1)} L ${adx.toFixed(1)} ${ady.toFixed(1)}"/>`;
+  s+=`<path class="cof-arc${still?' still':''}" d="M ${asx.toFixed(1)} ${asy.toFixed(1)} L ${atx.toFixed(1)} ${aty.toFixed(1)} L ${adx.toFixed(1)} ${ady.toFixed(1)}"/>`;
   COF.forEach(c=>{
     const i=c.i;
     let mfill='var(--bg-panel-2)', mtext='var(--text)', nfill='var(--bg-panel)', ntext='var(--text-dim)';
@@ -112,24 +115,22 @@ function applyLang(){
   document.documentElement.lang = lang;
   document.querySelectorAll('[data-i18n]').forEach(el=>{ const k=el.getAttribute('data-i18n'); if(I18N[lang][k]!==undefined) el.textContent=I18N[lang][k]; });
   document.title = lang==='en' ? 'Euterpe — Guitar Studio' : 'Euterpe — Гітарна студія';
-  document.getElementById('cof-open').textContent=t('b_open_scales');
-  { const ch=document.getElementById('cof-harmony'); if(ch) ch.textContent=t('b_open_harmony'); }
   const setPair=(onId,offId)=>{ const a=document.getElementById(onId),b=document.getElementById(offId); if(a){a.classList.add('active');a.setAttribute('aria-pressed','true');} if(b){b.classList.remove('active');b.setAttribute('aria-pressed','false');} };
   gMode==='names'?setPair('g-names','g-deg'):setPair('g-deg','g-names');
   applyNtFilter();
-  buildChQuals(); buildArpQuals(); buildArpPos(); buildTrSets(); buildTrInvs(); buildScSelect(); buildScPos();
-  buildToolbar(); setMetroLabel(); setLoopLabel(); setBandLabels(); setBackingToggle(); applyBackingPanel();
+  buildArpPos(); buildTrSets(); buildTrInvs(); buildScPos();
+  buildToolbar(); setMetroLabel(); setBandLabels(); setBackingToggle();
   buildSeqPresets(); renderSeq(); setSeqTransport();
   { const o=document.getElementById('cl-overlay'); if(o && !o.hidden) renderChangelog(); }
   renderPractice();
   refreshDrillsLang();   // re-localize the drill in flight, and the drill header, whose name and setup handle
   // are painted from i18n, not data-i18n
   applyDrillCtx();
-  setHView(hView); setScView(scView); updateGlobalPlay();
+  setHView(hView); setScView(scView);
+  renderStrip();   // chip labels, ▶ and any open sheet are painted from i18n
   applyAudioAvailability();
   micRefreshLang();
   calRefreshLang();
-  activateRoot(document.getElementById('g-roots'), keyRoot);
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));
   /* the view switch has no visible label (its buttons name themselves next to the

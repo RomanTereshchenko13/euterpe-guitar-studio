@@ -8,7 +8,11 @@
    reaction time. Median over several clicks, so one stray noise can't shift it.
 
    On headphones the mic can't hear the speaker, so there is nothing to measure; it says
-   so rather than storing a wrong number, and the manual slider covers that case. */
+   so rather than storing a wrong number, and the manual slider covers that case.
+
+   It lives in the mic flow, not in Settings: the box is offered when a scored run is
+   switched on or started with the round trip unknown, and the drill header's ⏱ (shown
+   while the mic is on) brings it back to re-measure. */
 
 const CAL_CLICKS = 7;        // clicks per run; median of what comes back
 const CAL_SPACING = 0.55;    // s between clicks — beyond any plausible round trip
@@ -19,6 +23,8 @@ const CAL_MAX_MS = 400;      // sanity ceiling: beyond this it isn't latency, it
 let calMs = 0;               // the stored round-trip offset, ms (persisted)
 let calKnown = false;        // ever ESTABLISHED — measured or set by hand? (persisted)
 let calRun = null;           // in-flight run
+let calOpen = false;         // the box is up: offered, or opened from the header's ⏱
+let calDeclined = false;     // "Not now", this visit: not offered again until a reload
 
 /* The accessor the scorers use, in seconds like everything on the audio clock. */
 function calOffsetSec(){ return calMs/1000; }
@@ -105,6 +111,25 @@ function calMeasured(){ return calKnown; }
 function calRender(){
   const v=document.getElementById('cal-val'); if(v) v.textContent=calMs+' '+t('on_ms');
   const s=document.getElementById('cal-slider'); if(s && String(s.value)!==String(calMs)) s.value=calMs;
+  const b=document.getElementById('drill-ctx-cal');
+  if(b){ b.textContent='⏱ '+(calKnown ? calMs+' '+t('on_ms') : '?'); b.setAttribute('aria-label', t('cal_label')); b.title=t('cal_label'); }
+  const c=document.getElementById('cal-close'); if(c) c.textContent=t(calKnown ? 'drill_done' : 'cal_later');
+}
+/* A scored tier is about to measure the player with the round trip unknown: offer the
+   box (13-scored.js). The drill's own repaint shows it. */
+function calOffer(){ if(!calKnown && !calDeclined) calOpen=true; }
+/* the header's ⏱, and the box's own Not now / Done */
+function calBoxToggle(){
+  calOpen=!calOpen;
+  if(!calOpen && !calKnown) calDeclined=true;
+  applyDrillCtx();
+}
+/* the box and its ⏱ follow the running drill's mic: no mic tier, no latency */
+function applyCalBox(micOn){
+  const box=document.getElementById('cal-box'); if(box) box.hidden=!(micOn && calOpen);
+  const b=document.getElementById('drill-ctx-cal');
+  if(b){ b.hidden=!micOn; b.setAttribute('aria-expanded', micOn && calOpen ? 'true' : 'false'); }
+  calRender();
 }
 /* the measured number stays in `ms`, so a language switch re-localizes the sentence
    and keeps the reading */
@@ -128,15 +153,21 @@ function calRefreshLang(){
 }
 
 (function initCalibration(){
-  const row=document.getElementById('cal-row');
+  const box=document.getElementById('cal-box');
   // no mic path: the measurement can't run, and an offset you can't verify is worse than
-  // none — nothing uses it without the mic anyway. Remove the row.
-  if(!row) return;
-  if(!micSupported()){ if(row.parentNode) row.parentNode.removeChild(row); return; }
+  // none — nothing uses it without the mic anyway. Remove the box and its ⏱.
+  if(!box) return;
+  if(!micSupported()){
+    ['cal-box','drill-ctx-cal'].forEach(id=>{ const el=document.getElementById(id); if(el && el.parentNode) el.parentNode.removeChild(el); });
+    return;
+  }
   const run=document.getElementById('cal-run');
   const slider=document.getElementById('cal-slider');
+  const close=document.getElementById('cal-close'); if(close) close.onclick=calBoxToggle;
   if(slider) slider.oninput=()=>calSetMs(slider.value, true);
   if(run) run.onclick=async ()=>{
+    // the clicks would land inside a run being scored: stop it first
+    const d=activeDrill(); if(d && d.play && typeof d.playing==='function' && d.playing()){ d.play(); applyDrillCtx(); }
     run.disabled=true;
     calStatus('cal_running');
     const r=await calRunTest();

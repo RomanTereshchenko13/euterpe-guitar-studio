@@ -25,7 +25,7 @@ node tools/shoot.js tabs 390x844 844x390 360x740 768x1024 1024x768 1280x800 1920
 
 - Each `WxH` is a **real viewport**, so shape-based shells fire (landscape phone =
   `max-width:940 & max-height:500`).
-- The `tabs` token captures **all three tabs** (harmony / scales / circle) per
+- The `tabs` token captures **both tabs** (harmony / scales) per
   size → `tools/shots/w{W}-{panel}.png`.
 - Watch the command output for any **HORIZONTAL OVERFLOW** flag — that's a hard
   fail, note the viewport.

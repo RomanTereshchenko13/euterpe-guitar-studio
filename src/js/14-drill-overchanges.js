@@ -88,7 +88,6 @@ function renderTarget(){
   if(beats) beats.innerHTML=Array.from({length:barBeats()},(_,k)=>`<span class="co-beat" data-k="${k}"></span>`).join('');
   renderTargetStage(tgDrill.bars[tgDrill.bar], tgDrill.bars[(tgDrill.bar+1)%tgDrill.bars.length]);
   const h=document.getElementById('tg-hits'); if(h) h.textContent = tgDrill.playing ? ('↻ '+tgDrill.cycles) : '';
-  const pb=document.getElementById('tg-play'); if(pb){ pb.innerHTML=(tgDrill.playing?'&#9632; ':'&#9654; ')+t(tgDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', tgDrill.playing); pb.setAttribute('aria-pressed', tgDrill.playing?'true':'false'); }
   const hint=document.getElementById('tg-hint'); if(hint) hint.textContent=t(tgScore.on()?'co_hint_scored':'co_hint');
   tgScore.render();
   applyDrillCtx();
@@ -107,13 +106,14 @@ function tgPulseBeat(k){
 // re-localize an in-flight drill on a language switch
 function refreshTargetLang(){ if(tgDrill){ renderTarget(); tgScore.refreshLang(); } }
 
-registerDrill({ id:'overchanges', area:'tg-area', tempo:true,   // bars ride barSec()
+registerDrill({ id:'overchanges', area:'tg-area', tempo:true, key:true,   // bars ride barSec(), in the key
+                play:targetToggle, playing:()=>!!(tgDrill && tgDrill.playing),
                 tracks:[
                   { id:'comp', kind:'perf', sess:'comp', better:'high', unit:'bars', label:'drill_comp', scored:'mic' }
                 ],
                 begin:beginComp, end:endComp, isActive:()=>!!tgDrill, refreshLang:refreshTargetLang,
                 setup:'tg-setup',
-                mic:()=>tgScore.available(),
+                mic:()=>tgScore.available(), micOn:()=>tgScore.on(),
                 // stop first: switching tiers mid-run would change what a score in progress measures
                 onMic:()=>{ if(tgDrill&&tgDrill.playing) targetStop(); tgScore.toggle(); renderTarget(); },
                 // the progression is stored resolved to the key, so a key change rebuilds the bars
@@ -124,7 +124,6 @@ registerDrill({ id:'overchanges', area:'tg-area', tempo:true,   // bars ride bar
 
 (function initOverChanges(){
   const area=document.getElementById('tg-area'); if(!area) return;
-  const pl=document.getElementById('tg-play'); if(pl) pl.onclick=targetToggle;
   const pg=document.getElementById('tg-progs');
   if(pg) pg.addEventListener('click', e=>{ const btn=e.target.closest('.tg-prog'); if(btn){ tgIdx=+btn.dataset.i; if(tgDrill){ tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]); if(tgDrill.bar>=tgDrill.bars.length) tgDrill.bar=0; } renderTarget(); } });
 })();

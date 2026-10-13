@@ -16,23 +16,16 @@ function buildToolbar(){
   buildTuner();
   const lb=document.getElementById('tb-lefty'); lb.classList.toggle('active', lefty); lb.setAttribute('aria-pressed', lefty);
   applyA11y();   // keep the accessibility toggles in sync after a rebuild (language switch)
-  applyToolbarState();
+  applySheets();
 }
 /* ---- tempo: one setter, every readout ----
-   Two controls show `tempo` (the header slider and the drill header's stepper), so one
-   place clamps it — to the slider's own range — and repaints both. */
+   The strip's tempo sheet is the one control (slider and ±5 steppers, in Reference and
+   drills alike); this clamps to the slider's own range and repaints the chip too. */
 function setTempo(bpm){
   tempo = Math.max(40, Math.min(200, Math.round(bpm)));
   const r=document.getElementById('tb-tempo');  if(r) r.value=tempo;
   const b=document.getElementById('tb-bpm');    if(b) b.textContent=tempo+' BPM';
-  const d=document.getElementById('drill-ctx-bpm'); if(d) d.textContent=tempo+' BPM';
-}
-
-function applyToolbarState(){
-  const tb=document.getElementById('toolbar'), tg=document.getElementById('tb-toggle');
-  tb.classList.toggle('collapsed', !toolbarOpen);
-  tg.classList.toggle('open', toolbarOpen);
-  tg.setAttribute('aria-expanded', toolbarOpen);
+  paintTempoChip();
 }
 /* custom tuning: six per-string selects (high → low, like the board), shown only for
    the Custom tuning; each option is a MIDI pitch labelled note + octave. */
@@ -46,11 +39,6 @@ function buildCustomTuning(){
   }).join('');
 }
 function applyCustomTuningVis(){ const g=document.getElementById('tb-custom'); if(g) g.hidden = !TUNINGS[tuningIdx].custom; }
-function applyBackingPanel(){
-  const p=document.getElementById('backing-panel'), tg=document.getElementById('backing-toggle');
-  if(p) p.classList.toggle('collapsed', !backingOpen);
-  if(tg){ tg.classList.toggle('open', backingOpen); tg.setAttribute('aria-expanded', backingOpen); }
-}
 /* the chord-shape card's open/closed state is persisted (shapesOpen) */
 function applyShapesPanel(){
   const body=document.getElementById('shapes-body'), tg=document.getElementById('shapes-toggle');
@@ -169,7 +157,7 @@ function savedFields(){ return [
   ['lang',         svOneOf('uk','en'),                    ()=>lang,         v=>{ lang=v; }],
   ['mode',         svOneOf('reference','practice'),       ()=>currentMode,  v=>{ currentMode=v; }],
   // any other tab would open on no panel at all
-  ['tab',          svOneOf('harmony','scales','circle'),  ()=>currentTab,   v=>{ currentTab=v; }],
+  ['tab',          svOneOf('harmony','scales'),           ()=>currentTab,   v=>{ currentTab=v; }],
   ['tuningIdx',    svIdx(TUNINGS),                        ()=>tuningIdx,    v=>{ tuningIdx=v; }],
   ['customTuning', v=>Array.isArray(v) && v.length===6 && v.every(m=>svInt(TUNE_LO, TUNE_HI)(m)!==undefined) ? v.slice() : undefined,
                                                           ()=>customTuning, v=>{ customTuning=v; }],
@@ -178,6 +166,7 @@ function savedFields(){ return [
   ['meterIdx',     svIdx(METERS),                         ()=>meterIdx,     v=>{ meterIdx=v; }],
   ['masterVol',    svNum(0, 1),                           ()=>masterVol,    v=>{ masterVol=v; }],
   ['lefty',        svBool,                                ()=>lefty,        v=>{ lefty=v; }],
+  // the Settings sheet and the ▶ drawer (the Backing panel it replaced keeps its name)
   ['toolbarOpen',  svBool,                                ()=>toolbarOpen,  v=>{ toolbarOpen=v; }],
   ['backingOpen',  svBool,                                ()=>backingOpen,  v=>{ backingOpen=v; }],
   ['shapesOpen',   svBool,                                ()=>shapesOpen,   v=>{ shapesOpen=v; }],
@@ -216,6 +205,7 @@ function savedFields(){ return [
                        .map(st=>({pc:st.pc, lbl:(typeof st.lbl==='string'?st.lbl:ROOTS[st.pc]), qi:st.qi, bars:([1,2,4].includes(st.bars)?st.bars:1)}))
                        : undefined,                       ()=>seq,          v=>{ seq=v; }],
   ['seqLoopOn',    svBool,                                ()=>seqLoopOn,    v=>{ seqLoopOn=v; }],
+  ['playSrc',      svOneOf('chord','prog'),               ()=>playSrc,      v=>{ playSrc=v; }],
   ['bassOn',       svBool,                                ()=>bassOn,       v=>{ bassOn=v; }],
   ['grooveOn',     svBool,                                ()=>grooveOn,     v=>{ grooveOn=v; }],
   // round-trip latency, bounded by the measurement's own ceiling so a bad save can't skew every score
@@ -237,6 +227,9 @@ function migrateSave(raw){
   if(s.mode==='ear') s.mode='practice';                        // the ear drills moved into Practice
   if(s.tab==='chords') s.tab='harmony';                        // the Chords tab merged into Harmony
   if(s.tab==='notes'){ s.tab='scales'; s.scView='notes'; }     // Notes became a view of Scales
+  // the circle became the key picker (PLAN step 8): a save on its tab opens Scales with
+  // the key sheet open, where the circle now lives (`keySheet` is read once, never saved)
+  if(s.tab==='circle'){ s.tab='scales'; s.keySheet=true; }
   // Triads became a toggle on Chord tones (v2.17.0): a save on the Triads tab or view opens
   // on Chord tones with triads on, on the triad it had picked
   if(s.tab==='triads' || s.hView==='triads'){
@@ -303,6 +296,7 @@ function loadState(){
   try{
     const s=migrateSave(raw);
     savedFields().forEach(([k,read,,set])=>{ const v=read(s[k], s); if(v!==undefined) set(v); });
+    if(s.keySheet===true) keySheetOpen=true;
   }catch(e){ devWarn('saved state could not be restored; using defaults', e); return false; }
   return true;
 }

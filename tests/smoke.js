@@ -13,7 +13,7 @@
      2. Runtime jsdom checks  — boot the page with a stubbed Web Audio context
         and a test-only introspection hook (window.__GS_TEST__), then assert:
           • JS loads without throwing            (syntax + runtime validity)
-          • DOM IDs resolve; moved/removed IDs    (g-loop present, ch-loop gone)
+          • DOM IDs resolve; moved/removed IDs    (the strip present, g-loop gone)
           • i18n dictionaries are symmetric       (uk vs en keys)
           • musical correctness                   (voicing fifths incl. ♭5/♯5,
                                                     note spellings, scale order)
@@ -24,7 +24,7 @@
                                                     windowed range at 360/390/414,
                                                     open-string column intact,
                                                     fret-number / cell alignment)
-          • behaviour                             (tab + sub-view gating of Loop,
+          • behaviour                             (the strip on every view,
                                                     loop/seq transport toggles)
 
    Note (honest framing): a true spectral/FFT tuning check needs a real
@@ -81,13 +81,12 @@ const html = fs.readFileSync(htmlPath, 'utf8');
        shipped.length > 0 && shipped.every(r => r.en.length <= 3 && r.en.length === r.uk.length),
        shipped.filter(r => r.en.length > 3 || r.en.length !== r.uk.length).map(r => r.v).join(',')); }
 
-  // The Loop button moved to the timing bar: the old per-row id must be gone,
-  // the new contextual id must exist and be wired.
+  // step 8: one ▶ in the strip replaced Listen, Loop and the transport chip
   ok('removed ch-loop is no longer referenced', !/getElementById\(['"]ch-loop['"]\)/.test(html),
      'stale ch-loop reference remains');
-  ok('g-loop element exists', /id=["']g-loop["']/.test(html), 'g-loop markup missing');
-  ok('g-loop is wired to loopToggle', /getElementById\(['"]g-loop['"]\)\.onclick\s*=\s*loopToggle/.test(html),
-     'g-loop not wired');
+  ok('step 8: no Loop button and no transport chip in the markup',
+     !/id=["'](g-loop|tb-transport|tb-stop|seq-play)["']/.test(html));
+  ok('step 8: the strip\'s ▶ is wired to stripPlay', /wire\('g-play', stripPlay\)/.test(html));
 
   /* CSS rules jsdom can't verify (it applies no cascade), pinned in the bundle's CSS.
      [what it guarantees, pattern, whether the pattern must match] */
@@ -96,18 +95,17 @@ const html = fs.readFileSync(htmlPath, 'utf8');
     ['the board has no hard min-width (it fits a phone)', /\.board\s*\{[^}]*min-width:\s*1150px/, false],
     ['drill setup is hidden when its body class is off', /body:not\(\.drill-setup-open\)\s*\.drill-setup\s*\{[^}]*display:\s*none/, true],
     ['drill hint is hidden when its body class is off', /body:not\(\.drill-help-open\)\s*\.drill-hint\s*\{[^}]*display:\s*none/, true],
-    ['Practice hides Listen', /body\.mode-practice\s+#g-play/, true],
-    ['Practice hides Loop', /body\.mode-practice\s+#g-loop/, true],
-    ['Practice hides the header tempo (the drill header has its own)', /body\.mode-practice\s+\.tb-bar\s+\.tb-tempo/, true],
-    ['Practice hides the backing panel', /body\.mode-practice\s+#backing-panel/, true],
-    ['Practice hides the backing toggle', /body\.mode-practice\s+#backing-toggle/, true],
+    ['Practice hides the strip\'s reference slot (the strip has moved)', /body\.mode-practice\s+#strip-ref/, true],
     ['Practice keeps the nav (it is how you leave)', /body\.mode-practice\s+#mainnav/, false],
     ['Practice keeps Settings', /body\.mode-practice[^{]*#toolbar\b/, false],
     ['Practice keeps the Settings toggle', /body\.mode-practice[^{]*#tb-toggle\b/, false],
-    ['Practice keeps Tools', /body\.mode-practice[^{]*#tb-tools\b/, false],
-    ['context-bar groups are separated by an adjacent-sibling rule', /\.context-bar\s+\.ctx-group\s*\+\s*\.ctx-group[^{]*\{[^}]*border-left:\s*1px/, true],
-    ['...so no separator hangs off the front of the bar', /\.context-bar\s+\.ctx-group:not\(\.ctx-view\)/, false],
-    ['the context bar has its own grid area', /#context-bar\s*\{[^}]*grid-area:\s*ctx/, true],
+    ['Practice keeps the strip', /body\.mode-practice[^{]*#strip(?![\w-])/, false],
+    ['the drill header shows only while a drill runs', /body:not\(\.drill-running\)\s+#drill-ctx\s*\{[^}]*display:\s*none/, true],
+    ['the strip has its own grid area', /#strip-ref\s*\{[^}]*grid-area:\s*strip/, true],
+    ['the strip stays one row: it swipes, never wraps', /\.strip-row \{[^}]*flex-wrap: nowrap;[^}]*overflow-x: auto/, true],
+    ['on a phone a sheet rises over the page, the neck still in view', /\.sheets \{ position: fixed;[^}]*bottom: calc\(46px/, true],
+    ['the drill header is one row, its name giving way', /\.drill-name \{[^}]*text-overflow: ellipsis;[^}]*white-space: nowrap/, true],
+    ['no header transport rules are left behind', /\.tb-bar\b|\.tb-transport\b|\.context-bar\b/, false],
     ['.main clears the neck above it', /\.main\s*\{[^}]*margin-top:\s*22px/, true],
     ['...and Practice takes that clearance back', /body\.mode-practice\s+\.main\s*\{[^}]*margin-top:\s*0/, true],
     ['progress and the session starter share a row on desktop', /@media \(min-width: 941px\) \{\s*#ph-top-block \{[^}]*grid-template-columns: 340px minmax\(0,1fr\)/, true],
@@ -116,8 +114,8 @@ const html = fs.readFileSync(htmlPath, 'utf8');
     ['the card list li is a bare flex cell', /\.practice-list li \{ display: flex; \}/, true],
     ['...with no box of its own', /\.practice-list li \{[^}]*background/, false],
     ['the circle grows with its column', /#cof-svg \{ width: 100%/, true],
-    ['...up to a readable cap', /\.cof-wrap \{[^}]*flex: 1 1 340px;[^}]*max-width: 520px/, true],
-    ['the circle reading pane is capped too', /\.cof-side \{[^}]*max-width: 620px/, true],
+    ['...up to a cap that leaves the neck in view', /#cof-svg \{[^}]*max-width: 320px/, true],
+    ['the key panel beside it is capped too', /\.key-pick \{[^}]*max-width: 620px/, true],
     ['a Settings cluster heading takes its own row on a phone', /@media \(max-width: 700px\) \{\s*\.tb-cluster \{[^}]*flex-wrap: wrap;[^}]*\}\s*\.tb-cluster > \.tbc-label \{ flex-basis: 100%; \}/, true],
   ].forEach(([what, re, want]) => ok('css: ' + what, re.test(html) === want));
 
@@ -160,10 +158,11 @@ ok('app booted without throwing & exposed test hook', !!T,
 
 if (T) {
   /* ---- DOM resolution ---- */
-  ok('g-loop present in DOM', !!win.document.getElementById('g-loop'));
   ok('ch-loop absent from DOM', !win.document.getElementById('ch-loop'));
-  ['g-play','tb-stop','tb-transport','g-roots','board','nums','legend','app-ver']
+  ['strip','g-play','chip-key','chip-chord','chip-tempo','backing-toggle','tb-tuner','tb-toggle','g-roots','board','nums','legend','app-ver']
     .forEach(id => ok('DOM id resolves: ' + id, !!win.document.getElementById(id)));
+  ['g-loop','tb-transport','tb-stop','context-bar','panel-circle','harmony-extras','seq-play','arp-quals','sc-select','seam-jam']
+    .forEach(id => ok('step 8: gone from the DOM: #' + id, !win.document.getElementById(id)));
   // 1b: the four per-tab boards collapsed into one shared #board
   ['ch-board','tr-board','sc-board','nt-board'].forEach(id =>
     ok('1b: old per-tab board gone: ' + id, !win.document.getElementById(id)));
@@ -175,9 +174,9 @@ if (T) {
   ok('3c: drill has its own board, three fretboards total',
      win.document.querySelectorAll('.fretboard').length === 3 && !!win.document.getElementById('drill-board'),
      win.document.querySelectorAll('.fretboard').length + ' found');
-  // A2: the tab strip became the one nav — three reference subjects + Practice
-  ok('1b: Notes folded away (3 reference subjects, not 4)',
-     win.document.querySelectorAll('.navbtn:not([data-panel="practice"])').length === 3,
+  // A2: the tab strip became the one nav; step 8 folded the circle into the key sheet
+  ok('step 8: two reference subjects (Notes and the circle folded away)',
+     win.document.querySelectorAll('.navbtn:not([data-panel="practice"])').length === 2,
      win.document.querySelectorAll('.navbtn').length + ' nav buttons');
   ok('1b: notes controls live under Scales (sub-notes)', !!win.document.getElementById('sub-notes'));
 
@@ -188,14 +187,15 @@ if (T) {
   const onlyEn = en.filter(k => !T.I18N.uk.hasOwnProperty(k));
   ok('i18n: no keys only in uk', onlyUk.length === 0, onlyUk.join(', '));
   ok('i18n: no keys only in en', onlyEn.length === 0, onlyEn.join(', '));
-  ['b_listen_tip','b_loop_tip','b_loop_stop_tip','audio_off',
+  ['strip_key','pl_h','pl_src','pl_chord','pl_prog','pl_band','pl_jam','pl_play_chord','pl_play_prog',
+   'tbc_sound','tb_lang','kbd_key','lbl_quality','cal_offer','cal_later','audio_off',
    'cd_voicings','cd_eshape','cd_ashape','cd_fret','cd_pick_hint','tr_shapes',
    'view_scale','view_notes','suggest_title','suggest_scales',
    'shape_full','shape_triads','shape_no_triad',
    'view_arp','arp_h','arp_p','arp_hint','arp_word','tb_capo','capo_off','caged_desc',
    'mode_practice','practice_h','practice_intro','drill_notes','drill_notes_meta',
    'drill_quit','drill_find_pre','drill_find_sub','drill_complete','drill_score','drill_clean',
-   'drill_misses','drill_time','drill_again','drill_done','seam_drill','seam_jam','seam_jam_stop',
+   'drill_misses','drill_time','drill_again','drill_done','seam_drill',
    'sess_title','sess_lead','sess_len','sess_min','sess_start','sess_next',
    'sess_done_h','sess_none','sess_drills','sess_norun',
    'badge_mic','badge_acc','badge_coach','unit_bars','unit_cpm',
@@ -250,8 +250,8 @@ if (T) {
     const pp = doc.getElementById('panel-practice');
     ok('3a: practice panel present and NOT a .panel (off the .panel.active machinery)',
        !!pp && !pp.classList.contains('panel'));
-    ok('3a: reference shell untouched (3 reference panels)',
-       doc.querySelectorAll('.main > .panel').length === 3);
+    ok('3a: reference shell untouched (2 reference panels)',
+       doc.querySelectorAll('.main > .panel').length === 2);
 
     // enter Practice
     T.selectTab('harmony');
@@ -668,10 +668,11 @@ if (T) {
     langBtns.find(b => b.dataset.lang !== T.state().lang).click();   // back
     T.exitAllDrills();
 
-    /* --- key and tempo stay derived, as A1 left them --- */
+    /* --- key and tempo stay derived, as A1 left them; step 8 moved them to the strip --- */
     doc.getElementById('start-notes').click();
-    ok('B2: a drill that re-derives from nothing still gets no key picker', !vis('drill-ctx-key'));
-    ok('B2: ...and no tempo stepper', !vis('drill-ctx-tempo'));
+    ok('B2: a drill that re-derives from nothing gets no key chip', !vis('chip-key'));
+    ok('B2: ...no tempo chip', !vis('chip-tempo'));
+    ok('step 8: ...and no ▶ — naming notes has nothing to play', !vis('chip-play'));
     T.exitAllDrills();
     T.setMode('reference');
 
@@ -793,11 +794,11 @@ if (T) {
 
     /* --- THE SEAM: "drill this" from the reference views that have a drill --- */
     const seams = [...doc.querySelectorAll('[data-seam]')];
-    ok('B3: the drill seam is offered by four views',
-       new Set(seams.map(b => b.dataset.seam)).size === 4,
+    ok('B3: the drill seam is offered by three views',
+       new Set(seams.map(b => b.dataset.seam)).size === 3,
        seams.map(b => b.dataset.seam).join(','));
-    ok('B3: ...covering exactly those four',
-       ['chords', 'scale', 'notes', 'circle']
+    ok('B3: ...covering exactly those three',
+       ['chords', 'scale', 'notes']
          .every(v => seams.some(b => b.dataset.seam === v)));
     ok('B3: every seam points at a track that exists',
        Object.keys(T.SEAM_TRACKS).every(v => !!T.trackById(T.SEAM_TRACKS[v])),
@@ -813,30 +814,19 @@ if (T) {
     T.exitAllDrills();
     T.setMode('reference');
 
-    /* --- "JAM OVER THIS": five steps become one --- */
+    /* --- step 8: the Jam is the band under the one ▶, not a button of its own --- */
     T.selectTab('harmony');
-    ok('B3: the jam seam sits with the suggester that already knows the answer',
-       !!doc.querySelector('#aside-body #seam-jam'));
-    const jamWas = T.state();
+    ok('step 8: no Jam buttons left on the page (the drawer holds the band)',
+       !doc.querySelector('[data-jam]') && !doc.querySelector('#sub-arp [data-seam]'));
+    const bandWas = T.bandActive();
     T.jamToggle();
-    ok('B3: one tap brings up the band and the loop',
-       T.jamActive() && T.state().loop !== jamWas.loop);
-    ok('B3: ...and the button becomes the way to stop it',
-       doc.getElementById('seam-jam').textContent === T.I18N[T.state().lang].seam_jam_stop);
+    ok('step 8: the Jam turns the whole band on', T.state().bassOn && T.state().grooveOn && bandWas === false);
+    ok('step 8: ...without starting anything — ▶ does that', !T.transportActive());
+    T.stripPlay();
+    ok('step 8: ▶ then plays the chord with the band', T.state().loop && T.bandActive());
+    T.stripPlay();
     T.jamToggle();
-    ok('B3: ...which it does', !T.jamActive());
-    ok('B3: the label goes back',
-       doc.getElementById('seam-jam').textContent === T.I18N[T.state().lang].seam_jam);
-    /* step 1: Arpeggio's "practise this" is the jam, not a tap drill — the same toggle,
-       painted together with the aside's */
-    const arpJam = doc.querySelector('#sub-arp [data-jam]');
-    ok('step 1: Arpeggio offers the jam instead of a drill seam',
-       !!arpJam && !doc.querySelector('#sub-arp [data-seam]'));
-    arpJam.click();
-    ok('step 1: ...it starts the band, and both jam buttons say so',
-       T.jamActive() && [...doc.querySelectorAll('[data-jam]')].every(b => b.getAttribute('aria-pressed') === 'true'));
-    arpJam.click();
-    ok('step 1: ...and stops it', !T.jamActive());
+    ok('step 8: the Jam again turns it off', !T.bandActive() && !T.transportActive());
   })();
 
   /* ---- Phase 10/B4: PROGRESS, AND COPY THAT TELLS THE TRUTH ------------------
@@ -980,14 +970,14 @@ if (T) {
     // Ear was a top-level mode once; it is a Practice pillar, and after A2 the nav
     // holds four destinations — three reference subjects and Practice — not five.
     ok('P4: ear folded into Practice — no ear destination in the nav',
-       dests.length === 4 && dests.indexOf('ear') < 0, dests.join(','));
+       dests.length === 3 && dests.indexOf('ear') < 0, dests.join(','));
     ok('P4: the separate ear panel + home are gone',
        !doc.getElementById('panel-ear') && !doc.getElementById('ear-home')
        && !doc.getElementById('ear-progress') && !doc.querySelector('.ear-panel'));
     ok('P4: ear drill area now lives inside the practice panel',
        !!doc.querySelector('#panel-practice #ear-area'));
-    ok('P4: reference shell still 3 subjects / 3 reference panels',
-       dests.filter(d => d !== 'practice').length === 3 && doc.querySelectorAll('.main > .panel').length === 3);
+    ok('P4: reference shell: 2 subjects / 2 reference panels',
+       dests.filter(d => d !== 'practice').length === 2 && doc.querySelectorAll('.main > .panel').length === 2);
     // two ear drill starters, now cards in the practice home
     ['start-interval', 'start-chordq'].forEach(id =>
       ok('P4: ear drill starter present in practice home: ' + id,
@@ -1074,9 +1064,6 @@ if (T) {
     T.setScView('notes');
     ok('step 3: ...which follows the sub-view', vh('scales-h').textContent === T.I18N[T.state().lang].nt_h);
     T.setScView('scale');
-    T.selectTab('circle');
-    ok('step 3: Circle has no board, so no heading above one', vh('view-head').hidden);
-    ok('step 3: Circle keeps its heading in its panel', !!doc.querySelector('#panel-circle .panel-head h2'));
 
     /* chord-shape cards: selectable, and the selected one rings its notes on the neck */
     T.selectTab('harmony'); T.setHView('chords'); T.setChTriads(false); T.setChQual(1);
@@ -1582,16 +1569,17 @@ if (T) {
     T.resetLearner();
   })();
 
-  /* ---- one shared drill key strip (replaces six duplicated per-drill key rows) ---- */
+  /* ---- one shared drill key: the strip's key chip (step 8; it replaced six per-drill
+     key rows, then the drill header's own picker) ---- */
   (function sharedDrillKey() {
     const doc = win.document;
-    ok('drill ctx: the shared key strip exists', !!doc.getElementById('drill-ctx-key'));
+    ok('drill ctx: the strip\'s key chip exists', !!doc.getElementById('chip-key'));
     // the whole point: no drill carries its own copy of the key row any more
     ok('drill ctx: no per-drill key pickers remain',
-       ['sp-key', 'co-key', 'gf-key', 'tg-key', 'cr-key', 'sd-key']
+       ['sp-key', 'co-key', 'gf-key', 'tg-key', 'cr-key', 'sd-key', 'drill-ctx-key', 'drill-ctx-keylbl']
          .every(id => !doc.getElementById(id)));
-    ok('drill ctx: the strip is populated with root buttons',
-       doc.getElementById('drill-ctx-key').children.length >= 12);
+    ok('drill ctx: its sheet holds the root buttons',
+       doc.getElementById('g-roots').children.length >= 12 && !!doc.querySelector('#sheet-key #g-roots'));
     // Quit was a seventh identical per-drill button; the shell owns it now
     ok('drill ctx: one shared Quit button', !!doc.getElementById('drill-ctx-quit'));
     // with Ear folded in, the ear drill drops its own quit too — the strip serves all
@@ -1612,11 +1600,11 @@ if (T) {
     ok('drill ctx: the shared Quit exits an ear drill too',
        T.getEar() === null && doc.getElementById('practice-home').hidden === false);
 
-    /* The key half of the strip is only shown to a drill that declares onKey(). The
-       ear / note-naming / one-minute-changes drills don't re-derive from the key, so
-       parking a key picker in front of them would be a control that adjusts nothing —
-       the same defect the timing-calibration slider was removed for. */
-    const keyShown = () => !doc.getElementById('drill-ctx-key').hidden;
+    /* The key chip is only shown to a drill that declares `key`. The ear / note-naming /
+       one-minute-changes drills don't re-derive from the key, so parking a key picker in
+       front of them would be a control that adjusts nothing — the same defect the
+       timing-calibration slider was removed for. */
+    const keyShown = () => !doc.getElementById('chip-key').hidden;
     T.startTiming();
     T.applyDrillCtx();
     ok('drill ctx: a key-dependent drill (timing) shows the key picker', keyShown());
@@ -1624,7 +1612,6 @@ if (T) {
     T.startEar('interval');
     T.applyDrillCtx();
     ok('drill ctx: a key-independent drill (ear) hides the key picker', !keyShown());
-    ok('drill ctx: the label hides with it', doc.getElementById('drill-ctx-keylbl').hidden);
     /* B2: no dividers left in the strip. The key picker is twelve buttons and wraps at
        phone widths, so a divider between the groups reliably landed at the START of a
        line — where it is not a separator but a stray vertical rule, the same defect B2
@@ -1672,27 +1659,28 @@ if (T) {
     /* --- tempo: one setter, one control per context --- */
     ok('A1: the timing drill no longer carries a private tempo stepper',
        !doc.getElementById('sd-slower') && !doc.getElementById('sd-faster') && !doc.getElementById('sd-bpm'));
-    ok('A1: the shell owns the scoped tempo stepper instead',
-       !!doc.getElementById('drill-ctx-slower') && !!doc.getElementById('drill-ctx-faster')
-       && !!doc.getElementById('drill-ctx-bpm'));
-    // both readouts are painted by the ONE setter, so neither can drift from `tempo`
+    ok('step 8: the strip\'s tempo sheet holds the one tempo control, steppers included',
+       ['tb-slower', 'tb-faster', 'tb-tempo', 'tb-bpm'].every(id => !!doc.querySelector('#sheet-tempo #' + id))
+       && !doc.getElementById('drill-ctx-slower') && !doc.getElementById('drill-ctx-tempo'));
+    // every readout is painted by the ONE setter, so none can drift from `tempo`
     T.setTempo(132);
-    ok('A1: setTempo drives the header readout', doc.getElementById('tb-bpm').textContent === '132 BPM');
-    ok('A1: setTempo drives the header slider', +doc.getElementById('tb-tempo').value === 132);
-    ok('A1: setTempo drives the drill-strip readout',
-       doc.getElementById('drill-ctx-bpm').textContent === '132 BPM');
+    ok('A1: setTempo drives the readout', doc.getElementById('tb-bpm').textContent === '132 BPM');
+    ok('A1: setTempo drives the slider', +doc.getElementById('tb-tempo').value === 132);
+    ok('step 8: setTempo drives the tempo chip', /132 · 4\/4/.test(doc.getElementById('chip-tempo').textContent),
+       doc.getElementById('chip-tempo').textContent);
+    doc.getElementById('tb-faster').click();
+    ok('step 8: the stepper moves the same tempo', T.getTempo() === 137);
     // clamped to the slider's own range, so the stepper can't walk past what the slider allows
     T.setTempo(9999); ok('A1: setTempo clamps high', T.getTempo() === 200);
     T.setTempo(-5);   ok('A1: setTempo clamps low',  T.getTempo() === 40);
     T.setTempo(90);
 
-    /* --- the tempo half of the strip is DERIVED from the registry, like the key half --- */
-    const tempoShown = () => !doc.getElementById('drill-ctx-tempo').hidden;
+    /* --- the tempo chip is DERIVED from the registry, like the key chip --- */
+    const tempoShown = () => !doc.getElementById('chip-tempo').hidden;
     T.setMode('practice');
     T.startTiming();
     T.applyDrillCtx();
-    ok('A1: a tempo-driven drill (timing) shows the tempo stepper', tempoShown());
-    ok('A1: its label shows with it', !doc.getElementById('drill-ctx-tlbl').hidden);
+    ok('A1: a tempo-driven drill (timing) shows the tempo chip', tempoShown());
     T.exitTiming();
     T.startEar('interval');
     T.applyDrillCtx();
@@ -1722,8 +1710,8 @@ if (T) {
     const press = k => doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: k, bubbles: true }));
     press('m');
     ok('A1: M does not start the reference metronome from a Practice screen', !T.transportActive());
-    press('l');
-    ok('A1: L does not start the reference loop from a Practice screen', !T.transportActive());
+    press(' ');
+    ok('step 8: Space on the Practice home (no ▶ on screen) starts nothing', !T.transportActive());
     T.setMode('reference');
     press('m');
     ok('A1: ...but M still works in Reference, where the control is on screen', T.transportActive());
@@ -1736,19 +1724,15 @@ if (T) {
     ok('A1: ...and into Settings, so it stays reachable in Practice',
        doc.getElementById('toolbar').contains(doc.getElementById('tb-vol')));
 
-    /* --- spine #1's control exists wherever a key is meaningful, Circle included --- */
-    T.selectTab('circle');
-    T.applyContextBar();
-    ok('A1: the root picker is present on Circle (it used to vanish with the whole bar)',
-       doc.getElementById('context-bar').hidden === false
-       && doc.getElementById('g-roots').children.length >= 12);
-    ok('A1: ...without the fretboard-only Display toggle riding along',
-       doc.querySelector('.ctx-display').hidden === true);
-    ok('A1: ...and with neither tab\'s view switch',
-       doc.getElementById('ctx-view-harmony').hidden && doc.getElementById('ctx-view-scales').hidden);
+    /* --- spine #1's control exists wherever a key is meaningful: the strip's key chip --- */
+    T.selectTab('scales'); T.setScView('notes');
+    ok('step 8: the key chip is on Scales ▸ Notes too', !doc.getElementById('chip-key').hidden);
+    ok('A1: ...without the fretboard-only Display toggle, which Notes has no use for',
+       doc.getElementById('ctx-display').hidden === true);
+    T.setScView('scale');
     T.selectTab('harmony');
-    ok('A1: Harmony still gets its own view switch back',
-       !doc.getElementById('ctx-view-harmony').hidden && doc.querySelector('.ctx-display').hidden === false);
+    ok('A1: Harmony gets its own view switch, and Names/Intervals, back',
+       !doc.getElementById('ctx-view-harmony').hidden && doc.getElementById('ctx-display').hidden === false);
     T.setKey(0, 'C');
     T.resetLearner();
   })();
@@ -1768,11 +1752,11 @@ if (T) {
        !doc.getElementById('modenav') && !doc.getElementById('tabs')
        && !doc.querySelector('.modebtn') && !doc.querySelector('.tab'));
     const btns = [...doc.querySelectorAll('#mainnav .navbtn')];
-    ok('A2: one nav holds all four destinations',
-       btns.map(b => b.dataset.panel).join(',') === 'harmony,scales,circle,practice');
+    ok('A2: one nav holds all three destinations',
+       btns.map(b => b.dataset.panel).join(',') === 'harmony,scales,practice');
     ok('A2: every destination has a panel to control',
        btns.every(b => !!doc.getElementById('panel-' + b.dataset.panel)));
-    ok('A2: all four are real tabs over real tabpanels',
+    ok('A2: all three are real tabs over real tabpanels',
        btns.every(b => b.getAttribute('role') === 'tab' && b.getAttribute('aria-controls') === 'panel-' + b.dataset.panel)
        && btns.every(b => doc.getElementById(b.dataset.panel === 'practice' ? 'panel-practice' : 'panel-' + b.dataset.panel)
                             .getAttribute('role') === 'tabpanel'));
@@ -1797,9 +1781,7 @@ if (T) {
        btns.filter(b => b.tabIndex === 0).length === 1);
 
     /* --- the view switch is a lens on the board, not a third strip --- */
-    ok('A2: the view groups moved out of the context bar',
-       !doc.querySelector('#context-bar #ctx-view-harmony') && !doc.querySelector('#context-bar #ctx-view-scales'));
-    ok('A2: ...and onto the board they change',
+    ok('A2: the view groups sit on the board they change',
        !!doc.querySelector('#board-region #board-lens #ctx-view-harmony')
        && !!doc.querySelector('#board-region #board-lens #ctx-view-scales'));
     ok('A2: the view buttons still work from there', !!doc.getElementById('hv-arp'));
@@ -1809,23 +1791,24 @@ if (T) {
     T.selectTab('scales');
     ok('A2: ...and the other way round',
        doc.getElementById('ctx-view-harmony').hidden && !doc.getElementById('ctx-view-scales').hidden);
-    // living inside #board-region means it hides with the board for free
-    T.selectTab('circle');
-    ok('A2: on a tab with no neck, the lens goes with the board',
-       doc.getElementById('board-region').hidden === true
-       && doc.getElementById('board-lens').closest('#board-region') !== null);
+    ok('step 8: ...and so does Names/Intervals, a lens on the same board',
+       !!doc.querySelector('#board-lens #ctx-display #g-names'));
     T.selectTab('harmony');
 
     /* --- the number keys are the nav, in nav order --- */
     const press = k => doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: k, bubbles: true }));
-    press('4');
-    ok('A2: 4 reaches Practice — which had no shortcut while it was a separate axis',
-       T.state().currentMode === 'practice');
+    press('3');
+    ok('A2: 3 reaches Practice', T.state().currentMode === 'practice');
     press('2');
     ok('A2: 2 comes back out to Scales',
        T.state().currentMode === 'reference' && T.state().currentTab === 'scales');
     press('1');
     ok('A2: 1 is Harmony', T.state().currentTab === 'harmony');
+    T.dismissWelcome();   // Escape closes a modal first, and the first-run card may still be up
+    press('k');
+    ok('step 8: K opens the key sheet, where the circle lives', T.sheetShown('key') && !doc.getElementById('sheet-key').hidden);
+    press('Escape');
+    ok('step 8: Escape shuts it', !T.sheetShown('key') && doc.getElementById('sheet-key').hidden);
     T.setKey(0, 'C');
   })();
 
@@ -1842,16 +1825,16 @@ if (T) {
     const doc = win.document;
 
     /* --- the bands above the neck --- */
-    ok('A3: the context bar is its own grid item, not part of .main',
-       !!doc.querySelector('.layout > #context-bar') && !doc.querySelector('.main #context-bar'));
-    /* Only the context bar and the view's own heading (step 3: heading → view switch →
-       neck) stand between the header and the neck. Counting the .layout children that
-       precede #board-region is the durable form of "the neck leads": adding another
-       band above it fails here, whatever it is called. */
+    ok('step 8: the strip is its own grid item in Reference, not part of .main',
+       !!doc.querySelector('.layout > #strip-ref > #strip') && !doc.querySelector('.main #strip'));
+    /* Only the view's own heading and the strip (heading → strip → view switch → neck)
+       stand between the header and the neck. Counting the .layout children that precede
+       #board-region is the durable form of "the neck leads": adding another band above it
+       fails here, whatever it is called. */
     const layoutKids = [...doc.querySelector('.layout').children];
     const beforeBoard = layoutKids.slice(0, layoutKids.findIndex(el => el.id === 'board-region'));
-    ok('A3: only the context bar and the view heading precede the neck',
-       beforeBoard.map(el => el.id).join(',') === 'context-bar,view-head',
+    ok('A3: only the view heading and the strip precede the neck',
+       beforeBoard.map(el => el.id).join(',') === 'view-head,strip-ref',
        beforeBoard.map(el => el.id || el.className).join(','));
     ok('step 3: the view heading is just the heading — no controls ride in it',
        !doc.querySelector('#view-head button:not(.ph-help), #view-head select, #view-head input'));
@@ -1871,11 +1854,12 @@ if (T) {
     ok('A3: every shape that shows a board has a map for it', boardMaps.length >= 3, String(boardMaps.length));
     ok('A3: the neck outranks the controls on every shape',
        boardMaps.every(m => rowOf(m, 'board') < rowOf(m, 'main')));
-    ok('A3: ...and the key you are in outranks the neck',
-       boardMaps.every(m => rowOf(m, 'ctx') >= 0 && rowOf(m, 'ctx') <= rowOf(m, 'board')));
+    // above the neck, or (landscape phone) beside it, in the rows the neck spans
+    ok('A3: ...and the strip (the key you are in) outranks the neck',
+       boardMaps.every(m => rowOf(m, 'strip') >= 0 && (rowOf(m, 'strip') <= rowOf(m, 'board') || m[rowOf(m, 'strip')].includes('board'))));
     /* prioritize-fretboard-width: the neck keeps the whole page width on desktop. The
        controls compact into a horizontal rail under it, never a vertical one beside it. */
-    const desktop = maps.find(m => m.length && m[0].join() === 'ctx,ctx');
+    const desktop = maps.find(m => m.length && m[0].join() === 'vhead,vhead');
     ok('A3: the desktop neck still spans every column',
        !!desktop && desktop[rowOf(desktop, 'board')].every(c => c === 'board'));
     ok('A3: the suggester rides beside the controls, not beside the neck',
@@ -1939,30 +1923,29 @@ if (T) {
 
     /* --- Settings sorts by what you DO with a control --- */
     const clusters = [...doc.querySelectorAll('#toolbar .tb-cluster')];
-    // step 0 added a fourth: Progress (export / import), the one cluster about your data
+    // step 8: Instrument · Sound · Display (language included) · Progress
     ok('A4: Settings is four clusters', clusters.length === 4);
-    ok('A4: ...named Instrument / Tools / Preferences / Progress',
+    ok('step 8: ...named Instrument / Sound / Display / Progress',
        clusters.map(c => c.querySelector('.tbc-label').dataset.i18n).join(',')
-         === 'tbc_instrument,tbc_tools,tbc_prefs,tbc_progress');
-    const inCluster = (id, sel) => !!doc.querySelector('#' + id + ' ' + sel);
-    /* Tools is the point of the split: you come to DO something and leave, and two of
-       these are prerequisites for a scored drill rather than configuration.
-       The tuner button is checked LIVE (it works everywhere), the calibration row
-       only in the markup — 14-calibration.js removes #cal-row where there is no mic
-       path, which jsdom is, and that removal is deliberate: a control that can only
-       ever fail should not be on screen. Asserting it live would be asserting that the
-       degradation is broken. */
-    ok('A4: Tools holds the tuner', inCluster('tb-tools', '#tb-tuner'));
-    const atTools = html.indexOf('id="tb-tools"'), atCal = html.indexOf('id="cal-row"'),
-          atPrefs = html.indexOf('tbc_prefs');
-    ok('A4: ...and the latency measurement, between Tools and Preferences in the markup',
-       atTools > 0 && atCal > atTools && atPrefs > atCal);
-    ok('A4: the guitar is described in one place, not split across two headings',
-       ['tb-tuning', 'tb-capo', 'tb-frets', 'tb-meter']
+         === 'tbc_instrument,tbc_sound,lbl_display,tbc_progress');
+    /* The tools you come to USE and leave are on the strip, not in Settings: the tuner
+       (checked live — it works everywhere), and the latency, in the mic flow. That one is
+       checked in the markup only: 14-calibration.js removes it where there is no mic path,
+       which jsdom is, and that removal is deliberate — a control that can only ever fail
+       should not be on screen. */
+    ok('step 8: the tuner sits in the strip', !!doc.querySelector('#strip-row #tb-tuner'));
+    const atPractice = html.indexOf('id="panel-practice"'), atCal = html.indexOf('id="cal-row"'),
+          atHome = html.indexOf('id="practice-home"'), atSettings = html.indexOf('id="toolbar"');
+    ok('step 8: ...and the latency in the mic flow, above the drill, not in Settings',
+       atCal > atPractice && atCal < atHome && !html.slice(atSettings, html.indexOf('id="bk-export"')).includes('cal-row'));
+    ok('A4: the guitar is described in one place',
+       ['tb-tuning', 'tb-capo', 'tb-frets', 'tb-lefty']
          .every(id => doc.getElementById(id).closest('.tb-cluster') === clusters[0]));
-    ok('A4: the set-once controls sit together',
-       ['tb-vol', 'tb-lefty', 'tb-cbpalette', 'tb-shapes']
-         .every(id => doc.getElementById(id).closest('.tb-cluster') === clusters[2]));
+    ok('step 8: ...and the meter rides with the tempo it shapes', !!doc.querySelector('#sheet-tempo #tb-meter'));
+    ok('step 8: what the screen shows sits together, the language included',
+       ['tb-cbpalette', 'tb-shapes', 'lang-switch']
+         .every(id => doc.getElementById(id).closest('.tb-cluster') === clusters[2])
+       && doc.getElementById('tb-vol').closest('.tb-cluster') === clusters[1]);
     /* --- the mic funnel: an unmeasured latency is not a latency of zero --- */
     T.setCalKnown(false);
     ok('A4: latency starts UNKNOWN, which is not the same as zero',
@@ -2239,24 +2222,22 @@ if (T) {
     }
   })();
 
-  /* ---- behaviour: contextual Loop visibility + scales sub-views (1b) ---- */
+  /* ---- behaviour: the one ▶ on every reference view + scales sub-views (1b) ---- */
   (function loopVisibility() {
+    const play = () => win.document.getElementById('chip-play');
     T.selectTab('harmony'); T.setHView('chords');
-    const lp = win.document.getElementById('g-loop');
-    const gp = win.document.getElementById('g-play');
-    ok('Loop visible on chord-tones view', lp && lp.hidden === false);
+    ok('step 8: ▶ on chord tones', play().hidden === false);
     T.setChTriads(true); T.setHView('chords');
-    ok('Loop still visible with triads on', lp && lp.hidden === false);
+    ok('step 8: ...with triads on', play().hidden === false);
     T.setChTriads(false); T.setHView('chords');
     T.selectTab('scales'); T.setScView('scale');
-    ok('Loop hidden on scales tab', lp && lp.hidden === true);
-    ok('Listen visible on scale view', gp && gp.hidden === false);
+    ok('step 8: ...on the scales tab', play().hidden === false);
     // 1b: Notes is now a view inside Scales, not a tab
     T.setScView('notes');
     ok('1b: scale controls hidden in notes view', win.document.getElementById('sub-scale').hidden === true);
     ok('1b: notes controls shown in notes view', win.document.getElementById('sub-notes').hidden === false);
     ok('1b: board shows notes mode in notes view', T.isBoardMode('notes') === true);
-    ok('Listen hidden in notes view', gp && gp.hidden === true);
+    ok('step 8: ...and in the notes view', play().hidden === false);
     T.setScView('scale');
     ok('1b: back to scale view restores scale board', T.isBoardMode('scale') === true);
     T.selectTab('harmony'); T.setHView('chords');
@@ -2407,24 +2388,26 @@ if (T) {
     const doc = win.document, st0 = T.state();
     T.setMode('reference'); T.selectTab('harmony'); T.setHView('chords');
     const mo = new win.MutationObserver(() => {});
-    ['panel-scales', 'panel-circle'].forEach(id =>
+    // the key sheet's root buttons are the one part that tracks the key while shut
+    ['panel-scales', 'cof-svg', 'cof-info', 'sc-fams'].forEach(id =>
       mo.observe(doc.getElementById(id), { subtree: true, childList: true, characterData: true, attributes: true }));
     T.setKey(2, 'D', 0);
     T.setGMode('deg'); T.setGMode('names');
     T.renderAllBoards();
     const n = mo.takeRecords().length; mo.disconnect();
-    ok('step 5: key, labels and tuning changes on Harmony leave hidden panels untouched', n === 0, n + ' mutations');
+    ok('step 5: key, labels and tuning changes on Harmony leave hidden panels (and the shut key sheet) untouched', n === 0, n + ' mutations');
     T.selectTab('scales'); T.setScView('scale');
     ok('step 5: ...Scales is current once shown', /^D\s/.test(doc.getElementById('sc-info').textContent),
        doc.getElementById('sc-info').textContent.slice(0, 40));
-    T.selectTab('circle');
+    T.toggleSheet('key');
     const major = T.I18N[T.state().lang].major_word;
-    ok('step 5: ...and so is the Circle', doc.getElementById('cof-info').textContent.includes('D ' + major),
+    ok('step 5: ...and so is the circle, once its sheet opens', doc.getElementById('cof-info').textContent.includes('D ' + major),
        doc.getElementById('cof-info').textContent.slice(0, 60));
+    T.toggleSheet('key');
     T.setMode('practice');
     const m2 = new win.MutationObserver(() => {});
-    m2.observe(doc.querySelector('.main'), { subtree: true, childList: true, characterData: true });
-    m2.observe(doc.getElementById('board-region'), { subtree: true, childList: true });
+    ['panel-harmony', 'panel-scales', 'board-region'].forEach(id =>
+      m2.observe(doc.getElementById(id), { subtree: true, childList: true, characterData: true }));
     T.setKey(7, 'G');
     const n2 = m2.takeRecords().length; m2.disconnect();
     ok('step 5: in Practice, a key change paints no reference view', n2 === 0, n2 + ' mutations');
@@ -2491,6 +2474,7 @@ if (T) {
     const s = () => T.state();
     T.setMode('reference'); T.selectTab('harmony'); T.setHView('chords');
     T.setKey(0, 'C', 0); T.setChQual(0);
+    T.toggleSheet('chord');   // the degrees are the chord sheet's
     const degs = [...doc.querySelectorAll('#h-degrees [data-deg]')];
     ok('step 6: Harmony lists the key\'s seven chords as degrees',
        degs.map(b => b.querySelector('.deg-rn').textContent).join(' ') === 'I ii iii IV V vi vii°',
@@ -2506,10 +2490,11 @@ if (T) {
     ok('step 6: the root picker still marks the key',
        +doc.querySelector('#g-roots .btn.active').dataset.pc === 0);
     ok('step 6: the degree row marks ii', doc.querySelector('#h-degrees .active').dataset.deg === '1');
+    ok('step 8: the chord chip names it', /^Dm/.test(doc.getElementById('chip-chord').textContent));
     T.selectTab('scales'); T.setScView('scale');
     ok('step 6: Scales shows the key, not the chord', /^C\s/.test(doc.getElementById('sc-info').textContent),
        doc.getElementById('sc-info').textContent.slice(0, 30));
-    T.selectTab('circle');
+    T.toggleSheet('key');
     const ringed = [...doc.querySelectorAll('#cof-svg .cof-chord')];
     ok('step 6: the circle shows the key with the chord ringed (Dm, inner ring)',
        ringed.length === 1 && ringed[0].dataset.type === 'min' && T.COF[+ringed[0].dataset.i].minPc === 2
@@ -2553,9 +2538,8 @@ if (T) {
     const cad = T.keyCadence();
     ok('step 6: natural minor cadences i–iv–v',
        cad.map(c => c.off).join(',') === '0,5,7,12' && cad.slice(0, 3).every(c => c.iv[1] === 3), JSON.stringify(cad));
-    T.selectTab('circle');
     ok('step 6: the cadence button names the key\'s degrees (A minor: i–iv–v)',
-       /i–iv–v$/.test(doc.getElementById('g-play').textContent), doc.getElementById('g-play').textContent);
+       /i–iv–v$/.test(doc.getElementById('cof-cadence').textContent), doc.getElementById('cof-cadence').textContent);
     T.setChQual(1); T.setKey(9, 'A', 5);
     ok('step 6: the key\'s own tonic chord is not marked twice',
        doc.querySelectorAll('#cof-svg .cof-chord, #cof-info .cof-deg.on').length === 0);
@@ -2570,9 +2554,11 @@ if (T) {
     doc.querySelector('#sc-info .sc-open-harmony').click();
     ok('step 6: Scales\' V opens G in Harmony, still in C',
        s().currentTab === 'harmony' && s().chRoot === 7 && s().chQual === 0 && s().keyRoot === 0);
-    T.setKey(9, 'A', 5); T.selectTab('circle');
-    doc.getElementById('cof-harmony').click();
-    ok('step 6: the circle opens the key\'s tonic chord', s().chRoot === 9 && s().chQual === 1 && s().currentTab === 'harmony');
+    T.setKey(9, 'A', 5);
+    ok('step 8: a circle node picks the key and brings the chord home',
+       (doc.querySelector('#cof-svg .cof-node[data-type="maj"][data-i="2"]').dispatchEvent(new win.MouseEvent('click', { bubbles: true })),
+        s().keyRoot === 2 && s().scIdx === 0 && s().chRoot === 2));
+    T.toggleSheet('key');
 
     // put everything back
     T.seqClear(); T.setSeq(seq0);
@@ -2581,15 +2567,186 @@ if (T) {
     T.selectTab('harmony'); T.setHView('chords');
   })();
 
+  /* ---- PLAN step 8: the context strip, one layout grammar ----
+     One row — key · chord · tempo · ▶ · tuner · ⚙ — above the neck in Reference and above
+     the drill stage in Practice; one element, moved between the two. Each chip opens a
+     sheet, one at a time. In a drill the row offers what the drill declares. */
+  (function contextStrip() {
+    const doc = win.document, st0 = T.state(), seq0 = JSON.parse(JSON.stringify(T.getSeq()));
+    const vis = id => { const e = doc.getElementById(id); return !!e && !e.hidden && !e.closest('[hidden]'); };
+    const strip = doc.getElementById('strip');
+    T.dismissWelcome();
+    T.setMode('reference'); T.selectTab('harmony'); T.setHView('chords'); T.closeSheets();
+
+    /* --- where it lives --- */
+    ok('step 8: one strip, above the neck in Reference', strip.parentNode.id === 'strip-ref');
+    ok('step 8: ...every chip on it', ['chip-key', 'chip-chord', 'chip-tempo', 'chip-play', 'backing-toggle', 'tb-tuner', 'tb-toggle'].every(vis));
+    T.setMode('practice');
+    ok('step 8: in Practice the same element sits under the drill header',
+       strip.parentNode.id === 'strip-drill' && doc.querySelectorAll('#strip').length === 1);
+    ok('step 8: on the Practice home it offers only the tuner and Settings',
+       vis('tb-tuner') && vis('tb-toggle') && ['chip-key', 'chip-chord', 'chip-tempo', 'chip-play', 'backing-toggle'].every(id => !vis(id)));
+    T.setMode('reference');
+    ok('step 8: ...and goes back above the neck', strip.parentNode.id === 'strip-ref');
+
+    /* --- the sheets: a chip opens its own, one at a time --- */
+    doc.getElementById('chip-key').click();
+    ok('step 8: the key chip opens the key sheet', vis('sheet-key') && doc.getElementById('chip-key').getAttribute('aria-expanded') === 'true');
+    doc.getElementById('chip-chord').click();
+    ok('step 8: opening another shuts the first', vis('sheet-chord') && !vis('sheet-key')
+       && doc.getElementById('chip-key').getAttribute('aria-expanded') === 'false');
+    doc.getElementById('chip-chord').click();
+    ok('step 8: the chip again shuts it', !vis('sheet-chord') && doc.getElementById('sheets').hidden);
+    doc.getElementById('tb-toggle').click();
+    ok('step 8: ⚙ opens Settings, and it is remembered', vis('toolbar') && T.state().toolbarOpen === true
+       && JSON.parse(win.localStorage.getItem('guitarStudio.v1')).toolbarOpen === true);
+    doc.querySelector('#toolbar [data-close]').click();
+    ok('step 8: a sheet\'s ✕ shuts it and hands focus back to its chip',
+       !vis('toolbar') && doc.activeElement === doc.getElementById('tb-toggle'));
+
+    /* --- the key sheet: root, scale family + more, and the circle as the picker --- */
+    T.setKey(9, 'A', 5); T.setChQual(1);
+    T.toggleSheet('key');
+    ok('step 8: the key chip names the key', /^A minor|^A мінор/.test(doc.getElementById('chip-key').textContent),
+       doc.getElementById('chip-key').textContent);
+    const fams = () => [...doc.querySelectorAll('#sc-fams [data-sc]')].map(b => +b.dataset.sc);
+    ok('step 8: the common keys first (major, minor, the pentatonics, blues)', fams().join() === '0,5,7,8,9', fams().join());
+    doc.getElementById('sc-fams-toggle').click();
+    ok('step 8: "more" adds the modes', fams().length === T.SCALES.length);
+    doc.getElementById('sc-fams-toggle').click();
+    T.setChord(4, 'E', 6);   // E7, the V of A minor
+    doc.querySelector('#sc-fams [data-sc="0"]').click();
+    ok('step 8: a scale pick moves the key\'s scale and keeps the root and the chord',
+       T.state().scIdx === 0 && T.state().keyRoot === 9 && T.state().chRoot === 4 && T.state().chQual === 6);
+    T.setScale(1);           // Dorian lives behind "more"
+    ok('step 8: a key in "more" opens it by itself', fams().length === T.SCALES.length
+       && doc.querySelector('#sc-fams [data-sc="1"]').classList.contains('active'));
+    ok('step 8: the circle is in the key sheet', !!doc.querySelector('#sheet-key #cof-svg .cof-node') && !!doc.querySelector('#sheet-key #cof-info'));
+    doc.querySelector('#g-roots [data-pc="7"]').click();
+    ok('step 8: a root button sets the key', T.state().keyRoot === 7 && T.state().scIdx === 1);
+    T.toggleSheet('key');
+
+    /* --- the chord sheet: the key's degrees first, then the quality --- */
+    T.setKey(0, 'C', 0); T.toggleSheet('chord');
+    ok('step 8: the chord sheet opens on the key\'s seven degrees', doc.querySelectorAll('#sheet-chord #h-degrees [data-deg]').length === 7);
+    const quals = () => [...doc.querySelectorAll('#ch-quals button')];
+    quals().find(b => b.textContent === 'm').click();
+    ok('step 8: a quality changes the chord, keeps its root', T.state().chRoot === 0 && T.QUALITIES[T.state().chQual].short === 'm'
+       && /^Cm/.test(doc.getElementById('chip-chord').textContent));
+    ok('step 8: the quality row no longer sits under the neck', !doc.querySelector('.main #ch-quals') && !doc.querySelector('.main #h-degrees'));
+    doc.getElementById('ch-quals-toggle').click();
+    ok('step 8: "more" opens the sevenths and extensions', quals().length === T.QUALITIES.length);
+    doc.getElementById('ch-quals-toggle').click();
+    T.toggleSheet('chord');
+
+    /* --- the tempo sheet: BPM and meter, one chip --- */
+    T.setTempo(90);
+    const mt = doc.getElementById('tb-meter'); mt.value = '1'; mt.dispatchEvent(new win.Event('change'));
+    ok('step 8: the tempo chip reads ♩ BPM · meter', /90 · 3\/4/.test(doc.getElementById('chip-tempo').textContent), doc.getElementById('chip-tempo').textContent);
+    mt.value = '2'; mt.dispatchEvent(new win.Event('change'));
+
+    /* --- the one ▶ and its drawer --- */
+    T.initAudio();
+    T.setChTriads(false);
+    ok('step 8: ▶ says what it will play', /^▶C/.test(doc.getElementById('g-play').textContent.replace(/\s/g, '')), doc.getElementById('g-play').textContent);
+    T.stripPlay();
+    ok('step 8: ▶ loops the chord', T.state().loop && doc.getElementById('g-play').classList.contains('active')
+       && doc.getElementById('g-play').getAttribute('aria-pressed') === 'true');
+    T.stripPlay();
+    ok('step 8: ...and the same press stops it', !T.transportActive());
+    T.applyPreset(T.SEQ_PRESETS[2]);
+    doc.getElementById('backing-toggle').click();
+    ok('step 8: the caret opens the drawer: what ▶ plays, the progression, the band',
+       vis('backing-panel') && ['pl-src', 'seq-presets', 'seq-strip', 'pl-jam', 'tb-bass', 'tb-drums'].every(id => !!doc.querySelector('#backing-panel #' + id)));
+    doc.querySelectorAll('#pl-src .btn')[1].click();
+    ok('step 8: "the progression" is remembered', T.getPlaySrc() === 'prog' && JSON.parse(win.localStorage.getItem('guitarStudio.v1')).playSrc === 'prog');
+    T.stripPlay();
+    ok('step 8: ▶ then plays the progression', T.state().seq && !T.state().loop);
+    doc.querySelectorAll('#pl-src .btn')[0].click();
+    ok('step 8: switching to the chord while it plays switches what sounds', T.state().loop && !T.state().seq);
+    T.stripPlay();
+    T.setMode('practice');
+    ok('step 8: the drawer is the reference transport\'s: shut and unoffered in Practice', !vis('backing-panel') && !vis('backing-toggle'));
+    T.setMode('reference');
+    ok('step 8: ...and back where it was in Reference', vis('backing-panel'));
+    T.toggleSheet('play');
+
+    /* --- the drills: the strip offers what each declares, and ▶ is the drill's verb --- */
+    T.setMode('practice');
+    T.startTrack('timing');
+    ok('step 8: timing reads the key and the tempo: key, tempo and ▶ — no chord',
+       vis('chip-key') && vis('chip-tempo') && vis('chip-play') && !vis('chip-chord'));
+    ok('step 8: ...with no Play button of its own', !doc.querySelector('#sd-area .btn.play'));
+    T.stripPlay();
+    ok('step 8: ▶ starts the drill', T.getSd().playing === true && doc.getElementById('g-play').getAttribute('aria-pressed') === 'true');
+    ok('step 8: ...and folds its setup and hint so the stage moves up', !doc.body.classList.contains('drill-setup-open') && !doc.body.classList.contains('drill-help-open'));
+    T.stripPlay();
+    ok('step 8: ■ stops it', T.getSd().playing === false);
+    T.startTrack('strum');
+    ok('step 8: strumming reads the chord: chord, tempo and ▶ — no key', vis('chip-chord') && vis('chip-tempo') && vis('chip-play') && !vis('chip-key'));
+    T.toggleSheet('chord');
+    quals().find(b => b.textContent === 'maj').click();
+    ok('step 8: a chord picked in a drill reaches the drill', T.QUALITIES[T.state().chQual].short === '' && doc.getElementById('sp-chord').textContent.endsWith(' · ' + T.noteTxt(T.state().chLbl)));
+    T.toggleSheet('chord');
+    T.startTrack('changes');
+    ok('step 8: one-minute changes: ▶ is Start', doc.getElementById('g-play').getAttribute('aria-label') === T.I18N[T.state().lang].cm_start);
+    T.stripPlay();
+    ok('step 8: ...then Finish, while the clock runs', T.getCm().phase === 'run' && doc.getElementById('g-play').getAttribute('aria-label') === T.I18N[T.state().lang].cm_stop);
+    T.stripPlay();
+    ok('step 8: ...which ends the run', T.getCm().phase === 'done');
+    T.startTrack('interval');
+    ok('step 8: in an ear drill ▶ is Replay, not a toggle',
+       vis('chip-play') && doc.getElementById('g-play').getAttribute('aria-label') === T.I18N[T.state().lang].ear_replay
+       && !doc.getElementById('g-play').hasAttribute('aria-pressed') && !doc.getElementById('ear-replay'));
+    ['sd-play', 'sp-play', 'tg-play', 'cm-start-btn', 'cm-stop', 'ear-replay']
+      .forEach(id => ok('step 8: no drill keeps its own play button: #' + id, !doc.getElementById(id)));
+    /* the drill header is one row: name · ? · setup · 🎤 · ✕, and nothing else rides in it */
+    ok('step 8: the drill header carries no key, tempo or play control',
+       !doc.querySelector('#drill-ctx .root-row, #drill-ctx input, #drill-ctx .btn.play'));
+    ok('step 8: ✕ is named for screen readers', doc.getElementById('drill-ctx-quit').getAttribute('aria-label') === T.I18N[T.state().lang].drill_quit);
+    T.quitDrill();
+    T.setMode('reference');
+
+    /* --- every screen: exactly one tempo control and one play control --- */
+    // shown = not under [hidden], and not in the layer the mode's CSS collapses
+    const plays = () => [...doc.querySelectorAll('.btn.play, #g-play')].filter(b => !b.closest('[hidden]') && !b.closest('.drill-summary')
+      && !b.closest(T.state().currentMode === 'practice' ? '.main > .panel, .aside, #shapes-card, #strip-ref' : '#panel-practice'));
+    T.selectTab('harmony');
+    ok('step 8: Reference shows one play control', plays().length === 1, plays().map(b => b.id || b.className).join());
+    ok('step 8: ...and one tempo control', doc.querySelectorAll('input[type="range"][id$="tempo"]').length === 1);
+    T.setMode('practice'); T.startTrack('timing');
+    ok('step 8: a drill shows one play control too', plays().length === 1, plays().map(b => b.id || b.className).join());
+    T.quitDrill(); T.setMode('reference');
+
+    /* --- the header: brand only; language in Settings, version in the footer --- */
+    ok('step 8: the header holds the brand and the nav, no controls',
+       !doc.querySelector('header .lang, header .ver, header .btn, header select, header input'));
+    ok('step 8: the language switch is in Settings ▸ Display', !!doc.querySelector('#toolbar #lang-switch .langbtn'));
+    ok('step 8: the version badge is in the footer', !!doc.querySelector('footer #app-ver'));
+
+    /* --- old saves on the circle open Scales with the key sheet --- */
+    const mig = T.migrateSave({ tab: 'circle', scView: 'notes' });
+    ok('step 8: a save on the circle tab migrates to Scales with the key sheet', mig.tab === 'scales' && mig.keySheet === true && mig.scView === 'notes');
+    ok('step 8: ...and the marker is never saved', !('keySheet' in T.snapshotState()));
+
+    // put everything back
+    T.closeSheets();
+    T.setPlaySrc('chord');
+    T.seqClear(); T.setSeq(seq0);
+    T.setTempo(st0.tempo);
+    T.setKey(st0.keyRoot, st0.keyLbl, st0.scIdx);
+    T.setChord(st0.chRoot, st0.chLbl, st0.chQual);
+    T.selectTab('harmony'); T.setHView('chords');
+    T.resetLearner();
+  })();
+
   /* ---- Phase 2 (v1.20.0): arpeggios, CAGED labels, capo ---- */
   (function phase2() {
     // Arpeggio is a fourth Harmony view that owns the shared board
     T.selectTab('harmony'); T.setHView('arp');
     ok('Phase2: arp is the active board mode', T.isBoardMode('arp') === true);
     ok('Phase2: arp panel shown', win.document.getElementById('sub-arp').hidden === false);
-    const gp = win.document.getElementById('g-play'), lp = win.document.getElementById('g-loop');
-    ok('Phase2: Listen visible in arp view', gp && gp.hidden === false);
-    ok('Phase2: Loop hidden in arp view (it is the chord/triad backing)', lp && lp.hidden === true);
+    ok('step 8: the strip\'s ▶ is there in the arp view too', win.document.getElementById('chip-play').hidden === false);
     // arp shares the chord quality with chord-tones (the bridge)
     T.setChQual(byShort['m7']);
     ok('Phase2: arp board paints the shared chord quality', T.isBoardMode('arp') === true);
@@ -2913,7 +3070,8 @@ if (T) {
 
     /* -- self-disable, same rule as F0: no worklet / no mic in jsdom -- */
     ok('F1: onsetSupported() is false without a mic path', T.onsetSupported() === false);
-    ok('F1: the calibration row is removed where there is no mic', !doc.getElementById('cal-row'));
+    ok('F1: the calibration box is removed where there is no mic',
+       !doc.getElementById('cal-row') && !doc.getElementById('cal-box') && !doc.getElementById('drill-ctx-cal'));
 
     /* -- the worklet processor is compiled in a DIFFERENT realm, so the build's own
           syntax check never parses it. A typo in that string would only surface as a
@@ -3199,11 +3357,10 @@ if (T) {
     [[3, 'Eb'], [1, 'C#'], [10, 'Bb']].forEach(([pc, lbl]) => {
       T.setKey(pc, lbl);
       ok('glyphs: the key label itself stays ASCII in state (' + lbl + ')', T.state().keyLbl === lbl && T.state().chLbl === lbl);
-      ['harmony', 'scales', 'circle'].forEach(tab => {
-        T.selectTab(tab);
-        if (tab === 'harmony') ['chords', 'triads', 'arp'].forEach(v => { T.setHView(v); scan(lbl + '/' + v); });
-        else if (tab === 'scales') ['scale', 'notes'].forEach(v => { T.setScView(v); scan(lbl + '/' + v); });
-        else scan(lbl + '/circle');
+      ['harmony', 'scales', 'key sheet', 'chord sheet'].forEach(tab => {
+        if (tab === 'harmony') { T.selectTab(tab); ['chords', 'triads', 'arp'].forEach(v => { T.setHView(v); scan(lbl + '/' + v); }); }
+        else if (tab === 'scales') { T.selectTab(tab); ['scale', 'notes'].forEach(v => { T.setScView(v); scan(lbl + '/' + v); }); }
+        else { const k = tab === 'key sheet' ? 'key' : 'chord'; T.toggleSheet(k); scan(lbl + '/' + tab); T.toggleSheet(k); }
       });
     });
     ok('glyphs: no ASCII accidental is painted anywhere', offenders.length === 0, offenders.slice(0, 6).join(' | '));

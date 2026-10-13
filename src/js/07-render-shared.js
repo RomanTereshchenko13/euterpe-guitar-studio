@@ -126,7 +126,7 @@ const INLAY_DOUBLE = new Set([12,24]);
    Re-run after a context change rebuilds the groups. */
 function markScrollables(){
   if(typeof document==='undefined') return;
-  document.querySelectorAll('.row > .group, #ch-quals .group, #arp-quals .group').forEach(g=>{
+  document.querySelectorAll('.row > .group, #ch-quals .group, #sc-fams .group').forEach(g=>{
     g.classList.toggle('scrollable', g.scrollWidth > g.clientWidth + 1);
   });
 }

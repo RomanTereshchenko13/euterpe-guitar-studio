@@ -109,6 +109,7 @@ function renderCm(){
   if(cmDrill.phase==='setup') renderCmSetup();
   else if(cmDrill.phase==='run') renderCmActive();
   else renderCmSummary();
+  applyDrillCtx();     // the strip's ▶ is Start, or Finish while the clock runs
 }
 function renderCmSetup(){
   if(!cmDrill) return;
@@ -120,7 +121,6 @@ function renderCmSetup(){
   if(ck){ ck.classList.toggle('active', cmClick); ck.setAttribute('aria-pressed', cmClick?'true':'false'); ck.innerHTML='&#9833; '+t('cm_click'); }
   const bl=document.getElementById('cm-setup-best');
   if(bl){ const b=cmPairBest(cmDrill.pairIdx); bl.textContent = b>0 ? (t('cm_best')+' · '+b+' '+t('cm_cpm').toLowerCase()) : ''; }
-  const sb=document.getElementById('cm-start-btn'); if(sb) sb.innerHTML='&#9654; '+t('cm_start');
 }
 function cmChordBox(c){
   const q=c.q, funcMap={};
@@ -137,7 +137,6 @@ function renderCmActive(){
   renderCmTime(); renderCmCount();
   const sub=document.getElementById('cm-sub'); if(sub) sub.textContent=t('cm_tap_hint');
   const ut=document.getElementById('cm-untap'); if(ut) ut.innerHTML='&minus; '+t('cm_undo');
-  const st=document.getElementById('cm-stop'); if(st) st.textContent=t('cm_stop');
 }
 function renderCmTime(){ const tm=document.getElementById('cm-timer'); if(tm && cmDrill) tm.textContent=cmFmtTime(cmDrill.remaining); }
 function renderCmCount(){
@@ -164,6 +163,10 @@ function refreshChangesLang(){ if(cmDrill) renderCm(); }
 
 /* in-drill controls, wired once at load */
 registerDrill({ id:'changes', area:'cm-area', tempo:true,   // the optional click rides pulseSec()
+                // ▶ starts the clock (or a fresh run from the summary); ■ finishes early
+                play:()=>{ if(cmDrill && cmDrill.phase==='run') finishChanges(); else cmBegin(); },
+                playing:()=>!!(cmDrill && cmDrill.phase==='run'),
+                playKey:()=>(cmDrill && cmDrill.phase==='run') ? 'cm_stop' : 'cm_start',
                 // the one coach track: it counts YOUR taps, not your guitar
                 tracks:[{ id:'changes', kind:'perf', sess:'changes', label:'drill_changes',
                           better:'high', unit:'cpm' }],
@@ -172,8 +175,6 @@ registerDrill({ id:'changes', area:'cm-area', tempo:true,   // the optional clic
 (function initChanges(){
   const area=document.getElementById('cm-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('cm-start-btn', cmBegin);
-  wire('cm-stop',      finishChanges);   // finish early
   wire('cm-tally',     cmTap);
   wire('cm-untap',     cmUntap);
   wire('cm-click',     ()=>{ cmClick=!cmClick; renderCmSetup(); });

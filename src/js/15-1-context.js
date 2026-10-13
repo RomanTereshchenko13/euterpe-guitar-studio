@@ -1,20 +1,19 @@
 /* ===================== CONTEXT: the one key, the views that read it, the view on screen ===================== */
-/* ---- shared root picker, display mode, sub-view toggle, global play ---- */
+/* ---- shared root picker, display mode, sub-view toggle ---- */
 /* Only the view on screen paints, controls and board both. A hidden view is stale until
    it is shown, and every way of showing one — selectTab, setHView, setScView, setMode —
-   ends here, so a key, tuning or language change costs one view, not five. */
+   ends here, so a key, tuning or language change costs one view, not five. The strip's
+   sheets follow the same rule (paintSheets). */
 function renderActiveContext(){
   if(currentMode!=='reference') return;
   if(currentTab==='harmony'){
-    renderDegrees();
-    if(hView==='arp'){ buildArpQuals(); buildArpPos(); renderArp(); }
-    else { buildChQuals(); renderChords(); }
+    if(hView==='arp'){ buildArpPos(); renderArp(); }
+    else renderChords();
   }
   else if(currentTab==='scales'){
     if(scView==='notes') renderNotes();
-    else { buildScSelect(); buildScPos(); renderScales(); }
+    else { buildScPos(); renderScales(); }
   }
-  else if(currentTab==='circle') renderCircle();
   markScrollables();
 }
 /* The Practice home, painted from the model in one pass: progress from the learner
@@ -41,24 +40,23 @@ function paintDrillBadges(){
 }
 
 /* ---- one key ----
-   keyRoot/keyLbl (key center) and scIdx (its scale) are what Scales, Circle and Notes
+   keyRoot/keyLbl (key center) and scIdx (its scale) are what Scales, the circle and Notes
    show, and setKey() is the ONE place they change, so the views never drift. Pass
    `mode` to also move the scale (a circle click); omit it to keep it. A new key brings
-   the chord home to its tonic root, quality kept (setChord moves it within the key). */
+   the chord home to its tonic root, quality kept (setChord moves it within the key). A
+   running drill that reads the key re-derives from it. */
 function setKey(pc, lbl, mode){
   keyRoot=pc; keyLbl=lbl;
   if(Number.isInteger(mode) && SCALES[mode]) scIdx=mode;
   chRoot=pc; chLbl=lbl;
   chVoicing=0; scOverlay=null;
   ntRoot=lbl;                                   // Notes follows the shared root
-  activateRoot(document.getElementById('g-roots'), keyRoot);
-  // the drill header's key picker tracks the same root
-  { const dk=document.getElementById('drill-ctx-key'); if(dk) activateRoot(dk, keyRoot); }
-  renderActiveContext(); updateGlobalPlay();   // the cadence button names the key's degrees
+  renderActiveContext(); renderStrip(); drillKeyChanged();
   saveState();
 }
 buildRootBtns(document.getElementById('g-roots'), keyRoot, (pc,r)=>{ setKey(pc,r); });
 
+/* Names | Intervals, on the board's lens */
 function setGMode(m){ gMode=m;
   const on=document.getElementById(m==='names'?'g-names':'g-deg'), off=document.getElementById(m==='names'?'g-deg':'g-names');
   on.classList.add('active'); on.setAttribute('aria-pressed','true'); off.classList.remove('active'); off.setAttribute('aria-pressed','false');
@@ -76,7 +74,7 @@ function setHView(v){ hView = v==='arp' ? 'arp' : 'chords'; v=hView;
   document.getElementById('harmony-h').textContent = t(head+'_h');
   document.getElementById('harmony-p').textContent = t(head+'_p');
   applyHarmonyExtras();
-  renderActiveContext(); updateGlobalPlay(); saveState();
+  renderActiveContext(); saveState();
 }
 document.getElementById('hv-chords').onclick=()=>setHView('chords');
 document.getElementById('hv-arp').onclick=()=>setHView('arp');
@@ -88,77 +86,31 @@ function setScView(v){ scView=v;
   ['scale','notes'].forEach(k=>{ const b=document.getElementById('sv-'+k); b.classList.toggle('active', k===v); b.setAttribute('aria-pressed', k===v?'true':'false'); });
   document.getElementById('scales-h').textContent = t(v==='notes'?'nt_h':'sc_h');
   document.getElementById('scales-p').textContent = t(v==='notes'?'nt_p':'sc_p');
-  applyContextBar();   // the Names/Intervals switch does nothing in Notes
-  renderActiveContext(); updateGlobalPlay(); saveState();
+  applyBoardRegion();   // the Names/Intervals switch does nothing in Notes
+  renderActiveContext(); saveState();
 }
 document.getElementById('sv-scale').onclick=()=>setScView('scale');
 document.getElementById('sv-notes').onclick=()=>setScView('notes');
 
-function applyContextBar(){
-  // The bar shows wherever one of its groups has a job (the root picker matters on
-  // Circle too); it stands down only when all of them have.
-  const key = currentTab==='harmony' || currentTab==='scales' || currentTab==='circle';
-  document.getElementById('context-bar').hidden = !key;
-  // Names/Intervals does nothing in Notes (always names) or on Circle (no dots)
-  const cd=document.querySelector('.ctx-display');
-  if(cd) cd.hidden = currentTab==='circle' || (currentTab==='scales' && scView==='notes');
-}
+/* Both reference subjects show the neck; the lens shows the active subject's view
+   switch, and Names/Intervals wherever the dots have labels to switch (not Notes). */
 function applyBoardRegion(){
-  const show = (currentTab==='harmony' || currentTab==='scales');
-  document.getElementById('board-region').hidden = !show;
-  const bm=document.getElementById('board-meta'); if(bm) bm.hidden = !show;   // legend + hint follow the board
-  // the view switch is a lens on the board: only the active subject's group shows
   const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
   const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
-  // ...and the heading above it names the same subject (Circle keeps its own in its panel)
-  document.getElementById('view-head').hidden = !show;
+  const cd=document.getElementById('ctx-display');      if(cd) cd.hidden = currentTab==='scales' && scView==='notes';
+  // ...and the heading above the strip names the same subject
   document.getElementById('vh-harmony').hidden = currentTab!=='harmony';
   document.getElementById('vh-scales').hidden  = currentTab!=='scales';
 }
-/* voicing cards + sequencer belong only to Harmony's chord-tones view. With triads
-   on, the triad cards in the panel stand in for the chord shapes. */
+/* the voicing cards belong only to Harmony's chord-tones view. With triads on, the
+   triad cards in the panel stand in for the chord shapes. */
 function applyHarmonyExtras(){
   const on = currentTab==='harmony' && hView==='chords';
-  const el=document.getElementById('harmony-extras'); if(el) el.hidden = !on;
   const sc=document.getElementById('shapes-card'); if(sc) sc.hidden = !on || triadsOn();
   applyShapesPanel();
 }
-function globalPlay(){
-  const boardEl=document.getElementById('board');
-  if(currentTab==='harmony'){
-    if(isBoardMode('triads')){ const v=currentTriadVoicing(); animArpMidi(boardEl, v.midis); }
-    else if(hView==='arp'){ const q=QUALITIES[chQual]; animRun(boardEl, 48+chRoot, q.iv.concat([12])); }   // run the arpeggio melodically up the neck
-    else { const v=currentChordVoicing(); animArpMidi(boardEl, v.midis); }
-  } else if(currentTab==='scales' && scView==='scale'){ const s=SCALES[scIdx]; animRun(boardEl, 48+keyRoot, s.iv.concat([12])); }
-  else if(currentTab==='circle'){
-    // the key's own I–IV–V–I, at a fixed pace independent of the tempo
-    const b=48+keyRoot, bt=0.5;
-    keyCadence().forEach((c,i)=>{ const base=b+c.off; c.iv.forEach((x,j)=>pluck(base+x, i*bt + j*0.018, Math.max(0.9, bt*1.4))); });
-  }
+/* the key sheet's cadence: the key's own I–IV–V–I, at a fixed pace independent of the tempo */
+function playCadence(){
+  const b=48+keyRoot, bt=0.5;
+  keyCadence().forEach((c,i)=>{ const base=b+c.off; c.iv.forEach((x,j)=>pluck(base+x, i*bt + j*0.018, Math.max(0.9, bt*1.4))); });
 }
-function updateGlobalPlay(){
-  const b=document.getElementById('g-play');
-  if(b){
-    // nothing to "listen" to in the notes view
-    b.hidden = currentTab==='scales' && scView==='notes';
-    const cadence = currentTab==='circle';
-    // the cadence names the key's own degrees: i–iv–v in A minor, not I–IV–V
-    const cad=t('b_cadence').replace('{cad}', keyCadenceName());
-    b.innerHTML='&#9654; '+(cadence?cad:t('b_listen'));
-    const tip=cadence?cad:t('b_listen_tip');
-    b.setAttribute('aria-label', tip); b.title=tip;
-  }
-  const lp=document.getElementById('g-loop');
-  if(lp){
-    // Loops the selected voicing (or the shown triad) as a backing; it persists
-    // across tabs, and the transport chip is the Stop.
-    lp.hidden = !(currentTab==='harmony' && hView==='chords');
-    lp.classList.toggle('active', !!loopClock);
-    lp.setAttribute('aria-pressed', loopClock?'true':'false');
-    lp.innerHTML=(loopClock?'&#9632; ':'&#8635; ')+t('b_loop');
-    const ltip=t(loopClock?'b_loop_stop_tip':'b_loop_tip');
-    lp.setAttribute('aria-label', ltip); lp.title=ltip;
-  }
-}
-document.getElementById('g-play').onclick=globalPlay;
-document.getElementById('g-loop').onclick=loopToggle;

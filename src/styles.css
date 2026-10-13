@@ -20,11 +20,11 @@
 
   /* keyboard accessibility: visible focus on every interactive control */
   .btn:focus-visible, .navbtn:focus-visible, .langbtn:focus-visible, .ver:focus-visible,
-  .aside-toggle:focus-visible, .tb-toggle:focus-visible, .cl-close:focus-visible,
+  .aside-toggle:focus-visible, .chip:focus-visible, .sheet-x:focus-visible, .cl-close:focus-visible,
   input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .dot:focus-visible { outline: 2px solid #fff; outline-offset: 2px; z-index: 7; }
   /* no tap delay or double-tap zoom on controls, so rapid note tapping is instant */
-  .btn, .navbtn, .langbtn, .ver, .tb-toggle, .aside-toggle, .cl-close,
+  .btn, .navbtn, .langbtn, .ver, .chip, .sheet-x, .aside-toggle, .cl-close,
   .chordbox, .cd-dot, .cof-node, .seq-chip .nm, .seq-chip .bars, .seq-chip .x,
   .install-btn, .toast-act, .toast-x,
   select { touch-action: manipulation; }
@@ -51,11 +51,12 @@
   .brand-name { display: flex; flex-direction: column; gap: 1px; }
   .brand h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 30px; letter-spacing: -0.01em; }
   .brand-desc { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 13px; line-height: 1.1; color: var(--text-dim); letter-spacing: 0.01em; }
-  .brand .ver { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; color: var(--text-faint); border: 1px solid rgba(45, 182, 166, 0.4); border-radius: 6px; padding: 2px 7px; align-self: center; cursor: pointer; background: transparent; transition: all 0.12s; }
-  .brand .ver:hover { color: var(--accent); border-color: var(--accent); }
-  .lang { margin-left: auto; display: flex; gap: 2px; align-self: center; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 8px; padding: 2px; }
+  /* the version, in the footer: it opens the changelog */
+  .ver { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; color: var(--text-faint); border: 1px solid rgba(45, 182, 166, 0.4); border-radius: 6px; padding: 2px 7px; margin-left: 6px; cursor: pointer; background: transparent; transition: all 0.12s; }
+  .ver:hover { color: var(--accent); border-color: var(--accent); }
+  .lang { display: flex; gap: 2px; background: var(--bg-panel-2); border: 1px solid var(--border-strong); border-radius: 8px; padding: 2px; }
   /* PWA install button (header) + update toast (bottom), hidden until signalled (16-pwa.js) */
-  .install-btn { align-self: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #07203a; background: var(--accent); border: none; border-radius: 7px; padding: 5px 11px; cursor: pointer; transition: opacity 0.12s; }
+  .install-btn { margin-left: auto; align-self: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #07203a; background: var(--accent); border: none; border-radius: 7px; padding: 5px 11px; cursor: pointer; transition: opacity 0.12s; }
   .install-btn:hover { opacity: 0.88; }
   .toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 200; display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 24px); background: var(--bg-panel-2); border: 1px solid var(--border-strong); border-radius: 12px; padding: 10px 12px 10px 16px; box-shadow: 0 12px 36px rgba(0,0,0,0.5); animation: toast-in 0.22s ease; }
   .toast .toast-msg { font-size: 13px; color: var(--text); }
@@ -70,34 +71,33 @@
   .langbtn { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; padding: 5px 11px; border: none; background: transparent; color: var(--text-dim); border-radius: 6px; cursor: pointer; transition: all 0.12s; }
   .langbtn:hover:not(.active) { color: var(--text); }
   .langbtn.active { background: var(--accent); color: #07203a; }
-  /* the one navigation: three reference subjects + Practice, as peers */
+  /* the one navigation: two reference subjects + Practice, as peers */
   .mainnav { display: flex; gap: 4px; margin-top: 22px; flex-wrap: wrap; }
   .navbtn { font-family: inherit; font-size: 14px; font-weight: 500; background: transparent; color: var(--text-dim); border: none; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0; padding: 10px 16px 12px; cursor: pointer; transition: color 0.15s, border-color 0.15s, background 0.15s; }
   .navbtn:hover:not(.active) { color: var(--text); background: var(--bg-panel); }
   .navbtn.active { color: var(--text); border-bottom-color: var(--accent); }
 
-  /* Desktop grid: the neck leads and spans the full width — context bar → neck +
-     legend → the view's controls (with the suggester beside them) → reference rows.
+  /* Desktop grid: the neck leads and spans the full width — heading → strip → neck +
+     legend → the view's controls (with the suggester beside them) → chord shapes.
      Named areas, not source order, so phones reflow the same DOM. minmax(0,1fr)
      keeps the wide neck from blowing out the row; it scrolls in its own .scroll. */
   .layout {
     display: grid;
     grid-template-columns: minmax(0,1fr) 234px;
     grid-template-areas:
-      "ctx       ctx"
       "vhead     vhead"
+      "strip     strip"
       "board     board"
       "boardmeta boardmeta"
       "main      aside"
-      "shapes    shapes"
-      "extras    extras";
+      "shapes    shapes";
     column-gap: 30px;
     align-items: start;
     padding-top: 30px;
   }
   /* no suggester off Harmony: drop its column (applyAsideState) */
-  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "ctx" "vhead" "board" "boardmeta" "main" "shapes" "extras"; }
-  #context-bar { grid-area: ctx; }
+  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "vhead" "strip" "board" "boardmeta" "main" "shapes"; }
+  #strip-ref { grid-area: strip; }
   .view-head { grid-area: vhead; }
   .view-head .panel-head { margin-bottom: 8px; }
   /* .main follows the neck and needs air above it. Not a row-gap: the areas are
@@ -107,7 +107,6 @@
   body.mode-practice .main { margin-top: 0; }
   #board-region { grid-area: board; }
   .board-meta { grid-area: boardmeta; }
-  #harmony-extras { grid-area: extras; }
   .aside { grid-area: aside; align-self: start; }
   /* the collapsible chord-shape row below the neck */
   #shapes-card { grid-area: shapes; align-self: start; margin-top: 26px; }
@@ -116,7 +115,7 @@
   @media (max-width: 940px) {
     .layout, .layout.no-aside {
       grid-template-columns: minmax(0,1fr);
-      grid-template-areas: "ctx" "vhead" "board" "boardmeta" "main" "shapes" "aside" "extras";
+      grid-template-areas: "vhead" "strip" "board" "boardmeta" "main" "shapes" "aside";
     }
     /* air between the stacked cards; shapes ("how to fret this") before the suggester */
     .aside { position: static; margin-top: 22px; }
@@ -143,27 +142,17 @@
      .panel/.panel.active machinery */
   .practice-panel { display: none; animation: fade 0.25s ease; }
   body.mode-practice .practice-panel { display: block; }
-  /* the drill header shows exactly when the practice home doesn't — derived from the
-     home's own [hidden] */
-  #practice-home:not([hidden]) ~ #drill-ctx { display: none; }
-  /* Practice collapses the reference shell: the reference panel, context bar, board,
-     extras, suggester and shapes card. */
+  /* the drill header shows exactly while a drill runs (applyDrillCtx) */
+  body:not(.drill-running) #drill-ctx { display: none; }
+  /* Practice collapses the reference shell: the reference panel, the strip's reference
+     slot (the strip itself has moved into Practice), board, suggester and shapes card. */
   body.mode-practice .panel.active,
-  body.mode-practice #context-bar,
+  body.mode-practice #strip-ref,
   body.mode-practice .view-head,
   body.mode-practice #board-region,
   body.mode-practice .board-meta,
-  body.mode-practice #harmony-extras,
   body.mode-practice .aside,
   body.mode-practice #shapes-card { display: none; }
-  /* ...and the reference transport: Listen, Loop, Backing and Settings' tempo act on the
-     reference board, which isn't here; tempo lives in the drill header. #g-play/#g-loop
-     need the id to beat `.tb-bar > .btn`; the panels need it to beat `.toolbar`. */
-  body.mode-practice #g-play,
-  body.mode-practice #g-loop,
-  body.mode-practice .tb-bar .tb-tempo,
-  body.mode-practice #backing-toggle,
-  body.mode-practice #backing-panel { display: none; }
   /* no board or suggester: .main takes the full width */
   body.mode-practice .layout, body.mode-practice .layout.no-aside {
     grid-template-columns: minmax(0,1fr); grid-template-areas: "main";
@@ -223,19 +212,19 @@
   .dc-badge:empty { display: none; }
   .seam-btn { border-color: var(--accent); color: var(--accent); }
 
-  /* ---- the drill shell: header (#drill-ctx) · setup · hint · stage · action bar · summary ---- */
-  .drill-ctx { flex-wrap: wrap; row-gap: 8px; }
+  /* ---- the drill shell: header (#drill-ctx) · strip · setup · hint · stage · summary ---- */
+  /* one row: the name gives way (ellipsis) so ? · setup · 🎤 · ✕ never wrap */
+  .drill-ctx { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; min-width: 0; }
   /* the panel's own heading is redundant once the drill header names the drill */
   body.drill-running .practice-panel .panel-head { display: none; }
-  /* the title band is full width, so the 12-key picker below can wrap without stranding Quit */
-  .drill-ctx-lead { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .drill-name { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin-right: 2px; }
+  .drill-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin-right: 2px; }
+  .drill-ctx > .btn, .drill-ctx > .drill-help, .drill-ctx > .drill-sess { flex-shrink: 0; white-space: nowrap; }
   .drill-name:focus { outline: none; }   /* focused on start for screen readers, not a control */
   /* read by screen readers, not shown */
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .drill-sess { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); }
-  /* Quit sits at the far end */
-  #drill-ctx-quit { margin-left: auto; }
+  /* ✕, the way out, at the far end */
+  .drill-quit { font-size: 13px; line-height: 1; }
   /* SETUP: open before the first Play, folded during the run */
   body:not(.drill-setup-open) .drill-setup { display: none; }
   .drill-setup { margin-bottom: 4px; }
@@ -331,9 +320,6 @@
   .sd-cell.on { border-color: var(--root); box-shadow: 0 0 0 2px rgba(107,165,58,0.4); }
   .sd-lab { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); line-height: 1; }
   .sd-cell.on .sd-lab { color: var(--root); }
-  /* the drill header's tempo stepper, for every tempo-driven drill */
-  .tempo-group { display: inline-flex; align-items: center; gap: 8px; }
-  .tempo-bpm { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); min-width: 62px; text-align: center; }
   .sd-dot { opacity: 0.22; transition: opacity 0.1s, transform 0.1s; }
   .sd-dot.pal { opacity: 1; background: var(--sc-other); }
   .sd-dot.pal.on { background: var(--root); transform: scale(1.12); box-shadow: 0 0 0 3px rgba(107,165,58,0.3); }
@@ -389,8 +375,6 @@
   .deg-rn { font-size: 0.85em; opacity: 0.7; }
   .btn.play { background: transparent; border-color: var(--root); color: var(--root); }
   .btn.play:hover { background: rgba(107,165,58,0.14); }
-  .btn.play.loop { border-color: var(--accent); color: var(--accent); }
-  .btn.play.loop:hover:not(.active) { background: rgba(45,182,166,0.14); }
 
   /* ---- chord progression sequencer ---- */
   .seq { margin: 14px 0 6px; padding: 11px 13px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
@@ -487,20 +471,19 @@
   .sug-row .ctrl-label { display: block; margin-bottom: 4px; }
   .sug-scales { gap: 6px; }
   .sug-scales .btn { font-size: 12px; padding: 4px 9px; }
-  /* The circle is this tab's content, as the neck is the others', so it grows with the
-     viewport — capped at 520px to clear the fold. flex-basis keeps phones as they were:
-     below ~940px the panes wrap and the circle is full width. */
-  .cof-layout { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
-  .cof-wrap { flex: 1 1 340px; max-width: 520px; min-width: 0; }
-  /* capped, or the monospace key readout trails a dead strip behind it */
-  .cof-side { flex: 1 1 340px; min-width: 250px; max-width: 620px; }
-  #cof-svg { width: 100%; max-width: 100%; height: auto; display: block; }
+  /* The circle, in the key sheet: the picker grows with its column up to a size that
+     leaves the neck in view; below ~700px the panes stack and it is full width. */
+  .cof-wrap { flex: 0 1 320px; min-width: 0; }
+  #cof-svg { width: 100%; max-width: 320px; height: auto; display: block; margin: 0 auto; }
+  .cof-wrap .legend { margin-top: 10px; gap: 10px 14px; }
   .cof-node { cursor: pointer; }
   .cof-node circle { transition: fill 0.15s, stroke 0.15s; }
   .cof-node:hover circle { stroke: var(--text); }
   .cof-node text { font-family: 'JetBrains Mono', monospace; font-weight: 700; pointer-events: none; }
   /* the subdominant → tonic → dominant arc draws in on a key change */
   .cof-arc { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; stroke-dasharray: 320; stroke-dashoffset: 320; animation: cof-draw 0.55s ease forwards; pointer-events: none; }
+  /* a repaint in the same key (the chord moved) leaves the arc drawn */
+  .cof-arc.still { animation: none; stroke-dashoffset: 0; }
   @keyframes cof-draw { to { stroke-dashoffset: 0; } }
   #cof-info .sub b { font-weight: 700; }
   /* the chord, marked on top of the key: a dashed ring on its node, an underline in the list */
@@ -508,25 +491,74 @@
   .cof-deg { display: inline-block; min-width: 48px; }
   .cof-deg.on { box-shadow: inset 0 -2px 0 var(--third); }
 
-  /* ---- timing bar (tempo + transport) + collapsible settings ---- */
-  .tb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 16px; }
-  .tb-bar .tb-group { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 9px; padding: 6px 11px; }
-  /* one control height, so mixed paddings line up in each wrapped row at any zoom */
-  .tb-bar > .btn, .tb-bar .tb-toggle, .tb-bar > .tb-group, .tb-bar > .tb-transport { min-height: 34px; }
-  .tb-bar > .btn, .tb-bar .tb-toggle { display: inline-flex; align-items: center; justify-content: center; }
-  /* the Settings + Backing toggles wrap as one unit */
-  .tb-toggles { display: inline-flex; align-items: center; gap: 8px; }
-  .tb-toggle { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--bg-panel); color: var(--text-dim); cursor: pointer; transition: all 0.12s; }
-  .tb-toggle:hover { color: var(--text); border-color: var(--text-faint); }
-  .tb-toggle.open { background: var(--bg-panel-2); color: var(--text); }
-  /* the Backing toggle tints while the metronome / bass / drums run */
-  .tb-toggle.on { color: var(--root); border-color: var(--root); }
-  .tb-toggle .chev { transition: transform 0.18s; font-size: 10px; }
-  .tb-toggle.open .chev { transform: rotate(180deg); }
-  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
-  .toolbar.collapsed { display: none; }
-  /* Settings as labelled clusters; each wraps internally, so narrow screens stack
-     clusters instead of interleaving unrelated controls */
+  /* ---- THE CONTEXT STRIP: key · chord · tempo · ▶ · tuner · ⚙ (15-0-strip.js) ----
+     One row, the same above the neck and above a drill stage. On a narrow screen it
+     swipes rather than wraps, so it stays one row. */
+  .strip { margin-bottom: 10px; }
+  .strip-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
+  .strip-row::-webkit-scrollbar { display: none; }
+  .strip-row > * { flex-shrink: 0; }
+  /* ⚙ at the far end */
+  .chip-gear { margin-left: auto; }
+  .chip, .strip-row .btn.play { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--bg-panel); color: var(--text); cursor: pointer; white-space: nowrap; transition: border-color 0.12s, background 0.12s, color 0.12s; }
+  .chip:hover { border-color: var(--text-faint); background: var(--bg-panel-2); }
+  .chip.open { border-color: var(--accent); background: var(--bg-panel-2); }
+  .chip .chev { font-size: 10px; color: var(--text-dim); transition: transform 0.18s; }
+  .chip.open .chev { transform: rotate(180deg); }
+  .chip-ico { font-size: 13px; }
+  /* the caret tints while the band plays under ▶, the tempo chip while the metronome runs */
+  .chip.on { border-color: var(--root); color: var(--root); }
+  /* ▶ and its drawer caret read as one control */
+  .chip-pair { display: inline-flex; align-items: stretch; }
+  .chip-pair > .btn.play { border-radius: 9px 0 0 9px; }
+  .chip-pair > .chip-caret { border-radius: 0 9px 9px 0; border-left: none; padding: 6px 9px; }
+  .chip-pair > .btn.play:only-child, .chip-pair > .btn.play:has(+ [hidden]) { border-radius: 9px; }
+  .strip-row .btn.play.active { background: rgba(107,165,58,0.16); }
+  /* beat pulse: the ▶'s dot pumps on each scheduled beat, downbeat stronger */
+  .strip-pulse { display: none; width: 7px; height: 7px; border-radius: 50%; background: var(--root); }
+  #g-play.active .strip-pulse { display: inline-block; }
+  .strip-pulse.bp { animation: tb-beat 0.32s ease-out; }
+  .strip-pulse.bp-strong { animation: tb-beat-strong 0.36s ease-out; }
+  @keyframes tb-beat { 0% { transform: scale(1.7); } 100% { transform: scale(1); } }
+  @keyframes tb-beat-strong { 0% { transform: scale(2.3); box-shadow: 0 0 0 0 rgba(107,165,58,0.55); } 70% { box-shadow: 0 0 0 7px rgba(107,165,58,0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(107,165,58,0); } }
+
+  /* ---- the sheets: under the row on a wide screen, a bottom sheet on a phone ---- */
+  .sheets { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+  .sheet { padding: 12px 14px 14px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--bg-panel); animation: fade 0.18s ease; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-basis: 100%; }
+  .sheet-h { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .sheet-x { font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1; color: var(--text-dim); background: transparent; border: 1px solid var(--border-strong); border-radius: 7px; padding: 5px 9px; cursor: pointer; }
+  .sheet-x:hover { color: var(--text); border-color: var(--text-faint); }
+  .sheet .row:last-child { margin-bottom: 0; }
+  /* the key sheet: the pickers and the key panel beside the circle */
+  .key-layout { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+  .key-pick { flex: 1 1 340px; min-width: 0; max-width: 620px; }
+  .key-pick .info { margin: 4px 0 12px; }
+  #sc-fams { display: flex; flex-direction: column; gap: 8px; }
+  #sc-fams .btn { white-space: nowrap; }
+  .tempo-row input[type="range"] { flex: 1 1 160px; max-width: 320px; }
+  /* the progression, in the ▶ drawer */
+  .seq-foot { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  @media (max-width: 940px) {
+    /* the strip fits a phone, either way up: icons for the tuner and ▶ (its chord is the
+       chord chip), no chevrons on the chips, a long key name gives way */
+    .strip-row { gap: 5px; }
+    .chip, .strip-row .btn.play { padding: 6px 8px; font-size: 12px; gap: 4px; }
+    .strip-row .chip-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .strip-row .chip:not(.chip-caret) .chev { display: none; }
+    .chip-val { max-width: 32vw; overflow: hidden; text-overflow: ellipsis; }
+    /* phone: the sheet rises over the page above the bottom nav, so the neck stays in
+       view while you pick */
+    .sheets { position: fixed; left: 0; right: 0; bottom: calc(46px + env(safe-area-inset-bottom)); z-index: 40; margin: 0; max-height: min(62vh, 520px); overflow-y: auto; overscroll-behavior: contain; padding: 0 8px 8px; }
+    .sheet { border-radius: 14px; box-shadow: 0 -10px 30px rgba(0,0,0,0.55); }
+    .key-layout { gap: 12px; }
+    .cof-wrap { flex-basis: 100%; }
+    #cof-svg { max-width: 260px; }
+  }
+
+  /* ---- Settings: labelled clusters; each wraps internally, so narrow screens stack
+     clusters instead of interleaving unrelated controls ---- */
+  .sheet.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
   .tb-cluster { display: flex; align-items: baseline; gap: 10px; flex: 1 1 auto; min-width: 0; }
   .tbc-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); white-space: nowrap; flex-shrink: 0; }
   .tbc-items { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
@@ -536,16 +568,12 @@
     .tb-cluster { flex: 1 1 100%; flex-wrap: wrap; }
     .tb-cluster > .tbc-label { flex-basis: 100%; }
   }
-  .toolbar .tb-group, .tb-bar .tb-group { display: flex; align-items: center; gap: 7px; }
-  /* .tbg-inner lets the tb-bar groups fold via grid-rows on a phone; it keeps the
-     horizontal layout */
-  .tbg-inner { display: flex; align-items: center; gap: 7px; min-width: 0; }
-  .toolbar .tb-label, .tb-bar .tb-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+  .toolbar .tb-group { display: flex; align-items: center; gap: 7px; }
+  .toolbar .tb-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
   .toolbar select { font-size: 12px; padding: 5px 9px; }
   /* custom tuning: six compact selects on one wrapping row */
   .custom-strings { display: flex; flex-wrap: wrap; gap: 4px; }
   .toolbar .custom-str { font-size: 11px; padding: 3px 5px; }
-  .toolbar .divider { height: 20px; }
   input[type="range"] { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 3px; background: var(--border-strong); outline: none; width: 116px; cursor: pointer; }
   input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
   input[type="range"]::-moz-range-thumb { width: 15px; height: 15px; border: none; border-radius: 50%; background: var(--accent); cursor: pointer; }
@@ -553,85 +581,60 @@
   .btn.metro.active { background: var(--root); color: #0e1408; border-color: var(--root); font-weight: 700; }
   .btn.band.active { background: var(--ext); color: #11071f; border-color: var(--ext); font-weight: 700; }
   .btn[disabled], .btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
-  .audio-warn { font-size: 11px; color: var(--text-faint); align-self: center; }
-  /* the transport chip: on every tab while the loop or progression plays */
-  .tb-transport { display: inline-flex; align-items: center; gap: 8px; padding: 5px 8px 5px 11px; border: 1px solid var(--accent); border-radius: 9px; background: var(--bg-panel); }
-  .tb-transport-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; }
-  .tb-transport-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 var(--accent); }
-  /* beat pulse: the transport dot pumps on each scheduled beat, downbeat stronger */
-  .tb-transport-dot.bp { animation: tb-beat 0.32s ease-out; }
-  .tb-transport-dot.bp-strong { animation: tb-beat-strong 0.36s ease-out; }
-  @keyframes tb-beat { 0% { transform: scale(1.7); } 100% { transform: scale(1); } }
-  @keyframes tb-beat-strong { 0% { transform: scale(2.3); box-shadow: 0 0 0 0 rgba(45,182,166,0.55); } 70% { box-shadow: 0 0 0 7px rgba(45,182,166,0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(45,182,166,0); } }
-  #tb-stop { padding: 4px 9px; }
-  /* the context bar: root + display */
-  .context-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 18px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
-  .context-bar .ctx-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  /* each group after the first carries its own left rule, so a wrapped group keeps it
-     instead of orphaning a free-standing divider */
-  .context-bar .ctx-group + .ctx-group { padding-left: 13px; border-left: 1px solid var(--border-strong); }
-  /* the view switch is a lens on the board: it hides, moves and sticks with the neck */
+  .audio-warn { font-size: 11px; color: var(--text-faint); align-self: center; white-space: normal; }
+  /* the view switch is a lens on the board: it hides, moves and sticks with the neck;
+     Names/Intervals sits at its far end */
   .board-lens { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
   .board-lens .lens-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .board-lens .ctx-display { margin-left: auto; }
   /* the one shared fretboard (Harmony + Scales) */
   .board-region { margin-top: 4px; }
   /* sticky neck (phone): pinned while the cards below scroll, so a tap shows its result */
   @media (max-width: 940px) {
     #board-region { position: sticky; top: var(--hdr-h, 0px); z-index: 5; background: var(--bg); padding-top: 6px; box-shadow: 0 8px 14px -10px rgba(0,0,0,0.7); }
   }
-  /* condensing sticky header (phone): pins and slims past the brand, tempo/backing fold
-     away; the board offsets below it via --hdr-h, kept in sync by JS */
+  /* condensing sticky header (phone): the brand alone (the nav is the bottom bar),
+     slimmed past the top; the board offsets below it via --hdr-h, kept in sync by JS */
   @media (max-width: 940px) {
-    header { position: sticky; top: 0; z-index: 20; }
+    header { position: sticky; top: 0; z-index: 20; padding-top: 12px; padding-bottom: 6px; }
     /* every height-contributing property animates (no display:none), so the header glides;
        the board tracks it because --hdr-h is re-measured every frame */
-    header, header .brand h1, header .brand-desc, header .mainnav, header .tb-bar, header .tb-bar .tb-group {
-      transition: padding 0.22s ease, font-size 0.22s ease, margin 0.22s ease, max-height 0.22s ease, grid-template-rows 0.22s ease, opacity 0.16s ease, border-width 0.22s ease;
+    header, header .brand h1, header .brand-desc {
+      transition: padding 0.22s ease, font-size 0.22s ease, margin 0.22s ease, max-height 0.22s ease, opacity 0.16s ease;
     }
     /* contain:layout makes each section's reposition cheap during the header animation
        (it stuttered on Android Chrome). Layout only — paint/size containment would clip
        shadows and the neck's edge fade. */
-    #board-region, .board-meta, #harmony-extras, .aside, .main { contain: layout; }
+    #board-region, .board-meta, .aside, .main { contain: layout; }
     .brand-desc { max-height: 1.2em; overflow: hidden; }
-    /* the groups fold by grid-rows 1fr → 0fr: animates to the real content height, no
-       guessed max-height */
-    /* the tempo group gets its own row, so its fold collapses a whole empty line */
-    .tb-bar .tb-group { display: grid; grid-template-rows: 1fr; flex-basis: 100%; }
-    .tb-bar .tbg-inner { min-height: 0; overflow: hidden; }
-    header.scrolled { padding-top: 8px; }
+    header.scrolled { padding-top: 6px; padding-bottom: 4px; }
     header.scrolled .brand-desc { max-height: 0; opacity: 0; }
-    header.scrolled .brand .ver { display: none; }
     header.scrolled .brand h1 { font-size: 19px; }
-    header.scrolled .mainnav { margin-top: 10px; }
-    header.scrolled .tb-bar { margin-top: 8px; }
-    header.scrolled .tb-bar .tb-group { grid-template-rows: 0fr; min-height: 0; margin: 0; padding-top: 0; padding-bottom: 0; border-width: 0; opacity: 0; }
+    .layout { padding-top: 12px; }
   }
   @supports (top: max(0px, env(safe-area-inset-top))) {
-    @media (max-width: 940px) { header.scrolled { padding-top: max(8px, env(safe-area-inset-top)); } }
+    @media (max-width: 940px) { header { padding-top: max(12px, env(safe-area-inset-top)); } header.scrolled { padding-top: max(6px, env(safe-area-inset-top)); } }
   }
   /* ---- landscape phones (wide, very short) ----
      The portrait shell would bury the neck under the header. Here the header is static
      (the condense and magnetic-neck JS stand down below this height) and the page splits:
-     controls scroll on the left, the neck stays pinned on the right. Gated with :has() to
-     views that show a board; after the portrait block so it wins. */
+     controls scroll on the left, the neck stays pinned on the right. The :has() gate (an
+     id) outranks `.layout.no-aside`; after the portrait block so it wins. */
   @media (max-width: 940px) and (max-height: 500px) {
     header { position: static; padding-top: max(10px, env(safe-area-inset-top)); }
     .brand-desc { display: none; }
     .brand h1 { font-size: 22px; }
     header .mainnav { margin-top: 8px; }
-    .tb-bar { margin-top: 8px; }
-    .toolbar { margin-top: 8px; padding: 8px 12px; }
     .layout:has(#board-region:not([hidden])) {
       grid-template-columns: minmax(0,1fr) minmax(300px, 46%);
       /* the left column keeps the portrait order; #shapes-card needs an explicit slot or it
          auto-places to the end */
       grid-template-areas:
-        "ctx       board"
         "vhead     board"
+        "strip     board"
         "main      board"
         "shapes    board"
         "aside     board"
-        "extras    board"
         "boardmeta boardmeta";
       column-gap: 16px;
       padding-top: 12px;
@@ -660,15 +663,13 @@
     .mt-note { font-size: 38px; }
     .mt-mic .mt-hint { display: none; }
   }
-  /* chord-tones reference rows below the board */
-  #harmony-extras { margin-top: 26px; }
 
-  /* the quality picker in labelled tiers (basic / sevenths / extended) */
+  /* the quality picker in labelled tiers (basic / sevenths / extended), in the chord sheet */
   .row-quals { margin-bottom: 13px; }
   /* the CHORD label left, the "more" toggle right on the same line */
   .quals-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
   .quals-head .ctrl-label { margin-right: 0; }
-  #ch-quals, #arp-quals { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-start; }
+  #ch-quals { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-start; }
   .qual-grp { display: flex; flex-direction: column; gap: 5px; }
   .qual-grp-lab { font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
   /* the "more" toggle for the seventh + extended tiers */
@@ -746,36 +747,26 @@
   @media (max-width: 600px) {
     .wrap { padding: 0 14px; }
     .brand h1 { font-size: 25px; }
-    /* the context bar un-boxes on phones: each control a labelled row, like the panel rows */
-    .context-bar { flex-direction: column; align-items: stretch; gap: 13px; padding: 0; margin-bottom: 16px; border: none; background: transparent; border-radius: 0; }
-    .context-bar .ctx-group { width: 100%; gap: 7px 8px; }
-    .context-bar .ctx-group + .ctx-group { padding-left: 0; border-left: none; }
-    .context-bar .ctrl-label { width: 100%; margin: 0; }
+    /* brand only: the description goes, the nav is the bottom bar */
+    .brand-desc { display: none; }
     /* panel control rows swipe instead of wrapping into tall blocks; the root pickers keep
        wrapping so all 12 roots stay visible */
     .row > .group { flex-wrap: nowrap; overflow-x: auto; min-width: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
     .row > .group::-webkit-scrollbar { display: none; }
-    /* the drill header's key picker wraps too */
+    /* the key sheet's root picker wraps, so all 12 stay visible */
     .row > .group.root-row { flex-wrap: wrap; overflow-x: visible; }
-    /* the quality picker: tiers stacked, each swiping horizontally */
-    #ch-quals, #arp-quals { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 10px; overflow: visible; }
-    #ch-quals .group, #arp-quals .group { flex-wrap: nowrap; overflow-x: auto; min-width: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+    /* the quality and scale pickers: tiers stacked, each swiping horizontally */
+    #ch-quals, #sc-fams { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 10px; overflow: visible; }
+    #ch-quals .group, #sc-fams .group { flex-wrap: nowrap; overflow-x: auto; min-width: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
     /* fade the right edge only when a swipe group overflows (.scrollable, set by JS) */
-    .row > .group.scrollable, #ch-quals .group.scrollable, #arp-quals .group.scrollable {
+    .row > .group.scrollable, #ch-quals .group.scrollable, #sc-fams .group.scrollable {
       -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
       mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
     }
-    #ch-quals .group::-webkit-scrollbar, #arp-quals .group::-webkit-scrollbar { display: none; }
-    .toolbar { gap: 8px 10px; }
+    #ch-quals .group::-webkit-scrollbar, #sc-fams .group::-webkit-scrollbar { display: none; }
+    .sheet.toolbar { gap: 8px 10px; }
     input[type="range"] { width: 92px; }
-    /* a tighter transport bar: Listen · Loop · Settings · Backing on one row, tempo below */
-    .tb-bar { gap: 7px 8px; }
-    .tb-bar .btn.play { padding: 7px 10px; }
-    .tb-bar .tb-toggle { padding: 6px 10px; }
-    .tb-toggles { gap: 6px; }
-    /* the tempo row's slider stretches to fill it */
-    .tb-bar .tb-tempo .tbg-inner { width: 100%; }
-    .tb-bar .tb-tempo input[type="range"] { flex: 1; width: auto; min-width: 0; }
+    .tempo-row input[type="range"] { flex: 1 1 auto; width: auto; min-width: 0; }
     /* finger-sized dots: tapping a dot is the app's primary verb */
     .dot { width: 33px; height: 33px; font-size: 11px; }
     .btn { padding: 8px 12px; }

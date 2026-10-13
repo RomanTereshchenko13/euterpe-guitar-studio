@@ -10,16 +10,14 @@ document.querySelectorAll('.ph-help').forEach(btn=>{ btn.addEventListener('click
 applyHelpState();
 
 function selectTab(name){
-  // Playback persists across tabs on purpose — it is a backing track; the transport
-  // chip stops it from anywhere.
-  currentTab=name;
-  document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active', x.id==='panel-'+name));
+  // Playback persists across tabs on purpose — it is a backing track; the strip's ▶,
+  // on both tabs, stops it.
+  currentTab = name==='scales' ? 'scales' : 'harmony';
+  document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active', x.id==='panel-'+currentTab));
   applyNav();
   applyAsideState();
-  applyContextBar();
   applyBoardRegion();
   applyHarmonyExtras();
-  updateGlobalPlay();
   renderActiveContext();
   saveState();
 }
@@ -34,10 +32,11 @@ function setMode(mode){
   document.body.classList.toggle('mode-reference', currentMode==='reference');
   document.body.classList.toggle('mode-practice', currentMode==='practice');
   applyNav();
+  placeStrip();   // above the neck, or under the drill header
   if(currentMode==='reference'){
     // leaving Practice ends whatever was running
     exitAllDrills();
-    applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
+    applyAsideState(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
   } else {
     stopReferenceTransport();
     // entering Practice with no drill running: show the home (a drill starter swaps it
@@ -45,10 +44,10 @@ function setMode(mode){
     if(!activeDrill()) showDrillHome();
     renderPractice();
   }
-  updateGlobalPlay();
+  renderStrip();
   saveState();
 }
-/* One navigation: three reference subjects and Practice, each a real tabpanel.
+/* One navigation: two reference subjects and Practice, each a real tabpanel.
    navTo() sets the mode the destination belongs to and, for a reference one, the tab. */
 function navTo(panel){
   if(panel==='practice'){ setMode('practice'); }
@@ -93,11 +92,10 @@ function applyNav(){
      chord tones (+ triads) → comp     the chord on screen, changed on time under a band
      scale                  → timing   this scale, walked in one box on the beat
      notes                  → note     find every instance of the note
-     circle                 → changes  the keys' chords, switched cleanly
 
-   Arpeggio has no drill seam: its notes are practised over the band, so its button is
-   a Jam toggle (below). Everything else goes through startTrack(), like every door. */
-const SEAM_TRACKS = { chords:'comp', scale:'timing', notes:'note', circle:'changes' };
+   Arpeggio has no drill seam: its notes are practised over the band (▶ with the Jam).
+   Everything else goes through startTrack(), like every door. */
+const SEAM_TRACKS = { chords:'comp', scale:'timing', notes:'note' };
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-seam]'); if(!b) return;
   const track=SEAM_TRACKS[b.dataset.seam]; if(!track) return;

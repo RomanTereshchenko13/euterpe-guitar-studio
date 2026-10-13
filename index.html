@@ -40,10 +40,10 @@
   body { background: var(--bg); color: var(--text); font-family: 'Hanken Grotesk', system-ui, sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; padding: 0 0 4rem; overscroll-behavior-y: contain; }
   html { overflow-anchor: none; }
   .btn:focus-visible, .navbtn:focus-visible, .langbtn:focus-visible, .ver:focus-visible,
-  .aside-toggle:focus-visible, .tb-toggle:focus-visible, .cl-close:focus-visible,
+  .aside-toggle:focus-visible, .chip:focus-visible, .sheet-x:focus-visible, .cl-close:focus-visible,
   input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .dot:focus-visible { outline: 2px solid #fff; outline-offset: 2px; z-index: 7; }
-  .btn, .navbtn, .langbtn, .ver, .tb-toggle, .aside-toggle, .cl-close,
+  .btn, .navbtn, .langbtn, .ver, .chip, .sheet-x, .aside-toggle, .cl-close,
   .chordbox, .cd-dot, .cof-node, .seq-chip .nm, .seq-chip .bars, .seq-chip .x,
   .install-btn, .toast-act, .toast-x,
   select { touch-action: manipulation; }
@@ -64,10 +64,10 @@
   .brand-name { display: flex; flex-direction: column; gap: 1px; }
   .brand h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 30px; letter-spacing: -0.01em; }
   .brand-desc { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 13px; line-height: 1.1; color: var(--text-dim); letter-spacing: 0.01em; }
-  .brand .ver { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; color: var(--text-faint); border: 1px solid rgba(45, 182, 166, 0.4); border-radius: 6px; padding: 2px 7px; align-self: center; cursor: pointer; background: transparent; transition: all 0.12s; }
-  .brand .ver:hover { color: var(--accent); border-color: var(--accent); }
-  .lang { margin-left: auto; display: flex; gap: 2px; align-self: center; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 8px; padding: 2px; }
-  .install-btn { align-self: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #07203a; background: var(--accent); border: none; border-radius: 7px; padding: 5px 11px; cursor: pointer; transition: opacity 0.12s; }
+  .ver { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; color: var(--text-faint); border: 1px solid rgba(45, 182, 166, 0.4); border-radius: 6px; padding: 2px 7px; margin-left: 6px; cursor: pointer; background: transparent; transition: all 0.12s; }
+  .ver:hover { color: var(--accent); border-color: var(--accent); }
+  .lang { display: flex; gap: 2px; background: var(--bg-panel-2); border: 1px solid var(--border-strong); border-radius: 8px; padding: 2px; }
+  .install-btn { margin-left: auto; align-self: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #07203a; background: var(--accent); border: none; border-radius: 7px; padding: 5px 11px; cursor: pointer; transition: opacity 0.12s; }
   .install-btn:hover { opacity: 0.88; }
   .toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 200; display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 24px); background: var(--bg-panel-2); border: 1px solid var(--border-strong); border-radius: 12px; padding: 10px 12px 10px 16px; box-shadow: 0 12px 36px rgba(0,0,0,0.5); animation: toast-in 0.22s ease; }
   .toast .toast-msg { font-size: 13px; color: var(--text); }
@@ -89,32 +89,30 @@
     display: grid;
     grid-template-columns: minmax(0,1fr) 234px;
     grid-template-areas:
-      "ctx       ctx"
       "vhead     vhead"
+      "strip     strip"
       "board     board"
       "boardmeta boardmeta"
       "main      aside"
-      "shapes    shapes"
-      "extras    extras";
+      "shapes    shapes";
     column-gap: 30px;
     align-items: start;
     padding-top: 30px;
   }
-  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "ctx" "vhead" "board" "boardmeta" "main" "shapes" "extras"; }
-  #context-bar { grid-area: ctx; }
+  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "vhead" "strip" "board" "boardmeta" "main" "shapes"; }
+  #strip-ref { grid-area: strip; }
   .view-head { grid-area: vhead; }
   .view-head .panel-head { margin-bottom: 8px; }
   .main { grid-area: main; min-width: 0; margin-top: 22px; }
   body.mode-practice .main { margin-top: 0; }
   #board-region { grid-area: board; }
   .board-meta { grid-area: boardmeta; }
-  #harmony-extras { grid-area: extras; }
   .aside { grid-area: aside; align-self: start; }
   #shapes-card { grid-area: shapes; align-self: start; margin-top: 26px; }
   @media (max-width: 940px) {
     .layout, .layout.no-aside {
       grid-template-columns: minmax(0,1fr);
-      grid-template-areas: "ctx" "vhead" "board" "boardmeta" "main" "shapes" "aside" "extras";
+      grid-template-areas: "vhead" "strip" "board" "boardmeta" "main" "shapes" "aside";
     }
     .aside { position: static; margin-top: 22px; }
     #shapes-card { margin-top: 22px; }
@@ -132,20 +130,14 @@
   body.help-open .panel.active .panel-head p, body.help-open .view-head .panel-head p { display: block; margin-top: 6px; }
   .practice-panel { display: none; animation: fade 0.25s ease; }
   body.mode-practice .practice-panel { display: block; }
-  #practice-home:not([hidden]) ~ #drill-ctx { display: none; }
+  body:not(.drill-running) #drill-ctx { display: none; }
   body.mode-practice .panel.active,
-  body.mode-practice #context-bar,
+  body.mode-practice #strip-ref,
   body.mode-practice .view-head,
   body.mode-practice #board-region,
   body.mode-practice .board-meta,
-  body.mode-practice #harmony-extras,
   body.mode-practice .aside,
   body.mode-practice #shapes-card { display: none; }
-  body.mode-practice #g-play,
-  body.mode-practice #g-loop,
-  body.mode-practice .tb-bar .tb-tempo,
-  body.mode-practice #backing-toggle,
-  body.mode-practice #backing-panel { display: none; }
   body.mode-practice .layout, body.mode-practice .layout.no-aside {
     grid-template-columns: minmax(0,1fr); grid-template-areas: "main";
   }
@@ -192,14 +184,14 @@
   .dc-badge.b-acc { border-color: var(--border-strong); color: var(--text); }
   .dc-badge:empty { display: none; }
   .seam-btn { border-color: var(--accent); color: var(--accent); }
-  .drill-ctx { flex-wrap: wrap; row-gap: 8px; }
+  .drill-ctx { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; min-width: 0; }
   body.drill-running .practice-panel .panel-head { display: none; }
-  .drill-ctx-lead { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .drill-name { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin-right: 2px; }
+  .drill-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin-right: 2px; }
+  .drill-ctx > .btn, .drill-ctx > .drill-help, .drill-ctx > .drill-sess { flex-shrink: 0; white-space: nowrap; }
   .drill-name:focus { outline: none; }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .drill-sess { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); }
-  #drill-ctx-quit { margin-left: auto; }
+  .drill-quit { font-size: 13px; line-height: 1; }
   body:not(.drill-setup-open) .drill-setup { display: none; }
   .drill-setup { margin-bottom: 4px; }
   body:not(.drill-help-open) .drill-hint { display: none; }
@@ -274,8 +266,6 @@
   .sd-cell.on { border-color: var(--root); box-shadow: 0 0 0 2px rgba(107,165,58,0.4); }
   .sd-lab { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); line-height: 1; }
   .sd-cell.on .sd-lab { color: var(--root); }
-  .tempo-group { display: inline-flex; align-items: center; gap: 8px; }
-  .tempo-bpm { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); min-width: 62px; text-align: center; }
   .sd-dot { opacity: 0.22; transition: opacity 0.1s, transform 0.1s; }
   .sd-dot.pal { opacity: 1; background: var(--sc-other); }
   .sd-dot.pal.on { background: var(--root); transform: scale(1.12); box-shadow: 0 0 0 3px rgba(107,165,58,0.3); }
@@ -322,8 +312,6 @@
   .deg-rn { font-size: 0.85em; opacity: 0.7; }
   .btn.play { background: transparent; border-color: var(--root); color: var(--root); }
   .btn.play:hover { background: rgba(107,165,58,0.14); }
-  .btn.play.loop { border-color: var(--accent); color: var(--accent); }
-  .btn.play.loop:hover:not(.active) { background: rgba(45,182,166,0.14); }
   .seq { margin: 14px 0 6px; padding: 11px 13px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
   .seq-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
   .seq-presets { display: inline-flex; gap: 4px; flex-wrap: wrap; }
@@ -400,33 +388,70 @@
   .sug-row .ctrl-label { display: block; margin-bottom: 4px; }
   .sug-scales { gap: 6px; }
   .sug-scales .btn { font-size: 12px; padding: 4px 9px; }
-  .cof-layout { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
-  .cof-wrap { flex: 1 1 340px; max-width: 520px; min-width: 0; }
-  .cof-side { flex: 1 1 340px; min-width: 250px; max-width: 620px; }
-  #cof-svg { width: 100%; max-width: 100%; height: auto; display: block; }
+  .cof-wrap { flex: 0 1 320px; min-width: 0; }
+  #cof-svg { width: 100%; max-width: 320px; height: auto; display: block; margin: 0 auto; }
+  .cof-wrap .legend { margin-top: 10px; gap: 10px 14px; }
   .cof-node { cursor: pointer; }
   .cof-node circle { transition: fill 0.15s, stroke 0.15s; }
   .cof-node:hover circle { stroke: var(--text); }
   .cof-node text { font-family: 'JetBrains Mono', monospace; font-weight: 700; pointer-events: none; }
   .cof-arc { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; stroke-dasharray: 320; stroke-dashoffset: 320; animation: cof-draw 0.55s ease forwards; pointer-events: none; }
+  .cof-arc.still { animation: none; stroke-dashoffset: 0; }
   @keyframes cof-draw { to { stroke-dashoffset: 0; } }
   #cof-info .sub b { font-weight: 700; }
   .cof-node.cof-chord circle { stroke: var(--text); stroke-width: 3; stroke-dasharray: 5 3; }
   .cof-deg { display: inline-block; min-width: 48px; }
   .cof-deg.on { box-shadow: inset 0 -2px 0 var(--third); }
-  .tb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 16px; }
-  .tb-bar .tb-group { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 9px; padding: 6px 11px; }
-  .tb-bar > .btn, .tb-bar .tb-toggle, .tb-bar > .tb-group, .tb-bar > .tb-transport { min-height: 34px; }
-  .tb-bar > .btn, .tb-bar .tb-toggle { display: inline-flex; align-items: center; justify-content: center; }
-  .tb-toggles { display: inline-flex; align-items: center; gap: 8px; }
-  .tb-toggle { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--bg-panel); color: var(--text-dim); cursor: pointer; transition: all 0.12s; }
-  .tb-toggle:hover { color: var(--text); border-color: var(--text-faint); }
-  .tb-toggle.open { background: var(--bg-panel-2); color: var(--text); }
-  .tb-toggle.on { color: var(--root); border-color: var(--root); }
-  .tb-toggle .chev { transition: transform 0.18s; font-size: 10px; }
-  .tb-toggle.open .chev { transform: rotate(180deg); }
-  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
-  .toolbar.collapsed { display: none; }
+  .strip { margin-bottom: 10px; }
+  .strip-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
+  .strip-row::-webkit-scrollbar { display: none; }
+  .strip-row > * { flex-shrink: 0; }
+  .chip-gear { margin-left: auto; }
+  .chip, .strip-row .btn.play { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--bg-panel); color: var(--text); cursor: pointer; white-space: nowrap; transition: border-color 0.12s, background 0.12s, color 0.12s; }
+  .chip:hover { border-color: var(--text-faint); background: var(--bg-panel-2); }
+  .chip.open { border-color: var(--accent); background: var(--bg-panel-2); }
+  .chip .chev { font-size: 10px; color: var(--text-dim); transition: transform 0.18s; }
+  .chip.open .chev { transform: rotate(180deg); }
+  .chip-ico { font-size: 13px; }
+  .chip.on { border-color: var(--root); color: var(--root); }
+  .chip-pair { display: inline-flex; align-items: stretch; }
+  .chip-pair > .btn.play { border-radius: 9px 0 0 9px; }
+  .chip-pair > .chip-caret { border-radius: 0 9px 9px 0; border-left: none; padding: 6px 9px; }
+  .chip-pair > .btn.play:only-child, .chip-pair > .btn.play:has(+ [hidden]) { border-radius: 9px; }
+  .strip-row .btn.play.active { background: rgba(107,165,58,0.16); }
+  .strip-pulse { display: none; width: 7px; height: 7px; border-radius: 50%; background: var(--root); }
+  #g-play.active .strip-pulse { display: inline-block; }
+  .strip-pulse.bp { animation: tb-beat 0.32s ease-out; }
+  .strip-pulse.bp-strong { animation: tb-beat-strong 0.36s ease-out; }
+  @keyframes tb-beat { 0% { transform: scale(1.7); } 100% { transform: scale(1); } }
+  @keyframes tb-beat-strong { 0% { transform: scale(2.3); box-shadow: 0 0 0 0 rgba(107,165,58,0.55); } 70% { box-shadow: 0 0 0 7px rgba(107,165,58,0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(107,165,58,0); } }
+  .sheets { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+  .sheet { padding: 12px 14px 14px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--bg-panel); animation: fade 0.18s ease; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-basis: 100%; }
+  .sheet-h { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .sheet-x { font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1; color: var(--text-dim); background: transparent; border: 1px solid var(--border-strong); border-radius: 7px; padding: 5px 9px; cursor: pointer; }
+  .sheet-x:hover { color: var(--text); border-color: var(--text-faint); }
+  .sheet .row:last-child { margin-bottom: 0; }
+  .key-layout { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+  .key-pick { flex: 1 1 340px; min-width: 0; max-width: 620px; }
+  .key-pick .info { margin: 4px 0 12px; }
+  #sc-fams { display: flex; flex-direction: column; gap: 8px; }
+  #sc-fams .btn { white-space: nowrap; }
+  .tempo-row input[type="range"] { flex: 1 1 160px; max-width: 320px; }
+  .seq-foot { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  @media (max-width: 940px) {
+    .strip-row { gap: 5px; }
+    .chip, .strip-row .btn.play { padding: 6px 8px; font-size: 12px; gap: 4px; }
+    .strip-row .chip-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .strip-row .chip:not(.chip-caret) .chev { display: none; }
+    .chip-val { max-width: 32vw; overflow: hidden; text-overflow: ellipsis; }
+    .sheets { position: fixed; left: 0; right: 0; bottom: calc(46px + env(safe-area-inset-bottom)); z-index: 40; margin: 0; max-height: min(62vh, 520px); overflow-y: auto; overscroll-behavior: contain; padding: 0 8px 8px; }
+    .sheet { border-radius: 14px; box-shadow: 0 -10px 30px rgba(0,0,0,0.55); }
+    .key-layout { gap: 12px; }
+    .cof-wrap { flex-basis: 100%; }
+    #cof-svg { max-width: 260px; }
+  }
+  .sheet.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
   .tb-cluster { display: flex; align-items: baseline; gap: 10px; flex: 1 1 auto; min-width: 0; }
   .tbc-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); white-space: nowrap; flex-shrink: 0; }
   .tbc-items { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
@@ -434,13 +459,11 @@
     .tb-cluster { flex: 1 1 100%; flex-wrap: wrap; }
     .tb-cluster > .tbc-label { flex-basis: 100%; }
   }
-  .toolbar .tb-group, .tb-bar .tb-group { display: flex; align-items: center; gap: 7px; }
-  .tbg-inner { display: flex; align-items: center; gap: 7px; min-width: 0; }
-  .toolbar .tb-label, .tb-bar .tb-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+  .toolbar .tb-group { display: flex; align-items: center; gap: 7px; }
+  .toolbar .tb-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
   .toolbar select { font-size: 12px; padding: 5px 9px; }
   .custom-strings { display: flex; flex-wrap: wrap; gap: 4px; }
   .toolbar .custom-str { font-size: 11px; padding: 3px 5px; }
-  .toolbar .divider { height: 20px; }
   input[type="range"] { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 3px; background: var(--border-strong); outline: none; width: 116px; cursor: pointer; }
   input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
   input[type="range"]::-moz-range-thumb { width: 15px; height: 15px; border: none; border-radius: 50%; background: var(--accent); cursor: pointer; }
@@ -448,60 +471,42 @@
   .btn.metro.active { background: var(--root); color: #0e1408; border-color: var(--root); font-weight: 700; }
   .btn.band.active { background: var(--ext); color: #11071f; border-color: var(--ext); font-weight: 700; }
   .btn[disabled], .btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
-  .audio-warn { font-size: 11px; color: var(--text-faint); align-self: center; }
-  .tb-transport { display: inline-flex; align-items: center; gap: 8px; padding: 5px 8px 5px 11px; border: 1px solid var(--accent); border-radius: 9px; background: var(--bg-panel); }
-  .tb-transport-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; }
-  .tb-transport-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 var(--accent); }
-  .tb-transport-dot.bp { animation: tb-beat 0.32s ease-out; }
-  .tb-transport-dot.bp-strong { animation: tb-beat-strong 0.36s ease-out; }
-  @keyframes tb-beat { 0% { transform: scale(1.7); } 100% { transform: scale(1); } }
-  @keyframes tb-beat-strong { 0% { transform: scale(2.3); box-shadow: 0 0 0 0 rgba(45,182,166,0.55); } 70% { box-shadow: 0 0 0 7px rgba(45,182,166,0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(45,182,166,0); } }
-  #tb-stop { padding: 4px 9px; }
-  .context-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 18px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
-  .context-bar .ctx-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .context-bar .ctx-group + .ctx-group { padding-left: 13px; border-left: 1px solid var(--border-strong); }
+  .audio-warn { font-size: 11px; color: var(--text-faint); align-self: center; white-space: normal; }
   .board-lens { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
   .board-lens .lens-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .board-lens .ctx-display { margin-left: auto; }
   .board-region { margin-top: 4px; }
   @media (max-width: 940px) {
     #board-region { position: sticky; top: var(--hdr-h, 0px); z-index: 5; background: var(--bg); padding-top: 6px; box-shadow: 0 8px 14px -10px rgba(0,0,0,0.7); }
   }
   @media (max-width: 940px) {
-    header { position: sticky; top: 0; z-index: 20; }
-    header, header .brand h1, header .brand-desc, header .mainnav, header .tb-bar, header .tb-bar .tb-group {
-      transition: padding 0.22s ease, font-size 0.22s ease, margin 0.22s ease, max-height 0.22s ease, grid-template-rows 0.22s ease, opacity 0.16s ease, border-width 0.22s ease;
+    header { position: sticky; top: 0; z-index: 20; padding-top: 12px; padding-bottom: 6px; }
+    header, header .brand h1, header .brand-desc {
+      transition: padding 0.22s ease, font-size 0.22s ease, margin 0.22s ease, max-height 0.22s ease, opacity 0.16s ease;
     }
-    #board-region, .board-meta, #harmony-extras, .aside, .main { contain: layout; }
+    #board-region, .board-meta, .aside, .main { contain: layout; }
     .brand-desc { max-height: 1.2em; overflow: hidden; }
-    .tb-bar .tb-group { display: grid; grid-template-rows: 1fr; flex-basis: 100%; }
-    .tb-bar .tbg-inner { min-height: 0; overflow: hidden; }
-    header.scrolled { padding-top: 8px; }
+    header.scrolled { padding-top: 6px; padding-bottom: 4px; }
     header.scrolled .brand-desc { max-height: 0; opacity: 0; }
-    header.scrolled .brand .ver { display: none; }
     header.scrolled .brand h1 { font-size: 19px; }
-    header.scrolled .mainnav { margin-top: 10px; }
-    header.scrolled .tb-bar { margin-top: 8px; }
-    header.scrolled .tb-bar .tb-group { grid-template-rows: 0fr; min-height: 0; margin: 0; padding-top: 0; padding-bottom: 0; border-width: 0; opacity: 0; }
+    .layout { padding-top: 12px; }
   }
   @supports (top: max(0px, env(safe-area-inset-top))) {
-    @media (max-width: 940px) { header.scrolled { padding-top: max(8px, env(safe-area-inset-top)); } }
+    @media (max-width: 940px) { header { padding-top: max(12px, env(safe-area-inset-top)); } header.scrolled { padding-top: max(6px, env(safe-area-inset-top)); } }
   }
   @media (max-width: 940px) and (max-height: 500px) {
     header { position: static; padding-top: max(10px, env(safe-area-inset-top)); }
     .brand-desc { display: none; }
     .brand h1 { font-size: 22px; }
     header .mainnav { margin-top: 8px; }
-    .tb-bar { margin-top: 8px; }
-    .toolbar { margin-top: 8px; padding: 8px 12px; }
     .layout:has(#board-region:not([hidden])) {
       grid-template-columns: minmax(0,1fr) minmax(300px, 46%);
       grid-template-areas:
-        "ctx       board"
         "vhead     board"
+        "strip     board"
         "main      board"
         "shapes    board"
         "aside     board"
-        "extras    board"
         "boardmeta boardmeta";
       column-gap: 16px;
       padding-top: 12px;
@@ -523,11 +528,10 @@
     .mt-note { font-size: 38px; }
     .mt-mic .mt-hint { display: none; }
   }
-  #harmony-extras { margin-top: 26px; }
   .row-quals { margin-bottom: 13px; }
   .quals-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
   .quals-head .ctrl-label { margin-right: 0; }
-  #ch-quals, #arp-quals { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-start; }
+  #ch-quals { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-start; }
   .qual-grp { display: flex; flex-direction: column; gap: 5px; }
   .qual-grp-lab { font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
   .qual-more { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--text-dim); background: transparent; border: 1px solid var(--border-strong); border-radius: 7px; padding: 4px 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.12s; }
@@ -587,28 +591,20 @@
   @media (max-width: 600px) {
     .wrap { padding: 0 14px; }
     .brand h1 { font-size: 25px; }
-    .context-bar { flex-direction: column; align-items: stretch; gap: 13px; padding: 0; margin-bottom: 16px; border: none; background: transparent; border-radius: 0; }
-    .context-bar .ctx-group { width: 100%; gap: 7px 8px; }
-    .context-bar .ctx-group + .ctx-group { padding-left: 0; border-left: none; }
-    .context-bar .ctrl-label { width: 100%; margin: 0; }
+    .brand-desc { display: none; }
     .row > .group { flex-wrap: nowrap; overflow-x: auto; min-width: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
     .row > .group::-webkit-scrollbar { display: none; }
     .row > .group.root-row { flex-wrap: wrap; overflow-x: visible; }
-    #ch-quals, #arp-quals { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 10px; overflow: visible; }
-    #ch-quals .group, #arp-quals .group { flex-wrap: nowrap; overflow-x: auto; min-width: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
-    .row > .group.scrollable, #ch-quals .group.scrollable, #arp-quals .group.scrollable {
+    #ch-quals, #sc-fams { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 10px; overflow: visible; }
+    #ch-quals .group, #sc-fams .group { flex-wrap: nowrap; overflow-x: auto; min-width: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+    .row > .group.scrollable, #ch-quals .group.scrollable, #sc-fams .group.scrollable {
       -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
       mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
     }
-    #ch-quals .group::-webkit-scrollbar, #arp-quals .group::-webkit-scrollbar { display: none; }
-    .toolbar { gap: 8px 10px; }
+    #ch-quals .group::-webkit-scrollbar, #sc-fams .group::-webkit-scrollbar { display: none; }
+    .sheet.toolbar { gap: 8px 10px; }
     input[type="range"] { width: 92px; }
-    .tb-bar { gap: 7px 8px; }
-    .tb-bar .btn.play { padding: 7px 10px; }
-    .tb-bar .tb-toggle { padding: 6px 10px; }
-    .tb-toggles { gap: 6px; }
-    .tb-bar .tb-tempo .tbg-inner { width: 100%; }
-    .tb-bar .tb-tempo input[type="range"] { flex: 1; width: auto; min-width: 0; }
+    .tempo-row input[type="range"] { flex: 1 1 auto; width: auto; min-width: 0; }
     .dot { width: 33px; height: 33px; font-size: 11px; }
     .btn { padding: 8px 12px; }
     .langbtn { padding: 7px 12px; }
@@ -714,123 +710,18 @@
         <h1 data-i18n="brand">Euterpe</h1>
         <p class="brand-desc" data-i18n="brand_desc">гітарна студія</p>
       </div>
-      <button class="ver" id="app-ver" aria-haspopup="dialog"></button>
-      <div class="lang" id="lang-switch">
-        <button class="langbtn active" data-lang="uk">UK</button>
-        <button class="langbtn" data-lang="en">EN</button>
-      </div>
       <button class="install-btn" id="pwa-install" data-i18n="pwa_install" hidden>Встановити</button>
     </div>
     <nav class="mainnav" id="mainnav" aria-label="Sections">
       <button class="navbtn active" data-panel="harmony" data-i18n="tab_harmony">Акорди</button>
       <button class="navbtn" data-panel="scales" data-i18n="tab_scales">Гами</button>
-      <button class="navbtn" data-panel="circle" data-i18n="tab_circle">Коло квінт</button>
       <button class="navbtn" data-panel="practice" data-mode="practice" data-i18n="mode_practice">Практика</button>
     </nav>
-    <div class="tb-bar">
-      <button class="btn play" id="g-play"></button>
-      <button class="btn play loop" id="g-loop"></button>
-      <div class="tb-transport" id="tb-transport" hidden>
-        <span class="tb-transport-dot"></span>
-        <span class="tb-transport-label" id="tb-transport-label"></span>
-        <button class="btn" id="tb-stop"></button>
-      </div>
-      <span class="tb-toggles">
-        <button class="tb-toggle" id="tb-toggle" aria-expanded="false" aria-controls="toolbar"><span data-i18n="tb_settings">Налаштування</span> <span class="chev">▾</span></button>
-        <button class="tb-toggle" id="backing-toggle" aria-expanded="false" aria-controls="backing-panel"><span data-i18n="tb_backing">Супровід</span> <span class="chev">▾</span></button>
-      </span>
-      <div class="tb-group tb-tempo">
-        <div class="tbg-inner">
-          <span class="tb-label" data-i18n="tb_tempo">Темп</span>
-          <input type="range" id="tb-tempo" min="40" max="200" step="2" value="90" aria-label="Tempo">
-          <span class="bpm-val" id="tb-bpm">90 BPM</span>
-        </div>
-      </div>
-    </div>
-    <div class="toolbar collapsed" id="toolbar">
-      <div class="tb-cluster">
-        <span class="tbc-label" data-i18n="tbc_instrument">Інструмент</span>
-        <div class="tbc-items">
-          <div class="tb-group">
-            <span class="tb-label" data-i18n="tb_tuning">Стрій</span>
-            <select id="tb-tuning"></select>
-          </div>
-          <div class="tb-group tb-custom" id="tb-custom" hidden>
-            <span class="tb-label" data-i18n="tun_custom">Власний стрій</span>
-            <span class="custom-strings" id="tb-custom-strings"></span>
-          </div>
-          <div class="tb-group">
-            <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
-            <select id="tb-capo"></select>
-          </div>
-          <div class="tb-group">
-            <span class="tb-label" data-i18n="tb_frets">Лади</span>
-            <select id="tb-frets"></select>
-          </div>
-          <div class="tb-group">
-            <span class="tb-label" data-i18n="tb_meter">Розмір</span>
-            <select id="tb-meter"></select>
-          </div>
-        </div>
-      </div>
-      <div class="tb-cluster" id="tb-tools">
-        <span class="tbc-label" data-i18n="tbc_tools">Інструменти</span>
-        <div class="tbc-items">
-          <button class="btn" id="tb-tuner" data-i18n="tuner_open">🎵 Тюнер</button>
-          <div class="tb-group tb-cal" id="cal-row">
-            <span class="tb-label" data-i18n="cal_label">Затримка</span>
-            <button type="button" class="btn" id="cal-run" data-i18n="cal_run">Виміряти</button>
-            <input type="range" id="cal-slider" min="0" max="400" step="1" value="0" aria-label="Latency offset (ms)">
-            <span class="bpm-val" id="cal-val">0 ms</span>
-            <span class="cal-status" id="cal-status" role="status" hidden></span>
-          </div>
-        </div>
-      </div>
-      <div class="tb-cluster">
-        <span class="tbc-label" data-i18n="tbc_prefs">Налаштування застосунку</span>
-        <div class="tbc-items">
-          <div class="tb-group">
-            <span class="tb-label" data-i18n="tb_volume">Гучність</span>
-            <input type="range" id="tb-vol" min="0" max="100" step="1" value="100" aria-label="Volume">
-            <span class="bpm-val" id="tb-vol-val">100%</span>
-          </div>
-          <button class="btn" id="tb-lefty" aria-pressed="false" data-i18n="tb_lefty">Ліворукий</button>
-          <button class="btn" id="tb-cbpalette" aria-pressed="false" data-i18n="a11y_palette">Палітра для дальтоніків</button>
-          <button class="btn" id="tb-shapes" aria-pressed="false" data-i18n="a11y_shapes">Форми на нотах</button>
-        </div>
-      </div>
-      <div class="tb-cluster" id="tb-progress">
-        <span class="tbc-label" data-i18n="tbc_progress">Прогрес</span>
-        <div class="tbc-items">
-          <button class="btn" id="bk-export" data-i18n="bk_export">Експорт</button>
-          <button class="btn" id="bk-import" data-i18n="bk_import">Імпорт…</button>
-          <input type="file" id="bk-file" accept="application/json,.json" hidden>
-          <span class="bk-status" id="bk-status" role="status" hidden></span>
-        </div>
-      </div>
-    </div>
-    <div class="toolbar collapsed" id="backing-panel">
-      <div class="tb-group">
-        <span class="tb-label" data-i18n="tb_backing">Супровід</span>
-        <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
-        <button class="btn band" id="tb-bass" aria-pressed="false"></button>
-        <button class="btn band" id="tb-drums" aria-pressed="false"></button>
-      </div>
-    </div>
   </div>
 </header>
 
 <main class="wrap">
 <div class="layout">
-
-  <div class="context-bar" id="context-bar">
-    <div class="ctx-group"><span class="ctrl-label" data-i18n="lbl_root">Тоніка</span><div class="group" id="g-roots"></div></div>
-    <div class="ctx-group ctx-display">
-      <span class="ctrl-label" data-i18n="lbl_display">Показ</span>
-      <button class="btn active" id="g-names" data-i18n="b_notes">Назви</button>
-      <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
-    </div>
-  </div>
 
 <div class="view-head" id="view-head">
   <div class="panel-head" id="vh-harmony">
@@ -842,6 +733,161 @@
     <p id="scales-p" data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
   </div>
 </div>
+
+<div class="strip-slot" id="strip-ref">
+  <div class="strip" id="strip">
+    <div class="strip-row" id="strip-row" role="toolbar">
+      <button type="button" class="chip" id="chip-key" aria-expanded="false" aria-controls="sheet-key"></button>
+      <button type="button" class="chip" id="chip-chord" aria-expanded="false" aria-controls="sheet-chord"></button>
+      <button type="button" class="chip" id="chip-tempo" aria-expanded="false" aria-controls="sheet-tempo"></button>
+      <span class="chip-pair" id="chip-play">
+        <button type="button" class="btn play" id="g-play"></button>
+        <button type="button" class="chip chip-caret" id="backing-toggle" aria-expanded="false" aria-controls="backing-panel"><span class="chev">▾</span></button>
+      </span>
+      <button type="button" class="chip" id="tb-tuner"><span aria-hidden="true">🎵</span><span class="chip-txt" data-i18n="tuner_open">Тюнер</span></button>
+      <button type="button" class="chip chip-gear" id="tb-toggle" aria-expanded="false" aria-controls="toolbar"><span aria-hidden="true">⚙</span></button>
+    </div>
+    <div class="sheets" id="sheets" hidden>
+
+      <div class="sheet" id="sheet-key" role="region" aria-labelledby="sheet-key-h" hidden>
+        <div class="sheet-head"><span class="sheet-h" id="sheet-key-h" data-i18n="strip_key">Тональність</span><button type="button" class="sheet-x" data-close aria-label="close">✕</button></div>
+        <div class="key-layout">
+          <div class="key-pick">
+            <div class="row"><span class="ctrl-label" data-i18n="lbl_root">Тоніка</span><div class="group root-row" id="g-roots"></div></div>
+            <div class="row-quals">
+              <div class="quals-head">
+                <span class="ctrl-label" data-i18n="lbl_scale">Гама</span>
+                <button type="button" class="qual-more" id="sc-fams-toggle" aria-controls="sc-fams" aria-expanded="false"></button>
+              </div>
+              <div id="sc-fams"></div>
+            </div>
+            <div class="info" id="cof-info"></div>
+            <div class="row"><button type="button" class="btn" id="cof-cadence"></button></div>
+          </div>
+          <div class="cof-wrap">
+            <svg id="cof-svg" viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg" aria-label="Circle of fifths"></svg>
+            <div class="legend">
+              <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_tonic">Тоніка</span></div>
+              <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="leg_subdom">Субдомінанта (IV)</span></div>
+              <div class="leg"><span class="leg-dot" style="background:var(--third)"></span><span data-i18n="leg_dom">Домінанта (V)</span></div>
+              <div class="leg"><span class="leg-dot" style="background:var(--seventh)"></span><span data-i18n="leg_rel">Паралель</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sheet" id="sheet-chord" role="region" aria-labelledby="sheet-chord-h" hidden>
+        <div class="sheet-head"><span class="sheet-h" id="sheet-chord-h" data-i18n="lbl_chord">Акорд</span><button type="button" class="sheet-x" data-close aria-label="close">✕</button></div>
+        <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="h-degrees"></div></div>
+        <div class="row-quals">
+          <div class="quals-head">
+            <span class="ctrl-label" data-i18n="lbl_quality">Тип</span>
+            <button type="button" class="qual-more" id="ch-quals-toggle" aria-controls="ch-quals" aria-expanded="false"></button>
+          </div>
+          <div id="ch-quals"></div>
+        </div>
+      </div>
+
+      <div class="sheet" id="sheet-tempo" role="region" aria-labelledby="sheet-tempo-h" hidden>
+        <div class="sheet-head"><span class="sheet-h" id="sheet-tempo-h" data-i18n="tb_tempo">Темп</span><button type="button" class="sheet-x" data-close aria-label="close">✕</button></div>
+        <div class="row tempo-row">
+          <button type="button" class="btn" id="tb-slower" aria-label="−5 BPM">&#8722;</button>
+          <input type="range" id="tb-tempo" min="40" max="200" step="2" value="90" aria-label="Tempo">
+          <button type="button" class="btn" id="tb-faster" aria-label="+5 BPM">&#43;</button>
+          <span class="bpm-val" id="tb-bpm">90 BPM</span>
+        </div>
+        <div class="row">
+          <span class="ctrl-label" data-i18n="tb_meter">Розмір</span><select id="tb-meter"></select>
+          <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
+        </div>
+      </div>
+
+      <div class="sheet" id="backing-panel" role="region" aria-labelledby="backing-h" hidden>
+        <div class="sheet-head"><span class="sheet-h" id="backing-h" data-i18n="pl_h">Що грає ▶</span><button type="button" class="sheet-x" data-close aria-label="close">✕</button></div>
+        <div class="row"><span class="ctrl-label" data-i18n="pl_src">Грати</span><div class="group" id="pl-src"></div></div>
+        <div class="seq" id="ch-seq">
+          <div class="seq-head">
+            <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
+            <div class="seq-presets" id="seq-presets"></div>
+          </div>
+          <div class="seq-strip" id="seq-strip"></div>
+          <div class="seq-foot">
+            <button class="btn" id="seq-add" data-i18n="seq_add">Додати акорд</button>
+            <button class="btn" id="seq-loopbtn"></button>
+            <button class="btn" id="seq-clear" data-i18n="seq_clear">Очистити</button>
+          </div>
+        </div>
+        <div class="row">
+          <span class="ctrl-label" data-i18n="pl_band">Гурт</span>
+          <button class="btn band" id="pl-jam" aria-pressed="false"></button>
+          <button class="btn band" id="tb-bass" aria-pressed="false"></button>
+          <button class="btn band" id="tb-drums" aria-pressed="false"></button>
+        </div>
+      </div>
+
+      <div class="sheet toolbar" id="toolbar" role="region" aria-labelledby="toolbar-h" hidden>
+        <div class="sheet-head"><span class="sheet-h" id="toolbar-h" data-i18n="tb_settings">Налаштування</span><button type="button" class="sheet-x" data-close aria-label="close">✕</button></div>
+        <div class="tb-cluster">
+          <span class="tbc-label" data-i18n="tbc_instrument">Інструмент</span>
+          <div class="tbc-items">
+            <div class="tb-group">
+              <span class="tb-label" data-i18n="tb_tuning">Стрій</span>
+              <select id="tb-tuning"></select>
+            </div>
+            <div class="tb-group tb-custom" id="tb-custom" hidden>
+              <span class="tb-label" data-i18n="tun_custom">Власний стрій</span>
+              <span class="custom-strings" id="tb-custom-strings"></span>
+            </div>
+            <div class="tb-group">
+              <span class="tb-label" data-i18n="tb_capo">Каподастр</span>
+              <select id="tb-capo"></select>
+            </div>
+            <div class="tb-group">
+              <span class="tb-label" data-i18n="tb_frets">Лади</span>
+              <select id="tb-frets"></select>
+            </div>
+            <button class="btn" id="tb-lefty" aria-pressed="false" data-i18n="tb_lefty">Ліворукий</button>
+          </div>
+        </div>
+        <div class="tb-cluster">
+          <span class="tbc-label" data-i18n="tbc_sound">Звук</span>
+          <div class="tbc-items">
+            <div class="tb-group">
+              <span class="tb-label" data-i18n="tb_volume">Гучність</span>
+              <input type="range" id="tb-vol" min="0" max="100" step="1" value="100" aria-label="Volume">
+              <span class="bpm-val" id="tb-vol-val">100%</span>
+            </div>
+          </div>
+        </div>
+        <div class="tb-cluster">
+          <span class="tbc-label" data-i18n="lbl_display">Показ</span>
+          <div class="tbc-items">
+            <button class="btn" id="tb-cbpalette" aria-pressed="false" data-i18n="a11y_palette">Палітра для дальтоніків</button>
+            <button class="btn" id="tb-shapes" aria-pressed="false" data-i18n="a11y_shapes">Форми на нотах</button>
+            <div class="tb-group">
+              <span class="tb-label" data-i18n="tb_lang">Мова</span>
+              <div class="lang" id="lang-switch">
+                <button class="langbtn active" data-lang="uk">UK</button>
+                <button class="langbtn" data-lang="en">EN</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tb-cluster" id="tb-progress">
+          <span class="tbc-label" data-i18n="tbc_progress">Прогрес</span>
+          <div class="tbc-items">
+            <button class="btn" id="bk-export" data-i18n="bk_export">Експорт</button>
+            <button class="btn" id="bk-import" data-i18n="bk_import">Імпорт…</button>
+            <input type="file" id="bk-file" accept="application/json,.json" hidden>
+            <span class="bk-status" id="bk-status" role="status" hidden></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <div class="board-region" id="board-region">
   <div class="board-lens" id="board-lens">
     <div class="lens-group" id="ctx-view-harmony">
@@ -851,6 +897,10 @@
     <div class="lens-group" id="ctx-view-scales" hidden>
       <button class="btn active" id="sv-scale" data-i18n="view_scale">Гама</button>
       <button class="btn" id="sv-notes" data-i18n="view_notes">Ноти</button>
+    </div>
+    <div class="lens-group ctx-display" id="ctx-display">
+      <button class="btn active" id="g-names" data-i18n="b_notes">Назви</button>
+      <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
     </div>
   </div>
   <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
@@ -863,15 +913,7 @@
 <div class="main">
 
   <section class="panel active" id="panel-harmony">
-    <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="h-degrees"></div></div>
     <div id="sub-chords">
-      <div class="row-quals">
-        <div class="quals-head">
-          <span class="ctrl-label" data-i18n="lbl_chord">Акорд</span>
-          <button type="button" class="qual-more" id="ch-quals-toggle" aria-controls="ch-quals" aria-expanded="false"></button>
-        </div>
-        <div id="ch-quals"></div>
-      </div>
       <div class="info" id="ch-info"></div>
       <div class="row"><span class="ctrl-label" data-i18n="lbl_show">Показати</span><div class="group" id="ch-shape"></div></div>
       <div id="ch-triad-rows" hidden>
@@ -885,27 +927,15 @@
     </div>
 
     <div id="sub-arp" hidden>
-      <div class="row-quals">
-        <div class="quals-head">
-          <span class="ctrl-label" data-i18n="lbl_chord">Акорд</span>
-          <button type="button" class="qual-more" id="arp-quals-toggle" aria-controls="arp-quals" aria-expanded="false"></button>
-        </div>
-        <div id="arp-quals"></div>
-      </div>
       <div class="row"><span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="arp-pos"></div></div>
       <div class="info" id="arp-info"></div>
-      <div class="row"><button class="btn play seam-btn" data-jam></button></div>
     </div>
 
   </section>
 
   <section class="panel" id="panel-scales">
     <div id="sub-scale">
-      <div class="row">
-        <span class="ctrl-label" data-i18n="lbl_scale">Гама</span><select id="sc-select"></select>
-        <div class="divider"></div>
-        <span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="sc-pos"></div>
-      </div>
+      <div class="row"><span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="sc-pos"></div></div>
       <div class="row"><span class="ctrl-label" data-i18n="lbl_dia">Акорди тональності</span><div class="group" id="sc-diatonic"></div></div>
       <div class="info" id="sc-info"></div>
       <div class="row"><button class="btn seam-btn" data-seam="scale" data-i18n="seam_drill">Тренувати це →</button></div>
@@ -915,33 +945,9 @@
       <div class="row">
         <span class="ctrl-label" data-i18n="lbl_show">Показати</span>
         <button class="btn" id="nt-nat" aria-pressed="false" data-i18n="b_natonly">Тільки натуральні</button>
-        <span class="cd-hint" data-i18n="nt_pick_hint">Підсвічена нота йде за тонікою вгорі · «Тільки натуральні» ховає дієзи й бемолі</span>
+        <span class="cd-hint" data-i18n="nt_pick_hint">Підсвічена нота йде за тональністю · «Тільки натуральні» ховає дієзи й бемолі</span>
       </div>
       <div class="row"><button class="btn seam-btn" data-seam="notes" data-i18n="seam_drill">Тренувати це →</button></div>
-    </div>
-  </section>
-
-  <section class="panel" id="panel-circle">
-    <div class="panel-head">
-      <div class="ph-top"><h2 data-i18n="cof_h">Коло квінт</h2><button class="ph-help" type="button" aria-expanded="false" aria-controls="cof-p">?</button></div>
-      <p id="cof-p" data-i18n="cof_p">Тональності розташовані по квінтах. Сусіди — найближчі споріднені тональності: ліворуч субдомінанта (IV), праворуч домінанта (V). Натисни тональність, щоб побачити ключові знаки, паралель і акорди тональності.</p>
-    </div>
-    <div class="cof-layout">
-      <div class="cof-wrap"><svg id="cof-svg" viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg"></svg></div>
-      <div class="cof-side">
-        <div class="info" id="cof-info"></div>
-        <div class="row" style="margin-top:14px">
-          <button class="btn" id="cof-open"></button>
-          <button class="btn" id="cof-harmony"></button>
-          <button class="btn seam-btn" data-seam="circle" data-i18n="seam_drill">Тренувати це →</button>
-        </div>
-        <div class="legend" style="margin-top:18px">
-          <div class="leg"><span class="leg-dot" style="background:var(--root)"></span><span data-i18n="leg_tonic">Тоніка</span></div>
-          <div class="leg"><span class="leg-dot" style="background:var(--fifth)"></span><span data-i18n="leg_subdom">Субдомінанта (IV)</span></div>
-          <div class="leg"><span class="leg-dot" style="background:var(--third)"></span><span data-i18n="leg_dom">Домінанта (V)</span></div>
-          <div class="leg"><span class="leg-dot" style="background:var(--seventh)"></span><span data-i18n="leg_rel">Паралель</span></div>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -950,6 +956,29 @@
       <div class="ph-top"><h2 id="practice-h" data-i18n="practice_h">Практика</h2></div>
     </div>
     <p class="sr-only" id="drill-live" role="status" aria-live="polite"></p>
+
+    <div class="drill-ctx" id="drill-ctx">
+      <span class="drill-name" id="drill-ctx-name" tabindex="-1"></span>
+      <span class="drill-sess" id="drill-ctx-sess" hidden></span>
+      <button type="button" class="btn" id="drill-ctx-skip" hidden></button>
+      <button type="button" class="drill-help" id="drill-ctx-help" aria-expanded="false" title="?">?</button>
+      <button type="button" class="btn" id="drill-ctx-setup" aria-expanded="true" hidden></button>
+      <button type="button" class="btn" id="drill-ctx-mic" aria-pressed="false" hidden></button>
+      <button type="button" class="btn" id="drill-ctx-cal" aria-expanded="false" aria-controls="cal-box" hidden></button>
+      <button type="button" class="btn drill-quit" id="drill-ctx-quit"><span aria-hidden="true">✕</span></button>
+    </div>
+    <div class="strip-slot" id="strip-drill"></div>
+    <div class="cal-box" id="cal-box" hidden>
+      <p class="cal-lead" data-i18n="cal_offer">Спершу виміряй затримку звуку — без неї кожен «відстає» на розмір буфера.</p>
+      <div class="row tb-cal" id="cal-row">
+        <span class="ctrl-label" data-i18n="cal_label">Затримка</span>
+        <button type="button" class="btn" id="cal-run" data-i18n="cal_run">Виміряти</button>
+        <input type="range" id="cal-slider" min="0" max="400" step="1" value="0" aria-label="Latency offset (ms)">
+        <span class="bpm-val" id="cal-val">0 ms</span>
+        <button type="button" class="btn" id="cal-close" data-i18n="cal_later">Не зараз</button>
+      </div>
+      <p class="cal-status" id="cal-status" role="status" hidden></p>
+    </div>
     <div id="practice-home">
       <div id="ph-top-block">
         <div class="practice-session-card">
@@ -1017,26 +1046,6 @@
       </div>
     </div>
 
-    <div class="row drill-ctx" id="drill-ctx">
-      <span class="drill-ctx-lead">
-      <span class="drill-name" id="drill-ctx-name" tabindex="-1"></span>
-      <span class="drill-sess" id="drill-ctx-sess" hidden></span>
-      <button type="button" class="btn" id="drill-ctx-skip" hidden></button>
-      <button type="button" class="drill-help" id="drill-ctx-help" aria-expanded="false" title="?">?</button>
-      <button type="button" class="btn" id="drill-ctx-setup" aria-expanded="true" hidden></button>
-      <button type="button" class="btn" id="drill-ctx-mic" aria-pressed="false" hidden></button>
-      <button type="button" class="btn" id="drill-ctx-quit" data-i18n="drill_quit">Вийти</button>
-      </span>
-      <span class="ctrl-label" id="drill-ctx-keylbl" data-i18n="dr_key" hidden>Тональність</span>
-      <div class="group root-row" id="drill-ctx-key" hidden></div>
-      <span class="ctrl-label" id="drill-ctx-tlbl" data-i18n="tb_tempo" hidden>Темп</span>
-      <div class="group tempo-group" id="drill-ctx-tempo" hidden>
-        <button type="button" class="btn" id="drill-ctx-slower" aria-label="−5 BPM">&#8722;</button>
-        <span class="tempo-bpm" id="drill-ctx-bpm"></span>
-        <button type="button" class="btn" id="drill-ctx-faster" aria-label="+5 BPM">&#43;</button>
-      </div>
-    </div>
-
     <div id="cm-area" hidden>
       <div id="cm-setup">
         <div class="row"><span class="ctrl-label" data-i18n="cm_pair">Пара акордів</span><div class="group" id="cm-pairs"></div></div>
@@ -1046,13 +1055,11 @@
           <button type="button" class="btn" id="cm-click" aria-pressed="false"></button>
         </div>
         <div class="cm-best-line" id="cm-setup-best"></div>
-        <div class="drill-actions"><button class="btn play" id="cm-start-btn"></button></div>
         <p class="drill-hint" id="cm-setup-note" data-i18n="cm_setup_note">Перемикайся між акордами якомога чистіше й натискай велику кнопку на кожній чистій зміні. Лічильник рахує твої натискання, а не звук гітари — оцінку з мікрофоном додамо згодом.</p>
       </div>
       <div id="cm-active" hidden>
         <div class="cm-top">
           <span class="cm-timer" id="cm-timer">1:00</span>
-          <button type="button" class="btn" id="cm-stop" data-i18n="cm_stop">Завершити</button>
         </div>
         <div class="cm-chords">
           <div class="cm-chord" id="cm-chord-a"></div>
@@ -1090,7 +1097,6 @@
       <div class="scored-panel" id="sp-score" hidden></div>
       <div class="drill-bar">
         <button type="button" class="btn" id="sp-click" aria-pressed="false"></button>
-        <button type="button" class="btn play" id="sp-play"></button>
       </div>
     </div>
 
@@ -1114,9 +1120,6 @@
       <div class="co-beats" id="tg-beats"></div>
       <p class="scored-status" id="tg-status" role="status" hidden></p>
       <div class="scored-panel" id="tg-score" hidden></div>
-      <div class="drill-bar">
-        <button type="button" class="btn play" id="tg-play"></button>
-      </div>
     </div>
 
     <div id="sd-area" hidden>
@@ -1133,9 +1136,6 @@
       <div class="scroll"><div class="board"><div class="fretboard" id="sd-board"></div></div><div class="fretnums" id="sd-nums"></div></div>
       <p class="scored-status" id="sd-status" role="status" hidden></p>
       <div class="scored-panel" id="sd-score" hidden></div>
-      <div class="drill-bar">
-        <button type="button" class="btn play" id="sd-play"></button>
-      </div>
     </div>
 
     <div id="drill-area" hidden>
@@ -1157,7 +1157,6 @@
           <div class="ear-prompt" id="ear-prompt"></div>
           <span class="drill-count" id="ear-count"></span>
         </div>
-        <div class="drill-bar"><button type="button" class="btn play" id="ear-replay"></button></div>
         <div class="ear-choices" id="ear-choices"></div>
         <div class="ear-feedback" id="ear-feedback"></div>
         <div class="ear-next-row"><button type="button" class="btn play" id="ear-next" hidden></button></div>
@@ -1169,29 +1168,11 @@
 </div>
 
 
-<div id="harmony-extras" hidden>
-  <div class="seq" id="ch-seq">
-    <div class="seq-head">
-      <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
-      <button class="btn" id="seq-add" data-i18n="seq_add">Додати акорд</button>
-      <div class="divider"></div>
-      <span class="ctrl-label" data-i18n="seq_presets">Пресети</span>
-      <div class="seq-presets" id="seq-presets"></div>
-      <div class="divider"></div>
-      <button class="btn play" id="seq-play"></button>
-      <button class="btn" id="seq-loopbtn"></button>
-      <button class="btn" id="seq-clear" data-i18n="seq_clear">Очистити</button>
-    </div>
-    <div class="seq-strip" id="seq-strip"></div>
-  </div>
-</div>
-
 <aside class="aside">
   <div class="aside-card">
     <div class="aside-head"><span id="suggest-title" data-i18n="suggest_title">Що грати над цим</span><button class="aside-toggle" id="aside-toggle">−</button></div>
     <div id="aside-body">
       <div id="suggest-body"></div>
-      <div class="row"><button class="btn play seam-btn" id="seam-jam" data-jam></button></div>
     </div>
   </div>
 </aside>
@@ -1199,14 +1180,14 @@
 <div class="aside-card" id="shapes-card" hidden>
   <div class="aside-head"><span data-i18n="cd_voicings">Форми акорду</span><button class="aside-toggle" id="shapes-toggle" aria-expanded="true">−</button></div>
   <div id="shapes-body">
-    <div class="cd-hint" data-i18n="cd_pick_hint">Натисни картку, щоб обрати форму для «Прослухати» / «Лупа»</div>
+    <div class="cd-hint" data-i18n="cd_pick_hint">Натисни картку — вона прозвучить, обведеться на грифі й гратиме в ▶</div>
     <div class="chorddia" id="ch-diagram"></div>
     <button type="button" class="btn cd-more" id="cd-more" aria-expanded="false" hidden></button>
   </div>
 </div>
 </div>
 
-  <footer data-i18n="footer">Гітарна студія · стандартний стрій (E A D G B e) · працює офлайн</footer>
+  <footer><span data-i18n="footer">Гітарна студія · стандартний стрій (E A D G B e) · працює офлайн</span> <button class="ver" id="app-ver" aria-haspopup="dialog"></button></footer>
   <div class="kbd-hint-bar">
     <button class="kbd-open-btn" id="kbd-open"><span data-i18n="kbd_hint">Гарячі клавіші</span> <kbd>?</kbd></button>
   </div>
@@ -1256,10 +1237,10 @@
       <button class="cl-close" id="kbd-close" aria-label="close">✕</button>
     </div>
     <div class="kbd-body">
-      <div class="kbd-row"><span class="kbd-keys"><kbd>Space</kbd></span><span data-i18n="kbd_play">Прослухати / Стоп</span></div>
-      <div class="kbd-row"><span class="kbd-keys"><kbd>L</kbd></span><span data-i18n="kbd_loop">Луп — увімк/вимк</span></div>
+      <div class="kbd-row"><span class="kbd-keys"><kbd>Space</kbd></span><span data-i18n="kbd_play">▶ Грати / Стоп</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>M</kbd></span><span data-i18n="kbd_metro">Метроном — увімк/вимк</span></div>
-      <div class="kbd-row"><span class="kbd-keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd></span><span data-i18n="kbd_tabs">Перемкнути розділи</span></div>
+      <div class="kbd-row"><span class="kbd-keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><span data-i18n="kbd_tabs">Перемкнути розділи</span></div>
+      <div class="kbd-row"><span class="kbd-keys"><kbd>K</kbd></span><span data-i18n="kbd_key">Вибір тональності</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>A</kbd>–<kbd>G</kbd></span><span data-i18n="kbd_root">Задати тоніку</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>[</kbd><kbd>]</kbd></span><span data-i18n="kbd_transpose">Транспонувати на півтон</span></div>
     </div>
@@ -1896,7 +1877,7 @@ const CHANGELOG = [{"v":"2.17.0","date":"2026-10-09","en":["Fewer, better drills
 const I18N = {
   uk: {
     brand:'Euterpe', brand_desc:'гітарна студія',
-    tab_scales:'Гами', tab_circle:'Коло квінт', mode_practice:'Практика',
+    tab_scales:'Гами', mode_practice:'Практика',
     practice_h:'Практика', practice_intro:'Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.',
     ear_intervals:'Інтервали на слух', ear_intervals_meta:'Почуй дві ноти · назви інтервал',
     ear_chords:'Якість акорду на слух', ear_chords_meta:'Почуй акорд · визнач його тип',
@@ -1907,7 +1888,7 @@ const I18N = {
     drill_setup:'Параметри', ear_hint:'Послухай приклад і обери відповідь. «Ще раз» — скільки завгодно; помилка повернеться до тебе раніше.',
     drill_complete:'Сесію завершено', drill_score:'Рахунок', drill_clean:'Чисто', drill_misses:'Помилки', drill_time:'Час', drill_again:'Ще раз', drill_done:'Готово',
     sum_review:'Повтори на грифі',
-    seam_drill:'Тренувати це →', seam_jam:'Джем над цим', seam_jam_stop:'Зупинити джем',
+    seam_drill:'Тренувати це →',
     sess_title:'Заняття', sess_lead:'Скажи, скільки маєш часу — застосунок збере вправи, які варто повторити, відлічить час і підсумує.',
     sess_len:'Тривалість', sess_min:'хв', sess_start:'Почати заняття', sess_next:'Далі →',
     sess_done_h:'Заняття завершено', sess_none:'Цього разу нічого не зараховано — але час на інструменті все одно зарахований.',
@@ -1919,7 +1900,6 @@ const I18N = {
     cm_setup_note:'Перемикайся між акордами якомога чистіше й натискай велику кнопку на кожній чистій зміні. Лічильник рахує твої натискання, а не звук гітари — оцінку з мікрофоном додамо згодом.',
     cm_changes:'Зміни', cm_cpm:'За хвилину', cm_best:'Рекорд', cm_tap_hint:'Натискай на кожній чистій зміні', cm_undo:'Скасувати', cm_newbest:'Новий рекорд!',
     drill_strum:'Бій і відчуття', drill_strum_meta:'Малюнки · свінг · акценти · глушіння',
-    dr_key:'Тональність',
     practice_grp_timing:'Таймінг', drill_timing:'Поділ і таймінг', drill_timing_meta:'Вісімки · тріолі · шістнадцятки',
     sd_subdiv:'Поділ', sd_notes:'Ноти',
     sd_hint:'Тримайся клацання — акцентований удар це «раз», тихі — поділи долі. Грай підсвічені ноти гами рівно по сітці. Увімкни 🎤 угорі, щоб застосунок слухав і оцінював твій таймінг.',
@@ -1938,11 +1918,10 @@ const I18N = {
     view_scale:'Гама', view_notes:'Ноти',
     suggest_title:'Що грати над цим', suggest_arp:'Арпеджіо', suggest_scales:'Гами, що підходять',
     cof_h:'Коло квінт',
-    cof_p:'Тональності розташовані по квінтах. Сусіди — найближчі споріднені тональності: ліворуч субдомінанта (IV), праворуч домінанта (V). Натисни тональність, щоб побачити ключові знаки, паралель і акорди тональності.',
     cof_sig:'Ключові знаки', cof_sig0:'без ключових знаків',
     cof_rel_minor:'Паралельний мінор', cof_rel_major:'Паралельний мажор',
     cof_neighbors:'Сусіди по колу', cof_subdom:'субдомінанта', cof_dom:'домінанта',
-    min_word:'мінор', b_cadence:'Прослухати {cad}', b_open_scales:'Відкрити в гамах', b_open_harmony:'Відкрити в акордах',
+    min_word:'мінор', b_cadence:'♪ Прослухати {cad}', b_open_harmony:'Відкрити в акордах',
     leg_tonic:'Тоніка', leg_dom:'Домінанта (V)', leg_subdom:'Субдомінанта (IV)', leg_rel:'Паралель',
     ch_h:'Тони акорду на грифі',
     ch_p:'Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу. Натисни на ноту, щоб почути її.',
@@ -1950,20 +1929,19 @@ const I18N = {
     tr_hint:'Тризвук на трьох сусідніх струнах — рухомий блок: кожне обернення повторюється вгору по грифу через 12 ладів. Вивчиш одну форму на одному наборі струн — отримаєш увесь гриф.',
     view_arp:'Арпеджіо', arp_word:'арпеджіо',
     arp_h:'Арпеджіо на грифі',
-    arp_p:'Ті самі ноти, що й у «Тонах акорду», але як арпеджіо — грай їх одну за одною вгору по грифу. Обери позицію, щоб ізолювати зручний бокс для практики; «Прослухати» програє арпеджіо висхідно.',
+    arp_p:'Ті самі ноти, що й у «Тонах акорду», але як арпеджіо — грай їх одну за одною вгору по грифу. Обери позицію, щоб ізолювати зручний бокс для практики; ▶ з джемом дасть гурт, щоб грати над ним.',
     arp_hint:'Арпеджіо — це ноти акорду, зіграні почергово. Влучай у ці ноти в соло на зміні акорду — вони звучать найстабільніше.',
     caged_desc:'бокс мажорної гами навколо цієї рухомої форми акорду',
     sc_h:'Гами і моди',
     sc_p:'Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.',
     nt_h:'Всі ноти на грифі',
     nt_p:'Довідник усіх нот. Натисни ноту в керуванні, щоб підсвітити її скрізь, або клікни по ноті на грифі, щоб почути.',
-    lbl_root:'Тоніка', lbl_chord:'Акорд', lbl_scale:'Гама', lbl_pos:'Позиція', lbl_dia:'Акорди тональності',
+    lbl_root:'Тоніка', lbl_chord:'Акорд', lbl_quality:'Тип', lbl_scale:'Гама', lbl_pos:'Позиція', lbl_dia:'Акорди тональності',
     lbl_show:'Показати', lbl_display:'Показ', lbl_set:'Набір струн', lbl_inv:'Обернення',
-    b_notes:'Назви', b_intervals:'Інтервали', b_listen:'Прослухати', b_loop:'Луп',
-    b_listen_tip:'Прослухати поточний вибір один раз', b_loop_tip:'Зациклити поточний акорд як супровід для імпровізації', b_loop_stop_tip:'Зупинити луп',
+    b_notes:'Назви', b_intervals:'Інтервали',
     audio_off:'Звук недоступний у цьому браузері — відтворення вимкнено.',
-    seq_title:'Прогресія', seq_add:'Додати акорд', seq_presets:'Пресети', seq_clear:'Очистити',
-    seq_play:'Грати', seq_loop:'Цикл', seq_bars:'тактів', seq_empty:'Порожньо — додай поточний акорд або вибери пресет',
+    seq_title:'Прогресія', seq_add:'Додати акорд', seq_clear:'Очистити',
+    seq_loop:'Цикл', seq_bars:'тактів', seq_empty:'Порожньо — додай поточний акорд або вибери пресет',
     b_natonly:'Тільки натуральні', b_clear:'Зняти',
     pos_all:'Вся', inv_all:'Всі', inv_root:'Основне', inv_1st:'1-ше', inv_2nd:'2-ге',
     leg_root:'Тоніка', leg_third:'Терція', leg_fifth:'Квінта', leg_seventh:'Септима', leg_ext:'Розширення',
@@ -1979,9 +1957,9 @@ const I18N = {
     inv_root_desc:'Основне положення — у басу тоніка',
     inv_1st_desc:'Перше обернення — у басу терція',
     inv_2nd_desc:'Друге обернення — у басу квінта',
-    tb_settings:'Налаштування', tb_volume:'Гучність',
+    tb_settings:'Налаштування', tb_volume:'Гучність', tbc_sound:'Звук', tb_lang:'Мова',
     tb_tuning:'Стрій', tb_lefty:'Ліворукий', tb_frets:'Лади', tb_tempo:'Темп', tb_capo:'Каподастр', capo_off:'без', tb_meter:'Розмір',
-    tuner_open:'🎵 Тюнер', mic_title:'Тюнер',
+    tuner_open:'Тюнер', mic_title:'Тюнер',
     tuner_ear:'Налаштувати на слух', tuner_ear_hint:'Натисни струну — прозвучить її нота; підтягуй струну, доки звуки не зіллються.',
     mic_start:'Увімкнути мікрофон', mic_stop:'Зупинити',
     mic_cents:'центів', mic_string:'Найближча струна', mic_play_hint:'Зіграй одну струну',
@@ -1999,11 +1977,13 @@ const I18N = {
     cal_unheard:'Не почув клацання. Якщо ти в навушниках, звук не доходить до мікрофона — постав затримку повзунком вручну.',
     cal_cancelled:'Вимірювання скасовано.',
     cal_busy:'Вимірювання вже триває.',
+    cal_offer:'Спершу виміряй затримку звуку — без неї кожен «відстає» на розмір буфера. У навушниках мікрофон клацання не почує: тоді постав її повзунком.',
+    cal_later:'Не зараз',
     on_listen:'🎤 Слухати й оцінювати',
     sd_hint_scored:'Грай по сітці — застосунок слухає й оцінює твій таймінг. У навушниках точніше: з колонок мікрофон чує й сам застосунок.',
     sp_hint_scored:'Грай малюнок сам — гітару-підказку вимкнено, щоб оцінювався ти. У навушниках точніше.',
     co_hint_scored:'Заходь на кожну зміну акорду вчасно — оцінюється саме це, ритм між змінами твій. У навушниках точніше.',
-    on_needcal:'Затримку ще не виміряно, тож наскільки ти влучаєш у долю — поки невідомо (без неї будь-хто «відстає» на розмір буфера). Рівність нижче чесна вже зараз. Виміряй: Налаштування → Інструменти → Затримка.',
+    on_needcal:'Затримку ще не виміряно, тож наскільки ти влучаєш у долю — поки невідомо (без неї будь-хто «відстає» на розмір буфера). Рівність нижче чесна вже зараз. Виміряй затримку над вправою (⏱).',
     on_ms_off:'мс відхилення',
     on_tight:'Чітко', on_close:'Майже', on_loose:'Гуляє', on_none:'Нічого не почув',
     on_rushing:'спішиш', on_dragging:'відстаєш',
@@ -2030,32 +2010,34 @@ const I18N = {
     wc_tune_d:'Тюнер за мікрофоном, або еталонний тон для кожної струни.',
     wc_got:'Просто озирнутись',
     tb_metro_on:'Метроном', tb_metro_off:'Метроном',
-    tb_bass:'Бас', tb_drums:'Ударні', tb_backing:'Супровід',
+    tb_bass:'Бас', tb_drums:'Ударні',
     qg_basic:'Базові', qg_seventh:'Септакорди', qg_ext:'Розширені',
     qual_more:'більше', qual_less:'менше',
-    seq_play_tip:'Програти всю прогресію', seq_loop_tip:'Циклити прогресію як супровід для імпровізації',
-    nt_pick_hint:'Підсвічена нота йде за тонікою вгорі · «Тільки натуральні» ховає дієзи й бемолі',
-    tb_now_loop:'Луп', tb_now_seq:'Прогресія', tb_stop:'Стоп',
+    seq_loop_tip:'Циклити прогресію як супровід для імпровізації',
+    nt_pick_hint:'Підсвічена нота йде за тональністю · «Тільки натуральні» ховає дієзи й бемолі',
+    strip_key:'Тональність',
+    pl_h:'Що грає ▶', pl_src:'Грати', pl_chord:'Акорд', pl_prog:'Прогресію', pl_band:'Гурт', pl_jam:'Джем',
+    pl_play_chord:'Зациклити акорд', pl_play_prog:'Програти прогресію',
     cl_title:'Що нового', cl_current:'зараз', cl_older:'Повна історія випусків — CHANGELOG.md у репозиторії',
-  tbc_instrument:'Інструмент', tbc_tools:'Інструменти', tbc_prefs:'Уподобання',
+  tbc_instrument:'Інструмент',
     frets_all:'Усі', cd_open:'відкритий акорд',
     cd_barre:'барре, лад', cd_std:'аплікатура для стандартного строю',
     cd_na:'немає простої форми', cd_calc:'обчислена аплікатура', cd_pos:'вище по грифу',
     cd_voicings:'Форми акорду', cd_eshape:'барре у формі E', cd_ashape:'барре у формі A',
-    cd_fret:'лад', cd_pick_hint:'Натисни картку — вона прозвучить, обведеться на грифі й гратиме в «Прослухати» / «Лупа»',
-    cd_plays:'▶ Грає в «Прослухати»',
+    cd_fret:'лад', cd_pick_hint:'Натисни картку — вона прозвучить, обведеться на грифі й гратиме в ▶',
+    cd_plays:'▶ Цю грає ▶',
     cd_more:'Більше форм', cd_less:'Менше форм',
     tr_shapes:'Форми тризвуку',
     shape_full:'Увесь акорд', shape_triads:'Тризвуки', shape_no_triad:'У цього акорду немає тризвуку (немає терції чи квінти).',
     pwa_install:'Встановити', pwa_install_tip:'Встановити Euterpe як застосунок',
     pwa_update:'Доступна нова версія Euterpe.', pwa_update_btn:'Оновити', pwa_dismiss:'Сховати',
-    kbd_title:'Гарячі клавіші', kbd_play:'Прослухати / Стоп', kbd_loop:'Луп — увімк/вимк', kbd_metro:'Метроном — увімк/вимк',
+    kbd_title:'Гарячі клавіші', kbd_play:'▶ Грати / Стоп', kbd_key:'Вибір тональності', kbd_metro:'Метроном — увімк/вимк',
     kbd_tabs:'Перемкнути розділи', kbd_root:'Задати тоніку', kbd_transpose:'Транспонувати на півтон', kbd_hint:'Гарячі клавіші',
     ph_help:'Опис'
   },
   en: {
     brand:'Euterpe', brand_desc:'guitar studio',
-    tab_scales:'Scales', tab_circle:'Circle', mode_practice:'Practice',
+    tab_scales:'Scales', mode_practice:'Practice',
     practice_h:'Practice', practice_intro:'Scored drills that track your progress and resurface what you miss.',
     ear_intervals:'Intervals by ear', ear_intervals_meta:'Hear two notes · name the interval',
     ear_chords:'Chord quality by ear', ear_chords_meta:'Hear a chord · name its quality',
@@ -2066,7 +2048,7 @@ const I18N = {
     drill_setup:'Setup', ear_hint:'Listen to the prompt, then pick the answer. Replay as often as you like; a wrong answer comes back sooner.',
     drill_complete:'Session complete', drill_score:'Score', drill_clean:'Clean', drill_misses:'Wrong taps', drill_time:'Time', drill_again:'Again', drill_done:'Done',
     sum_review:'Review on the neck',
-    seam_drill:'Drill this →', seam_jam:'Jam over this', seam_jam_stop:'Stop the jam',
+    seam_drill:'Drill this →',
     sess_title:'Practice session', sess_lead:'Say how long you have — the app lines up what is due, runs the clock, and tells you how it went.',
     sess_len:'Length', sess_min:'min', sess_start:'Start session', sess_next:'Next →',
     sess_done_h:'Session complete', sess_none:'Nothing scored this time — but the time on the instrument still counts.',
@@ -2078,7 +2060,6 @@ const I18N = {
     cm_setup_note:'Switch between the chords as cleanly as you can and tap the big button on each clean change. The counter counts your taps, not your guitar — mic scoring comes later.',
     cm_changes:'Changes', cm_cpm:'Per minute', cm_best:'Best', cm_tap_hint:'Tap on each clean change', cm_undo:'Undo', cm_newbest:'New best!',
     drill_strum:'Strumming & feel', drill_strum_meta:'Patterns · swing · accents · muting',
-    dr_key:'Key',
     practice_grp_timing:'Timing', drill_timing:'Subdivision & timing', drill_timing_meta:'Eighths · triplets · sixteenths',
     sd_subdiv:'Subdivision', sd_notes:'Notes',
     sd_hint:'Lock to the click — the accented tick is beat 1, the soft ticks are the subdivisions. Play the lit scale notes evenly across the grid. Turn on 🎤 above and the app listens and scores your timing.',
@@ -2097,11 +2078,10 @@ const I18N = {
     view_scale:'Scale', view_notes:'Notes',
     suggest_title:'Play over this', suggest_arp:'Arpeggio', suggest_scales:'Scales that fit',
     cof_h:'Circle of fifths',
-    cof_p:'Keys are arranged by fifths. Neighbours are the closest related keys: subdominant (IV) on the left, dominant (V) on the right. Tap a key to see its key signature, relative key and diatonic chords.',
     cof_sig:'Key signature', cof_sig0:'no sharps or flats',
     cof_rel_minor:'Relative minor', cof_rel_major:'Relative major',
     cof_neighbors:'Neighbours on the circle', cof_subdom:'subdominant', cof_dom:'dominant',
-    min_word:'minor', b_cadence:'Play {cad}', b_open_scales:'Open in scales', b_open_harmony:'Open in chords',
+    min_word:'minor', b_cadence:'♪ Hear {cad}', b_open_harmony:'Open in chords',
     leg_tonic:'Tonic', leg_dom:'Dominant (V)', leg_subdom:'Subdominant (IV)', leg_rel:'Relative key',
     ch_h:'Chord tones across the neck',
     ch_p:'Pick a root and a chord type — the root, third, fifth (and seventh for seventh chords) light up across the whole neck. Tap a note to hear it.',
@@ -2109,20 +2089,19 @@ const I18N = {
     tr_hint:'A triad on three adjacent strings is a movable block: each inversion repeats up the neck every 12 frets. Learn one shape on one string set and you get the whole neck.',
     view_arp:'Arpeggio', arp_word:'arpeggio',
     arp_h:'Arpeggios across the neck',
-    arp_p:'The same notes as Chord tones, but as an arpeggio — play them one at a time up the neck. Pick a position to isolate a practice box; Listen runs the arpeggio ascending.',
+    arp_p:'The same notes as Chord tones, but as an arpeggio — play them one at a time up the neck. Pick a position to isolate a practice box; ▶ with the Jam on gives you a band to play it over.',
     arp_hint:'An arpeggio is the chord played one note at a time. Target these notes in a solo on each chord change — they sound the most stable.',
     caged_desc:'the major-scale box around this movable chord form',
     sc_h:'Scales and modes',
     sc_p:'Pick a root and a scale. Overlay a chord from the key to see target tones inside the scale, and isolate a position for practice.',
     nt_h:'All notes on the neck',
     nt_p:'A reference for every note. Tap a note in the controls to highlight it everywhere, or tap a note on the neck to hear it.',
-    lbl_root:'Root', lbl_chord:'Chord', lbl_scale:'Scale', lbl_pos:'Position', lbl_dia:'Chords in key',
+    lbl_root:'Root', lbl_chord:'Chord', lbl_quality:'Quality', lbl_scale:'Scale', lbl_pos:'Position', lbl_dia:'Chords in key',
     lbl_show:'Show', lbl_display:'Display', lbl_set:'String set', lbl_inv:'Inversion',
-    b_notes:'Names', b_intervals:'Intervals', b_listen:'Listen', b_loop:'Loop',
-    b_listen_tip:'Hear the current selection once', b_loop_tip:'Loop the current chord as a backing to play over', b_loop_stop_tip:'Stop the loop',
+    b_notes:'Names', b_intervals:'Intervals',
     audio_off:'Audio is unavailable in this browser — playback is disabled.',
-    seq_title:'Progression', seq_add:'Add chord', seq_presets:'Presets', seq_clear:'Clear',
-    seq_play:'Play', seq_loop:'Cycle', seq_bars:'bars', seq_empty:'Empty — add the current chord or pick a preset',
+    seq_title:'Progression', seq_add:'Add chord', seq_clear:'Clear',
+    seq_loop:'Cycle', seq_bars:'bars', seq_empty:'Empty — add the current chord or pick a preset',
     b_natonly:'Naturals only', b_clear:'Clear',
     pos_all:'All', inv_all:'All', inv_root:'Root', inv_1st:'1st', inv_2nd:'2nd',
     leg_root:'Root', leg_third:'Third', leg_fifth:'Fifth', leg_seventh:'Seventh', leg_ext:'Extensions',
@@ -2138,9 +2117,9 @@ const I18N = {
     inv_root_desc:'Root position — root in the bass',
     inv_1st_desc:'First inversion — third in the bass',
     inv_2nd_desc:'Second inversion — fifth in the bass',
-    tb_settings:'Settings', tb_volume:'Volume',
+    tb_settings:'Settings', tb_volume:'Volume', tbc_sound:'Sound', tb_lang:'Language',
     tb_tuning:'Tuning', tb_lefty:'Left-handed', tb_frets:'Frets', tb_tempo:'Tempo', tb_capo:'Capo', capo_off:'off', tb_meter:'Meter',
-    tuner_open:'🎵 Tuner', mic_title:'Tuner',
+    tuner_open:'Tuner', mic_title:'Tuner',
     tuner_ear:'Tune by ear', tuner_ear_hint:'Tap a string to hear its note; turn the peg until the two sounds merge.',
     mic_start:'Enable microphone', mic_stop:'Stop',
     mic_cents:'cents', mic_string:'Nearest string', mic_play_hint:'Play a single string',
@@ -2158,11 +2137,13 @@ const I18N = {
     cal_unheard:'Could not hear the click. On headphones the sound never reaches the mic — set the latency by hand with the slider.',
     cal_cancelled:'Measurement cancelled.',
     cal_busy:'A measurement is already running.',
+    cal_offer:'Measure the audio latency first — without it everyone reads as dragging by the buffer size. On headphones the mic never hears the click: set it with the slider instead.',
+    cal_later:'Not now',
     on_listen:'🎤 Listen & score',
     sd_hint_scored:'Play along with the grid — the app is listening and scoring your timing. Headphones are more accurate: on speakers the mic also hears the app.',
     sp_hint_scored:'Play the pattern yourself — the guide guitar is muted so it scores you, not the app. Headphones are more accurate.',
     co_hint_scored:'Land each chord change in time — that is what is scored; your rhythm in between is your own. Headphones are more accurate.',
-    on_needcal:'Latency has not been measured, so how close you land on the beat is still unknown (without it everyone reads as dragging by the buffer size). The evenness below is honest already. Measure it: Settings → Tools → Latency.',
+    on_needcal:'Latency has not been measured, so how close you land on the beat is still unknown (without it everyone reads as dragging by the buffer size). The evenness below is honest already. Measure the latency above the drill (⏱).',
     on_ms_off:'ms off',
     on_tight:'Tight', on_close:'Close', on_loose:'Loose', on_none:'Heard nothing',
     on_rushing:'rushing', on_dragging:'dragging',
@@ -2189,26 +2170,28 @@ const I18N = {
     wc_tune_d:'Mic tuner, or a reference tone for each open string.',
     wc_got:'Just look around',
     tb_metro_on:'Metronome', tb_metro_off:'Metronome',
-    tb_bass:'Bass', tb_drums:'Drums', tb_backing:'Backing',
+    tb_bass:'Bass', tb_drums:'Drums',
     qg_basic:'Basic', qg_seventh:'Sevenths', qg_ext:'Extended',
     qual_more:'more', qual_less:'less',
-    seq_play_tip:'Play the whole progression', seq_loop_tip:'Loop the progression as a backing to play over',
-    nt_pick_hint:'The highlighted note follows the Root above · "Naturals only" hides sharps and flats',
-    tb_now_loop:'Loop', tb_now_seq:'Progression', tb_stop:'Stop',
+    seq_loop_tip:'Loop the progression as a backing to play over',
+    nt_pick_hint:'The highlighted note follows the key · "Naturals only" hides sharps and flats',
+    strip_key:'Key',
+    pl_h:'What ▶ plays', pl_src:'Play', pl_chord:'The chord', pl_prog:'The progression', pl_band:'Band', pl_jam:'Jam',
+    pl_play_chord:'Loop the chord', pl_play_prog:'Play the progression',
     cl_title:'What\'s new', cl_current:'current', cl_older:'Full release history — CHANGELOG.md in the repository',
-  tbc_instrument:'Instrument', tbc_tools:'Tools', tbc_prefs:'Preferences',
+  tbc_instrument:'Instrument',
     frets_all:'All', cd_open:'open chord',
     cd_barre:'barre, fret', cd_std:'fingering for standard tuning',
     cd_na:'no simple shape', cd_calc:'computed voicing', cd_pos:'up the neck',
     cd_voicings:'Chord shapes', cd_eshape:'E-shape barre', cd_ashape:'A-shape barre',
-    cd_fret:'fret', cd_pick_hint:'Tap a card to hear it, ring it on the neck and use it for Listen / Loop',
-    cd_plays:'▶ Plays in Listen',
+    cd_fret:'fret', cd_pick_hint:'Tap a card to hear it, ring it on the neck and have ▶ play it',
+    cd_plays:'▶ This one plays',
     cd_more:'More shapes', cd_less:'Fewer shapes',
     tr_shapes:'Triad shapes',
     shape_full:'Full chord', shape_triads:'Triads', shape_no_triad:'This chord has no triad (no third or no fifth).',
     pwa_install:'Install', pwa_install_tip:'Install Euterpe as an app',
     pwa_update:'A new version of Euterpe is available.', pwa_update_btn:'Reload', pwa_dismiss:'Dismiss',
-    kbd_title:'Keyboard shortcuts', kbd_play:'Listen / Stop', kbd_loop:'Loop on/off', kbd_metro:'Metronome on/off',
+    kbd_title:'Keyboard shortcuts', kbd_play:'▶ Play / Stop', kbd_key:'Key picker', kbd_metro:'Metronome on/off',
     kbd_tabs:'Switch section', kbd_root:'Set the key (root)', kbd_transpose:'Transpose by a semitone', kbd_hint:'Keyboard shortcuts',
     ph_help:'Description'
   }
@@ -2273,6 +2256,7 @@ function meterGroupStarts(){ const g=curMeter().groups, s=new Set(); let a=0; fo
 function setMeter(i){ if(Number.isInteger(i) && i>=0 && i<METERS.length) meterIdx=i; }
 let toolbarOpen = false;
 let backingOpen = false;
+let keySheetOpen = false, chordSheetOpen = false, tempoSheetOpen = false;
 let shapesOpen = true;
 let cbPalette = false, fnShapes = false;
 let welcomeSeen = false;
@@ -2449,11 +2433,8 @@ function tunerTone(midi){
   o.start(now); o2.start(now); o.stop(now+dur+0.05); o2.stop(now+dur+0.05);
   _tunerVoice={o, o2, g};
 }
-let playTimers=[];
-function clearPlayHighlights(){ playTimers.forEach(clearTimeout); playTimers=[]; document.querySelectorAll('.dot.playing').forEach(d=>d.classList.remove('playing')); }
+function clearPlayHighlights(){ document.querySelectorAll('.dot.playing').forEach(d=>d.classList.remove('playing')); }
 function setDotPlaying(boardEl, pc, on){ boardEl.querySelectorAll('.dot').forEach(d=>{ if(d.dataset.midi!=null && mod(parseInt(d.dataset.midi),12)===pc) d.classList.toggle('playing', on); }); }
-function flashAt(boardEl, pc, atMs){ playTimers.push(setTimeout(()=>setDotPlaying(boardEl,pc,true), atMs)); }
-function pulseAt(boardEl, pc, atMs, lenMs){ flashAt(boardEl,pc,atMs); playTimers.push(setTimeout(()=>setDotPlaying(boardEl,pc,false), atMs+lenMs)); }
 const SCHED_MS=25, LOOKAHEAD=0.1, SCHED_LEAD=0.06;
 const clocks=new Set();
 let schedTimer=null;
@@ -2490,18 +2471,6 @@ function playCue(kind, when){
   else if(kind==='wrong'){ cueBlip(when, 220, 0.28, 0.16, 'sawtooth'); cueBlip(when+0.005, 207, 0.2, 0.18, 'sawtooth'); }     
   else { cueBlip(when, 1500, 0.24, 0.05, 'square'); }                                                                         
 }
-const PREVIEW_STEP=0.15;
-function animRun(boardEl, base, ivs){
-  clearPlayHighlights();
-  const step=PREVIEW_STEP, dur=Math.min(0.5, step*1.6);
-  ivs.forEach((iv,i)=>{ pluck(base+iv, i*step, dur); pulseAt(boardEl, mod(base+iv,12), i*step*1000, step*1000*0.96); });
-}
-function animArpMidi(boardEl, midis){
-  clearPlayHighlights();
-  const step=PREVIEW_STEP;
-  midis.forEach((m,i)=>{ pluck(m, i*step, 1.7); if(boardEl) flashAt(boardEl, mod(m,12), i*step*1000); });
-  playTimers.push(setTimeout(clearPlayHighlights, ((Math.max(1,midis.length)-1)*step + 1.7)*1000));
-}
 function strumMidi(midis, when, vel, spread, dir){
   if(!midis.length) return;
   const order = dir<0 ? midis.slice().reverse() : midis.slice();
@@ -2514,6 +2483,7 @@ function strumMidi(midis, when, vel, spread, dir){
   });
 }
 let bassOn=false, grooveOn=false;
+let playSrc='chord';
 function fifthInterval(qi){ const q=QUALITIES[qi]; const k=q.deg.indexOf(5); return k>=0 ? q.iv[k] : 7; }
 let _noiseBuf=null;
 function noiseBuf(){ if(_noiseBuf) return _noiseBuf;
@@ -2633,16 +2603,21 @@ function metroToggle(){
   btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setMetroLabel(); setBackingToggle(); syncWakeLock();
 }
 function setMetroLabel(){ const b=document.getElementById('tb-metro'); b.innerHTML=(metroClock?'&#9632; ':'&#9654; ')+t(metroClock?'tb_metro_on':'tb_metro_off'); b.setAttribute('aria-label', t('tb_metro_off')); }
-function setBackingToggle(){ const b=document.getElementById('backing-toggle'); if(b) b.classList.toggle('on', !!metroClock || bandActive()); }
-function ensureBacking(){ if(!loopClock && !seqClock) loopToggle(); }   
+function setBackingToggle(){
+  const b=document.getElementById('backing-toggle'); if(b) b.classList.toggle('on', bandActive());
+  const tc=document.getElementById('chip-tempo'); if(tc) tc.classList.toggle('on', !!metroClock);
+}
 function setBandLabels(){
+  const jm=document.getElementById('pl-jam');
+  if(jm){ const on=bandActive(); jm.textContent=t('pl_jam'); jm.classList.toggle('active', on); jm.setAttribute('aria-pressed', on?'true':'false'); }
   const bb=document.getElementById('tb-bass');
   if(bb){ bb.innerHTML='&#9834; '+t('tb_bass'); bb.classList.toggle('active', bassOn); bb.setAttribute('aria-pressed', bassOn?'true':'false'); bb.setAttribute('aria-label', t('tb_bass')); }
   const db=document.getElementById('tb-drums');
   if(db){ db.innerHTML='&#9835; '+t('tb_drums'); db.classList.toggle('active', grooveOn); db.setAttribute('aria-pressed', grooveOn?'true':'false'); db.setAttribute('aria-label', t('tb_drums')); }
 }
-function bassToggle(){ audio(); bassOn=!bassOn; if(bassOn) ensureBacking(); setBandLabels(); setBackingToggle(); saveState(); }
-function drumsToggle(){ audio(); grooveOn=!grooveOn; if(grooveOn) ensureBacking(); setBandLabels(); setBackingToggle(); saveState(); }
+function bassToggle(){ bassOn=!bassOn; setBandLabels(); setBackingToggle(); saveState(); }
+function drumsToggle(){ grooveOn=!grooveOn; setBandLabels(); setBackingToggle(); saveState(); }
+function jamToggle(){ const on=!bandActive(); bassOn=on; grooveOn=on; setBandLabels(); setBackingToggle(); saveState(); }
 let loopClock=null, loopMode='chord';
 function loopStrum(when){
   const ctx=audio(); if(!ctx) return;
@@ -2664,40 +2639,29 @@ function loopStrum(when){
 }
 function stopLoopVisual(){ document.querySelectorAll('#board .dot.playing').forEach(d=>d.classList.remove('playing')); }
 function loopToggle(){
-  const btn=document.getElementById('g-loop');
-  if(loopClock){ removeClock(loopClock); loopClock=null; clearVisualQ(); stopLoopVisual();
-    btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); setLoopLabel(); return; }
+  if(loopClock){ stopLoop(); return; }
   seqStop();
   loopMode = isBoardMode('triads') ? 'triad' : 'chord';
   audio();
   loopClock={ interval:()=>barSec(), tick:(time)=>loopStrum(time) };
   addClock(loopClock);
-  btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setLoopLabel();
+  updateGlobalTransport();
 }
-function stopLoop(){ if(!loopClock) return; removeClock(loopClock); loopClock=null; clearVisualQ(); stopLoopVisual();
-  const b=document.getElementById('g-loop'); if(b){ b.classList.remove('active'); b.setAttribute('aria-pressed','false'); } setLoopLabel(); }
-function setLoopLabel(){ const b=document.getElementById('g-loop'); if(!b) return; b.innerHTML=(loopClock?'&#9632; ':'&#8635; ')+t('b_loop'); b.setAttribute('aria-label', t(loopClock?'b_loop_stop_tip':'b_loop_tip')); b.title=t(loopClock?'b_loop_stop_tip':'b_loop_tip'); updateGlobalTransport(); }
+function stopLoop(){ if(!loopClock) return; removeClock(loopClock); loopClock=null; clearVisualQ(); stopLoopVisual(); updateGlobalTransport(); }
 function stopReferenceTransport(){
   if(seqClock) seqStop();
   stopLoop();
   if(metroClock) metroToggle();
 }
 function pulseTransport(strong){
-  const d=document.querySelector('.tb-transport-dot'); if(!d) return;
+  const d=document.querySelector('#g-play .strip-pulse'); if(!d) return;
   d.classList.remove('bp','bp-strong'); void d.offsetWidth;     
   d.classList.add(strong?'bp-strong':'bp');
 }
 function enqueueBeats(when){ const p=pulseSec(), n=barBeats(), starts=meterGroupStarts(); for(let k=0;k<n;k++) enqueueVisual(when+k*p, ()=>pulseTransport(k===0 || starts.has(k))); }
 function loopChordLabel(){ return noteTxt(chLbl)+(loopMode==='triad' && chTriadIdx()>=0 ? curTriad().short : QUALITIES[chQual].short); }
 function updateGlobalTransport(){
-  const wrap=document.getElementById('tb-transport'); if(!wrap) return;
-  const label=document.getElementById('tb-transport-label');
-  const stop=document.getElementById('tb-stop');
-  stop.innerHTML='&#9632; '+t('tb_stop'); stop.setAttribute('aria-label', t('tb_stop'));
-  if(seqClock){ label.textContent=t('tb_now_seq')+' · '+noteTxt(chLbl)+QUALITIES[chQual].short; wrap.hidden=false; }
-  else if(loopClock){ label.textContent=t('tb_now_loop')+' · '+loopChordLabel(); wrap.hidden=false; }
-  else { wrap.hidden=true; }
-  renderJamBtn();
+  renderPlayBtn();
   syncWakeLock();
 }
 let _wakeLock=null, _wakeReq=false;
@@ -2785,7 +2749,6 @@ function seqRebuild(){ if(seqClock){ seqBuildMap(); if(seqBar>=seqBarMap.length)
 function seqLoopToggle(){ seqLoopOn=!seqLoopOn; setSeqTransport(); saveState(); }
 function seqClear(){ seq=[]; if(seqClock) seqStop(); seqStepIdx=-1; renderSeq(); saveState(); }
 function setSeqTransport(){
-  const p=document.getElementById('seq-play'); if(p){ p.innerHTML=(seqClock?'&#9632; ':'&#9654; ')+t('seq_play'); p.setAttribute('aria-label', t('seq_play_tip')); p.title=t('seq_play_tip'); p.classList.toggle('active', !!seqClock); }
   const l=document.getElementById('seq-loopbtn'); if(l){ l.innerHTML='&#8635; '+t('seq_loop'); l.setAttribute('aria-label', t('seq_loop_tip')); l.title=t('seq_loop_tip'); l.classList.toggle('active', seqLoopOn); l.setAttribute('aria-pressed', seqLoopOn?'true':'false'); }
   updateGlobalTransport();
 }
@@ -2886,7 +2849,7 @@ const INLAY_SINGLE = new Set(DOTS.filter(f=>f!==12&&f!==24));
 const INLAY_DOUBLE = new Set([12,24]);
 function markScrollables(){
   if(typeof document==='undefined') return;
-  document.querySelectorAll('.row > .group, #ch-quals .group, #arp-quals .group').forEach(g=>{
+  document.querySelectorAll('.row > .group, #ch-quals .group, #sc-fams .group').forEach(g=>{
     g.classList.toggle('scrollable', g.scrollWidth > g.clientWidth + 1);
   });
 }
@@ -3055,7 +3018,12 @@ function keyCadence(){
 function keyCadenceName(){ return keyCadence().slice(0,3).map(c=>c.roman).join('–'); }
 function setChord(pc, lbl, qi){
   chRoot=pc; chLbl=lbl; chQual=qi;
-  renderActiveContext();
+  renderActiveContext(); renderStrip(); drillKeyChanged();
+}
+function setChordQual(i){
+  chVoicing=0; chShapesExpanded=false;
+  setChord(chRoot, chLbl, i);
+  saveState();
 }
 function renderDegrees(){
   const c=document.getElementById('h-degrees'); if(!c) return;
@@ -3086,9 +3054,7 @@ function renderQualPicker(containerId, toggleId, onPick){
   const tog=document.getElementById(toggleId);
   if(tog){ tog.setAttribute('aria-expanded', adv?'true':'false'); tog.textContent=(adv?t('qual_less')+' ▴':t('qual_more')+' ▾'); }
 }
-function buildChQuals(){
-  renderQualPicker('ch-quals','ch-quals-toggle', i=>{ chQual=i; chVoicing=0; chShapesExpanded=false; buildChQuals(); renderChords(); saveState(); });
-}
+function buildChQuals(){ renderQualPicker('ch-quals','ch-quals-toggle', setChordQual); }
 function renderChords(){
   const q=QUALITIES[chQual];
   const notes=q.iv.map((iv,i)=>spellNote(chLbl,(chRoot+iv)%12,q.deg[i])).join(' – ');
@@ -3112,13 +3078,10 @@ function renderChords(){
 function renderChShape(){
   const has=chTriadIdx()>=0, on=triadsOn();
   segButtons('ch-shape', [{label:t('shape_full')},{label:t('shape_triads')}], on?1:0, i=>{
-    chTriads=!!i; chVoicing=0; renderChords(); applyHarmonyExtras(); updateGlobalPlay(); saveState(); });
+    chTriads=!!i; chVoicing=0; renderChords(); applyHarmonyExtras(); renderPlayBtn(); saveState(); });
   const tb=document.querySelector('#ch-shape .btn:nth-child(2)');
   if(tb){ tb.disabled=!has; tb.title = has ? '' : t('shape_no_triad'); }
   const rows=document.getElementById('ch-triad-rows'); if(rows) rows.hidden=!on;
-}
-function buildArpQuals(){
-  renderQualPicker('arp-quals','arp-quals-toggle', i=>{ chQual=i; chVoicing=0; chShapesExpanded=false; buildChQuals(); buildArpQuals(); renderArp(); saveState(); });
 }
 function buildArpPos(){
   segButtons('arp-pos', [t('pos_all'),'1','2','3','4','5'].map(label=>({label})), arpPos,
@@ -3419,20 +3382,21 @@ function renderTriads(){
 }
 const SDEG=['1','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'];
 const SCALES=[
-  {iv:[0,2,4,5,7,9,11],en:'Major (Ionian)',uk:'Мажор (іонійський)'},
-  {iv:[0,2,3,5,7,9,10],en:'Dorian',uk:'Дорійський'},
-  {iv:[0,1,3,5,7,8,10],en:'Phrygian',uk:'Фригійський'},
-  {iv:[0,2,4,6,7,9,11],en:'Lydian',uk:'Лідійський'},
-  {iv:[0,2,4,5,7,9,10],en:'Mixolydian',uk:'Міксолідійський'},
-  {iv:[0,2,3,5,7,8,10],en:'Aeolian (natural minor)',uk:'Еолійський (нат. мінор)'},
-  {iv:[0,1,3,5,6,8,10],en:'Locrian',uk:'Локрійський'},
-  {iv:[0,3,5,7,10],en:'Minor pentatonic',uk:'Мінорна пентатоніка'},
-  {iv:[0,2,4,7,9],en:'Major pentatonic',uk:'Мажорна пентатоніка'},
-  {iv:[0,3,5,6,7,10],en:'Blues (minor)',uk:'Блюзова (мінорна)'},
-  {iv:[0,2,3,5,7,8,11],en:'Harmonic minor',uk:'Гармонічний мінор'},
-  {iv:[0,2,3,5,7,9,11],en:'Melodic minor',uk:'Мелодичний мінор'},
+  {iv:[0,2,4,5,7,9,11],en:'Major (Ionian)',uk:'Мажор (іонійський)',             grp:'basic', kn:{en:'major',uk:'мажор'}},
+  {iv:[0,2,3,5,7,9,10],en:'Dorian',uk:'Дорійський',                             grp:'mode',  kn:{en:'Dorian',uk:'дорійський'}},
+  {iv:[0,1,3,5,7,8,10],en:'Phrygian',uk:'Фригійський',                          grp:'mode',  kn:{en:'Phrygian',uk:'фригійський'}},
+  {iv:[0,2,4,6,7,9,11],en:'Lydian',uk:'Лідійський',                             grp:'mode',  kn:{en:'Lydian',uk:'лідійський'}},
+  {iv:[0,2,4,5,7,9,10],en:'Mixolydian',uk:'Міксолідійський',                    grp:'mode',  kn:{en:'Mixolydian',uk:'міксолідійський'}},
+  {iv:[0,2,3,5,7,8,10],en:'Aeolian (natural minor)',uk:'Еолійський (нат. мінор)', grp:'basic', kn:{en:'minor',uk:'мінор'}},
+  {iv:[0,1,3,5,6,8,10],en:'Locrian',uk:'Локрійський',                           grp:'mode',  kn:{en:'Locrian',uk:'локрійський'}},
+  {iv:[0,3,5,7,10],en:'Minor pentatonic',uk:'Мінорна пентатоніка',              grp:'basic', kn:{en:'minor pent.',uk:'мін. пентатоніка'}},
+  {iv:[0,2,4,7,9],en:'Major pentatonic',uk:'Мажорна пентатоніка',               grp:'basic', kn:{en:'major pent.',uk:'маж. пентатоніка'}},
+  {iv:[0,3,5,6,7,10],en:'Blues (minor)',uk:'Блюзова (мінорна)',                 grp:'basic', kn:{en:'blues',uk:'блюз'}},
+  {iv:[0,2,3,5,7,8,11],en:'Harmonic minor',uk:'Гармонічний мінор',              grp:'mode',  kn:{en:'harmonic minor',uk:'гарм. мінор'}},
+  {iv:[0,2,3,5,7,9,11],en:'Melodic minor',uk:'Мелодичний мінор',                grp:'mode',  kn:{en:'melodic minor',uk:'мел. мінор'}},
 ];
 function sName(s){ return lang==='en'?s.en:s.uk; }
+function sKeyName(s){ return lang==='en'?s.kn.en:s.kn.uk; }
 function isMajorFamily(i){ return SCALES[i].iv.includes(4); }
 function scalesOverChord(rootPc, chordPcs){
   const need=chordPcs.map(pc=>mod(pc,12));
@@ -3502,9 +3466,21 @@ function renderScales(){
     }, scaleLegendHTML(), '', win);
   }
 }
-function buildScSelect(){
-  const sel=document.getElementById('sc-select'); sel.innerHTML='';
-  SCALES.forEach((s,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=sName(s); if(i===scIdx)o.selected=true; sel.appendChild(o); });
+let scFamsAdv=false;
+function buildScFams(){
+  const c=document.getElementById('sc-fams'); if(!c) return;
+  const adv = scFamsAdv || SCALES[scIdx].grp!=='basic';
+  const grp=g=>'<div class="group">'+SCALES.map((s,i)=>s.grp!==g ? '' :
+    `<button type="button" class="btn${i===scIdx?' active':''}" data-sc="${i}" aria-pressed="${i===scIdx}">${sName(s)}</button>`).join('')+'</div>';
+  c.innerHTML = grp('basic') + (adv ? grp('mode') : '');
+  const tog=document.getElementById('sc-fams-toggle');
+  if(tog){ tog.setAttribute('aria-expanded', adv?'true':'false'); tog.textContent=(adv?t('qual_less')+' ▴':t('qual_more')+' ▾'); }
+}
+function setScale(i){
+  if(!SCALES[i]) return;
+  scIdx=i; scOverlay=null;
+  renderActiveContext(); renderStrip(); drillKeyChanged();
+  saveState();
 }
 function buildScPos(){
   const caged=isCAGEDScale();
@@ -3555,19 +3531,21 @@ function buildDia(rootPc, sc, flat){
 function ctxCofMinor(){ return !isMajorFamily(scIdx); }
 function ctxCofSel(){ const minor=ctxCofMinor(); const i=COF.findIndex(c=>(minor?c.minPc:c.majPc)===keyRoot); return i<0?0:i; }
 function pcToRootLabel(pc){ const i=ROOTS.findIndex(r=> (FLAT_ROOTS[r]!==undefined?FLAT_ROOTS[r]:NOTES.indexOf(r))===pc ); return ROOTS[i]; }
-function activateRoot(container, pc){ [...container.children].forEach(b=>{ b.classList.toggle('active', +b.dataset.pc===pc); }); }
+function activateRoot(container, pc){ [...container.children].forEach(b=>{ const on=+b.dataset.pc===pc; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on?'true':'false'); }); }
 function cofChordRing(){
   const iv=QUALITIES[chQual].iv, ring = iv[2]!==7 ? null : iv[1]===4 ? 'maj' : iv[1]===3 ? 'min' : null;
   return (chRoot===keyRoot && ring===(ctxCofMinor()?'min':'maj')) ? null : ring;
 }
+let _cofArcKey='';
 function cofXY(i,r){ const a=(-90+i*30)*Math.PI/180; return [180+r*Math.cos(a), 180+r*Math.sin(a)]; }
 function renderCircle(){
   const cofSel=ctxCofSel(), cofMinor=ctxCofMinor();
   const RO=132, RI=85, rMaj=27, rMin=21, dom=(cofSel+1)%12, sub=(cofSel+11)%12, ring=cofChordRing();
+  const arcKey=keyRoot+':'+scIdx, still=arcKey===_cofArcKey; _cofArcKey=arcKey;
   let s=`<circle cx="180" cy="180" r="${RO}" fill="none" stroke="var(--border)" stroke-width="1"/><circle cx="180" cy="180" r="${RI}" fill="none" stroke="var(--border)" stroke-width="1"/>`;
   const arcR=cofMinor?RI:RO;
   const [asx,asy]=cofXY(sub,arcR), [atx,aty]=cofXY(cofSel,arcR), [adx,ady]=cofXY(dom,arcR);
-  s+=`<path class="cof-arc" d="M ${asx.toFixed(1)} ${asy.toFixed(1)} L ${atx.toFixed(1)} ${aty.toFixed(1)} L ${adx.toFixed(1)} ${ady.toFixed(1)}"/>`;
+  s+=`<path class="cof-arc${still?' still':''}" d="M ${asx.toFixed(1)} ${asy.toFixed(1)} L ${atx.toFixed(1)} ${aty.toFixed(1)} L ${adx.toFixed(1)} ${ady.toFixed(1)}"/>`;
   COF.forEach(c=>{
     const i=c.i;
     let mfill='var(--bg-panel-2)', mtext='var(--text)', nfill='var(--bg-panel)', ntext='var(--text-dim)';
@@ -3614,23 +3592,21 @@ function applyLang(){
   document.documentElement.lang = lang;
   document.querySelectorAll('[data-i18n]').forEach(el=>{ const k=el.getAttribute('data-i18n'); if(I18N[lang][k]!==undefined) el.textContent=I18N[lang][k]; });
   document.title = lang==='en' ? 'Euterpe — Guitar Studio' : 'Euterpe — Гітарна студія';
-  document.getElementById('cof-open').textContent=t('b_open_scales');
-  { const ch=document.getElementById('cof-harmony'); if(ch) ch.textContent=t('b_open_harmony'); }
   const setPair=(onId,offId)=>{ const a=document.getElementById(onId),b=document.getElementById(offId); if(a){a.classList.add('active');a.setAttribute('aria-pressed','true');} if(b){b.classList.remove('active');b.setAttribute('aria-pressed','false');} };
   gMode==='names'?setPair('g-names','g-deg'):setPair('g-deg','g-names');
   applyNtFilter();
-  buildChQuals(); buildArpQuals(); buildArpPos(); buildTrSets(); buildTrInvs(); buildScSelect(); buildScPos();
-  buildToolbar(); setMetroLabel(); setLoopLabel(); setBandLabels(); setBackingToggle(); applyBackingPanel();
+  buildArpPos(); buildTrSets(); buildTrInvs(); buildScPos();
+  buildToolbar(); setMetroLabel(); setBandLabels(); setBackingToggle();
   buildSeqPresets(); renderSeq(); setSeqTransport();
   { const o=document.getElementById('cl-overlay'); if(o && !o.hidden) renderChangelog(); }
   renderPractice();
   refreshDrillsLang();   
   applyDrillCtx();
-  setHView(hView); setScView(scView); updateGlobalPlay();
+  setHView(hView); setScView(scView);
+  renderStrip();   
   applyAudioAvailability();
   micRefreshLang();
   calRefreshLang();
-  activateRoot(document.getElementById('g-roots'), keyRoot);
   document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
   document.querySelectorAll('.ph-help').forEach(b=>b.setAttribute('aria-label', t('ph_help')));
   { const bl=document.getElementById('board-lens'); if(bl) bl.setAttribute('aria-label', t('lbl_view')); }
@@ -3652,19 +3628,13 @@ function buildToolbar(){
   buildTuner();
   const lb=document.getElementById('tb-lefty'); lb.classList.toggle('active', lefty); lb.setAttribute('aria-pressed', lefty);
   applyA11y();   
-  applyToolbarState();
+  applySheets();
 }
 function setTempo(bpm){
   tempo = Math.max(40, Math.min(200, Math.round(bpm)));
   const r=document.getElementById('tb-tempo');  if(r) r.value=tempo;
   const b=document.getElementById('tb-bpm');    if(b) b.textContent=tempo+' BPM';
-  const d=document.getElementById('drill-ctx-bpm'); if(d) d.textContent=tempo+' BPM';
-}
-function applyToolbarState(){
-  const tb=document.getElementById('toolbar'), tg=document.getElementById('tb-toggle');
-  tb.classList.toggle('collapsed', !toolbarOpen);
-  tg.classList.toggle('open', toolbarOpen);
-  tg.setAttribute('aria-expanded', toolbarOpen);
+  paintTempoChip();
 }
 function midiLabel(m){ return NOTES[mod(m,12)].replace('#','♯') + (Math.floor(m/12)-1); }
 function buildCustomTuning(){
@@ -3676,11 +3646,6 @@ function buildCustomTuning(){
   }).join('');
 }
 function applyCustomTuningVis(){ const g=document.getElementById('tb-custom'); if(g) g.hidden = !TUNINGS[tuningIdx].custom; }
-function applyBackingPanel(){
-  const p=document.getElementById('backing-panel'), tg=document.getElementById('backing-toggle');
-  if(p) p.classList.toggle('collapsed', !backingOpen);
-  if(tg){ tg.classList.toggle('open', backingOpen); tg.setAttribute('aria-expanded', backingOpen); }
-}
 function applyShapesPanel(){
   const body=document.getElementById('shapes-body'), tg=document.getElementById('shapes-toggle');
   if(body) body.style.display = shapesOpen ? '' : 'none';
@@ -3763,7 +3728,7 @@ const svIdx = arr => v => Number.isInteger(v) && arr[v]!==undefined ? v : undefi
 function savedFields(){ return [
   ['lang',         svOneOf('uk','en'),                    ()=>lang,         v=>{ lang=v; }],
   ['mode',         svOneOf('reference','practice'),       ()=>currentMode,  v=>{ currentMode=v; }],
-  ['tab',          svOneOf('harmony','scales','circle'),  ()=>currentTab,   v=>{ currentTab=v; }],
+  ['tab',          svOneOf('harmony','scales'),           ()=>currentTab,   v=>{ currentTab=v; }],
   ['tuningIdx',    svIdx(TUNINGS),                        ()=>tuningIdx,    v=>{ tuningIdx=v; }],
   ['customTuning', v=>Array.isArray(v) && v.length===6 && v.every(m=>svInt(TUNE_LO, TUNE_HI)(m)!==undefined) ? v.slice() : undefined,
                                                           ()=>customTuning, v=>{ customTuning=v; }],
@@ -3807,6 +3772,7 @@ function savedFields(){ return [
                        .map(st=>({pc:st.pc, lbl:(typeof st.lbl==='string'?st.lbl:ROOTS[st.pc]), qi:st.qi, bars:([1,2,4].includes(st.bars)?st.bars:1)}))
                        : undefined,                       ()=>seq,          v=>{ seq=v; }],
   ['seqLoopOn',    svBool,                                ()=>seqLoopOn,    v=>{ seqLoopOn=v; }],
+  ['playSrc',      svOneOf('chord','prog'),               ()=>playSrc,      v=>{ playSrc=v; }],
   ['bassOn',       svBool,                                ()=>bassOn,       v=>{ bassOn=v; }],
   ['grooveOn',     svBool,                                ()=>grooveOn,     v=>{ grooveOn=v; }],
   ['calMs',        svNum(0, CAL_MAX_MS),                  ()=>calMs,        v=>{ calMs=v; }],
@@ -3822,6 +3788,7 @@ function migrateSave(raw){
   if(s.mode==='ear') s.mode='practice';                        
   if(s.tab==='chords') s.tab='harmony';                        
   if(s.tab==='notes'){ s.tab='scales'; s.scView='notes'; }     
+  if(s.tab==='circle'){ s.tab='scales'; s.keySheet=true; }
   if(s.tab==='triads' || s.hView==='triads'){
     if(s.tab==='triads') s.tab='harmony';
     s.hView='chords'; s.chTriads=true; s.chVoicing=0;
@@ -3864,6 +3831,7 @@ function loadState(){
   try{
     const s=migrateSave(raw);
     savedFields().forEach(([k,read,,set])=>{ const v=read(s[k], s); if(v!==undefined) set(v); });
+    if(s.keySheet===true) keySheetOpen=true;
   }catch(e){ devWarn('saved state could not be restored; using defaults', e); return false; }
   return true;
 }
@@ -4078,17 +4046,14 @@ function drillShellEnter(){
   applyDrillCtx();
 }
 function drillRunStarted(){
-  if(!drillSetupOpen) return;
-  drillSetupOpen=false;
+  if(!drillSetupOpen && !drillHintOpen) return;
+  drillSetupOpen=false; drillHintOpen=false;
   applyDrillCtx();
 }
 function applyDrillCtx(){
   const d=activeDrill();
-  const key=!!(d && typeof d.onKey==='function'), tmp=!!(d && d.tempo);
-  const show=(id,on)=>{ const el=document.getElementById(id); if(el) el.hidden=!on; };
-  ['drill-ctx-keylbl','drill-ctx-key'].forEach(id=>show(id,key));
-  ['drill-ctx-tlbl','drill-ctx-tempo'].forEach(id=>show(id,tmp));
-  if(tmp) setTempo(tempo);
+  const q=document.getElementById('drill-ctx-quit');
+  if(q){ q.setAttribute('aria-label', t('drill_quit')); q.title=t('drill_quit'); }
   const nm=document.getElementById('drill-ctx-name');
   if(nm){ const tr=curTrackObj(); nm.textContent = tr && tr.label ? t(tr.label) : ''; }
   const hasSetup=!!(d && d.setup && document.getElementById(d.setup));
@@ -4115,7 +4080,14 @@ function applyDrillCtx(){
     if(d && typeof d.mic==='function'){ try{ on=!!d.mic(); }catch(_){ on=false; } }
     mb.hidden=!on;
   }
+  applyCalBox(drillMicOn());
   sessionPaint();
+  renderStrip();
+}
+function drillMicOn(){
+  const d=activeDrill();
+  if(!d || typeof d.micOn!=='function') return false;
+  try{ return !!d.micOn(); }catch(_){ return false; }
 }
 function drillMicToggle(){
   const d=activeDrill();
@@ -4570,11 +4542,12 @@ function scoredRun(cfg){
     toggle(){
       st.on = !st.on; st.score = null;
       status(st.on && !calMeasured() ? 'on_needcal' : null);
+      if(st.on && !calMeasured()) calOffer();
       if(!st.on) unlisten();
     },
     setOn(v){ st.on = !!v; },
     
-    begin(){ st.grid = []; st.heard = []; st.score = null; st.live = true; if(st.on) listen(); },
+    begin(){ st.grid = []; st.heard = []; st.score = null; st.live = true; if(st.on){ if(!calMeasured()) calOffer(); listen(); } },
     
     mark(when){ if(st.on && st.live && st.grid.length < SC_MAX_MARKS) st.grid.push(when); },
     
@@ -4587,7 +4560,8 @@ function scoredRun(cfg){
     render(){
       const mb = document.getElementById(cfg.micId);
       if(mb){
-        mb.textContent = t('on_listen');
+        mb.textContent = '🎤';
+        mb.setAttribute('aria-label', t('on_listen')); mb.title = t('on_listen');
         mb.classList.toggle('active', st.on);
         mb.setAttribute('aria-pressed', st.on ? 'true' : 'false');
       }
@@ -4613,6 +4587,8 @@ const CAL_MAX_MS = 400;
 let calMs = 0;               
 let calKnown = false;        
 let calRun = null;           
+let calOpen = false;         
+let calDeclined = false;     
 
 
 function calOffsetSec(){ return calMs/1000; }
@@ -4691,6 +4667,24 @@ function calMeasured(){ return calKnown; }
 function calRender(){
   const v=document.getElementById('cal-val'); if(v) v.textContent=calMs+' '+t('on_ms');
   const s=document.getElementById('cal-slider'); if(s && String(s.value)!==String(calMs)) s.value=calMs;
+  const b=document.getElementById('drill-ctx-cal');
+  if(b){ b.textContent='⏱ '+(calKnown ? calMs+' '+t('on_ms') : '?'); b.setAttribute('aria-label', t('cal_label')); b.title=t('cal_label'); }
+  const c=document.getElementById('cal-close'); if(c) c.textContent=t(calKnown ? 'drill_done' : 'cal_later');
+}
+
+function calOffer(){ if(!calKnown && !calDeclined) calOpen=true; }
+
+function calBoxToggle(){
+  calOpen=!calOpen;
+  if(!calOpen && !calKnown) calDeclined=true;
+  applyDrillCtx();
+}
+
+function applyCalBox(micOn){
+  const box=document.getElementById('cal-box'); if(box) box.hidden=!(micOn && calOpen);
+  const b=document.getElementById('drill-ctx-cal');
+  if(b){ b.hidden=!micOn; b.setAttribute('aria-expanded', micOn && calOpen ? 'true' : 'false'); }
+  calRender();
 }
 
 function calStatus(key, ms){
@@ -4713,13 +4707,18 @@ function calRefreshLang(){
 }
 
 (function initCalibration(){
-  const row=document.getElementById('cal-row');
-  if(!row) return;
-  if(!micSupported()){ if(row.parentNode) row.parentNode.removeChild(row); return; }
+  const box=document.getElementById('cal-box');
+  if(!box) return;
+  if(!micSupported()){
+    ['cal-box','drill-ctx-cal'].forEach(id=>{ const el=document.getElementById(id); if(el && el.parentNode) el.parentNode.removeChild(el); });
+    return;
+  }
   const run=document.getElementById('cal-run');
   const slider=document.getElementById('cal-slider');
+  const close=document.getElementById('cal-close'); if(close) close.onclick=calBoxToggle;
   if(slider) slider.oninput=()=>calSetMs(slider.value, true);
   if(run) run.onclick=async ()=>{
+    const d=activeDrill(); if(d && d.play && typeof d.playing==='function' && d.playing()){ d.play(); applyDrillCtx(); }
     run.disabled=true;
     calStatus('cal_running');
     const r=await calRunTest();
@@ -4816,7 +4815,6 @@ function renderEarPrompt(){
   const p=document.getElementById('ear-prompt'); if(p) p.textContent=ear.cfg.prompt();
   const c=document.getElementById('ear-count'); if(c) c.textContent=Math.min(ear.done+1, ear.total)+' / '+ear.total;
   const h=document.getElementById('ear-hint'); if(h) h.textContent=t('ear_hint');
-  const rp=document.getElementById('ear-replay'); if(rp){ rp.innerHTML='&#9654; '+t('ear_replay'); rp.setAttribute('aria-label', t('ear_replay')); }
   const fb=document.getElementById('ear-feedback'); if(fb){ fb.textContent=''; fb.className='ear-feedback'; }
   const nx=document.getElementById('ear-next'); if(nx) nx.hidden=true;
   renderEarChoices();
@@ -4860,6 +4858,7 @@ function earReview(){
 function refreshEarLang(){ if(ear && !ear.finished && !ear.answered) renderEarPrompt(); }
 registerDrill({ id:'ear', area:'ear-area',
                 begin:beginEar, end:endEar, isActive:()=>!!ear, refreshLang:refreshEarLang,
+                play:earReplay, playKey:()=>'ear_replay',
                 tracks:[
                   { id:'interval', kind:'recall', items:'interval', sess:'ear-interval', label:'ear_intervals', scored:'acc', arg:'interval' },
                   { id:'chordq',   kind:'recall', items:'chordq',   sess:'ear-chordq',   label:'ear_chords',    scored:'acc', arg:'chordq' }
@@ -4867,7 +4866,6 @@ registerDrill({ id:'ear', area:'ear-area',
 (function initEar(){
   const area=document.getElementById('ear-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('ear-replay', earReplay);
   wire('ear-next',   earNext);
   const ch=document.getElementById('ear-choices');
   if(ch) ch.addEventListener('click', e=>{ const b=e.target.closest('.ear-choice'); if(b && !b.disabled) earAnswer(b.dataset.key); });
@@ -5047,7 +5045,6 @@ function renderTarget(){
   if(beats) beats.innerHTML=Array.from({length:barBeats()},(_,k)=>`<span class="co-beat" data-k="${k}"></span>`).join('');
   renderTargetStage(tgDrill.bars[tgDrill.bar], tgDrill.bars[(tgDrill.bar+1)%tgDrill.bars.length]);
   const h=document.getElementById('tg-hits'); if(h) h.textContent = tgDrill.playing ? ('↻ '+tgDrill.cycles) : '';
-  const pb=document.getElementById('tg-play'); if(pb){ pb.innerHTML=(tgDrill.playing?'&#9632; ':'&#9654; ')+t(tgDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', tgDrill.playing); pb.setAttribute('aria-pressed', tgDrill.playing?'true':'false'); }
   const hint=document.getElementById('tg-hint'); if(hint) hint.textContent=t(tgScore.on()?'co_hint_scored':'co_hint');
   tgScore.render();
   applyDrillCtx();
@@ -5063,13 +5060,14 @@ function tgPulseBeat(k){
   document.querySelectorAll('#tg-beats .co-beat').forEach(d=>d.classList.toggle('on', +d.dataset.k===k));
 }
 function refreshTargetLang(){ if(tgDrill){ renderTarget(); tgScore.refreshLang(); } }
-registerDrill({ id:'overchanges', area:'tg-area', tempo:true,   
+registerDrill({ id:'overchanges', area:'tg-area', tempo:true, key:true,   
+                play:targetToggle, playing:()=>!!(tgDrill && tgDrill.playing),
                 tracks:[
                   { id:'comp', kind:'perf', sess:'comp', better:'high', unit:'bars', label:'drill_comp', scored:'mic' }
                 ],
                 begin:beginComp, end:endComp, isActive:()=>!!tgDrill, refreshLang:refreshTargetLang,
                 setup:'tg-setup',
-                mic:()=>tgScore.available(),
+                mic:()=>tgScore.available(), micOn:()=>tgScore.on(),
                 onMic:()=>{ if(tgDrill&&tgDrill.playing) targetStop(); tgScore.toggle(); renderTarget(); },
                 onKey:()=>{ if(!tgDrill) return;
                             tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]);
@@ -5077,7 +5075,6 @@ registerDrill({ id:'overchanges', area:'tg-area', tempo:true,
                             renderTarget(); } });
 (function initOverChanges(){
   const area=document.getElementById('tg-area'); if(!area) return;
-  const pl=document.getElementById('tg-play'); if(pl) pl.onclick=targetToggle;
   const pg=document.getElementById('tg-progs');
   if(pg) pg.addEventListener('click', e=>{ const btn=e.target.closest('.tg-prog'); if(btn){ tgIdx=+btn.dataset.i; if(tgDrill){ tgDrill.presetIdx=tgIdx; tgDrill.bars=tgBuildBars(SEQ_PRESETS[tgIdx]); if(tgDrill.bar>=tgDrill.bars.length) tgDrill.bar=0; } renderTarget(); } });
 })();
@@ -5171,6 +5168,7 @@ function renderCm(){
   if(cmDrill.phase==='setup') renderCmSetup();
   else if(cmDrill.phase==='run') renderCmActive();
   else renderCmSummary();
+  applyDrillCtx();     
 }
 function renderCmSetup(){
   if(!cmDrill) return;
@@ -5182,7 +5180,6 @@ function renderCmSetup(){
   if(ck){ ck.classList.toggle('active', cmClick); ck.setAttribute('aria-pressed', cmClick?'true':'false'); ck.innerHTML='&#9833; '+t('cm_click'); }
   const bl=document.getElementById('cm-setup-best');
   if(bl){ const b=cmPairBest(cmDrill.pairIdx); bl.textContent = b>0 ? (t('cm_best')+' · '+b+' '+t('cm_cpm').toLowerCase()) : ''; }
-  const sb=document.getElementById('cm-start-btn'); if(sb) sb.innerHTML='&#9654; '+t('cm_start');
 }
 function cmChordBox(c){
   const q=c.q, funcMap={};
@@ -5199,7 +5196,6 @@ function renderCmActive(){
   renderCmTime(); renderCmCount();
   const sub=document.getElementById('cm-sub'); if(sub) sub.textContent=t('cm_tap_hint');
   const ut=document.getElementById('cm-untap'); if(ut) ut.innerHTML='&minus; '+t('cm_undo');
-  const st=document.getElementById('cm-stop'); if(st) st.textContent=t('cm_stop');
 }
 function renderCmTime(){ const tm=document.getElementById('cm-timer'); if(tm && cmDrill) tm.textContent=cmFmtTime(cmDrill.remaining); }
 function renderCmCount(){
@@ -5223,14 +5219,15 @@ function renderCmSummary(){
 }
 function refreshChangesLang(){ if(cmDrill) renderCm(); }
 registerDrill({ id:'changes', area:'cm-area', tempo:true,   
+                play:()=>{ if(cmDrill && cmDrill.phase==='run') finishChanges(); else cmBegin(); },
+                playing:()=>!!(cmDrill && cmDrill.phase==='run'),
+                playKey:()=>(cmDrill && cmDrill.phase==='run') ? 'cm_stop' : 'cm_start',
                 tracks:[{ id:'changes', kind:'perf', sess:'changes', label:'drill_changes',
                           better:'high', unit:'cpm' }],
                 begin:beginChanges, end:endChanges, isActive:()=>!!cmDrill, refreshLang:refreshChangesLang });
 (function initChanges(){
   const area=document.getElementById('cm-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('cm-start-btn', cmBegin);
-  wire('cm-stop',      finishChanges);   
   wire('cm-tally',     cmTap);
   wire('cm-untap',     cmUntap);
   wire('cm-click',     ()=>{ cmClick=!cmClick; renderCmSetup(); });
@@ -5345,7 +5342,6 @@ function renderStrum(){
   toggle('sp-accent', spAccent, 'sp_accent');
   toggle('sp-mute',   spMute,   'sp_mute');
   toggle('sp-band',   spBand,   'sp_band');
-  const pb=document.getElementById('sp-play'); if(pb){ pb.innerHTML=(spDrill.playing?'&#9632; ':'&#9654; ')+t(spDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', spDrill.playing); pb.setAttribute('aria-pressed', spDrill.playing?'true':'false'); }
   const ck=document.getElementById('sp-click'); if(ck){ ck.classList.toggle('active', spClick); ck.setAttribute('aria-pressed', spClick?'true':'false'); ck.innerHTML='&#9833; '+t('cm_click'); }
   const hint=document.getElementById('sp-hint'); if(hint) hint.textContent=t(spScore.on()?'sp_hint_scored':'sp_hint');
   spScore.render();
@@ -5366,10 +5362,12 @@ function spHighlightSlot(slot){
 }
 function refreshStrumLang(){ if(spDrill){ renderStrum(); spScore.refreshLang(); } }
 registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',   
+                chord:true,   
+                play:spToggle, playing:()=>!!(spDrill && spDrill.playing),
                 tracks:[{ id:'strum', kind:'perf', sess:'strum', label:'drill_strum',
                           better:'high', unit:'bars', scored:'mic' }],
                 begin:beginStrum, end:endStrum, isActive:()=>!!spDrill, refreshLang:refreshStrumLang,
-                mic:()=>spScore.available(),
+                mic:()=>spScore.available(), micOn:()=>spScore.on(),
                 onMic:()=>{ if(spDrill&&spDrill.playing) spStop();
                             spScore.toggle();
                             if(spScore.on() && !spClick && !spBand) spClick=true;
@@ -5378,7 +5376,6 @@ registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',
 (function initStrum(){
   const area=document.getElementById('sp-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('sp-play',   spToggle);
   wire('sp-click',  ()=>{ spClick=!spClick;   renderStrum(); });
   wire('sp-accent', ()=>{ spAccent=!spAccent; renderStrum(); });
   wire('sp-mute',   ()=>{ spMute=!spMute;     renderStrum(); });
@@ -5493,7 +5490,6 @@ function renderTiming(){
   const tt=document.getElementById('sd-title'); if(tt) tt.textContent=noteTxt(keyLbl)+' · '+sName(SCALES[scIdx]);
   const nb=document.getElementById('sd-notes'); if(nb){ nb.textContent=t('sd_notes'); nb.classList.toggle('active', sdNotes); nb.setAttribute('aria-pressed', sdNotes?'true':'false'); }
   renderSdGrid();
-  const pb=document.getElementById('sd-play'); if(pb){ pb.innerHTML=(sd.playing?'&#9632; ':'&#9654; ')+t(sd.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', sd.playing); pb.setAttribute('aria-pressed', sd.playing?'true':'false'); }
   const hint=document.getElementById('sd-hint'); if(hint) hint.textContent=t(sdScore.on()?'sd_hint_scored':'sd_hint');
   sdScore.render();
   applyDrillCtx();     
@@ -5541,17 +5537,17 @@ function refreshTimingLang(){
   renderTiming();
   sdScore.refreshLang();
 }
-registerDrill({ id:'timing', area:'sd-area', tempo:true, setup:'sd-setup',
+registerDrill({ id:'timing', area:'sd-area', tempo:true, key:true, setup:'sd-setup',
+                play:sdToggle, playing:()=>!!(sd && sd.playing),
                 tracks:[{ id:'timing', kind:'perf', sess:'timing', label:'drill_timing',
                           better:'high', unit:'bars', scored:'mic' }],
                 begin:beginTiming, end:endTiming, isActive:()=>!!sd, refreshLang:refreshTimingLang,
-                mic:()=>sdScore.available(),
+                mic:()=>sdScore.available(), micOn:()=>sdScore.on(),
                 onMic:()=>{ if(sd&&sd.playing) sdStop(); sdScore.toggle(); renderTiming(); },
                 onKey:()=>{ if(!sd) return; sdRenderBoard(); sdRestart(); renderTiming(); } });
 (function initTiming(){
   const area=document.getElementById('sd-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('sd-play',   sdToggle);
   wire('sd-notes',  ()=>{ sdNotes=!sdNotes; if(!sdNotes && sdLit){ sdLit.classList.remove('on'); sdLit=null; } renderTiming(); });
 })();
 const MT_FFT = 2048;
@@ -6069,18 +6065,157 @@ function renderSessionReport(){
     (runs.length ? rows : rows+'<div class="pp-empty">'+t('sess_none')+'</div>')+
     '<div class="drill-bar"><button type="button" class="btn play" id="sess-close">'+t('drill_done')+'</button></div>';
 }
+const SHEET_IDS   = { key:'sheet-key', chord:'sheet-chord', tempo:'sheet-tempo', play:'backing-panel', settings:'toolbar' };
+const SHEET_CHIPS = { key:'chip-key',  chord:'chip-chord',  tempo:'chip-tempo',  play:'backing-toggle', settings:'tb-toggle' };
+function sheetIsOpen(k){
+  return k==='key' ? keySheetOpen : k==='chord' ? chordSheetOpen : k==='tempo' ? tempoSheetOpen
+       : k==='play' ? backingOpen : k==='settings' ? toolbarOpen : false;
+}
+function setSheetFlag(k, on){
+  if(k==='key') keySheetOpen=on; else if(k==='chord') chordSheetOpen=on; else if(k==='tempo') tempoSheetOpen=on;
+  else if(k==='play') backingOpen=on; else if(k==='settings') toolbarOpen=on;
+}
+function chipOffered(k){
+  if(k==='settings' || currentMode!=='practice') return true;
+  if(k==='play') return false;                     
+  const d=activeDrill(); if(!d) return false;
+  return k==='key' ? !!d.key : k==='chord' ? !!d.chord : k==='tempo' ? !!d.tempo : false;
+}
+function sheetShown(k){ return sheetIsOpen(k) && chipOffered(k); }
+function toggleSheet(k){
+  const on=!sheetShown(k);
+  Object.keys(SHEET_IDS).forEach(o=>setSheetFlag(o, false));
+  if(on && chipOffered(k)) setSheetFlag(k, true);
+  applySheets(); paintSheets();
+  saveState();
+}
+function closeSheets(){
+  if(!Object.keys(SHEET_IDS).some(sheetShown)) return false;
+  Object.keys(SHEET_IDS).forEach(o=>setSheetFlag(o, false));
+  applySheets(); saveState();
+  return true;
+}
+function applySheets(){
+  let any=false;
+  Object.keys(SHEET_IDS).forEach(k=>{
+    const on=sheetShown(k);
+    const el=document.getElementById(SHEET_IDS[k]); if(el) el.hidden=!on;
+    const chip=document.getElementById(SHEET_CHIPS[k]);
+    if(chip){ chip.classList.toggle('open', on); chip.setAttribute('aria-expanded', on?'true':'false'); }
+    any = any || on;
+  });
+  const host=document.getElementById('sheets'); if(host) host.hidden=!any;
+}
+function paintSheets(){
+  if(sheetShown('key'))   repaintKeepingFocus(document.getElementById('sheet-key'), renderKeySheet);
+  if(sheetShown('chord')) repaintKeepingFocus(document.getElementById('sheet-chord'), renderChordSheet);
+  if(sheetShown('play'))  renderPlaySheet();
+  markScrollables();
+}
+const FOCUS_KEYS=['data-deg','data-sc','data-pc','data-i','data-type','aria-label'];
+function repaintKeepingFocus(host, paint){
+  const a=document.activeElement, inside=!!(host && a && a!==host && host.contains(a));
+  const sig=el=>FOCUS_KEYS.map(n=>el.getAttribute(n)).join('|'), was=inside ? sig(a) : null;
+  paint();
+  if(!inside || host.contains(a)) return;
+  const m=[...host.querySelectorAll('button, [tabindex]')].find(el=>sig(el)===was);
+  if(m) m.focus({preventScroll:true});
+}
+function renderKeySheet(){
+  buildScFams();
+  renderCircle();
+  const cd=document.getElementById('cof-cadence'); if(cd) cd.textContent=t('b_cadence').replace('{cad}', keyCadenceName());
+}
+function renderChordSheet(){ renderDegrees(); buildChQuals(); }
+function renderPlaySheet(){
+  segButtons('pl-src', [{label:t('pl_chord')},{label:t('pl_prog')}], playSrc==='prog'?1:0, i=>setPlaySrc(i?'prog':'chord'));
+  setBandLabels();
+}
+function setPlaySrc(v){
+  playSrc = v==='prog' ? 'prog' : 'chord';
+  if(loopClock || seqClock){ stopLoop(); seqStop(); refPlayToggle(); }
+  renderPlaySheet(); renderPlayBtn(); saveState();
+}
+function chipHTML(txt){ return '<span class="chip-val">'+txt+'</span><span class="chev" aria-hidden="true">▾</span>'; }
+function paintTempoChip(){
+  const c=document.getElementById('chip-tempo'); if(!c) return;
+  const m=curMeter().id;
+  c.innerHTML='<span class="chip-ico" aria-hidden="true">♩</span>'+chipHTML(tempo+' · '+m);
+  c.setAttribute('aria-label', t('tb_tempo')+': '+tempo+' BPM, '+m); c.title=t('tb_tempo');
+}
+function renderStrip(){
+  const pr=currentMode==='practice', d=pr ? activeDrill() : null;
+  const show=(id,on)=>{ const el=document.getElementById(id); if(el) el.hidden=!on; };
+  ['key','chord','tempo','play'].forEach(k=>show(SHEET_CHIPS[k], chipOffered(k)));
+  show('chip-play', !pr || !!(d && d.play));
+  const kn=noteTxt(keyLbl)+' '+sKeyName(SCALES[scIdx]);
+  const ck=document.getElementById('chip-key');
+  if(ck){ ck.innerHTML=chipHTML(kn); ck.setAttribute('aria-label', t('strip_key')+': '+kn); ck.title=t('strip_key'); }
+  const cn=noteTxt(chLbl)+QUALITIES[chQual].short;
+  const cc=document.getElementById('chip-chord');
+  if(cc){ cc.innerHTML=chipHTML(cn); cc.setAttribute('aria-label', t('lbl_chord')+': '+cn); cc.title=t('lbl_chord'); }
+  paintTempoChip();
+  activateRoot(document.getElementById('g-roots'), keyRoot);
+  const label=(id,key)=>{ const el=document.getElementById(id); if(el){ el.setAttribute('aria-label', t(key)); el.title=t(key); } };
+  label('backing-toggle', 'pl_h'); label('tb-toggle', 'tb_settings'); label('tb-tuner', 'tuner_open');
+  renderPlayBtn();
+  applySheets(); paintSheets();
+}
+function renderPlayBtn(){
+  const b=document.getElementById('g-play'); if(!b) return;
+  let on=false, txt, tip, toggle=true;
+  if(currentMode==='practice'){
+    const d=activeDrill(); if(!d || !d.play) return;
+    toggle=typeof d.playing==='function';
+    on=toggle && !!d.playing();
+    tip=txt=t(d.playKey ? d.playKey() : (on?'sp_stop':'sp_play'));
+  } else {
+    on=!!(loopClock || seqClock);
+    const prog = seqClock || (playSrc==='prog' && seq.length>0);
+    txt = loopClock ? loopChordLabel() : seqClock ? seqChordName({lbl:chLbl, qi:chQual})
+        : prog ? t('seq_title') : noteTxt(chLbl)+QUALITIES[chQual].short;
+    tip = on ? t('sp_stop') : t(prog ? 'pl_play_prog' : 'pl_play_chord');
+  }
+  b.innerHTML='<span class="strip-pulse" aria-hidden="true"></span><span class="chip-ico" aria-hidden="true">'+(on?'■':'▶')+'</span><span class="chip-txt">'+txt+'</span>';
+  b.classList.toggle('active', on);
+  b.setAttribute('aria-label', tip); b.title=tip;
+  if(toggle) b.setAttribute('aria-pressed', on?'true':'false'); else b.removeAttribute('aria-pressed');
+}
+function stripPlay(){
+  if(currentMode==='practice'){ const d=activeDrill(); if(d && d.play){ d.play(); applyDrillCtx(); } return; }
+  refPlayToggle();
+}
+function placeStrip(){
+  const s=document.getElementById('strip'), slot=document.getElementById(currentMode==='practice' ? 'strip-drill' : 'strip-ref');
+  if(s && slot && s.parentNode!==slot) slot.appendChild(s);
+}
+(function initStrip(){
+  const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
+  Object.keys(SHEET_CHIPS).forEach(k=>wire(SHEET_CHIPS[k], ()=>toggleSheet(k)));
+  wire('g-play', stripPlay);
+  wire('cof-cadence', playCadence);
+  wire('pl-jam', jamToggle);
+  const host=document.getElementById('sheets');
+  if(host) host.addEventListener('click', e=>{
+    const x=e.target.closest('[data-close]'); if(!x) return;
+    const sh=x.closest('.sheet'), k=sh && Object.keys(SHEET_IDS).find(o=>SHEET_IDS[o]===sh.id); if(!k) return;
+    setSheetFlag(k, false); applySheets(); saveState();
+    const chip=document.getElementById(SHEET_CHIPS[k]); if(chip) chip.focus();
+  });
+  const fams=document.getElementById('sc-fams');
+  if(fams) fams.addEventListener('click', e=>{ const b=e.target.closest('[data-sc]'); if(b) setScale(+b.dataset.sc); });
+  wire('sc-fams-toggle', ()=>{ scFamsAdv=!scFamsAdv; buildScFams(); markScrollables(); });
+})();
 function renderActiveContext(){
   if(currentMode!=='reference') return;
   if(currentTab==='harmony'){
-    renderDegrees();
-    if(hView==='arp'){ buildArpQuals(); buildArpPos(); renderArp(); }
-    else { buildChQuals(); renderChords(); }
+    if(hView==='arp'){ buildArpPos(); renderArp(); }
+    else renderChords();
   }
   else if(currentTab==='scales'){
     if(scView==='notes') renderNotes();
-    else { buildScSelect(); buildScPos(); renderScales(); }
+    else { buildScPos(); renderScales(); }
   }
-  else if(currentTab==='circle') renderCircle();
   markScrollables();
 }
 function renderPractice(){
@@ -6105,9 +6240,7 @@ function setKey(pc, lbl, mode){
   chRoot=pc; chLbl=lbl;
   chVoicing=0; scOverlay=null;
   ntRoot=lbl;                                   
-  activateRoot(document.getElementById('g-roots'), keyRoot);
-  { const dk=document.getElementById('drill-ctx-key'); if(dk) activateRoot(dk, keyRoot); }
-  renderActiveContext(); updateGlobalPlay();   
+  renderActiveContext(); renderStrip(); drillKeyChanged();
   saveState();
 }
 buildRootBtns(document.getElementById('g-roots'), keyRoot, (pc,r)=>{ setKey(pc,r); });
@@ -6127,7 +6260,7 @@ function setHView(v){ hView = v==='arp' ? 'arp' : 'chords'; v=hView;
   document.getElementById('harmony-h').textContent = t(head+'_h');
   document.getElementById('harmony-p').textContent = t(head+'_p');
   applyHarmonyExtras();
-  renderActiveContext(); updateGlobalPlay(); saveState();
+  renderActiveContext(); saveState();
 }
 document.getElementById('hv-chords').onclick=()=>setHView('chords');
 document.getElementById('hv-arp').onclick=()=>setHView('arp');
@@ -6137,72 +6270,30 @@ function setScView(v){ scView=v;
   ['scale','notes'].forEach(k=>{ const b=document.getElementById('sv-'+k); b.classList.toggle('active', k===v); b.setAttribute('aria-pressed', k===v?'true':'false'); });
   document.getElementById('scales-h').textContent = t(v==='notes'?'nt_h':'sc_h');
   document.getElementById('scales-p').textContent = t(v==='notes'?'nt_p':'sc_p');
-  applyContextBar();   
-  renderActiveContext(); updateGlobalPlay(); saveState();
+  applyBoardRegion();   
+  renderActiveContext(); saveState();
 }
 document.getElementById('sv-scale').onclick=()=>setScView('scale');
 document.getElementById('sv-notes').onclick=()=>setScView('notes');
-function applyContextBar(){
-  const key = currentTab==='harmony' || currentTab==='scales' || currentTab==='circle';
-  document.getElementById('context-bar').hidden = !key;
-  const cd=document.querySelector('.ctx-display');
-  if(cd) cd.hidden = currentTab==='circle' || (currentTab==='scales' && scView==='notes');
-}
 function applyBoardRegion(){
-  const show = (currentTab==='harmony' || currentTab==='scales');
-  document.getElementById('board-region').hidden = !show;
-  const bm=document.getElementById('board-meta'); if(bm) bm.hidden = !show;   
   const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
   const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
-  document.getElementById('view-head').hidden = !show;
+  const cd=document.getElementById('ctx-display');      if(cd) cd.hidden = currentTab==='scales' && scView==='notes';
   document.getElementById('vh-harmony').hidden = currentTab!=='harmony';
   document.getElementById('vh-scales').hidden  = currentTab!=='scales';
 }
 function applyHarmonyExtras(){
   const on = currentTab==='harmony' && hView==='chords';
-  const el=document.getElementById('harmony-extras'); if(el) el.hidden = !on;
   const sc=document.getElementById('shapes-card'); if(sc) sc.hidden = !on || triadsOn();
   applyShapesPanel();
 }
-function globalPlay(){
-  const boardEl=document.getElementById('board');
-  if(currentTab==='harmony'){
-    if(isBoardMode('triads')){ const v=currentTriadVoicing(); animArpMidi(boardEl, v.midis); }
-    else if(hView==='arp'){ const q=QUALITIES[chQual]; animRun(boardEl, 48+chRoot, q.iv.concat([12])); }   
-    else { const v=currentChordVoicing(); animArpMidi(boardEl, v.midis); }
-  } else if(currentTab==='scales' && scView==='scale'){ const s=SCALES[scIdx]; animRun(boardEl, 48+keyRoot, s.iv.concat([12])); }
-  else if(currentTab==='circle'){
-    const b=48+keyRoot, bt=0.5;
-    keyCadence().forEach((c,i)=>{ const base=b+c.off; c.iv.forEach((x,j)=>pluck(base+x, i*bt + j*0.018, Math.max(0.9, bt*1.4))); });
-  }
+function playCadence(){
+  const b=48+keyRoot, bt=0.5;
+  keyCadence().forEach((c,i)=>{ const base=b+c.off; c.iv.forEach((x,j)=>pluck(base+x, i*bt + j*0.018, Math.max(0.9, bt*1.4))); });
 }
-function updateGlobalPlay(){
-  const b=document.getElementById('g-play');
-  if(b){
-    b.hidden = currentTab==='scales' && scView==='notes';
-    const cadence = currentTab==='circle';
-    const cad=t('b_cadence').replace('{cad}', keyCadenceName());
-    b.innerHTML='&#9654; '+(cadence?cad:t('b_listen'));
-    const tip=cadence?cad:t('b_listen_tip');
-    b.setAttribute('aria-label', tip); b.title=tip;
-  }
-  const lp=document.getElementById('g-loop');
-  if(lp){
-    lp.hidden = !(currentTab==='harmony' && hView==='chords');
-    lp.classList.toggle('active', !!loopClock);
-    lp.setAttribute('aria-pressed', loopClock?'true':'false');
-    lp.innerHTML=(loopClock?'&#9632; ':'&#8635; ')+t('b_loop');
-    const ltip=t(loopClock?'b_loop_stop_tip':'b_loop_tip');
-    lp.setAttribute('aria-label', ltip); lp.title=ltip;
-  }
-}
-document.getElementById('g-play').onclick=globalPlay;
-document.getElementById('g-loop').onclick=loopToggle;
-setLoopLabel();
 buildSeqPresets();
 document.getElementById('seq-add').onclick=seqAddCurrent;
 document.getElementById('seq-clear').onclick=seqClear;
-document.getElementById('seq-play').onclick=seqPlay;
 document.getElementById('seq-loopbtn').onclick=seqLoopToggle;
 document.getElementById('seq-presets').addEventListener('click',e=>{ const b=e.target.closest('[data-p]'); if(b) applyPreset(SEQ_PRESETS[+b.dataset.p]); });
 document.getElementById('seq-strip').addEventListener('click',e=>{
@@ -6235,7 +6326,6 @@ document.getElementById('tr-diagram').addEventListener('click',e=>{
   const dot=e.target.closest('.cd-dot');
   if(dot && dot.dataset.midi!=null){ pluck(parseInt(dot.dataset.midi)); }
 });
-document.getElementById('sc-select').onchange=function(){ scIdx=parseInt(this.value); scOverlay=null; renderActiveContext(); saveState(); };
 document.getElementById('sc-diatonic').addEventListener('click',e=>{
   if(e.target.closest('[data-clear]')){ scOverlay=null; renderScales(); saveState(); return; }
   const b=e.target.closest('.dia'); if(!b) return; const c=diaList[+b.dataset.i];
@@ -6259,8 +6349,6 @@ document.getElementById('cof-svg').addEventListener('keydown',e=>{
   if(e.key!=='Enter'&&e.key!==' ') return;
   const g=e.target.closest('.cof-node'); if(g){ selectCircleNode(g); e.preventDefault(); }
 });
-document.getElementById('cof-open').onclick=function(){ selectTab('scales'); };
-{ const ch=document.getElementById('cof-harmony'); if(ch) ch.onclick=function(){ const d=keyDegrees()[0]; chVoicing=0; setChord(d.rootPc, d.lbl, d.qi); setHView('chords'); selectTab('harmony'); }; }
 document.getElementById('h-degrees').addEventListener('click', e=>{
   const b=e.target.closest('[data-deg]'); if(!b) return;
   const d=keyDegrees()[+b.dataset.deg]; if(!d) return;
@@ -6280,14 +6368,12 @@ function applyHelpState(){
 document.querySelectorAll('.ph-help').forEach(btn=>{ btn.addEventListener('click',()=>{ helpOpen=!helpOpen; applyHelpState(); }); });
 applyHelpState();
 function selectTab(name){
-  currentTab=name;
-  document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active', x.id==='panel-'+name));
+  currentTab = name==='scales' ? 'scales' : 'harmony';
+  document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active', x.id==='panel-'+currentTab));
   applyNav();
   applyAsideState();
-  applyContextBar();
   applyBoardRegion();
   applyHarmonyExtras();
-  updateGlobalPlay();
   renderActiveContext();
   saveState();
 }
@@ -6296,15 +6382,16 @@ function setMode(mode){
   document.body.classList.toggle('mode-reference', currentMode==='reference');
   document.body.classList.toggle('mode-practice', currentMode==='practice');
   applyNav();
+  placeStrip();   
   if(currentMode==='reference'){
     exitAllDrills();
-    applyAsideState(); applyContextBar(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
+    applyAsideState(); applyBoardRegion(); applyHarmonyExtras(); renderActiveContext();
   } else {
     stopReferenceTransport();
     if(!activeDrill()) showDrillHome();
     renderPractice();
   }
-  updateGlobalPlay();
+  renderStrip();
   saveState();
 }
 function navTo(panel){
@@ -6343,7 +6430,7 @@ function applyNav(){
   });
   applyNav();
 })();
-const SEAM_TRACKS = { chords:'comp', scale:'timing', notes:'note', circle:'changes' };
+const SEAM_TRACKS = { chords:'comp', scale:'timing', notes:'note' };
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-seam]'); if(!b) return;
   const track=SEAM_TRACKS[b.dataset.seam]; if(!track) return;
@@ -6361,35 +6448,22 @@ function startReview(track){
 }
 { const h=document.getElementById('practice-progress');
   if(h) h.addEventListener('click', e=>{ const b=e.target.closest('[data-review]'); if(b) startReview(b.dataset.review); }); }
-function jamActive(){ return !!(typeof seqClock!=='undefined' && seqClock) || !!(typeof loopClock!=='undefined' && loopClock); }
-function renderJamBtn(){
-  const on=jamActive();
-  document.querySelectorAll('[data-jam]').forEach(b=>{
-    b.textContent=t(on?'seam_jam_stop':'seam_jam');
-    b.classList.toggle('active', on);
-    b.setAttribute('aria-pressed', on?'true':'false');
-  });
+function refPlayToggle(){
+  if(seqClock) seqStop();
+  else if(loopClock) stopLoop();
+  else { audio(); if(playSrc==='prog' && seq.length) seqPlay(); else loopToggle(); }
+  renderPlayBtn();
 }
-function jamToggle(){
-  if(jamActive()){ if(seqClock) seqStop(); else stopLoop(); renderJamBtn(); return; }
-  audio();
-  if(!bassOn) bassToggle();
-  if(!grooveOn) drumsToggle();
-  if(seq.length){ if(!seqClock) seqPlay(); }
-  else if(!loopClock) loopToggle();
-  renderJamBtn();
-}
-document.querySelectorAll('[data-jam]').forEach(b=>{ b.onclick=jamToggle; });
 function applyAudioAvailability(){
   if(typeof window==='undefined') return true;
   const ok = !!(window.AudioContext || window.webkitAudioContext);
   if(ok){ const w=document.getElementById('audio-warn'); if(w) w.remove(); return true; }
-  ['g-play','g-loop','tb-metro','tb-bass','tb-drums','seq-play','seq-loopbtn'].forEach(id=>{
+  ['g-play','tb-metro','cof-cadence'].forEach(id=>{
     const el=document.getElementById(id); if(el){ el.disabled=true; el.setAttribute('aria-disabled','true'); el.title=t('audio_off'); }
   });
-  const bar=document.querySelector('.tb-bar');
-  if(bar && !document.getElementById('audio-warn')){
-    const w=document.createElement('span'); w.id='audio-warn'; w.className='audio-warn'; w.textContent=t('audio_off'); bar.appendChild(w);
+  const row=document.getElementById('strip-row');
+  if(row && !document.getElementById('audio-warn')){
+    const w=document.createElement('span'); w.id='audio-warn'; w.className='audio-warn'; w.textContent=t('audio_off'); row.appendChild(w);
   }
   devWarn('Web Audio unavailable; playback controls disabled');
   return false;
@@ -6415,7 +6489,7 @@ document.getElementById('tb-tuning').onchange=function(){
     v.onchange=function(){ saveState(); }; } }
 document.getElementById('tb-frets').onchange=function(){ fretRangeIdx=+this.value; renderAllBoards(); saveState(); };
 { const cp=document.getElementById('tb-capo'); if(cp) cp.onchange=function(){ capo=+this.value; renderAllBoards(); saveState(); }; }
-{ const mt=document.getElementById('tb-meter'); if(mt) mt.onchange=function(){ setMeter(+this.value); refreshDrillsLang(); saveState(); }; }
+{ const mt=document.getElementById('tb-meter'); if(mt) mt.onchange=function(){ setMeter(+this.value); paintTempoChip(); refreshDrillsLang(); saveState(); }; }
 function applyA11y(){
   if(typeof document==='undefined' || !document.body) return;
   document.body.classList.toggle('cb-palette', cbPalette);
@@ -6429,17 +6503,12 @@ document.getElementById('tb-lefty').onclick=function(){ lefty=!lefty; this.class
 document.getElementById('tb-tempo').oninput=function(){ setTempo(+this.value); };
 document.getElementById('tb-tempo').onchange=function(){ saveState(); };
 { const step=d=>{ setTempo(tempo+d); saveState(); };
-  const sl=document.getElementById('drill-ctx-slower'); if(sl) sl.onclick=()=>step(-5);
-  const fa=document.getElementById('drill-ctx-faster'); if(fa) fa.onclick=()=>step(5); }
+  const sl=document.getElementById('tb-slower'); if(sl) sl.onclick=()=>step(-5);
+  const fa=document.getElementById('tb-faster'); if(fa) fa.onclick=()=>step(5); }
 document.getElementById('tb-metro').onclick=metroToggle;
 document.getElementById('tb-bass').onclick=bassToggle;
 document.getElementById('tb-drums').onclick=drumsToggle;
-document.getElementById('tb-stop').onclick=function(){ if(seqClock) seqStop(); else stopLoop(); };
-document.getElementById('tb-toggle').onclick=function(){ toolbarOpen=!toolbarOpen; applyToolbarState(); saveState(); };
-document.getElementById('backing-toggle').onclick=function(){ backingOpen=!backingOpen; applyBackingPanel(); saveState(); };
-function qualMoreToggle(){ chQualsAdv=!chQualsAdv; buildChQuals(); buildArpQuals(); markScrollables(); }
-{ const a=document.getElementById('ch-quals-toggle'); if(a) a.onclick=qualMoreToggle;
-  const b=document.getElementById('arp-quals-toggle'); if(b) b.onclick=qualMoreToggle; }
+{ const a=document.getElementById('ch-quals-toggle'); if(a) a.onclick=()=>{ chQualsAdv=!chQualsAdv; buildChQuals(); markScrollables(); }; }
 function renderChangelog(){
   const body=document.getElementById('cl-body'); if(!body) return;
   body.innerHTML = CHANGELOG.map(r=>{
@@ -6472,7 +6541,12 @@ function dismissWelcome(){ const o=document.getElementById('welcome-overlay'); i
   route('wc-go-practice', ()=>navTo('practice'));
   route('wc-go-tune',     micOpen);
   const o=document.getElementById('welcome-overlay'); if(o) o.addEventListener('click',e=>{ if(e.target.id==='welcome-overlay') dismissWelcome(); }); }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeChangelog(); closeKbd(); dismissWelcome(); } });
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  const modal=['cl-overlay','kbd-overlay','welcome-overlay','mic-overlay'].some(id=>{ const o=document.getElementById(id); return o && !o.hidden; });
+  closeChangelog(); closeKbd(); dismissWelcome();
+  if(!modal) closeSheets();
+});
 const NOTE_KEY = { a:9, b:11, c:0, d:2, e:4, f:5, g:7 };
 function transposeKey(delta){ const pc=mod(keyRoot+delta,12); setKey(pc, ROOTS[pc]); }
 document.addEventListener('keydown',e=>{
@@ -6485,22 +6559,20 @@ document.addEventListener('keydown',e=>{
   const refTransport = currentMode!=='practice';
   if(k===' '||k==='Spacebar'){
     if(tg && tg.closest && tg.closest('button,a,[role="button"],[tabindex]')) return;   
-    if(!refTransport) return;
+    const gp=document.getElementById('g-play');
+    if(!gp || gp.disabled || gp.closest('[hidden]')) return;
     e.preventDefault();
-    if(typeof seqClock!=='undefined' && seqClock) seqStop();
-    else if(typeof loopClock!=='undefined' && loopClock) stopLoop();
-    else globalPlay();
+    stripPlay();
     return;
   }
   if(k==='?'){ e.preventDefault(); openKbd(); return; }
   if(k==='1'){ navTo('harmony'); return; }
   if(k==='2'){ navTo('scales'); return; }
-  if(k==='3'){ navTo('circle'); return; }
-  if(k==='4'){ navTo('practice'); return; }
+  if(k==='3'){ navTo('practice'); return; }
   if(k==='['){ transposeKey(-1); return; }
   if(k===']'){ transposeKey(1); return; }
   const lk = k.length===1 ? k.toLowerCase() : '';
-  if(lk==='l'){ const lp=document.getElementById('g-loop'); if(refTransport && lp && !lp.hidden && !lp.disabled) loopToggle(); return; }
+  if(lk==='k'){ if(chipOffered('key')) toggleSheet('key'); return; }
   if(lk==='m'){ const mb=document.getElementById('tb-metro'); if(refTransport && mb && !mb.disabled) metroToggle(); return; }
   if(lk && NOTE_KEY[lk]!==undefined){ const pc=NOTE_KEY[lk]; setKey(pc, ROOTS[pc]); return; }
 });
@@ -6518,10 +6590,7 @@ window.addEventListener('resize', markScrollables);
 try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(markScrollables); }catch(_){}
 applyAudioAvailability();
 applyA11y();   
-{ const dk=document.getElementById('drill-ctx-key');
-  if(dk) buildRootBtns(dk, keyRoot, (pc,r)=>{ setKey(pc,r); drillKeyChanged(); });
-  const dq=document.getElementById('drill-ctx-quit');
-  if(dq) dq.onclick=quitDrill; }
+{ const dq=document.getElementById('drill-ctx-quit'); if(dq) dq.onclick=quitDrill; }
 { const ph=document.getElementById('practice-home');
   if(ph) ph.addEventListener('click', e=>{
     const card=e.target.closest('[data-track]');
@@ -6532,6 +6601,7 @@ applyA11y();
   wire('drill-ctx-setup', drillSetupToggle);
   wire('drill-ctx-help',  drillHintToggle);
   wire('drill-ctx-mic',   drillMicToggle);
+  wire('drill-ctx-cal',   calBoxToggle);
   wire('drill-ctx-skip',  ()=>sessionAdvance()); }
 { const m=document.getElementById('sess-mins');
   if(m) m.addEventListener('click', e=>{
@@ -6549,6 +6619,9 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     APP_VERSION, I18N, QUALITIES, TRIADS, SCALES, COF, FRET_RANGES, SEQ_PRESETS,
     fifthInterval, spellNote, rootParts, simpleName,
     diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey, noteTxt, keyDegrees, keyCadence,
+    renderStrip, toggleSheet, closeSheets, sheetShown, chipOffered, placeStrip, stripPlay, refPlayToggle,
+    setScale, setChordQual, setPlaySrc, playCadence, jamToggle, bandActive, bassToggle, drumsToggle,
+    getPlaySrc:()=>playSrc,
     scalesOverChord, triadQi, currentHarmonyChord,
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,
     cellW, boardWidth, leftFixed, FRET_LO, FRET_HI,
@@ -6566,11 +6639,11 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     sessionEnd, sessionActive, sessionDismiss, sessionClock, renderSessionCard,
     getSession:()=>psess, getSessReport:()=>sessLast,
     getSessMins:()=>sessMins, setSessMins:(m)=>{ sessMins=m; },
-    SEAM_TRACKS, jamToggle, jamActive, renderJamBtn,
+    SEAM_TRACKS,
     trackBadge, paintDrillBadges, renderProgressInto, renderPractice, trendScore,
     selectTab, setMode, setHView, setScView, isBoardMode, loopToggle, seqPlay, seqAddCurrent, applyPreset, setChord, seqClear,
     getSeq:()=>seq, setSeq:(a)=>{ seq=a; renderSeq(); },
-    setTempo, getTempo:()=>tempo, stopReferenceTransport, transportActive, applyContextBar, updateGlobalPlay,
+    setTempo, getTempo:()=>tempo, stopReferenceTransport, transportActive, applyBoardRegion,
     renderAllBoards,
     recordAttempt, dueItems, recordSession, learnerStats, srsInterval, normalizeLearner,
     getLearner:()=>learner, resetLearner:()=>{ learner=newLearner(); }, LEARNER_V,
@@ -6606,7 +6679,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     onOnset, onsetActive, onsetRecent, onsetClear, onsetProcessorSrc,
     ON_REFRACTORY, ON_RATIO, ON_FLOOR, ON_HUMAN_MS, ON_SELF_HITRATE, ON_SELF_MIN_N,
     calOffsetSec, calSetMs, calCancel, calMedian, getCalMs:()=>calMs, CAL_MAX_MS, CAL_MIN_HITS,
-    calMeasured, setCalKnown:(v)=>{ calKnown=!!v; },
+    calMeasured, setCalKnown:(v)=>{ calKnown=!!v; }, calOffer, calBoxToggle, getCalOpen:()=>calOpen,
     scoredRun, SC_TOL_MAX,
     sdScore, spScore, tgScore,
     applyA11y, showWelcome, dismissWelcome,
@@ -6619,7 +6692,8 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     setCtxNow:(t)=>{ if(actx) actx.currentTime=t; },
     setGMode, revealFrets,
     state:()=>({ keyRoot, keyLbl, chRoot, chLbl, scIdx, scView, chQual, chVoicing, chTriads, currentTab, currentMode, hView, gMode, ntRoot,
-                 loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo,
+                 loop:!!loopClock, loopMode, seq:!!seqClock, fretRangeIdx, lang, tempo, playSrc, bassOn, grooveOn,
+                 toolbarOpen, backingOpen, keySheetOpen, chordSheetOpen, tempoSheetOpen,
                  cbPalette, fnShapes, welcomeSeen })
   };
 }

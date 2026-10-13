@@ -163,11 +163,8 @@ function tunerTone(midi){
   _tunerVoice={o, o2, g};
 }
 /* ---- synced visual highlighting ---- */
-let playTimers=[];
-function clearPlayHighlights(){ playTimers.forEach(clearTimeout); playTimers=[]; document.querySelectorAll('.dot.playing').forEach(d=>d.classList.remove('playing')); }
+function clearPlayHighlights(){ document.querySelectorAll('.dot.playing').forEach(d=>d.classList.remove('playing')); }
 function setDotPlaying(boardEl, pc, on){ boardEl.querySelectorAll('.dot').forEach(d=>{ if(d.dataset.midi!=null && mod(parseInt(d.dataset.midi),12)===pc) d.classList.toggle('playing', on); }); }
-function flashAt(boardEl, pc, atMs){ playTimers.push(setTimeout(()=>setDotPlaying(boardEl,pc,true), atMs)); }
-function pulseAt(boardEl, pc, atMs, lenMs){ flashAt(boardEl,pc,atMs); playTimers.push(setTimeout(()=>setDotPlaying(boardEl,pc,false), atMs+lenMs)); }
 
 /* ===================== TRANSPORT SCHEDULER =====================
    "Two clocks": a coarse setInterval wakes every SCHED_MS and queues audio events up to
@@ -218,25 +215,6 @@ function playCue(kind, when){
   else { cueBlip(when, 1500, 0.24, 0.05, 'square'); }                                                                         // count-in tick
 }
 
-/* chord/triad: roll up, each note lights and stays lit, then clears */
-/* arpeggio + scale animations share the visual timer pool */
-/* Listen previews run at a fixed, pleasant rate, NOT the practice tempo: Listen is
-   "what does this sound like", so it shouldn't crawl when you slow the metronome.
-   Loop and progression Play do follow the tempo — they are backings. */
-const PREVIEW_STEP=0.15;
-function animRun(boardEl, base, ivs){
-  clearPlayHighlights();
-  const step=PREVIEW_STEP, dur=Math.min(0.5, step*1.6);
-  ivs.forEach((iv,i)=>{ pluck(base+iv, i*step, dur); pulseAt(boardEl, mod(base+iv,12), i*step*1000, step*1000*0.96); });
-}
-/* Listen for an explicit voicing: arpeggiate its real MIDI notes (low → high) and
-   flash them on the board, so Listen matches the card or triad on screen. */
-function animArpMidi(boardEl, midis){
-  clearPlayHighlights();
-  const step=PREVIEW_STEP;
-  midis.forEach((m,i)=>{ pluck(m, i*step, 1.7); if(boardEl) flashAt(boardEl, mod(m,12), i*step*1000); });
-  playTimers.push(setTimeout(clearPlayHighlights, ((Math.max(1,midis.length)-1)*step + 1.7)*1000));
-}
 /* a strum sweeps low → high (down) or high → low (up), with a small inter-string delay,
    jitter and a brighter top on downstrokes — a sweep, not a stack */
 function strumMidi(midis, when, vel, spread, dir){

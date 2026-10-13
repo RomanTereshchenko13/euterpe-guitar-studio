@@ -133,12 +133,11 @@ function renderStrum(){
   toggle('sp-accent', spAccent, 'sp_accent');
   toggle('sp-mute',   spMute,   'sp_mute');
   toggle('sp-band',   spBand,   'sp_band');
-  const pb=document.getElementById('sp-play'); if(pb){ pb.innerHTML=(spDrill.playing?'&#9632; ':'&#9654; ')+t(spDrill.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', spDrill.playing); pb.setAttribute('aria-pressed', spDrill.playing?'true':'false'); }
   const ck=document.getElementById('sp-click'); if(ck){ ck.classList.toggle('active', spClick); ck.setAttribute('aria-pressed', spClick?'true':'false'); ck.innerHTML='&#9833; '+t('cm_click'); }
   // the hint has to say which tier you're in — and that the guide guitar goes quiet
   const hint=document.getElementById('sp-hint'); if(hint) hint.textContent=t(spScore.on()?'sp_hint_scored':'sp_hint');
   spScore.render();
-  applyDrillCtx();     // the shell owns the mic's visibility
+  applyDrillCtx();     // the shell owns the mic's visibility and the strip's ▶
 }
 function renderStrumGrid(){
   const g=document.getElementById('sp-grid'); if(!g) return;
@@ -157,10 +156,12 @@ function spHighlightSlot(slot){
 function refreshStrumLang(){ if(spDrill){ renderStrum(); spScore.refreshLang(); } }
 
 registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',   // the 8th-note clock is beat()-driven
+                chord:true,   // it strums the chord, so the strip offers the chord
+                play:spToggle, playing:()=>!!(spDrill && spDrill.playing),
                 tracks:[{ id:'strum', kind:'perf', sess:'strum', label:'drill_strum',
                           better:'high', unit:'bars', scored:'mic' }],
                 begin:beginStrum, end:endStrum, isActive:()=>!!spDrill, refreshLang:refreshStrumLang,
-                mic:()=>spScore.available(),
+                mic:()=>spScore.available(), micOn:()=>spScore.on(),
                 // stop first: switching tiers mid-run would change what a score in progress measures
                 onMic:()=>{ if(spDrill&&spDrill.playing) spStop();
                             spScore.toggle();
@@ -168,13 +169,12 @@ registerDrill({ id:'strum', area:'sp-area', tempo:true, setup:'sp-setup',   // t
                             // nothing to play against — turn the click on
                             if(spScore.on() && !spClick && !spBand) spClick=true;
                             renderStrum(); },
-                // the loop reads currentChordVoicing() live, so a key change only needs a repaint
+                // the loop reads currentChordVoicing() live, so a chord change only needs a repaint
                 onKey:()=>{ if(spDrill) renderStrum(); } });
 
 (function initStrum(){
   const area=document.getElementById('sp-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('sp-play',   spToggle);
   wire('sp-click',  ()=>{ spClick=!spClick;   renderStrum(); });
   wire('sp-accent', ()=>{ spAccent=!spAccent; renderStrum(); });
   wire('sp-mute',   ()=>{ spMute=!spMute;     renderStrum(); });

@@ -75,11 +75,12 @@ function midPulseSec(){ return Math.floor(barBeats()/2)*pulseSec(); }   // the m
 function meterGroupStarts(){ const g=curMeter().groups, s=new Set(); let a=0; for(const n of g){ s.add(a); a+=n; } return s; }
 function setMeter(i){ if(Number.isInteger(i) && i>=0 && i<METERS.length) meterIdx=i; }
 
-/* Settings start closed: they are setup, not actions, and one tap away is the right
-   distance. The choice is persisted. */
+/* The strip's sheets (15-0-strip.js). Settings start closed: they are setup, not
+   actions, and one tap away is the right distance. Settings and the ▶ drawer are
+   persisted; the key, chord and tempo pickers are opened for a pick and never saved. */
 let toolbarOpen = false;
-/* the backing band (metronome + bass/drums) has its own collapsible panel, closed */
 let backingOpen = false;
+let keySheetOpen = false, chordSheetOpen = false, tempoSheetOpen = false;
 /* the chord-shape voicing cards (right rail) are collapsible + persisted, default open */
 let shapesOpen = true;
 /* accessibility: a colour-blind-safe (Okabe–Ito) palette and per-function dot shapes,

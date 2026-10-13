@@ -1,6 +1,6 @@
 /* ===================== Drill registry =====================
    Every drill announces itself here, so the shell (mode switch, home view, language
-   repaint, drill header) iterates DRILLS instead of keeping its own list of drills.
+   repaint, drill header, the strip) iterates DRILLS instead of keeping its own list.
 
    An entry:
      { id, area:'<area element id>',
@@ -8,10 +8,16 @@
        end:fn,                     // stop its clocks, release the mic, drop its state
        isActive:()=>boolean,       // is this drill running right now?
        refreshLang:fn|undefined,   // optional: re-paint an in-flight drill
-       onKey:fn|undefined,         // optional: re-derive from a new context key
-       tempo:true|undefined,       // optional: this drill runs on the shared tempo
+       onKey:fn|undefined,         // optional: re-derive from a new key or chord
+       key:true|undefined,         // optional: it reads the key → the strip's key chip
+       chord:true|undefined,       // optional: it reads the chord → the strip's chord chip
+       tempo:true|undefined,       // optional: it runs on the shared tempo → the tempo chip
+       play:fn|undefined,          // optional: the strip's ▶ in this drill
+       playing:()=>boolean|undefined,  // optional: ▶ is a play/stop toggle (■ while true)
+       playKey:()=>'<i18n key>'|undefined,  // optional: what ▶ says (Start, Replay …)
        setup:'<element id>'|undefined,  // optional: the disclosure the shell folds
        mic:()=>boolean|undefined,  // optional: does it offer a scored tier right now?
+       micOn:()=>boolean|undefined,  // optional: is that tier switched on?
        onMic:fn|undefined,         // optional: the shared mic button was pressed
        tracks:[...] }              // what this drill teaches + how its result is measured
 
@@ -163,26 +169,23 @@ function drillShellEnter(){
   if(tr && !drillSeen[tr]){ drillSeen[tr]=1; saveState(); }
   applyDrillCtx();
 }
-/* Called when a run actually begins (Play / Start): fold the setup — a picker you
-   have already used is the least useful thing on screen while playing. Re-opening
-   it mid-run is one tap. */
+/* Called when a run actually begins (▶): fold the setup and the hint — a picker you have
+   already used and a paragraph you have already read are the least useful things on
+   screen while playing, and the stage moves up under the strip. Re-opening either
+   mid-run is one tap. */
 function drillRunStarted(){
-  if(!drillSetupOpen) return;
-  drillSetupOpen=false;
+  if(!drillSetupOpen && !drillHintOpen) return;
+  drillSetupOpen=false; drillHintOpen=false;
   applyDrillCtx();
 }
 
-/* The header is derived from the running drill: the key picker shows only for a drill
-   with onKey(), the tempo stepper only for `tempo:true`, the mic only when mic() says
+/* The header and the strip are derived from the running drill: the strip's key, chord
+   and tempo chips and its ▶ from what the entry declares, the mic only when mic() says
    so. A drill declares what it needs and never touches this markup. */
 function applyDrillCtx(){
   const d=activeDrill();
-  const key=!!(d && typeof d.onKey==='function'), tmp=!!(d && d.tempo);
-  const show=(id,on)=>{ const el=document.getElementById(id); if(el) el.hidden=!on; };
-  ['drill-ctx-keylbl','drill-ctx-key'].forEach(id=>show(id,key));
-  ['drill-ctx-tlbl','drill-ctx-tempo'].forEach(id=>show(id,tmp));
-  // the stepper's readout is only painted here, so keep it in step with the header slider
-  if(tmp) setTempo(tempo);
+  const q=document.getElementById('drill-ctx-quit');
+  if(q){ q.setAttribute('aria-label', t('drill_quit')); q.title=t('drill_quit'); }
 
   // the name comes from the track the player opened, not from the drill that hosts it
   const nm=document.getElementById('drill-ctx-name');
@@ -218,8 +221,17 @@ function applyDrillCtx(){
     if(d && typeof d.mic==='function'){ try{ on=!!d.mic(); }catch(_){ on=false; } }
     mb.hidden=!on;
   }
+  // the latency, in the mic flow: its button while the mic is on, its box when offered
+  applyCalBox(drillMicOn());
   // the timed session's block counter and Next, painted by the session module
   sessionPaint();
+  renderStrip();
+}
+/* is the running drill's scored tier switched on? */
+function drillMicOn(){
+  const d=activeDrill();
+  if(!d || typeof d.micOn!=='function') return false;
+  try{ return !!d.micOn(); }catch(_){ return false; }
 }
 // the shared mic button was pressed → hand it to whichever drill is running
 function drillMicToggle(){

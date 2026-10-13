@@ -1,20 +1,23 @@
 /* ===================== SCALES ===================== */
 const SDEG=['1','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'];
+/* Never reorder: scIdx is saved. `grp` is the key sheet's tier (the common keys, then
+   "more"); `kn` is the short form the key chip reads ("A minor"). */
 const SCALES=[
-  {iv:[0,2,4,5,7,9,11],en:'Major (Ionian)',uk:'Мажор (іонійський)'},
-  {iv:[0,2,3,5,7,9,10],en:'Dorian',uk:'Дорійський'},
-  {iv:[0,1,3,5,7,8,10],en:'Phrygian',uk:'Фригійський'},
-  {iv:[0,2,4,6,7,9,11],en:'Lydian',uk:'Лідійський'},
-  {iv:[0,2,4,5,7,9,10],en:'Mixolydian',uk:'Міксолідійський'},
-  {iv:[0,2,3,5,7,8,10],en:'Aeolian (natural minor)',uk:'Еолійський (нат. мінор)'},
-  {iv:[0,1,3,5,6,8,10],en:'Locrian',uk:'Локрійський'},
-  {iv:[0,3,5,7,10],en:'Minor pentatonic',uk:'Мінорна пентатоніка'},
-  {iv:[0,2,4,7,9],en:'Major pentatonic',uk:'Мажорна пентатоніка'},
-  {iv:[0,3,5,6,7,10],en:'Blues (minor)',uk:'Блюзова (мінорна)'},
-  {iv:[0,2,3,5,7,8,11],en:'Harmonic minor',uk:'Гармонічний мінор'},
-  {iv:[0,2,3,5,7,9,11],en:'Melodic minor',uk:'Мелодичний мінор'},
+  {iv:[0,2,4,5,7,9,11],en:'Major (Ionian)',uk:'Мажор (іонійський)',             grp:'basic', kn:{en:'major',uk:'мажор'}},
+  {iv:[0,2,3,5,7,9,10],en:'Dorian',uk:'Дорійський',                             grp:'mode',  kn:{en:'Dorian',uk:'дорійський'}},
+  {iv:[0,1,3,5,7,8,10],en:'Phrygian',uk:'Фригійський',                          grp:'mode',  kn:{en:'Phrygian',uk:'фригійський'}},
+  {iv:[0,2,4,6,7,9,11],en:'Lydian',uk:'Лідійський',                             grp:'mode',  kn:{en:'Lydian',uk:'лідійський'}},
+  {iv:[0,2,4,5,7,9,10],en:'Mixolydian',uk:'Міксолідійський',                    grp:'mode',  kn:{en:'Mixolydian',uk:'міксолідійський'}},
+  {iv:[0,2,3,5,7,8,10],en:'Aeolian (natural minor)',uk:'Еолійський (нат. мінор)', grp:'basic', kn:{en:'minor',uk:'мінор'}},
+  {iv:[0,1,3,5,6,8,10],en:'Locrian',uk:'Локрійський',                           grp:'mode',  kn:{en:'Locrian',uk:'локрійський'}},
+  {iv:[0,3,5,7,10],en:'Minor pentatonic',uk:'Мінорна пентатоніка',              grp:'basic', kn:{en:'minor pent.',uk:'мін. пентатоніка'}},
+  {iv:[0,2,4,7,9],en:'Major pentatonic',uk:'Мажорна пентатоніка',               grp:'basic', kn:{en:'major pent.',uk:'маж. пентатоніка'}},
+  {iv:[0,3,5,6,7,10],en:'Blues (minor)',uk:'Блюзова (мінорна)',                 grp:'basic', kn:{en:'blues',uk:'блюз'}},
+  {iv:[0,2,3,5,7,8,11],en:'Harmonic minor',uk:'Гармонічний мінор',              grp:'mode',  kn:{en:'harmonic minor',uk:'гарм. мінор'}},
+  {iv:[0,2,3,5,7,9,11],en:'Melodic minor',uk:'Мелодичний мінор',                grp:'mode',  kn:{en:'melodic minor',uk:'мел. мінор'}},
 ];
 function sName(s){ return lang==='en'?s.en:s.uk; }
+function sKeyName(s){ return lang==='en'?s.kn.en:s.kn.uk; }
 /* mode family: a major third puts a scale on the circle's major ring, a minor third
    on the minor ring */
 function isMajorFamily(i){ return SCALES[i].iv.includes(4); }
@@ -99,9 +102,25 @@ function renderScales(){
     }, scaleLegendHTML(), '', win);
   }
 }
-function buildScSelect(){
-  const sel=document.getElementById('sc-select'); sel.innerHTML='';
-  SCALES.forEach((s,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=sName(s); if(i===scIdx)o.selected=true; sel.appendChild(o); });
+/* The key sheet's scale picker: the common keys, the modes behind "more" — which opens
+   by itself when the key is in it, like the chord-quality picker. UI-only, not saved. */
+let scFamsAdv=false;
+function buildScFams(){
+  const c=document.getElementById('sc-fams'); if(!c) return;
+  const adv = scFamsAdv || SCALES[scIdx].grp!=='basic';
+  const grp=g=>'<div class="group">'+SCALES.map((s,i)=>s.grp!==g ? '' :
+    `<button type="button" class="btn${i===scIdx?' active':''}" data-sc="${i}" aria-pressed="${i===scIdx}">${sName(s)}</button>`).join('')+'</div>';
+  c.innerHTML = grp('basic') + (adv ? grp('mode') : '');
+  const tog=document.getElementById('sc-fams-toggle');
+  if(tog){ tog.setAttribute('aria-expanded', adv?'true':'false'); tog.textContent=(adv?t('qual_less')+' ▴':t('qual_more')+' ▾'); }
+}
+/* The key's scale moves, the root stays — and so does the chord: a mode change is not
+   a new tonic. */
+function setScale(i){
+  if(!SCALES[i]) return;
+  scIdx=i; scOverlay=null;
+  renderActiveContext(); renderStrip(); drillKeyChanged();
+  saveState();
 }
 function buildScPos(){
   const caged=isCAGEDScale();

@@ -129,11 +129,10 @@ function renderTiming(){
   const tt=document.getElementById('sd-title'); if(tt) tt.textContent=noteTxt(keyLbl)+' · '+sName(SCALES[scIdx]);
   const nb=document.getElementById('sd-notes'); if(nb){ nb.textContent=t('sd_notes'); nb.classList.toggle('active', sdNotes); nb.setAttribute('aria-pressed', sdNotes?'true':'false'); }
   renderSdGrid();
-  const pb=document.getElementById('sd-play'); if(pb){ pb.innerHTML=(sd.playing?'&#9632; ':'&#9654; ')+t(sd.playing?'sp_stop':'sp_play'); pb.classList.toggle('active', sd.playing); pb.setAttribute('aria-pressed', sd.playing?'true':'false'); }
   // with the mic off this is a coach that cannot hear you, and the hint says so
   const hint=document.getElementById('sd-hint'); if(hint) hint.textContent=t(sdScore.on()?'sd_hint_scored':'sd_hint');
   sdScore.render();
-  applyDrillCtx();     // the mic's visibility is the shell's, and it follows availability
+  applyDrillCtx();     // the mic's visibility and the strip's ▶ are the shell's
 }
 /* one grid row of SD_BEATS·div cells; downbeat and beats read stronger, with the beat
    number under each beat cell */
@@ -184,12 +183,13 @@ function refreshTimingLang(){
   sdScore.refreshLang();
 }
 
-registerDrill({ id:'timing', area:'sd-area', tempo:true, setup:'sd-setup',
+registerDrill({ id:'timing', area:'sd-area', tempo:true, key:true, setup:'sd-setup',
+                play:sdToggle, playing:()=>!!(sd && sd.playing),
                 tracks:[{ id:'timing', kind:'perf', sess:'timing', label:'drill_timing',
                           better:'high', unit:'bars', scored:'mic' }],
                 begin:beginTiming, end:endTiming, isActive:()=>!!sd, refreshLang:refreshTimingLang,
                 // the header's mic, offered wherever onset detection can run
-                mic:()=>sdScore.available(),
+                mic:()=>sdScore.available(), micOn:()=>sdScore.on(),
                 // stop first: switching tiers mid-run would change what a score in progress measures
                 onMic:()=>{ if(sd&&sd.playing) sdStop(); sdScore.toggle(); renderTiming(); },
                 // the grid walks the key's scale, so a key change repaints the board and restarts
@@ -198,6 +198,5 @@ registerDrill({ id:'timing', area:'sd-area', tempo:true, setup:'sd-setup',
 (function initTiming(){
   const area=document.getElementById('sd-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('sd-play',   sdToggle);
   wire('sd-notes',  ()=>{ sdNotes=!sdNotes; if(!sdNotes && sdLit){ sdLit.classList.remove('on'); sdLit=null; } renderTiming(); });
 })();

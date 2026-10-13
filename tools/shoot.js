@@ -15,7 +15,7 @@
    itself (not the in-board scroller) exceeds the viewport.
 
    Tabs: by default only the first-load tab (harmony) is captured. Pass tab tokens
-   to reach the others — `harmony` / `scales` / `circle`, or `tabs` for all three.
+   to reach the others — `harmony` / `scales`, or `tabs` for both.
    With a tab token the file is `w{W}-{panel}.png`; without, `w{W}.png` (unchanged).
    This is how the visual review covers ALL tabs across orientations.
 
@@ -34,9 +34,10 @@
    Phase 10/B3 sessions: pass `session` to start a timed practice session (the shot lands on the
    first drill of it, with the header's block counter + Next visible), or `session-report` to start
    one and quit straight out of it, which is how the closing report is photographed.
-   Phase 10/A4 Settings: pass `settings` to expand the Settings disclosure (Instrument / Tools /
-   Preferences). Combines with a mode token — `settings practice` is how you check that Tools is
-   reachable from Practice, which is the whole point of splitting it out. Adds a `-settings` suffix.
+   Phase 10/A4 Settings: pass `settings` to open the Settings sheet (Instrument / Sound / Display /
+   Progress). Combines with a mode token — `settings practice` checks it is reachable from Practice.
+   Adds a `-settings` suffix. Step 8, the strip's other sheets: `key` (root, scale, the circle),
+   `chord`, `tempo` and `drawer` (what ▶ plays); each adds its own suffix.
    Step 1: pass `triads` to turn on Chord tones' Triads toggle (adds `-triads`), or `tuner` to open
    the one tuner panel (adds `-tuner`; on file:// it is the by-ear strings).
    Step 3: `pos4` picks Scales position 4 and `shape3` the third chord-shape card (adds
@@ -68,12 +69,13 @@ if (!fs.existsSync(indexHtml)) { console.error('index.html not found — run `no
 
 // Split args into tab tokens and size tokens. Tabs default to [null] (capture the
 // first-load tab, original behaviour); `tabs` expands to all three panels.
-const PANELS = ['harmony', 'scales', 'circle'];
+const PANELS = ['harmony', 'scales'];
 const tabArgs = [];
 const sizeArgs = [];
 const a11yArgs = [];                              // accessibility toggles (additive): cbpalette / shapes / a11y (both)
 let mode = null;                                  // null = reference (default), 'practice' = Practice surface
-let openSettings = false;                         // 'settings' token: expand the Settings panel (A4)
+let openSettings = false;                         // 'settings' token: open the Settings sheet (A4)
+let openSheet = null;                             // step 8: 'key' / 'chord' / 'tempo' / 'drawer' — one of the strip's sheets
 let openTriads = false, openTuner = false;          // step 1: 'triads' / 'tuner' tokens
 let pickPos = false, pickShape = false;             // step 3: 'pos4' / 'shape3' tokens (neck auto-scroll)
 let meterArg = null;                              // optional time signature (e.g. '3/4') set before the drill starts
@@ -81,7 +83,8 @@ for (const a of process.argv.slice(2)) {
   if (a === 'tabs') tabArgs.push(...PANELS);
   else if (PANELS.includes(a)) tabArgs.push(a);
   else if (a === 'cbpalette' || a === 'shapes' || a === 'a11y') a11yArgs.push(a);
-  else if (a === 'settings') openSettings = true;          // A4: expand the Settings disclosure
+  else if (a === 'settings') openSettings = true;          // A4: open the Settings sheet
+  else if (a === 'key' || a === 'chord' || a === 'tempo' || a === 'drawer') openSheet = a;   // step 8: a strip sheet
   else if (a === 'triads') openTriads = true;              // step 1: Chord tones' Triads toggle
   else if (a === 'tuner') openTuner = true;                // step 1: the one tuner panel
   else if (a === 'pos4') pickPos = true;                   // step 3: Scales position 4 (the neck scrolls to it)
@@ -117,13 +120,14 @@ function appFor(panel) {
   if (mode) clicks.push(`var m=document.querySelector('.navbtn[data-panel="practice"]');if(m)m.click();`);   // A2: one nav strip
   if (mode === 'drill') clicks.push(`var s=document.getElementById('start-notes');if(s)s.click();`);
   if (mode === 'changes' || mode === 'changes-run') clicks.push(`var s=document.getElementById('start-changes');if(s)s.click();`);
-  if (mode === 'changes-run') clicks.push(`var g=document.getElementById('cm-start-btn');if(g)g.click();`);
+  // every drill's Play / Start is the strip's ▶ (step 8)
+  if (mode === 'changes-run') clicks.push(`var g=document.getElementById('g-play');if(g)g.click();`);
   if (mode === 'strum' || mode === 'strum-run') clicks.push(`var s=document.getElementById('start-strum');if(s)s.click();`);
-  if (mode === 'strum-run') clicks.push(`var g=document.getElementById('sp-play');if(g)g.click();`);
+  if (mode === 'strum-run') clicks.push(`var g=document.getElementById('g-play');if(g)g.click();`);
   if (mode === 'comp' || mode === 'comp-run') clicks.push(`var s=document.getElementById('start-comp');if(s)s.click();`);
-  if (mode === 'comp-run') clicks.push(`var g=document.getElementById('tg-play');if(g)g.click();`);
+  if (mode === 'comp-run') clicks.push(`var g=document.getElementById('g-play');if(g)g.click();`);
   if (mode === 'timing' || mode === 'timing-run') clicks.push(`var s=document.getElementById('start-timing');if(s)s.click();`);
-  if (mode === 'timing-run') clicks.push(`var g=document.getElementById('sd-play');if(g)g.click();`);
+  if (mode === 'timing-run') clicks.push(`var g=document.getElementById('g-play');if(g)g.click();`);
   /* Phase 10/B3, the timed session. `session` photographs a drill running INSIDE one —
      the only way to see the header's block counter and Next, which are hidden otherwise.
      `session-report` ends it immediately so the closing screen is what lands in the shot.
@@ -132,10 +136,11 @@ function appFor(panel) {
   if (mode === 'session-report') clicks.push(`var q=document.getElementById('drill-ctx-quit');if(q)q.click();`);
   const earStart = { 'ear-interval': 'start-interval', 'ear-chordq': 'start-chordq' }[mode];
   if (earStart) clicks.push(`var s=document.getElementById('${earStart}');if(s)s.click();`);
-  // Settings disclosure (A4): expand it LAST, so the shot shows the three clusters
-  // (Instrument / Tools / Preferences) in whichever mode was selected above — which is
-  // how you check that Tools is reachable from Practice, not only from Reference.
+  // Settings (A4) and the other strip sheets (step 8): opened LAST, in whichever mode was
+  // selected above — `settings practice` checks Settings is reachable from Practice
   if (openSettings) clicks.push(`var st=document.getElementById('tb-toggle');if(st)st.click();`);
+  const SHEET_CHIP = { key: 'chip-key', chord: 'chip-chord', tempo: 'chip-tempo', drawer: 'backing-toggle' };
+  if (openSheet) clicks.push(`var sc=document.getElementById('${SHEET_CHIP[openSheet]}');if(sc)sc.click();`);
   if (openTriads) clicks.push(`var tr=document.querySelectorAll('#ch-shape .btn')[1];if(tr)tr.click();`);
   if (openTuner) clicks.push(`var tu=document.getElementById('tb-tuner');if(tu)tu.click();`);
   if (pickPos) clicks.push(`var p=document.querySelectorAll('#sc-pos .btn')[4];if(p)p.click();`);
@@ -148,7 +153,7 @@ function appFor(panel) {
   if (meterArg) clicks.unshift(`var ms=document.getElementById('tb-meter');if(ms){for(var i=0;i<ms.options.length;i++){if(ms.options[i].textContent==='${meterArg}'||ms.options[i].value==='${meterArg}'){ms.selectedIndex=i;break;}}ms.dispatchEvent(new Event('change'));}`);
   // any non-default capture: dismiss the first-run welcome first so it doesn't block
   // the surface (the no-arg shot keeps it, to capture the onboarding card itself).
-  if (panel || mode || a11yArgs.length || openSettings || openTriads || openTuner || pickPos || pickShape) clicks.unshift(`var wc=document.getElementById('wc-got');if(wc)wc.click();`);
+  if (panel || mode || a11yArgs.length || openSettings || openSheet || openTriads || openTuner || pickPos || pickShape) clicks.unshift(`var wc=document.getElementById('wc-got');if(wc)wc.click();`);
   const switcher = clicks.length
     ? `<script>addEventListener('load',function(){try{${clicks.join('')}}catch(e){}});</script>`
     : '';
@@ -190,7 +195,7 @@ function appFor(panel) {
 
 for (const { w, h } of specs) {
   for (const panel of tabs) {
-    const tag = (panel ? `${w}-${panel}` : `${w}`) + (mode ? '-' + mode : '') + (openSettings ? '-settings' : '') + (openTriads ? '-triads' : '') + (openTuner ? '-tuner' : '') + (pickPos ? '-pos4' : '') + (pickShape ? '-shape3' : '') + (a11yArgs.length ? '-' + a11yArgs.join('-') : '');
+    const tag = (panel ? `${w}-${panel}` : `${w}`) + (mode ? '-' + mode : '') + (openSettings ? '-settings' : '') + (openSheet ? '-' + openSheet : '') + (openTriads ? '-triads' : '') + (openTuner ? '-tuner' : '') + (pickPos ? '-pos4' : '') + (pickShape ? '-shape3' : '') + (a11yArgs.length ? '-' + a11yArgs.join('-') : '');
     const appCopy = path.join(outDir, `_app_${tag}.html`);
     const wrapper = path.join(outDir, `_wrap_${tag}.html`);
     fs.writeFileSync(appCopy, appFor(panel));

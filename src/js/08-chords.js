@@ -49,8 +49,8 @@ function labClass(lab){
      triads    : trSet, trInv                      (the Chord-tones Triads toggle)
      scales    : scPos, scOverlay
      notes     : ntFilter, ntRoot
-     transport : tempo, lefty, bassOn, grooveOn, seqLoopOn, seq[] (the progression)
-     ui        : lang, currentTab, tuningIdx, fretRangeIdx, toolbarOpen
+     transport : tempo, lefty, bassOn, grooveOn, seqLoopOn, seq[] (the progression), playSrc
+     ui        : lang, currentTab, tuningIdx, fretRangeIdx, toolbarOpen, backingOpen
    The key is what Scales, the circle and Notes show; the chord is what Harmony shows,
    the band loops and "play over this" reads. A new key brings the chord to its tonic
    root (quality kept); a degree of the key, a progression step or a scale's chord moves
@@ -96,12 +96,18 @@ function keyCadence(){
 }
 function keyCadenceName(){ return keyCadence().slice(0,3).map(c=>c.roman).join('–'); }
 /* The one way the chord changes without the key: a degree, a progression step, a
-   scale's chord, the circle's tonic. Paints only what is on screen. */
+   scale's chord. Paints only what is on screen, and tells a drill that reads it. */
 function setChord(pc, lbl, qi){
   chRoot=pc; chLbl=lbl; chQual=qi;
-  renderActiveContext();
+  renderActiveContext(); renderStrip(); drillKeyChanged();
 }
-/* the degree row (Harmony): the chord's place in the key, one tap to another degree */
+/* the chord sheet's quality picker: same root, another quality */
+function setChordQual(i){
+  chVoicing=0; chShapesExpanded=false;
+  setChord(chRoot, chLbl, i);
+  saveState();
+}
+/* the degree row (the chord sheet): the chord's place in the key, one tap to another degree */
 function renderDegrees(){
   const c=document.getElementById('h-degrees'); if(!c) return;
   c.innerHTML=keyDegrees().map(d=>{
@@ -112,7 +118,7 @@ function renderDegrees(){
 }
 /* Only the basic tier shows by default; sevenths and extensions sit behind "more".
    They reveal themselves when the active quality lives in them, so the selection is
-   never hidden. chQualsAdv is UI-only (not saved) and shared by both pickers. */
+   never hidden. chQualsAdv is UI-only (not saved). */
 let chQualsAdv=false;
 function qualSeg(g, onPick, showLabel){
   const seg=document.createElement('div'); seg.className='qual-grp';
@@ -135,9 +141,7 @@ function renderQualPicker(containerId, toggleId, onPick){
   const tog=document.getElementById(toggleId);
   if(tog){ tog.setAttribute('aria-expanded', adv?'true':'false'); tog.textContent=(adv?t('qual_less')+' ▴':t('qual_more')+' ▾'); }
 }
-function buildChQuals(){
-  renderQualPicker('ch-quals','ch-quals-toggle', i=>{ chQual=i; chVoicing=0; chShapesExpanded=false; buildChQuals(); renderChords(); saveState(); });
-}
+function buildChQuals(){ renderQualPicker('ch-quals','ch-quals-toggle', setChordQual); }
 function renderChords(){
   const q=QUALITIES[chQual];
   const notes=q.iv.map((iv,i)=>spellNote(chLbl,(chRoot+iv)%12,q.deg[i])).join(' – ');
@@ -166,18 +170,15 @@ function renderChords(){
 function renderChShape(){
   const has=chTriadIdx()>=0, on=triadsOn();
   segButtons('ch-shape', [{label:t('shape_full')},{label:t('shape_triads')}], on?1:0, i=>{
-    chTriads=!!i; chVoicing=0; renderChords(); applyHarmonyExtras(); updateGlobalPlay(); saveState(); });
+    chTriads=!!i; chVoicing=0; renderChords(); applyHarmonyExtras(); renderPlayBtn(); saveState(); });
   const tb=document.querySelector('#ch-shape .btn:nth-child(2)');
   if(tb){ tb.disabled=!has; tb.title = has ? '' : t('shape_no_triad'); }
   const rows=document.getElementById('ch-triad-rows'); if(rows) rows.hidden=!on;
 }
 
 /* ---- Arpeggios ----
-   The same chord tones framed as an arpeggio: Listen runs it up the neck, and it can
-   be isolated to one box. Shares chQual with Chord tones, so switching keeps the chord. */
-function buildArpQuals(){
-  renderQualPicker('arp-quals','arp-quals-toggle', i=>{ chQual=i; chVoicing=0; chShapesExpanded=false; buildChQuals(); buildArpQuals(); renderArp(); saveState(); });
-}
+   The same chord tones framed as an arpeggio, which can be isolated to one box. Reads
+   the chord like Chord tones, so switching keeps it. */
 function buildArpPos(){
   segButtons('arp-pos', [t('pos_all'),'1','2','3','4','5'].map(label=>({label})), arpPos,
     i=>{ arpPos=i; buildArpPos(); renderArp(); saveState(); });

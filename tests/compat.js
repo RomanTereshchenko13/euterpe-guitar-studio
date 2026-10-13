@@ -11,7 +11,7 @@
      3. every key the old build saved is still saved, or is listed in RETIRED;
      4. save → load is lossless: a second boot on what the first one saved restores the
         same state, and saving that again writes the same bytes.
-   Any step that touches saved state (PLAN steps 5 and 6) must keep this green; a change
+   Any step that touches saved state (PLAN steps 5, 6 and 8) must keep this green; a change
    that is meant to show something different adds its migration to MIGRATED.
    ========================================================================== */
 'use strict';
@@ -37,7 +37,8 @@ const fixtures = fs.readdirSync(dir).filter(f => f.endsWith('.json')).sort()
 
 /* What a release deliberately shows differently now: [field, old value → new value, why]. */
 const MIGRATED = {
-  view: { 'harmony:identify': 'harmony:chords' },   // Identify was cut in v2.17.0
+  view: { 'harmony:identify': 'harmony:chords',     // Identify was cut in v2.17.0
+          circle: 'scales' },                       // the circle became the key sheet (PLAN step 8)
   mode: { ear: 'practice' }                          // the ear drills moved into Practice
 };
 /* Keys old builds saved that the current one no longer writes, and why that loses nothing. */
@@ -118,6 +119,10 @@ for (const fx of fixtures) {
          'was ' + JSON.stringify(fx.seen[from]) + ', now ' + JSON.stringify(now[k]));
   }
   domAgrees(L, a.win, a.T);
+  if (fx.seen.view === 'circle')
+    ok(L + ': opens with the key sheet up, where the circle now lives',
+       a.T.sheetShown('key') && a.win.document.getElementById('sheet-key').hidden === false
+       && a.win.document.querySelectorAll('#cof-svg .cof-node').length === 24);
   if (fx.hash) {
     ok(L + ': an old share link is cleared from the address', a.win.location.hash === '', a.win.location.hash);
     ok(L + ': ...and the save, not the link, decides what opens', same(now.view, fx.seen.view) && now.root === fx.seen.root);
