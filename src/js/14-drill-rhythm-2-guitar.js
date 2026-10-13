@@ -38,7 +38,6 @@ let spSwing = 0;        // index into SP_SWINGS — straight by default, so a pa
 let spAccent = false;   // backbeat (2 & 4) accent
 let spMute = false;     // palm-mute the strum
 let spBand = false;     // drums + bass underneath
-let spClick = false;    // optional beat-reference click
 let spDrill = null;
 // spDrill = { patIdx, over, prog, bars:[{pc,qi,lbl}…], bar, slot, barsPlayed, clock, playing }
 
@@ -181,7 +180,7 @@ function spTick(time, count){
     if(slot===0) bassNote(time, 36+ch.pc, b*1.9, 0.95);
     if(slot===4) bassNote(time, 36+ch.pc+fifthInterval(ch.qi), b*1.7, 0.8);
   }
-  if(spClick && beatPos) metroClick(time, slot===0);              // beat-reference click
+  if(clickOn && beatPos) metroClick(time, slot===0);             // the tempo sheet's click
   enqueueVisual(time, ()=>{ spHighlightSlot(slot); if(beatPos) spPulseBeat(slot/2); if(slot===0) renderSpStage(ch, nxt); });
 }
 
@@ -216,7 +215,6 @@ function renderStrum(){
   toggle('sp-accent', spAccent, 'sp_accent');
   toggle('sp-mute',   spMute,   'sp_mute');
   toggle('sp-band',   spBand,   'sp_band');
-  const ck=document.getElementById('sp-click'); if(ck){ ck.classList.toggle('active', spClick); ck.setAttribute('aria-pressed', spClick?'true':'false'); ck.innerHTML='&#9833; '+t('cm_click'); }
   // the hint has to say which tier you're in — and that the guide guitar goes quiet
   const hint=document.getElementById('sp-hint');
   if(hint) hint.textContent=t(spFree() ? (spScore.on()?'co_hint_scored':'co_hint') : (spScore.on()?'sp_hint_scored':'sp_hint'));
@@ -265,7 +263,7 @@ registerDrill({ id:'rhythm-guitar', area:'sp-area', tempo:true, setup:'sp-setup'
                             spScore.toggle();
                             // scoring mutes the guide guitar, so with no click and no band there would be
                             // nothing to play against — turn the click on
-                            if(spScore.on() && !spClick && !spBand) spClick=true;
+                            if(spScore.on() && !clickOn && !spBand) clickToggle();
                             renderStrum(); },
                 // a new key re-lays a preset progression; the chord is read live
                 onKey:()=>{ if(!spDrill) return; spSet(()=>{}); } });
@@ -273,7 +271,6 @@ registerDrill({ id:'rhythm-guitar', area:'sp-area', tempo:true, setup:'sp-setup'
 (function initStrum(){
   const area=document.getElementById('sp-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('sp-click',  ()=>{ spClick=!spClick;   renderStrum(); });
   wire('sp-accent', ()=>{ spAccent=!spAccent; renderStrum(); });
   wire('sp-mute',   ()=>{ spMute=!spMute;     renderStrum(); });
   wire('sp-band',   ()=>{ spBand=!spBand;     renderStrum(); });

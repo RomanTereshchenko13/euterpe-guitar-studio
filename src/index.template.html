@@ -32,7 +32,8 @@
 <body>
 <header>
   <div class="wrap">
-    <!-- brand only: language and version moved to Settings and the footer -->
+    <!-- brand · nav · tuner + settings on one line on a wide screen; a phone keeps the brand
+         and the two tools (the nav is the bottom bar) -->
     <div class="brand">
       <div class="brand-name">
         <h1 data-i18n="brand">Euterpe</h1>
@@ -48,26 +49,19 @@
       <button class="navbtn" data-panel="scales" data-i18n="tab_scales">Гами</button>
       <button class="navbtn" data-panel="practice" data-mode="practice" data-i18n="mode_practice">Практика</button>
     </nav>
+    <!-- the app's tools, in every mode: the one tuner (14-mic-tuner.js) and Settings (a
+         sheet of the strip's, toggled like its chips) -->
+    <div class="hdr-tools">
+      <button type="button" class="chip" id="tb-tuner"><span aria-hidden="true">🎵</span><span class="chip-txt" data-i18n="tuner_open">Тюнер</span></button>
+      <button type="button" class="chip chip-gear" id="tb-toggle" aria-expanded="false" aria-controls="toolbar"><span aria-hidden="true">⚙</span></button>
+    </div>
   </div>
 </header>
 
 <main class="wrap">
 <div class="layout">
 
-<!-- The board views' headings sit above what they name (heading → strip → view switch →
-     neck), outside #board-region so the sticky phone neck doesn't carry them. -->
-<div class="view-head" id="view-head">
-  <div class="panel-head" id="vh-harmony">
-    <div class="ph-top"><h2 id="harmony-h">Тони акорду на грифі</h2><button class="ph-help" type="button" aria-expanded="false" aria-controls="harmony-p">?</button></div>
-    <p id="harmony-p">Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу.</p>
-  </div>
-  <div class="panel-head" id="vh-scales" hidden>
-    <div class="ph-top"><h2 id="scales-h" data-i18n="sc_h">Гами і моди</h2><button class="ph-help" type="button" aria-expanded="false" aria-controls="scales-p">?</button></div>
-    <p id="scales-p" data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
-  </div>
-</div>
-
-<!-- THE CONTEXT STRIP (15-0-strip.js): key · chord · tempo · ▶ · tuner · ⚙, one row in
+<!-- THE CONTEXT STRIP (15-0-strip.js): key · chord · tempo · ▶, one row in
      Reference and Practice alike. This slot is its Reference home; placeStrip() moves the
      one #strip into #strip-drill while Practice is up, so its listeners and sheets go
      with it. Each chip opens a sheet below the row (a bottom sheet on a phone). -->
@@ -82,9 +76,6 @@
         <button type="button" class="btn play" id="g-play"></button>
         <button type="button" class="chip chip-caret" id="backing-toggle" aria-expanded="false" aria-controls="backing-panel"><span class="chev">▾</span></button>
       </span>
-      <!-- the one tuner (14-mic-tuner.js): mic where it can listen, reference tones by ear -->
-      <button type="button" class="chip" id="tb-tuner"><span aria-hidden="true">🎵</span><span class="chip-txt" data-i18n="tuner_open">Тюнер</span></button>
-      <button type="button" class="chip chip-gear" id="tb-toggle" aria-expanded="false" aria-controls="toolbar"><span aria-hidden="true">⚙</span></button>
     </div>
     <div class="sheets" id="sheets" hidden>
 
@@ -138,7 +129,8 @@
           <button type="button" class="btn" id="tb-faster" aria-label="+5 BPM">&#43;</button>
           <span class="bpm-val" id="tb-bpm">90 BPM</span>
         </div>
-        <!-- time signature: metronome accent, backing groove and progression bar length follow it -->
+        <!-- time signature: the click's accent, backing groove and progression bar length follow it;
+             the click sounds with whatever ▶ starts, the reference loop or a drill -->
         <div class="row">
           <span class="ctrl-label" data-i18n="tb_meter">Розмір</span><select id="tb-meter"></select>
           <button class="btn metro" id="tb-metro" aria-pressed="false"></button>
@@ -149,7 +141,8 @@
       <div class="sheet" id="backing-panel" role="region" aria-labelledby="backing-h" hidden>
         <div class="sheet-head"><span class="sheet-h" id="backing-h" data-i18n="pl_h">Що грає ▶</span><button type="button" class="sheet-x" data-close aria-label="close">✕</button></div>
         <div class="row"><span class="ctrl-label" data-i18n="pl_src">Грати</span><div class="group" id="pl-src"></div></div>
-        <div class="seq" id="ch-seq">
+        <!-- the progression editor, while ▶ plays the progression -->
+        <div class="seq" id="ch-seq" hidden>
           <div class="seq-head">
             <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
             <div class="seq-presets" id="seq-presets"></div>
@@ -163,7 +156,6 @@
         </div>
         <div class="row">
           <span class="ctrl-label" data-i18n="pl_band">Гурт</span>
-          <button class="btn band" id="pl-jam" aria-pressed="false"></button>
           <button class="btn band" id="tb-bass" aria-pressed="false"></button>
           <button class="btn band" id="tb-drums" aria-pressed="false"></button>
         </div>
@@ -244,24 +236,30 @@
      inside #board-region so it moves, hides and sticks with the neck. -->
 <div class="board-region" id="board-region">
   <div class="board-lens" id="board-lens">
+    <!-- Harmony's three views; Triads is disabled for a chord with no triad (sus, 11) -->
     <div class="lens-group" id="ctx-view-harmony">
-      <button class="btn active" id="hv-chords" data-i18n="view_chords">Тони акорду</button>
+      <button class="btn active" id="hv-chords"><span class="lens-long" data-i18n="view_chords">Тони акорду</span><span class="lens-short" data-i18n="view_tones" aria-hidden="true">Тони</span></button>
+      <button class="btn" id="hv-triads" data-i18n="shape_triads">Тризвуки</button>
       <button class="btn" id="hv-arp" data-i18n="view_arp">Арпеджіо</button>
     </div>
     <div class="lens-group" id="ctx-view-scales" hidden>
       <button class="btn active" id="sv-scale" data-i18n="view_scale">Гама</button>
       <button class="btn" id="sv-notes" data-i18n="view_notes">Ноти</button>
     </div>
-    <!-- what the dots say; Notes always names them, so it hides there -->
+    <!-- what the dots say; Notes always names them, so it hides there. A phone shows the
+         short labels (A · ♭3) so the whole lens is one row; the long ones stay the name. -->
     <div class="lens-group ctx-display" id="ctx-display">
-      <button class="btn active" id="g-names" data-i18n="b_notes">Назви</button>
-      <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
+      <button class="btn active" id="g-names"><span class="lens-long" data-i18n="b_notes">Назви</span><span class="lens-short" aria-hidden="true">A</span></button>
+      <button class="btn" id="g-deg"><span class="lens-long" data-i18n="b_intervals">Інтервали</span><span class="lens-short" aria-hidden="true">♭3</span></button>
     </div>
+    <!-- the view's description and the board hint, folded by default -->
+    <button class="ph-help" id="view-help" type="button" aria-expanded="false" aria-controls="view-desc">?</button>
   </div>
   <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
 </div>
 <!-- Legend + hint, outside #board-region so the sticky phone board pins the neck only -->
 <div class="board-meta" id="board-meta">
+  <p class="view-desc" id="view-desc"></p>
   <div class="legend" id="legend"></div>
   <div class="hint" id="hint"></div>
 </div>
@@ -272,9 +270,7 @@
     <!-- both sub-views read the chord, which the strip's chord chip picks -->
     <div id="sub-chords">
       <div class="info" id="ch-info"></div>
-      <!-- Full chord or its triads (the chosen chord's triad, Am7 → Am); the Triads button
-           is disabled for a chord with no triad (sus, 11) -->
-      <div class="row"><span class="ctrl-label" data-i18n="lbl_show">Показати</span><div class="group" id="ch-shape"></div></div>
+      <!-- the Triads view: the chosen chord's triad (Am7 → Am) on a string set -->
       <div id="ch-triad-rows" hidden>
         <div class="row"><span class="ctrl-label" data-i18n="lbl_set">Набір струн</span><div class="group" id="tr-sets"></div></div>
         <div class="row"><span class="ctrl-label" data-i18n="lbl_inv">Обернення</span><div class="group" id="tr-invs"></div></div>
@@ -286,7 +282,7 @@
       <div class="row"><button class="btn seam-btn" data-seam="chords" data-i18n="seam_drill">Тренувати це →</button></div>
     </div>
 
-    <!-- the arpeggio is practised over the band: ▶ with the Jam on (the strip's drawer) -->
+    <!-- the arpeggio is practised over the band: ▶ with Bass and Drums on (the strip's drawer) -->
     <div id="sub-arp" hidden>
       <div class="row"><span class="ctrl-label" data-i18n="lbl_pos">Позиція</span><div class="group" id="arp-pos"></div></div>
       <div class="info" id="arp-info"></div>
@@ -385,58 +381,39 @@
       <!-- a session's closing screen; applySessionViews() hides the home blocks while it is up -->
       <div class="session-report" id="session-report" hidden></div>
       <div class="ph-drills">
-      <p class="practice-soon" data-i18n="practice_intro">Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.</p>
-      <!-- drills grouped by pillar -->
-      <div class="practice-section">
-        <div class="ps-label" data-i18n="practice_grp_fretboard">Гриф</div>
-        <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-notes" data-track="note">
-            <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span><span class="dc-tags"></span>
-            <span class="dc-meta" data-i18n="drill_notes_meta">Грифознавство · рахунок за точністю</span>
-            <span class="dc-last"></span>
-          </button></li>
-        </ul>
-      </div>
-      <div class="practice-section">
-        <div class="ps-label" data-i18n="practice_grp_timing">Таймінг</div>
-        <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-timing" data-track="timing">
-            <span class="dc-name" data-i18n="drill_timing">Поділ і таймінг</span><span class="dc-tags"></span>
-            <span class="dc-meta" data-i18n="drill_timing_meta">Вісімки · тріолі · шістнадцятки · коуч</span>
-            <span class="dc-last"></span>
-          </button></li>
-        </ul>
-      </div>
-      <div class="practice-section">
-        <div class="ps-label" data-i18n="practice_grp_rhythm">Ритм</div>
-        <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-changes" data-track="changes">
-            <span class="dc-name" data-i18n="drill_changes">Зміна акордів за хвилину</span><span class="dc-tags"></span>
-            <span class="dc-meta" data-i18n="drill_changes_meta">Чисті зміни за хвилину · коуч (без оцінки)</span>
-            <span class="dc-last"></span>
-          </button></li>
-          <li><button type="button" class="drill-card" id="start-rhythm-guitar" data-track="rhythm-guitar">
-            <span class="dc-name" data-i18n="drill_rhythm">Ритм-гітара</span><span class="dc-tags"></span>
-            <span class="dc-meta" data-i18n="drill_rhythm_meta">Малюнок або свій ритм · над акордом чи прогресією</span>
-            <span class="dc-last"></span>
-          </button></li>
-        </ul>
-      </div>
-      <div class="practice-section">
-        <div class="ps-label" data-i18n="practice_grp_ear">Слух</div>
-        <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-interval" data-track="interval">
-            <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span><span class="dc-tags"></span>
-            <span class="dc-meta" data-i18n="ear_intervals_meta">Почуй дві ноти · назви інтервал</span>
-            <span class="dc-last"></span>
-          </button></li>
-          <li><button type="button" class="drill-card" id="start-chordq" data-track="chordq">
-            <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span><span class="dc-tags"></span>
-            <span class="dc-meta" data-i18n="ear_chords_meta">Почуй акорд · визнач його тип</span>
-            <span class="dc-last"></span>
-          </button></li>
-        </ul>
-      </div>
+      <!-- the drills, one list -->
+      <ul class="practice-list">
+        <li><button type="button" class="drill-card" id="start-notes" data-track="note">
+          <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span><span class="dc-tags"></span>
+          <span class="dc-meta" data-i18n="drill_notes_meta">Грифознавство · рахунок за точністю</span>
+          <span class="dc-last"></span>
+        </button></li>
+        <li><button type="button" class="drill-card" id="start-timing" data-track="timing">
+          <span class="dc-name" data-i18n="drill_timing">Поділ і таймінг</span><span class="dc-tags"></span>
+          <span class="dc-meta" data-i18n="drill_timing_meta">Вісімки · тріолі · шістнадцятки · коуч</span>
+          <span class="dc-last"></span>
+        </button></li>
+        <li><button type="button" class="drill-card" id="start-changes" data-track="changes">
+          <span class="dc-name" data-i18n="drill_changes">Зміна акордів за хвилину</span><span class="dc-tags"></span>
+          <span class="dc-meta" data-i18n="drill_changes_meta">Чисті зміни за хвилину · коуч (без оцінки)</span>
+          <span class="dc-last"></span>
+        </button></li>
+        <li><button type="button" class="drill-card" id="start-rhythm-guitar" data-track="rhythm-guitar">
+          <span class="dc-name" data-i18n="drill_rhythm">Ритм-гітара</span><span class="dc-tags"></span>
+          <span class="dc-meta" data-i18n="drill_rhythm_meta">Малюнок або свій ритм · над акордом чи прогресією</span>
+          <span class="dc-last"></span>
+        </button></li>
+        <li><button type="button" class="drill-card" id="start-interval" data-track="interval">
+          <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span><span class="dc-tags"></span>
+          <span class="dc-meta" data-i18n="ear_intervals_meta">Почуй дві ноти · назви інтервал</span>
+          <span class="dc-last"></span>
+        </button></li>
+        <li><button type="button" class="drill-card" id="start-chordq" data-track="chordq">
+          <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span><span class="dc-tags"></span>
+          <span class="dc-meta" data-i18n="ear_chords_meta">Почуй акорд · визнач його тип</span>
+          <span class="dc-last"></span>
+        </button></li>
+      </ul>
       </div>
     </div>
 
@@ -449,8 +426,6 @@
         <div class="row cm-custom" id="cm-custom" hidden></div>
         <div class="row">
           <span class="ctrl-label" data-i18n="cm_dur">Тривалість</span><div class="group" id="cm-durs"></div>
-          <div class="divider"></div>
-          <button type="button" class="btn" id="cm-click" aria-pressed="false"></button>
         </div>
         <div class="cm-best-line" id="cm-setup-best"></div>
         <!-- Start is the strip's ▶ -->
@@ -515,10 +490,6 @@
       <!-- filled after a scored run only (13-scored.js), plus the mic-error line -->
       <p class="scored-status" id="sp-status" role="status" hidden></p>
       <div class="scored-panel" id="sp-score" hidden></div>
-      <!-- the beat-reference click; Play is the strip's ▶ -->
-      <div class="drill-bar">
-        <button type="button" class="btn" id="sp-click" aria-pressed="false"></button>
-      </div>
     </div>
 
     <!-- Subdivision & timing: an accented click and grid tick the subdivision while the
@@ -652,7 +623,7 @@
     </div>
     <div class="kbd-body">
       <div class="kbd-row"><span class="kbd-keys"><kbd>Space</kbd></span><span data-i18n="kbd_play">▶ Грати / Стоп</span></div>
-      <div class="kbd-row"><span class="kbd-keys"><kbd>M</kbd></span><span data-i18n="kbd_metro">Метроном — увімк/вимк</span></div>
+      <div class="kbd-row"><span class="kbd-keys"><kbd>M</kbd></span><span data-i18n="kbd_metro">Клік із ▶ — увімк/вимк</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><span data-i18n="kbd_tabs">Перемкнути розділи</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>K</kbd></span><span data-i18n="kbd_key">Вибір тональності</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>A</kbd>–<kbd>G</kbd></span><span data-i18n="kbd_root">Задати тоніку</span></div>

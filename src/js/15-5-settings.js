@@ -48,7 +48,7 @@ document.getElementById('tb-tempo').onchange=function(){ saveState(); };
 { const step=d=>{ setTempo(tempo+d); saveState(); };
   const sl=document.getElementById('tb-slower'); if(sl) sl.onclick=()=>step(-5);
   const fa=document.getElementById('tb-faster'); if(fa) fa.onclick=()=>step(5); }
-document.getElementById('tb-metro').onclick=metroToggle;
+document.getElementById('tb-metro').onclick=clickToggle;
 document.getElementById('tb-bass').onclick=bassToggle;
 document.getElementById('tb-drums').onclick=drumsToggle;
 /* the chord sheet's "more" */

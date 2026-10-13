@@ -187,13 +187,13 @@ if (T) {
   const onlyEn = en.filter(k => !T.I18N.uk.hasOwnProperty(k));
   ok('i18n: no keys only in uk', onlyUk.length === 0, onlyUk.join(', '));
   ok('i18n: no keys only in en', onlyEn.length === 0, onlyEn.join(', '));
-  ['strip_key','pl_h','pl_src','pl_chord','pl_prog','pl_band','pl_jam','pl_play_chord','pl_play_prog',
+  ['strip_key','pl_h','pl_src','pl_chord','pl_prog','pl_band','tb_click','tb_click_tip','pl_play_chord','pl_play_prog',
    'tbc_sound','tb_lang','kbd_key','lbl_quality','cal_offer','cal_later','audio_off',
    'cd_voicings','cd_eshape','cd_ashape','cd_fret','cd_pick_hint','tr_shapes',
    'view_scale','view_notes','suggest_title','suggest_scales',
-   'shape_full','shape_triads','shape_no_triad',
-   'view_arp','arp_h','arp_p','arp_hint','arp_word','tb_capo','capo_off','caged_desc',
-   'mode_practice','practice_h','practice_intro','drill_notes','drill_notes_meta',
+   'shape_triads','shape_no_triad',
+   'view_arp','arp_p','arp_hint','arp_word','tb_capo','capo_off','caged_desc',
+   'mode_practice','practice_h','drill_notes','drill_notes_meta',
    'drill_quit','drill_find_pre','drill_find_sub','drill_complete','drill_score','drill_clean',
    'drill_misses','drill_time','drill_again','drill_done','seam_drill',
    'sess_title','sess_lead','sess_len','sess_min','sess_start','sess_next',
@@ -202,13 +202,13 @@ if (T) {
    'cm_yours','ear_level','ear_dir_down','ear_dir_harm','prog_unscored','sess_will',
    'prog_title','prog_accuracy','prog_streak','prog_sessions',
    'prog_yours','prog_best','prog_runs','prog_timing',
-   'practice_grp_ear','ear_intervals','ear_intervals_meta','ear_chords','ear_chords_meta',
+   'ear_intervals','ear_intervals_meta','ear_chords','ear_chords_meta',
    'ear_int_prompt','ear_chord_prompt',
    'ear_replay','ear_next','ear_right','ear_wrong','ear_got',
    'pwa_install','pwa_install_tip','pwa_update','pwa_update_btn','pwa_dismiss',
    'tb_volume','tuner_open','tuner_ear','tuner_ear_hint',
-   'practice_grp_fretboard','practice_grp_rhythm','drill_changes','drill_changes_meta',
-   'cm_pair','cm_dur','cm_sec','cm_click','cm_start','cm_stop','cm_setup_note',
+   'drill_changes','drill_changes_meta',
+   'cm_pair','cm_dur','cm_sec','cm_start','cm_stop','cm_setup_note',
    'cm_changes','cm_cpm','cm_best','cm_tap_hint','cm_undo','cm_newbest',
    'sp_pattern','sp_chord','sp_play','sp_stop','sp_hint',
    'co_now','co_next','co_hint',
@@ -820,14 +820,14 @@ if (T) {
     ok('step 8: no Jam buttons left on the page (the drawer holds the band)',
        !doc.querySelector('[data-jam]') && !doc.querySelector('#sub-arp [data-seam]'));
     const bandWas = T.bandActive();
-    T.jamToggle();
-    ok('step 8: the Jam turns the whole band on', T.state().bassOn && T.state().grooveOn && bandWas === false);
+    T.bassToggle(); T.drumsToggle();
+    ok('step 8: Bass and Drums turn the band on', T.state().bassOn && T.state().grooveOn && bandWas === false);
     ok('step 8: ...without starting anything — ▶ does that', !T.transportActive());
     T.stripPlay();
     ok('step 8: ▶ then plays the chord with the band', T.state().loop && T.bandActive());
     T.stripPlay();
-    T.jamToggle();
-    ok('step 8: the Jam again turns it off', !T.bandActive() && !T.transportActive());
+    T.bassToggle(); T.drumsToggle();
+    ok('step 8: ...and off again', !T.bandActive() && !T.transportActive());
   })();
 
   /* ---- Phase 10/B4: PROGRESS, AND COPY THAT TELLS THE TRUTH ------------------
@@ -1052,14 +1052,16 @@ if (T) {
     const doc = win.document;
     T.setMode('reference'); T.setKey(9, 'A'); T.setGMode('names');
 
-    /* headings above the neck, one per board subject */
-    const vh = id => doc.getElementById(id);
-    T.selectTab('harmony');
-    ok('step 3: Harmony shows its heading above the neck', !vh('view-head').hidden && !vh('vh-harmony').hidden && vh('vh-scales').hidden);
-    T.selectTab('scales');
-    ok('step 3: Scales swaps in its own heading', !vh('vh-scales').hidden && vh('vh-harmony').hidden);
-    T.setScView('notes');
-    ok('step 3: ...which follows the sub-view', vh('scales-h').textContent === T.I18N[T.state().lang].nt_h);
+    /* step 11: no heading above the neck — the lens names the view; its description
+       folds under the neck behind the lens's ? and follows the view */
+    const L = T.I18N[T.state().lang], desc = () => doc.getElementById('view-desc').textContent;
+    T.selectTab('harmony'); T.setHView('arp');
+    ok('step 11: no view heading above the neck', !doc.getElementById('view-head') && !doc.getElementById('harmony-h') && !doc.getElementById('scales-h'));
+    ok('step 11: the ? sits in the lens row', !!doc.querySelector('#board-lens .ph-help'));
+    ok('step 11: the description follows the view (Arpeggio)', desc() === L.arp_p);
+    T.setHView('chords');
+    T.selectTab('scales'); T.setScView('notes');
+    ok('step 11: ...and the sub-view (Notes)', desc() === L.nt_p);
     T.setScView('scale');
 
     /* chord-shape cards: selectable, and the selected one rings its notes on the neck */
@@ -1165,7 +1167,9 @@ if (T) {
     // home gains the Rhythm group + the new card; the drill area exists
     ok('5a: rhythm drill card present (start-changes)', !!doc.getElementById('start-changes'));
     ok('5a: chord-change area present (cm-area)', !!doc.getElementById('cm-area'));
-    ok('5a: practice home grouped by pillar', doc.querySelectorAll('#practice-home .practice-section').length >= 2);
+    ok('step 11: the practice home is one list of six cards, no section labels or intro',
+       doc.querySelectorAll('#practice-home .practice-list').length === 1 && doc.querySelectorAll('#practice-home .practice-list .drill-card').length === 6
+       && !doc.querySelector('#practice-home .ps-label, #practice-home .practice-soon'));
     // the drill uses chord-diagram SVGs, not a fretboard, so the board count is unchanged
     // (3 total: reference #board + the note-naming and timing drill boards)
     ok('5a: no extra fretboard added', doc.querySelectorAll('.fretboard').length === 3);
@@ -1473,8 +1477,8 @@ if (T) {
     const doc = win.document;
     ok('7a: timing card + area + board present',
        !!doc.getElementById('start-timing') && !!doc.getElementById('sd-area') && !!doc.getElementById('sd-board'));
-    ok('7a: a Timing group card sits in the practice home',
-       !!doc.querySelector('#practice-home .practice-section [data-i18n="drill_timing"]'));
+    ok('7a: a Timing card sits in the practice home',
+       !!doc.querySelector('#practice-home .practice-list [data-i18n="drill_timing"]'));
     ok('7a: four subdivisions (quarter → sixteenth) with the right per-beat divisions',
        T.SUBDIVS.length === 4 && T.SUBDIVS.map(s => s.div).join(',') === '1,2,3,4');
 
@@ -1733,18 +1737,19 @@ if (T) {
     T.setMode('practice');
     ok('A1: entering Practice stops the reference loop instead of strumming over the drill',
        !T.transportActive());
-    /* the shortcut has to follow the control it stands for, or M starts an invisible
-       metronome beating against the drill's own click with nothing on screen to stop it */
+    /* the shortcut follows the control it stands for: M is the tempo sheet's "click with
+       ▶" (step 11), a setting for whatever ▶ starts, never a transport of its own */
     const press = k => doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: k, bubbles: true }));
+    const click0 = T.getClickOn();
     press('m');
-    ok('A1: M does not start the reference metronome from a Practice screen', !T.transportActive());
+    ok('A1: M does nothing on the Practice home, where no tempo is on screen', T.getClickOn() === click0 && !T.transportActive());
     press(' ');
     ok('step 8: Space on the Practice home (no ▶ on screen) starts nothing', !T.transportActive());
     T.setMode('reference');
     press('m');
-    ok('A1: ...but M still works in Reference, where the control is on screen', T.transportActive());
+    ok('step 11: in Reference M switches the click with ▶, and starts nothing', T.getClickOn() === !click0 && !T.transportActive());
     press('m');
-    ok('A1: ...and toggles back off', !T.transportActive());
+    ok('A1: ...and toggles back', T.getClickOn() === click0);
 
     /* --- master volume is app-level, not a property of the backing band --- */
     ok('A1: master volume moved out of the Backing panel',
@@ -1855,17 +1860,15 @@ if (T) {
     /* --- the bands above the neck --- */
     ok('step 8: the strip is its own grid item in Reference, not part of .main',
        !!doc.querySelector('.layout > #strip-ref > #strip') && !doc.querySelector('.main #strip'));
-    /* Only the view's own heading and the strip (heading → strip → view switch → neck)
-       stand between the header and the neck. Counting the .layout children that precede
+    /* Only the strip (strip → view switch → neck; the heading went in step 11) stands
+       between the header and the neck. Counting the .layout children that precede
        #board-region is the durable form of "the neck leads": adding another band above it
        fails here, whatever it is called. */
     const layoutKids = [...doc.querySelector('.layout').children];
     const beforeBoard = layoutKids.slice(0, layoutKids.findIndex(el => el.id === 'board-region'));
-    ok('A3: only the view heading and the strip precede the neck',
-       beforeBoard.map(el => el.id).join(',') === 'view-head,strip-ref',
+    ok('A3: only the strip precedes the neck',
+       beforeBoard.map(el => el.id).join(',') === 'strip-ref',
        beforeBoard.map(el => el.id || el.className).join(','));
-    ok('step 3: the view heading is just the heading — no controls ride in it',
-       !doc.querySelector('#view-head button:not(.ph-help), #view-head select, #view-head input'));
     /* Source order IS focus order. The area maps alone would have shown the neck above
        controls that still came first in the DOM — so a keyboard user would meet the
        chord picker before the neck it changes, and the lens after it. */
@@ -1887,7 +1890,7 @@ if (T) {
        boardMaps.every(m => rowOf(m, 'strip') >= 0 && (rowOf(m, 'strip') <= rowOf(m, 'board') || m[rowOf(m, 'strip')].includes('board'))));
     /* prioritize-fretboard-width: the neck keeps the whole page width on desktop. The
        controls compact into a horizontal rail under it, never a vertical one beside it. */
-    const desktop = maps.find(m => m.length && m[0].join() === 'vhead,vhead');
+    const desktop = maps.find(m => m.length && m[0].join() === 'strip,strip');
     ok('A3: the desktop neck still spans every column',
        !!desktop && desktop[rowOf(desktop, 'board')].every(c => c === 'board'));
     ok('A3: the suggester rides beside the controls, not beside the neck',
@@ -1899,9 +1902,8 @@ if (T) {
     const home = doc.getElementById('practice-home');
     const drills = home.querySelector('.ph-drills');
     ok('A3: the drill picker has a wrapper to be a column of', !!drills);
-    ok('A3: every pillar sits in it',
-       [...home.querySelectorAll('.practice-section')].every(s => s.closest('.ph-drills') === drills)
-       && home.querySelectorAll('.practice-section').length === 4);
+    ok('A3: every card sits in it',
+       [...home.querySelectorAll('.drill-card')].every(c => c.closest('.ph-drills') === drills));
     /* B4 finished the move A3 started: the progress card was pulled out of the bottom of
        a 1700px column and set beside the picker; it now sits ON TOP of it, beside the
        session starter. What A3 asserted — that it is not buried inside the picker — is
@@ -1956,12 +1958,13 @@ if (T) {
     ok('step 8: ...named Instrument / Sound / Display / Progress',
        clusters.map(c => c.querySelector('.tbc-label').dataset.i18n).join(',')
          === 'tbc_instrument,tbc_sound,lbl_display,tbc_progress');
-    /* The tools you come to USE and leave are on the strip, not in Settings: the tuner
+    /* The tools you come to USE and leave are not buried in Settings: the tuner (in the
+       app header since step 11)
        (checked live — it works everywhere), and the latency, in the mic flow. That one is
        checked in the markup only: 14-calibration.js removes it where there is no mic path,
        which jsdom is, and that removal is deliberate — a control that can only ever fail
        should not be on screen. */
-    ok('step 8: the tuner sits in the strip', !!doc.querySelector('#strip-row #tb-tuner'));
+    ok('step 11: the tuner sits in the app header', !!doc.querySelector('header .hdr-tools #tb-tuner'));
     const atPractice = html.indexOf('id="panel-practice"'), atCal = html.indexOf('id="cal-row"'),
           atHome = html.indexOf('id="practice-home"'), atSettings = html.indexOf('id="toolbar"');
     ok('step 8: ...and the latency in the mic flow, above the drill, not in Settings',
@@ -2333,16 +2336,19 @@ if (T) {
     T.setChVoicing(0);
   })();
 
-  /* ---- triads: a toggle on Chord tones (step 1), shape playback + loop parity ---- */
+  /* ---- triads: Chord tones with chTriads on (step 1), one of the lens's three views
+     since step 11; shape playback + loop parity ---- */
   (function triadParity() {
     const doc = win.document;
-    ok('step 1: no Triads view of its own',
-       !doc.getElementById('hv-triads') && !doc.getElementById('sub-triads'));
+    ok('step 1: no Triads panel of its own', !doc.getElementById('sub-triads'));
     T.selectTab('harmony'); T.setHView('chords'); T.setChQual(0);
     T.setChTriads(false); T.setHView('chords');
-    ok('step 1: Chord tones offers Full chord | Triads', doc.querySelectorAll('#ch-shape .btn').length === 2);
+    ok('step 11: Harmony\'s views are one switch: Chord tones · Triads · Arpeggio',
+       [...doc.querySelectorAll('#ctx-view-harmony .btn')].map(b => b.id).join() === 'hv-chords,hv-triads,hv-arp'
+       && doc.getElementById('hv-chords').getAttribute('aria-pressed') === 'true');
+    ok('step 11: the Full chord / Triads row under the neck is gone', !doc.getElementById('ch-shape'));
     ok('step 1: the triad rows stay folded with the full chord', doc.getElementById('ch-triad-rows').hidden === true);
-    doc.querySelectorAll('#ch-shape .btn')[1].click();
+    doc.getElementById('hv-triads').click();
     ok('step 1: pressing Triads turns them on', T.state().chTriads === true && T.isBoardMode('triads') === true);
     ok('step 1: ...shows the string-set and inversion rows', doc.getElementById('ch-triad-rows').hidden === false);
     ok('step 1: ...draws triad cards in place of the chord shapes',
@@ -2356,7 +2362,9 @@ if (T) {
     ok('step 1: a sus chord has no triad, so the neck shows the full chord',
        T.chTriadIdx() === -1 && T.triadsOn() === false && T.isBoardMode('chords') === true);
     ok('step 1: ...and the Triads button is disabled, not hidden',
-       doc.querySelectorAll('#ch-shape .btn')[1].disabled === true);
+       doc.getElementById('hv-triads').disabled === true);
+    doc.getElementById('hv-triads').click();
+    ok('step 11: ...so pressing it does nothing', T.isBoardMode('chords') && doc.getElementById('hv-chords').getAttribute('aria-pressed') === 'true');
     T.setChQual(0); T.setHView('chords');
     T.setTriad(0, 1);                    // string set 1·2·3, root position (major chord)
     const tv = T.currentTriadVoicing();
@@ -2376,8 +2384,11 @@ if (T) {
     ok('triad→quality fifths are [perfect, perfect, ♭5, ♯5]',
        fifths[0] === 7 && fifths[1] === 7 && fifths[2] === 6 && fifths[3] === 8,
        fifths.join(','));
-    doc.querySelectorAll('#ch-shape .btn')[0].click();
-    ok('step 1: Full chord turns triads off', T.state().chTriads === false && T.isBoardMode('chords') === true);
+    doc.getElementById('hv-arp').click();
+    ok('step 11: Arpeggio from Triads', T.state().hView === 'arp' && doc.getElementById('hv-arp').getAttribute('aria-pressed') === 'true'
+       && doc.getElementById('hv-triads').getAttribute('aria-pressed') === 'false');
+    doc.getElementById('hv-chords').click();
+    ok('step 1: Chord tones turns triads off', T.state().chTriads === false && T.isBoardMode('chords') === true);
     ok('step 1: ...and the chord shapes come back', doc.getElementById('shapes-card').hidden === false);
     T.selectTab('harmony'); T.setHView('chords');
   })();
@@ -2677,7 +2688,7 @@ if (T) {
     T.applyPreset(T.SEQ_PRESETS[2]);
     doc.getElementById('backing-toggle').click();
     ok('step 8: the caret opens the drawer: what ▶ plays, the progression, the band',
-       vis('backing-panel') && ['pl-src', 'seq-presets', 'seq-strip', 'pl-jam', 'tb-bass', 'tb-drums'].every(id => !!doc.querySelector('#backing-panel #' + id)));
+       vis('backing-panel') && ['pl-src', 'seq-presets', 'seq-strip', 'tb-bass', 'tb-drums'].every(id => !!doc.querySelector('#backing-panel #' + id)));
     doc.querySelectorAll('#pl-src .btn')[1].click();
     ok('step 8: "the progression" is remembered', T.getPlaySrc() === 'prog' && JSON.parse(win.localStorage.getItem('guitarStudio.v1')).playSrc === 'prog');
     T.stripPlay();
@@ -2824,17 +2835,86 @@ if (T) {
     ok('step 10: the footer claims no tuning and repeats no brand', !/E A D G B e|Euterpe/.test(foot.textContent), foot.textContent);
     ok('step 10: ...it holds the version badge and the shortcuts link', !!foot.querySelector('#app-ver') && !!foot.querySelector('#kbd-open'));
 
-    /* --- the tempo sheet's Metronome is the reference transport's --- */
-    ok('step 10: the tempo sheet offers the Metronome in Reference', !doc.getElementById('tb-metro').hidden);
-    T.setMode('practice'); T.startTrack('timing');
-    ok('step 10: ...not inside a drill, which brings its own click', T.chipOffered('tempo') && doc.getElementById('tb-metro').hidden);
+    /* --- the tempo sheet's click: since step 11 one "click with ▶", offered wherever the
+       tempo is (step 10 hid the free metronome in drills) --- */
+    ok('step 11: the tempo sheet offers the click in Reference', !doc.getElementById('tb-metro').hidden);
+    T.setMode('practice'); T.startTrack('changes');
+    ok('step 11: ...and inside a drill with a tempo, which honours it', T.chipOffered('tempo') && !doc.getElementById('tb-metro').hidden);
     T.quitDrill(); T.setMode('reference');
-    ok('step 10: ...and back in Reference it is offered again', !doc.getElementById('tb-metro').hidden);
 
     // put everything back
     T.setKey(st0.keyRoot, st0.keyLbl, st0.scIdx);
     T.setChord(st0.chRoot, st0.chLbl, st0.chQual);
     T.selectTab('harmony'); T.setHView('chords');
+  })();
+
+  /* ---- PLAN step 11: the neck higher, one control per job ----
+     The tuner and Settings live in the app header; the strip is key · chord · tempo · ▶
+     and a screen that offers none of them has no strip row. One metronome: the tempo
+     sheet's "click with ▶", honoured by the reference loop and the drills, saved. The ▶
+     drawer has no Jam and shows the progression editor only for a progression. */
+  (function layoutPass() {
+    const doc = win.document, st0 = T.state();
+    const vis = id => { const e = doc.getElementById(id); return !!e && !e.hidden && !e.closest('[hidden]'); };
+    T.setMode('reference'); T.closeSheets();
+
+    /* --- the header holds the tools; the strip holds the context --- */
+    ok('step 11: the tuner and Settings are in the app header',
+       !!doc.querySelector('header #tb-tuner') && !!doc.querySelector('header #tb-toggle') && !doc.querySelector('#strip #tb-tuner, #strip #tb-toggle'));
+    ok('step 11: the strip is key · chord · tempo · ▶',
+       [...doc.querySelectorAll('#strip-row > *')].map(e => e.id).join() === 'chip-key,chip-chord,chip-tempo,chip-play');
+    doc.getElementById('tb-toggle').click();
+    ok('step 11: the header gear still opens Settings', vis('toolbar') && doc.getElementById('tb-toggle').getAttribute('aria-expanded') === 'true');
+    T.closeSheets();
+    T.setMode('practice');
+    ok('step 11: the Practice home has no strip row', !vis('strip-row'));
+    T.startDrill();
+    ok('step 11: ...nor does note naming, which declares no key, chord, tempo or ▶', !vis('strip-row'));
+    T.exitDrill();
+    T.startTrack('changes');
+    ok('step 11: a drill with a tempo and a ▶ has its row', vis('strip-row') && vis('chip-tempo') && vis('chip-play'));
+    ok('step 11: the drill has no Click button of its own', !doc.getElementById('cm-click') && !doc.getElementById('sp-click'));
+    ok('step 11: One-minute changes promises no mic scoring', !/згодом|comes later/.test(doc.getElementById('cm-setup-note').textContent));
+    T.quitDrill();
+    T.startRhythm();
+    const sb = doc.getElementById('drill-ctx-setup');
+    ok('step 11: the drill header\'s setup handle is an icon with a name',
+       !sb.hidden && !!sb.querySelector('svg') && sb.textContent.trim() === '' && sb.getAttribute('aria-label') === T.I18N[st0.lang].drill_setup);
+    T.exitRhythm(); T.setMode('reference');
+
+    /* --- the ▶ drawer --- */
+    T.setPlaySrc('chord');
+    T.toggleSheet('play');
+    ok('step 11: the drawer has no Jam', !doc.getElementById('pl-jam') && vis('tb-bass') && vis('tb-drums'));
+    ok('step 11: ...and no progression editor while ▶ plays the chord', !vis('ch-seq'));
+    T.setPlaySrc('prog');
+    ok('step 11: ...which shows for the progression', vis('ch-seq'));
+    T.setPlaySrc('chord'); T.closeSheets();
+
+    /* --- one metronome: click with ▶ --- */
+    T.initAudio();
+    const ctx = win.__AC.__ctx, mk = ctx.createOscillator;
+    let squares = 0;
+    ctx.createOscillator = () => { const o = mk(); return new Proxy(o, { set(t, k, v) { if (k === 'type' && v === 'square') squares++; t[k] = v; return true; } }); };
+    const run = () => { squares = 0; ctx.currentTime = 0; T.loopToggle();
+      for (let tms = 0; tms <= 3000; tms += 25) { ctx.currentTime = tms / 1000; T.schedAdvance(); }
+      T.loopToggle(); return squares; };
+    if (T.getClickOn()) T.clickToggle();
+    const quiet = run();
+    T.clickToggle();
+    const clicked = run();
+    ctx.createOscillator = mk;
+    ok('step 11: the click is off by default: the loop schedules none', quiet === 0, String(quiet));
+    ok('step 11: on, the reference loop clicks every beat', clicked >= 4, String(clicked));
+    ok('step 11: the click starts no transport of its own', !T.transportActive());
+    ok('step 11: ...the tempo chip and the tempo sheet say it is on',
+       doc.getElementById('chip-tempo').classList.contains('on') && doc.getElementById('tb-metro').getAttribute('aria-pressed') === 'true');
+    ok('step 11: ...and it is saved', T.snapshotState().clickOn === true);
+    ok('step 11: an older save has the click off', T.migrateSave({}).clickOn === undefined);
+    T.clickToggle();
+
+    T.setKey(st0.keyRoot, st0.keyLbl, st0.scIdx);
+    T.setChord(st0.chRoot, st0.chLbl, st0.chQual);
   })();
 
   /* ---- Phase 2 (v1.20.0): arpeggios, CAGED labels, capo ---- */

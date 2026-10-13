@@ -228,7 +228,7 @@ findings are bugs.
     fixture saved with an overlay on (`v2.18-overlay`). The Metronome is hidden, not disabled,
     in Practice; the chord toggle (`scShowChord`) is UI-only, not saved.
 
-- [ ] **11. Layout pass: the neck higher, one control per job** (minor)
+- [x] **11. Layout pass: the neck higher, one control per job** (minor; done 2026-10-13)
   - 🎵 Tuner and ⚙ Settings move into the app header (on a phone it holds only the brand). The
     strip is key · chord · tempo · ▶ and always fits one row; a drill that declares none of them
     (note naming, Practice home) has no strip row at all.
@@ -248,6 +248,10 @@ findings are bugs.
     promised.
   - Orientation matrix review (`tools/shoot.js tabs …`) before shipping.
   - _Data:_ `sp`/`cm` click flags were never saved; the metronome-with-▶ flag is new (additive).
+  - _As built:_ `clickOn` (saved, absent = off) replaces the free metronome; M toggles it wherever
+    the tempo is offered. Timing keeps its own grid click (it is the drill). On a phone the lens
+    uses short labels (Тони · Тризвуки · Арпеджіо, A / ♭3) to stay one row: neck at ~156px on
+    360×740. The view descriptions fold under the neck behind the lens's ?.
 
 - [ ] **12. Smaller seams** (patch or minor, with 11 or after)
   - Rhythm guitar's own "Гурт" follows the drawer's Bass/Drums instead of keeping its own flag.

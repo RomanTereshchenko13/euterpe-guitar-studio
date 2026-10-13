@@ -43,10 +43,14 @@
      parse env(), measures the base rules. */
   @supports (padding: max(0px, env(safe-area-inset-left))) {
     .wrap { padding-left: max(24px, env(safe-area-inset-left)); padding-right: max(24px, env(safe-area-inset-right)); }
-    header { padding-top: max(28px, env(safe-area-inset-top)); }
+    header { padding-top: max(18px, env(safe-area-inset-top)); }
     body { padding-bottom: max(4rem, env(safe-area-inset-bottom)); }
   }
-  header { border-bottom: 1px solid var(--border); padding: 28px 0 0; background: linear-gradient(180deg, #1c1913 0%, var(--bg) 100%); }
+  header { border-bottom: 1px solid var(--border); padding: 18px 0 0; background: linear-gradient(180deg, #1c1913 0%, var(--bg) 100%); }
+  /* one line: brand · nav · tools, the nav's tabs standing on the header's bottom edge */
+  header > .wrap { display: flex; align-items: flex-end; gap: 10px 28px; }
+  header .brand { padding-bottom: 12px; }
+  .hdr-tools { margin-left: auto; display: flex; align-items: center; gap: 8px; padding-bottom: 10px; }
   .brand { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
   .brand-name { display: flex; flex-direction: column; gap: 1px; }
   .brand h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 30px; letter-spacing: -0.01em; }
@@ -72,12 +76,12 @@
   .langbtn:hover:not(.active) { color: var(--text); }
   .langbtn.active { background: var(--accent); color: #07203a; }
   /* the one navigation: two reference subjects + Practice, as peers */
-  .mainnav { display: flex; gap: 4px; margin-top: 22px; flex-wrap: wrap; }
+  .mainnav { display: flex; gap: 4px; flex-wrap: wrap; }
   .navbtn { font-family: inherit; font-size: 14px; font-weight: 500; background: transparent; color: var(--text-dim); border: none; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0; padding: 10px 16px 12px; cursor: pointer; transition: color 0.15s, border-color 0.15s, background 0.15s; }
   .navbtn:hover:not(.active) { color: var(--text); background: var(--bg-panel); }
   .navbtn.active { color: var(--text); border-bottom-color: var(--accent); }
 
-  /* Desktop grid: the neck leads and spans the full width — heading → strip → neck +
+  /* Desktop grid: the neck leads and spans the full width — strip → neck +
      legend → the view's controls (with the suggester beside them) → chord shapes.
      Named areas, not source order, so phones reflow the same DOM. minmax(0,1fr)
      keeps the wide neck from blowing out the row; it scrolls in its own .scroll. */
@@ -85,7 +89,6 @@
     display: grid;
     grid-template-columns: minmax(0,1fr) 234px;
     grid-template-areas:
-      "vhead     vhead"
       "strip     strip"
       "board     board"
       "boardmeta boardmeta"
@@ -96,10 +99,8 @@
     padding-top: 30px;
   }
   /* no suggester off Harmony: drop its column (applyAsideState) */
-  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "vhead" "strip" "board" "boardmeta" "main" "shapes"; }
+  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "strip" "board" "boardmeta" "main" "shapes"; }
   #strip-ref { grid-area: strip; }
-  .view-head { grid-area: vhead; }
-  .view-head .panel-head { margin-bottom: 8px; }
   /* .main follows the neck and needs air above it. Not a row-gap: the areas are
      optional, and a gap would show as a hole. */
   .main { grid-area: main; min-width: 0; margin-top: 22px; }
@@ -115,7 +116,7 @@
   @media (max-width: 940px) {
     .layout, .layout.no-aside {
       grid-template-columns: minmax(0,1fr);
-      grid-template-areas: "vhead" "strip" "board" "boardmeta" "main" "shapes" "aside";
+      grid-template-areas: "strip" "board" "boardmeta" "main" "shapes" "aside";
     }
     /* air between the stacked cards; shapes ("how to fret this") before the suggester */
     .aside { position: static; margin-top: 22px; }
@@ -134,7 +135,10 @@
   .ph-help, .drill-help { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 22px; height: 22px; padding: 0; line-height: 1; border: 1px solid var(--border-strong); border-radius: 50%; background: var(--bg-panel); color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; cursor: pointer; }
   .ph-help:hover, .drill-help:hover { color: var(--text); border-color: var(--text-faint); }
   .ph-help.on, .drill-help.on { background: var(--accent); color: #07203a; border-color: var(--accent); }
-  body.help-open .panel.active .panel-head p, body.help-open .view-head .panel-head p { display: block; margin-top: 6px; }
+  body.help-open .panel.active .panel-head p { display: block; margin-top: 6px; }
+  /* the reference view's description, under the neck behind the lens's ? */
+  .view-desc { display: none; font-size: 14px; color: var(--text-dim); max-width: 680px; margin-top: 12px; }
+  body.help-open .view-desc { display: block; }
 
   /* ===== Mode axis: Reference · Practice (body.mode-practice) ===== */
 
@@ -148,7 +152,6 @@
      slot (the strip itself has moved into Practice), board, suggester and shapes card. */
   body.mode-practice .panel.active,
   body.mode-practice #strip-ref,
-  body.mode-practice .view-head,
   body.mode-practice #board-region,
   body.mode-practice .board-meta,
   body.mode-practice .aside,
@@ -157,7 +160,6 @@
   body.mode-practice .layout, body.mode-practice .layout.no-aside {
     grid-template-columns: minmax(0,1fr); grid-template-areas: "main";
   }
-  .practice-soon { color: var(--text-dim); font-size: 15px; max-width: 620px; }
   /* drill cards wrap into a grid; the li is a bare flex cell, so the card is the only
      box and cards in a row line up */
   .practice-list { list-style: none; margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
@@ -229,6 +231,8 @@
   .drill-sess { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); }
   /* ✕, the way out, at the far end */
   .drill-quit { font-size: 13px; line-height: 1; }
+  /* the setup handle is an icon, as tall as the text buttons beside it */
+  .ico-setup { display: block; margin: -1px 0; }
   /* SETUP: open before the first Play, folded during the run */
   body:not(.drill-setup-open) .drill-setup { display: none; }
   .drill-setup { margin-bottom: 4px; }
@@ -273,9 +277,6 @@
   .ear-next-row .btn.play { font-size: 14px; padding: 9px 26px; }
 
   /* ---- practice home: drills grouped by pillar ---- */
-  .practice-section { margin-top: 22px; }
-  .ps-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-  .practice-section .practice-list { margin-top: 0; }
 
   /* ---- chord-change fluency / one-minute changes ---- */
   /* one-minute changes: your own pair */
@@ -495,15 +496,13 @@
   /* the chord, marked on top of the key: a dashed ring on its node */
   .cof-node.cof-chord circle { stroke: var(--text); stroke-width: 3; stroke-dasharray: 5 3; }
 
-  /* ---- THE CONTEXT STRIP: key · chord · tempo · ▶ · tuner · ⚙ (15-0-strip.js) ----
-     One row, the same above the neck and above a drill stage. On a narrow screen it
-     swipes rather than wraps, so it stays one row. */
+  /* ---- THE CONTEXT STRIP: key · chord · tempo · ▶ (15-0-strip.js) ----
+     One row, the same above the neck and above a drill stage; four chips fit a phone. */
   .strip { margin-bottom: 10px; }
+  @media (max-width: 940px) { .strip { margin-bottom: 6px; } }
   .strip-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
   .strip-row::-webkit-scrollbar { display: none; }
   .strip-row > * { flex-shrink: 0; }
-  /* ⚙ at the far end */
-  .chip-gear { margin-left: auto; }
   .chip, .strip-row .btn.play { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--bg-panel); color: var(--text); cursor: pointer; white-space: nowrap; transition: border-color 0.12s, background 0.12s, color 0.12s; }
   .chip:hover { border-color: var(--text-faint); background: var(--bg-panel-2); }
   .chip.open { border-color: var(--accent); background: var(--bg-panel-2); }
@@ -544,11 +543,11 @@
   /* the progression, in the ▶ drawer */
   .seq-foot { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   @media (max-width: 940px) {
-    /* the strip fits a phone, either way up: icons for the tuner and ▶ (its chord is the
-       chord chip), no chevrons on the chips, a long key name gives way */
+    /* the strip fits a phone, either way up: an icon for ▶ (its chord is the chord chip),
+       no chevrons on the chips, a long key name gives way; the header's tuner is an icon */
     .strip-row { gap: 5px; }
     .chip, .strip-row .btn.play { padding: 6px 8px; font-size: 12px; gap: 4px; }
-    .strip-row .chip-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .strip-row .chip-txt, .hdr-tools .chip-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
     .strip-row .chip:not(.chip-caret) .chev { display: none; }
     .chip-val { max-width: 32vw; overflow: hidden; text-overflow: ellipsis; }
     /* phone: the sheet rises over the page above the bottom nav, so the neck stays in
@@ -591,16 +590,30 @@
   .board-lens { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
   .board-lens .lens-group { display: flex; flex-wrap: wrap; gap: 6px; }
   .board-lens .ctx-display { margin-left: auto; }
+  .board-lens .ph-help { align-self: center; }
+  .lens-short { display: none; }
+  /* phone: the lens is one row — short labels (the long ones stay the accessible name),
+     smaller buttons — so the neck sits right under the strip; a landscape phone too, where
+     the lens shares the neck's column */
+  @media (max-width: 600px), (max-width: 940px) and (max-height: 500px) {
+    .board-lens { flex-wrap: nowrap; gap: 5px; margin-bottom: 7px; align-items: center; }
+    .board-lens .lens-group { flex-wrap: nowrap; gap: 4px; }
+    .board-lens .btn { padding: 6px 9px; font-size: 12px; }
+    .lens-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .lens-short { display: inline; }
+  }
   /* the one shared fretboard (Harmony + Scales) */
   .board-region { margin-top: 4px; }
   /* sticky neck (phone): pinned while the cards below scroll, so a tap shows its result */
   @media (max-width: 940px) {
-    #board-region { position: sticky; top: var(--hdr-h, 0px); z-index: 5; background: var(--bg); padding-top: 6px; box-shadow: 0 8px 14px -10px rgba(0,0,0,0.7); }
+    #board-region { position: sticky; top: var(--hdr-h, 0px); z-index: 5; background: var(--bg); padding-top: 4px; box-shadow: 0 8px 14px -10px rgba(0,0,0,0.7); }
   }
   /* condensing sticky header (phone): the brand alone (the nav is the bottom bar),
      slimmed past the top; the board offsets below it via --hdr-h, kept in sync by JS */
   @media (max-width: 940px) {
     header { position: sticky; top: 0; z-index: 20; padding-top: 12px; padding-bottom: 6px; }
+    header > .wrap { align-items: center; }
+    header .brand, .hdr-tools { padding-bottom: 0; }
     /* every height-contributing property animates (no display:none), so the header glides;
        the board tracks it because --hdr-h is re-measured every frame */
     header, header .brand h1, header .brand-desc {
@@ -614,7 +627,7 @@
     header.scrolled { padding-top: 6px; padding-bottom: 4px; }
     header.scrolled .brand-desc { max-height: 0; opacity: 0; }
     header.scrolled .brand h1 { font-size: 19px; }
-    .layout { padding-top: 12px; }
+    .layout { padding-top: 8px; }
   }
   @supports (top: max(0px, env(safe-area-inset-top))) {
     @media (max-width: 940px) { header { padding-top: max(12px, env(safe-area-inset-top)); } header.scrolled { padding-top: max(6px, env(safe-area-inset-top)); } }
@@ -628,13 +641,11 @@
     header { position: static; padding-top: max(10px, env(safe-area-inset-top)); }
     .brand-desc { display: none; }
     .brand h1 { font-size: 22px; }
-    header .mainnav { margin-top: 8px; }
     .layout:has(#board-region:not([hidden])) {
       grid-template-columns: minmax(0,1fr) minmax(300px, 46%);
       /* the left column keeps the portrait order; #shapes-card needs an explicit slot or it
          auto-places to the end */
       grid-template-areas:
-        "vhead     board"
         "strip     board"
         "main      board"
         "shapes    board"

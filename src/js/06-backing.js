@@ -127,8 +127,11 @@ function scheduleBand(pc, qi, when, force){
 }
 function bandActive(){ return bassOn || grooveOn; }
 
-/* ---- metronome (scheduler clock → cue bus) ---- */
-let metroClock=null;
+/* ---- the click: one metronome, "click with ▶" ----
+   Not a transport of its own: a flag (the tempo sheet, or M) that whatever ▶ starts
+   honours — the reference loop and progression schedule it bar by bar beside the band,
+   and a drill with a tempo ticks it on its own clock. Persisted. */
+let clickOn=false;
 function metroClick(when, accent){
   const ctx=audio(); if(!ctx) return;
   const o=ctx.createOscillator(), g=ctx.createGain();
@@ -138,27 +141,27 @@ function metroClick(when, accent){
   g.gain.exponentialRampToValueAtTime(0.0001, when+0.05);
   o.connect(g).connect(cue); o.start(when); o.stop(when+0.06);
 }
-function metroToggle(){
-  const btn=document.getElementById('tb-metro');
-  if(metroClock){ removeClock(metroClock); metroClock=null; btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); setMetroLabel(); setBackingToggle(); syncWakeLock(); return; }
-  audio();
-  metroClock={ interval:()=>pulseSec(), tick:(time,count)=>metroClick(time, meterGroupStarts().has(count%barBeats())) };
-  addClock(metroClock);
-  btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setMetroLabel(); setBackingToggle(); syncWakeLock();
+/* one bar of clicks from `when`, accented on the meter's group starts */
+function scheduleClick(when){
+  const p=pulseSec(), starts=meterGroupStarts();
+  for(let k=0;k<barBeats();k++) metroClick(when+k*p, k===0 || starts.has(k));
 }
-function setMetroLabel(){ const b=document.getElementById('tb-metro'); b.innerHTML=(metroClock?'&#9632; ':'&#9654; ')+t(metroClock?'tb_metro_on':'tb_metro_off'); b.setAttribute('aria-label', t('tb_metro_off')); }
+function clickToggle(){ clickOn=!clickOn; setMetroLabel(); setBackingToggle(); renderStrip(); saveState(); }
+function setMetroLabel(){
+  const b=document.getElementById('tb-metro'); if(!b) return;
+  b.innerHTML='&#9833; '+t('tb_click'); b.title=t('tb_click_tip');
+  b.classList.toggle('active', clickOn); b.setAttribute('aria-pressed', clickOn?'true':'false');
+}
 /* tint the strip while something it hides is on: the drawer's caret for the band, the
-   tempo chip for the metronome */
+   tempo chip for the click */
 function setBackingToggle(){
   const b=document.getElementById('backing-toggle'); if(b) b.classList.toggle('on', bandActive());
-  const tc=document.getElementById('chip-tempo'); if(tc) tc.classList.toggle('on', !!metroClock);
+  const tc=document.getElementById('chip-tempo'); if(tc) tc.classList.toggle('on', clickOn);
 }
 /* ---- bass + drums: what the band adds under ▶ ----
    Settings for the next ▶, not a start of their own; while something plays they join
-   on the next bar. The Jam is both at once. Persisted. */
+   on the next bar. Persisted. */
 function setBandLabels(){
-  const jm=document.getElementById('pl-jam');
-  if(jm){ const on=bandActive(); jm.textContent=t('pl_jam'); jm.classList.toggle('active', on); jm.setAttribute('aria-pressed', on?'true':'false'); }
   const bb=document.getElementById('tb-bass');
   if(bb){ bb.innerHTML='&#9834; '+t('tb_bass'); bb.classList.toggle('active', bassOn); bb.setAttribute('aria-pressed', bassOn?'true':'false'); bb.setAttribute('aria-label', t('tb_bass')); }
   const db=document.getElementById('tb-drums');
@@ -166,8 +169,6 @@ function setBandLabels(){
 }
 function bassToggle(){ bassOn=!bassOn; setBandLabels(); setBackingToggle(); saveState(); }
 function drumsToggle(){ grooveOn=!grooveOn; setBandLabels(); setBackingToggle(); saveState(); }
-/* the Jam: the whole band on, or off */
-function jamToggle(){ const on=!bandActive(); bassOn=on; grooveOn=on; setBandLabels(); setBackingToggle(); saveState(); }
 
 /* ---- single-chord / single-triad loop: re-strums the current voicing every bar ----
    loopMode (chord vs triad) is captured at start, but the voicing is read live, so a
@@ -187,6 +188,7 @@ function loopStrum(when){
   strumMidi(midis, when, 0.9, 0.026, +1);                 // humanized downstrum
   if(bandActive()) strumMidi(midis, when+midPulseSec(), 0.55, 0.02, +1);   // softer push mid-bar (beat 3 in 4/4)
   scheduleBand(pc, qi, when);                             // bass + groove bed (no-op if both off)
+  if(clickOn) scheduleClick(when);
   enqueueBeats(when);                                     // transport beat pulse
   enqueueVisual(when, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, true)); updateGlobalTransport(); });
   enqueueVisual(when+bs*0.85, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, false)); });
@@ -204,12 +206,10 @@ function loopToggle(){
 function stopLoop(){ if(!loopClock) return; removeClock(loopClock); loopClock=null; clearVisualQ(); stopLoopVisual(); updateGlobalTransport(); }
 
 /* Stop everything the reference transport owns, on entering Practice: a drill brings
-   its own click and bed on its own scheduler, and the reference loop would play over
-   it. metroToggle() is the metronome's only stop, so it's called as one. */
+   its own click and bed on its own scheduler, and the reference loop would play over it. */
 function stopReferenceTransport(){
   if(seqClock) seqStop();
   stopLoop();
-  if(metroClock) metroToggle();
 }
 
 /* ---- what is sounding: the strip's ▶ says it, from either tab ---- */
@@ -231,7 +231,7 @@ function updateGlobalTransport(){
    Keep a phone awake while anything sounds; re-acquired on return to visibility (the
    browser drops it when hidden). Silently absent where the API is (iOS < 16.4, http). */
 let _wakeLock=null, _wakeReq=false;
-function transportActive(){ return !!(metroClock || loopClock || seqClock); }
+function transportActive(){ return !!(loopClock || seqClock); }
 function syncWakeLock(){
   if(typeof navigator==='undefined' || !navigator.wakeLock) return;
   const want=transportActive();
@@ -285,6 +285,7 @@ function seqStrumStep(i, when){
   compStrum(base, ivs, when, 0.9, 0.028);                 // humanized downbeat strum
   if(bandActive()) compStrum(base, ivs, when+midPulseSec(), 0.55, 0.022);   // softer push mid-bar (beat 3 in 4/4)
   scheduleBand(st.pc, st.qi, when);                       // bass + groove follow the step's chord
+  if(clickOn) scheduleClick(when);
   enqueueBeats(when);                                     // transport beat pulse
   const pcs=ivs.map(iv=>mod(base+iv,12));
   enqueueVisual(when, ()=>{

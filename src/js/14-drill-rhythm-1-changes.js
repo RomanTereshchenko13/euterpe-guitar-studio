@@ -26,7 +26,6 @@ const CM_QUALS = [0, 1, 6, 7, 8, 2, 3];
 let cmDurIdx = 1;        // default 60 s
 let cmPairIdx = 0;       // selected pair; -1 = your own (cmCustom)
 let cmCustom = [[5,0],[10,0]];   // your pair, [[pc,qi],[pc,qi]] (persisted) — F – B♭: two barres
-let cmClick = false;     // optional metronome reference during the run
 let cmDrill = null;
 // cmDrill = { phase:'setup'|'run'|'done', pairIdx, dur, count, remaining, startT,
 //             finished, ticker, clock, cpm, best, newBest }
@@ -88,10 +87,10 @@ function cmCountIn(){
 }
 function cmStartClocks(){
   cmDrill.ticker=setInterval(cmCountdown, 1000);
-  if(cmClick){ audio();
-    cmDrill.clock={ interval:()=>beat(), tick:(time,count)=>metroClick(time, count%4===0) };
-    addClock(cmDrill.clock);
-  }
+  // the tempo sheet's click, read live, so it can be switched on mid-run
+  audio();
+  cmDrill.clock={ interval:()=>beat(), tick:(time,count)=>{ if(clickOn) metroClick(time, count%4===0); } };
+  addClock(cmDrill.clock);
 }
 function cmStopClocks(){
   if(cmDrill && cmDrill.ticker){ clearInterval(cmDrill.ticker); cmDrill.ticker=null; }
@@ -136,8 +135,6 @@ function renderCmSetup(){
   }
   const dd=document.getElementById('cm-durs');
   if(dd) dd.innerHTML=CM_DURS.map((d,i)=>`<button type="button" class="btn cm-dur${i===cmDurIdx?' active':''}" data-i="${i}" aria-pressed="${i===cmDurIdx}">${d}${t('cm_sec')}</button>`).join('');
-  const ck=document.getElementById('cm-click');
-  if(ck){ ck.classList.toggle('active', cmClick); ck.setAttribute('aria-pressed', cmClick?'true':'false'); ck.innerHTML='&#9833; '+t('cm_click'); }
   const bl=document.getElementById('cm-setup-best');
   if(bl){ const b=cmPairBest(cmDrill.pairIdx); bl.textContent = b>0 ? (t('cm_best')+' · '+b+' '+t('cm_cpm').toLowerCase()) : ''; }
 }
@@ -196,7 +193,6 @@ registerDrill({ id:'changes', area:'cm-area', tempo:true,   // the optional clic
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('cm-tally',     cmTap);
   wire('cm-untap',     cmUntap);
-  wire('cm-click',     ()=>{ cmClick=!cmClick; renderCmSetup(); });
   const pp=document.getElementById('cm-pairs');
   if(pp) pp.addEventListener('click', e=>{ const btn=e.target.closest('.cm-pair'); if(btn){ cmPairIdx=+btn.dataset.i; if(cmDrill) cmDrill.pairIdx=cmPairIdx; renderCmSetup(); } });
   const cu=document.getElementById('cm-custom');

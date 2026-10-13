@@ -205,6 +205,8 @@ function savedFields(){ return [
   ['playSrc',      svOneOf('chord','prog'),               ()=>playSrc,      v=>{ playSrc=v; }],
   ['bassOn',       svBool,                                ()=>bassOn,       v=>{ bassOn=v; }],
   ['grooveOn',     svBool,                                ()=>grooveOn,     v=>{ grooveOn=v; }],
+  // the tempo sheet's "click with ▶" (new in v2.19.0; absent = off)
+  ['clickOn',      svBool,                                ()=>clickOn,      v=>{ clickOn=v; }],
   // round-trip latency, bounded by the measurement's own ceiling so a bad save can't skew every score
   ['calMs',        svNum(0, CAL_MAX_MS),                  ()=>calMs,        v=>{ calMs=v; }],
   ['calKnown',     svBool,                                ()=>calKnown,     v=>{ calKnown=v; }],

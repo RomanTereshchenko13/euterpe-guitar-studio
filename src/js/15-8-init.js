@@ -61,7 +61,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey, noteTxt, keyDegrees, keyCadence,
     // the context strip
     renderStrip, toggleSheet, closeSheets, sheetShown, chipOffered, placeStrip, stripPlay, refPlayToggle,
-    setScale, setChordQual, setPlaySrc, playCadence, jamToggle, bandActive, bassToggle, drumsToggle,
+    setScale, setChordQual, setPlaySrc, playCadence, clickToggle, getClickOn:()=>clickOn, bandActive, bassToggle, drumsToggle,
     getPlaySrc:()=>playSrc,
     scalesOverChord, triadQi, currentHarmonyChord,
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,

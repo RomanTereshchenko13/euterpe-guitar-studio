@@ -1,6 +1,6 @@
 /* ===================== KEYBOARD SHORTCUTS ===================== */
 /* ---- keyboard shortcuts ----
-   Space=the strip's ▶ · M=Metronome · 1–3=nav · K=key sheet · A–G=key · [ ]=transpose · ?=help.
+   Space=the strip's ▶ · M=click with ▶ · 1–3=nav · K=key sheet · A–G=key · [ ]=transpose · ?=help.
    Ignored while typing, while a modal is open, or with Ctrl/Meta/Alt (browser shortcuts
    survive). Space is taken only when focus is NOT on a control, so a focused dot or
    button keeps its native Space. */
@@ -14,9 +14,6 @@ document.addEventListener('keydown',e=>{
   if(!document.getElementById('cl-overlay').hidden || !document.getElementById('kbd-overlay').hidden) return;
   { const mo=document.getElementById('mic-overlay'); if(mo && !mo.hidden) return; }
   const k=e.key;
-  // M drives the REFERENCE metronome, which a drill replaces with its own click; from a
-  // drill it would start a metronome nobody can see or stop.
-  const refTransport = currentMode!=='practice';
   if(k===' '||k==='Spacebar'){
     if(tg && tg.closest && tg.closest('button,a,[role="button"],[tabindex]')) return;   // let the focused control keep Space
     // the strip's ▶ — the backing in Reference, the running drill's verb in Practice
@@ -36,6 +33,7 @@ document.addEventListener('keydown',e=>{
   const lk = k.length===1 ? k.toLowerCase() : '';
   // K opens the key sheet (where the circle lives) wherever the strip offers the key
   if(lk==='k'){ if(chipOffered('key')) toggleSheet('key'); return; }
-  if(lk==='m'){ const mb=document.getElementById('tb-metro'); if(refTransport && mb && !mb.disabled) metroToggle(); return; }
+  // M is the tempo sheet's click, wherever the strip offers the tempo
+  if(lk==='m'){ const mb=document.getElementById('tb-metro'); if(chipOffered('tempo') && mb && !mb.disabled) clickToggle(); return; }
   if(lk && NOTE_KEY[lk]!==undefined){ const pc=NOTE_KEY[lk]; setKey(pc, ROOTS[pc]); return; }
 });

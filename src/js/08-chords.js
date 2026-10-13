@@ -147,7 +147,8 @@ function renderChords(){
   const degs=q.lab.join('  ');
   document.getElementById('ch-info').innerHTML=`<div class="big">${noteTxt(chLbl)}${q.short} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
   renderChordDiagram();
-  renderChShape();
+  paintHarmonyLens();   // a chord with no triad disables Triads
+  { const rows=document.getElementById('ch-triad-rows'); if(rows) rows.hidden=!triadsOn(); }
   if(triadsOn()) renderTriads();
   // the shared board, only when this is the active view
   if(isBoardMode('chords')){
@@ -163,17 +164,6 @@ function renderChords(){
   renderSuggester();
 }
 
-/* Full chord | Triads. The triad rows show only while the neck shows triads; a chord
-   with no triad (sus, 11) disables the Triads button rather than hiding the switch, so
-   the row doesn't jump as you move through the qualities. */
-function renderChShape(){
-  const has=chTriadIdx()>=0, on=triadsOn();
-  segButtons('ch-shape', [{label:t('shape_full')},{label:t('shape_triads')}], on?1:0, i=>{
-    chTriads=!!i; chVoicing=0; renderChords(); applyHarmonyExtras(); renderPlayBtn(); saveState(); });
-  const tb=document.querySelector('#ch-shape .btn:nth-child(2)');
-  if(tb){ tb.disabled=!has; tb.title = has ? '' : t('shape_no_triad'); }
-  const rows=document.getElementById('ch-triad-rows'); if(rows) rows.hidden=!on;
-}
 
 /* ---- Arpeggios ----
    The same chord tones framed as an arpeggio, which can be isolated to one box. Reads

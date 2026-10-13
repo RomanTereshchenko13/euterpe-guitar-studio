@@ -56,10 +56,13 @@
   .wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
   @supports (padding: max(0px, env(safe-area-inset-left))) {
     .wrap { padding-left: max(24px, env(safe-area-inset-left)); padding-right: max(24px, env(safe-area-inset-right)); }
-    header { padding-top: max(28px, env(safe-area-inset-top)); }
+    header { padding-top: max(18px, env(safe-area-inset-top)); }
     body { padding-bottom: max(4rem, env(safe-area-inset-bottom)); }
   }
-  header { border-bottom: 1px solid var(--border); padding: 28px 0 0; background: linear-gradient(180deg, #1c1913 0%, var(--bg) 100%); }
+  header { border-bottom: 1px solid var(--border); padding: 18px 0 0; background: linear-gradient(180deg, #1c1913 0%, var(--bg) 100%); }
+  header > .wrap { display: flex; align-items: flex-end; gap: 10px 28px; }
+  header .brand { padding-bottom: 12px; }
+  .hdr-tools { margin-left: auto; display: flex; align-items: center; gap: 8px; padding-bottom: 10px; }
   .brand { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
   .brand-name { display: flex; flex-direction: column; gap: 1px; }
   .brand h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 30px; letter-spacing: -0.01em; }
@@ -81,7 +84,7 @@
   .langbtn { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; padding: 5px 11px; border: none; background: transparent; color: var(--text-dim); border-radius: 6px; cursor: pointer; transition: all 0.12s; }
   .langbtn:hover:not(.active) { color: var(--text); }
   .langbtn.active { background: var(--accent); color: #07203a; }
-  .mainnav { display: flex; gap: 4px; margin-top: 22px; flex-wrap: wrap; }
+  .mainnav { display: flex; gap: 4px; flex-wrap: wrap; }
   .navbtn { font-family: inherit; font-size: 14px; font-weight: 500; background: transparent; color: var(--text-dim); border: none; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0; padding: 10px 16px 12px; cursor: pointer; transition: color 0.15s, border-color 0.15s, background 0.15s; }
   .navbtn:hover:not(.active) { color: var(--text); background: var(--bg-panel); }
   .navbtn.active { color: var(--text); border-bottom-color: var(--accent); }
@@ -89,7 +92,6 @@
     display: grid;
     grid-template-columns: minmax(0,1fr) 234px;
     grid-template-areas:
-      "vhead     vhead"
       "strip     strip"
       "board     board"
       "boardmeta boardmeta"
@@ -99,10 +101,8 @@
     align-items: start;
     padding-top: 30px;
   }
-  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "vhead" "strip" "board" "boardmeta" "main" "shapes"; }
+  .layout.no-aside { grid-template-columns: minmax(0,1fr); grid-template-areas: "strip" "board" "boardmeta" "main" "shapes"; }
   #strip-ref { grid-area: strip; }
-  .view-head { grid-area: vhead; }
-  .view-head .panel-head { margin-bottom: 8px; }
   .main { grid-area: main; min-width: 0; margin-top: 22px; }
   body.mode-practice .main { margin-top: 0; }
   #board-region { grid-area: board; }
@@ -112,7 +112,7 @@
   @media (max-width: 940px) {
     .layout, .layout.no-aside {
       grid-template-columns: minmax(0,1fr);
-      grid-template-areas: "vhead" "strip" "board" "boardmeta" "main" "shapes" "aside";
+      grid-template-areas: "strip" "board" "boardmeta" "main" "shapes" "aside";
     }
     .aside { position: static; margin-top: 22px; }
     #shapes-card { margin-top: 22px; }
@@ -127,13 +127,14 @@
   .ph-help, .drill-help { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 22px; height: 22px; padding: 0; line-height: 1; border: 1px solid var(--border-strong); border-radius: 50%; background: var(--bg-panel); color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; cursor: pointer; }
   .ph-help:hover, .drill-help:hover { color: var(--text); border-color: var(--text-faint); }
   .ph-help.on, .drill-help.on { background: var(--accent); color: #07203a; border-color: var(--accent); }
-  body.help-open .panel.active .panel-head p, body.help-open .view-head .panel-head p { display: block; margin-top: 6px; }
+  body.help-open .panel.active .panel-head p { display: block; margin-top: 6px; }
+  .view-desc { display: none; font-size: 14px; color: var(--text-dim); max-width: 680px; margin-top: 12px; }
+  body.help-open .view-desc { display: block; }
   .practice-panel { display: none; animation: fade 0.25s ease; }
   body.mode-practice .practice-panel { display: block; }
   body:not(.drill-running) #drill-ctx { display: none; }
   body.mode-practice .panel.active,
   body.mode-practice #strip-ref,
-  body.mode-practice .view-head,
   body.mode-practice #board-region,
   body.mode-practice .board-meta,
   body.mode-practice .aside,
@@ -141,7 +142,6 @@
   body.mode-practice .layout, body.mode-practice .layout.no-aside {
     grid-template-columns: minmax(0,1fr); grid-template-areas: "main";
   }
-  .practice-soon { color: var(--text-dim); font-size: 15px; max-width: 620px; }
   .practice-list { list-style: none; margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
   .practice-list li { display: flex; }
   .practice-progress-card, .practice-session-card { padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); }
@@ -194,6 +194,7 @@
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .drill-sess { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); }
   .drill-quit { font-size: 13px; line-height: 1; }
+  .ico-setup { display: block; margin: -1px 0; }
   body:not(.drill-setup-open) .drill-setup { display: none; }
   .drill-setup { margin-bottom: 4px; }
   body:not(.drill-help-open) .drill-hint { display: none; }
@@ -226,9 +227,6 @@
   .ear-feedback.bad { color: #e07a7a; }
   .ear-next-row { display: flex; justify-content: center; }
   .ear-next-row .btn.play { font-size: 14px; padding: 9px 26px; }
-  .practice-section { margin-top: 22px; }
-  .ps-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-  .practice-section .practice-list { margin-top: 0; }
   .cm-custom { gap: 6px; }
   .cm-custom .cm-swap { font-size: 16px; margin: 0 4px; }
   .cm-best-line { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); margin: 12px 0; min-height: 18px; }
@@ -404,10 +402,10 @@
   @keyframes cof-draw { to { stroke-dashoffset: 0; } }
   .cof-node.cof-chord circle { stroke: var(--text); stroke-width: 3; stroke-dasharray: 5 3; }
   .strip { margin-bottom: 10px; }
+  @media (max-width: 940px) { .strip { margin-bottom: 6px; } }
   .strip-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
   .strip-row::-webkit-scrollbar { display: none; }
   .strip-row > * { flex-shrink: 0; }
-  .chip-gear { margin-left: auto; }
   .chip, .strip-row .btn.play { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--bg-panel); color: var(--text); cursor: pointer; white-space: nowrap; transition: border-color 0.12s, background 0.12s, color 0.12s; }
   .chip:hover { border-color: var(--text-faint); background: var(--bg-panel-2); }
   .chip.open { border-color: var(--accent); background: var(--bg-panel-2); }
@@ -443,7 +441,7 @@
   @media (max-width: 940px) {
     .strip-row { gap: 5px; }
     .chip, .strip-row .btn.play { padding: 6px 8px; font-size: 12px; gap: 4px; }
-    .strip-row .chip-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .strip-row .chip-txt, .hdr-tools .chip-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
     .strip-row .chip:not(.chip-caret) .chev { display: none; }
     .chip-val { max-width: 32vw; overflow: hidden; text-overflow: ellipsis; }
     .sheets { position: fixed; left: 0; right: 0; bottom: calc(46px + env(safe-area-inset-bottom)); z-index: 40; margin: 0; max-height: min(62vh, 520px); overflow-y: auto; overscroll-behavior: contain; padding: 0 8px 8px; }
@@ -476,12 +474,23 @@
   .board-lens { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
   .board-lens .lens-group { display: flex; flex-wrap: wrap; gap: 6px; }
   .board-lens .ctx-display { margin-left: auto; }
+  .board-lens .ph-help { align-self: center; }
+  .lens-short { display: none; }
+  @media (max-width: 600px), (max-width: 940px) and (max-height: 500px) {
+    .board-lens { flex-wrap: nowrap; gap: 5px; margin-bottom: 7px; align-items: center; }
+    .board-lens .lens-group { flex-wrap: nowrap; gap: 4px; }
+    .board-lens .btn { padding: 6px 9px; font-size: 12px; }
+    .lens-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .lens-short { display: inline; }
+  }
   .board-region { margin-top: 4px; }
   @media (max-width: 940px) {
-    #board-region { position: sticky; top: var(--hdr-h, 0px); z-index: 5; background: var(--bg); padding-top: 6px; box-shadow: 0 8px 14px -10px rgba(0,0,0,0.7); }
+    #board-region { position: sticky; top: var(--hdr-h, 0px); z-index: 5; background: var(--bg); padding-top: 4px; box-shadow: 0 8px 14px -10px rgba(0,0,0,0.7); }
   }
   @media (max-width: 940px) {
     header { position: sticky; top: 0; z-index: 20; padding-top: 12px; padding-bottom: 6px; }
+    header > .wrap { align-items: center; }
+    header .brand, .hdr-tools { padding-bottom: 0; }
     header, header .brand h1, header .brand-desc {
       transition: padding 0.22s ease, font-size 0.22s ease, margin 0.22s ease, max-height 0.22s ease, opacity 0.16s ease;
     }
@@ -490,7 +499,7 @@
     header.scrolled { padding-top: 6px; padding-bottom: 4px; }
     header.scrolled .brand-desc { max-height: 0; opacity: 0; }
     header.scrolled .brand h1 { font-size: 19px; }
-    .layout { padding-top: 12px; }
+    .layout { padding-top: 8px; }
   }
   @supports (top: max(0px, env(safe-area-inset-top))) {
     @media (max-width: 940px) { header { padding-top: max(12px, env(safe-area-inset-top)); } header.scrolled { padding-top: max(6px, env(safe-area-inset-top)); } }
@@ -499,11 +508,9 @@
     header { position: static; padding-top: max(10px, env(safe-area-inset-top)); }
     .brand-desc { display: none; }
     .brand h1 { font-size: 22px; }
-    header .mainnav { margin-top: 8px; }
     .layout:has(#board-region:not([hidden])) {
       grid-template-columns: minmax(0,1fr) minmax(300px, 46%);
       grid-template-areas:
-        "vhead     board"
         "strip     board"
         "main      board"
         "shapes    board"
@@ -718,22 +725,15 @@
       <button class="navbtn" data-panel="scales" data-i18n="tab_scales">Гами</button>
       <button class="navbtn" data-panel="practice" data-mode="practice" data-i18n="mode_practice">Практика</button>
     </nav>
+    <div class="hdr-tools">
+      <button type="button" class="chip" id="tb-tuner"><span aria-hidden="true">🎵</span><span class="chip-txt" data-i18n="tuner_open">Тюнер</span></button>
+      <button type="button" class="chip chip-gear" id="tb-toggle" aria-expanded="false" aria-controls="toolbar"><span aria-hidden="true">⚙</span></button>
+    </div>
   </div>
 </header>
 
 <main class="wrap">
 <div class="layout">
-
-<div class="view-head" id="view-head">
-  <div class="panel-head" id="vh-harmony">
-    <div class="ph-top"><h2 id="harmony-h">Тони акорду на грифі</h2><button class="ph-help" type="button" aria-expanded="false" aria-controls="harmony-p">?</button></div>
-    <p id="harmony-p">Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу.</p>
-  </div>
-  <div class="panel-head" id="vh-scales" hidden>
-    <div class="ph-top"><h2 id="scales-h" data-i18n="sc_h">Гами і моди</h2><button class="ph-help" type="button" aria-expanded="false" aria-controls="scales-p">?</button></div>
-    <p id="scales-p" data-i18n="sc_p">Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.</p>
-  </div>
-</div>
 
 <div class="strip-slot" id="strip-ref">
   <div class="strip" id="strip">
@@ -745,8 +745,6 @@
         <button type="button" class="btn play" id="g-play"></button>
         <button type="button" class="chip chip-caret" id="backing-toggle" aria-expanded="false" aria-controls="backing-panel"><span class="chev">▾</span></button>
       </span>
-      <button type="button" class="chip" id="tb-tuner"><span aria-hidden="true">🎵</span><span class="chip-txt" data-i18n="tuner_open">Тюнер</span></button>
-      <button type="button" class="chip chip-gear" id="tb-toggle" aria-expanded="false" aria-controls="toolbar"><span aria-hidden="true">⚙</span></button>
     </div>
     <div class="sheets" id="sheets" hidden>
 
@@ -806,7 +804,7 @@
       <div class="sheet" id="backing-panel" role="region" aria-labelledby="backing-h" hidden>
         <div class="sheet-head"><span class="sheet-h" id="backing-h" data-i18n="pl_h">Що грає ▶</span><button type="button" class="sheet-x" data-close aria-label="close">✕</button></div>
         <div class="row"><span class="ctrl-label" data-i18n="pl_src">Грати</span><div class="group" id="pl-src"></div></div>
-        <div class="seq" id="ch-seq">
+        <div class="seq" id="ch-seq" hidden>
           <div class="seq-head">
             <span class="ctrl-label" data-i18n="seq_title">Прогресія</span>
             <div class="seq-presets" id="seq-presets"></div>
@@ -820,7 +818,6 @@
         </div>
         <div class="row">
           <span class="ctrl-label" data-i18n="pl_band">Гурт</span>
-          <button class="btn band" id="pl-jam" aria-pressed="false"></button>
           <button class="btn band" id="tb-bass" aria-pressed="false"></button>
           <button class="btn band" id="tb-drums" aria-pressed="false"></button>
         </div>
@@ -892,7 +889,8 @@
 <div class="board-region" id="board-region">
   <div class="board-lens" id="board-lens">
     <div class="lens-group" id="ctx-view-harmony">
-      <button class="btn active" id="hv-chords" data-i18n="view_chords">Тони акорду</button>
+      <button class="btn active" id="hv-chords"><span class="lens-long" data-i18n="view_chords">Тони акорду</span><span class="lens-short" data-i18n="view_tones" aria-hidden="true">Тони</span></button>
+      <button class="btn" id="hv-triads" data-i18n="shape_triads">Тризвуки</button>
       <button class="btn" id="hv-arp" data-i18n="view_arp">Арпеджіо</button>
     </div>
     <div class="lens-group" id="ctx-view-scales" hidden>
@@ -900,13 +898,15 @@
       <button class="btn" id="sv-notes" data-i18n="view_notes">Ноти</button>
     </div>
     <div class="lens-group ctx-display" id="ctx-display">
-      <button class="btn active" id="g-names" data-i18n="b_notes">Назви</button>
-      <button class="btn" id="g-deg" data-i18n="b_intervals">Інтервали</button>
+      <button class="btn active" id="g-names"><span class="lens-long" data-i18n="b_notes">Назви</span><span class="lens-short" aria-hidden="true">A</span></button>
+      <button class="btn" id="g-deg"><span class="lens-long" data-i18n="b_intervals">Інтервали</span><span class="lens-short" aria-hidden="true">♭3</span></button>
     </div>
+    <button class="ph-help" id="view-help" type="button" aria-expanded="false" aria-controls="view-desc">?</button>
   </div>
   <div class="scroll"><div class="board"><div class="fretboard" id="board"></div></div><div class="fretnums" id="nums"></div></div>
 </div>
 <div class="board-meta" id="board-meta">
+  <p class="view-desc" id="view-desc"></p>
   <div class="legend" id="legend"></div>
   <div class="hint" id="hint"></div>
 </div>
@@ -916,7 +916,6 @@
   <section class="panel active" id="panel-harmony">
     <div id="sub-chords">
       <div class="info" id="ch-info"></div>
-      <div class="row"><span class="ctrl-label" data-i18n="lbl_show">Показати</span><div class="group" id="ch-shape"></div></div>
       <div id="ch-triad-rows" hidden>
         <div class="row"><span class="ctrl-label" data-i18n="lbl_set">Набір струн</span><div class="group" id="tr-sets"></div></div>
         <div class="row"><span class="ctrl-label" data-i18n="lbl_inv">Обернення</span><div class="group" id="tr-invs"></div></div>
@@ -996,57 +995,38 @@
       </div>
       <div class="session-report" id="session-report" hidden></div>
       <div class="ph-drills">
-      <p class="practice-soon" data-i18n="practice_intro">Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.</p>
-      <div class="practice-section">
-        <div class="ps-label" data-i18n="practice_grp_fretboard">Гриф</div>
-        <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-notes" data-track="note">
-            <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span><span class="dc-tags"></span>
-            <span class="dc-meta" data-i18n="drill_notes_meta">Грифознавство · рахунок за точністю</span>
-            <span class="dc-last"></span>
-          </button></li>
-        </ul>
-      </div>
-      <div class="practice-section">
-        <div class="ps-label" data-i18n="practice_grp_timing">Таймінг</div>
-        <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-timing" data-track="timing">
-            <span class="dc-name" data-i18n="drill_timing">Поділ і таймінг</span><span class="dc-tags"></span>
-            <span class="dc-meta" data-i18n="drill_timing_meta">Вісімки · тріолі · шістнадцятки · коуч</span>
-            <span class="dc-last"></span>
-          </button></li>
-        </ul>
-      </div>
-      <div class="practice-section">
-        <div class="ps-label" data-i18n="practice_grp_rhythm">Ритм</div>
-        <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-changes" data-track="changes">
-            <span class="dc-name" data-i18n="drill_changes">Зміна акордів за хвилину</span><span class="dc-tags"></span>
-            <span class="dc-meta" data-i18n="drill_changes_meta">Чисті зміни за хвилину · коуч (без оцінки)</span>
-            <span class="dc-last"></span>
-          </button></li>
-          <li><button type="button" class="drill-card" id="start-rhythm-guitar" data-track="rhythm-guitar">
-            <span class="dc-name" data-i18n="drill_rhythm">Ритм-гітара</span><span class="dc-tags"></span>
-            <span class="dc-meta" data-i18n="drill_rhythm_meta">Малюнок або свій ритм · над акордом чи прогресією</span>
-            <span class="dc-last"></span>
-          </button></li>
-        </ul>
-      </div>
-      <div class="practice-section">
-        <div class="ps-label" data-i18n="practice_grp_ear">Слух</div>
-        <ul class="practice-list">
-          <li><button type="button" class="drill-card" id="start-interval" data-track="interval">
-            <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span><span class="dc-tags"></span>
-            <span class="dc-meta" data-i18n="ear_intervals_meta">Почуй дві ноти · назви інтервал</span>
-            <span class="dc-last"></span>
-          </button></li>
-          <li><button type="button" class="drill-card" id="start-chordq" data-track="chordq">
-            <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span><span class="dc-tags"></span>
-            <span class="dc-meta" data-i18n="ear_chords_meta">Почуй акорд · визнач його тип</span>
-            <span class="dc-last"></span>
-          </button></li>
-        </ul>
-      </div>
+      <ul class="practice-list">
+        <li><button type="button" class="drill-card" id="start-notes" data-track="note">
+          <span class="dc-name" data-i18n="drill_notes">Назви ноти на грифі</span><span class="dc-tags"></span>
+          <span class="dc-meta" data-i18n="drill_notes_meta">Грифознавство · рахунок за точністю</span>
+          <span class="dc-last"></span>
+        </button></li>
+        <li><button type="button" class="drill-card" id="start-timing" data-track="timing">
+          <span class="dc-name" data-i18n="drill_timing">Поділ і таймінг</span><span class="dc-tags"></span>
+          <span class="dc-meta" data-i18n="drill_timing_meta">Вісімки · тріолі · шістнадцятки · коуч</span>
+          <span class="dc-last"></span>
+        </button></li>
+        <li><button type="button" class="drill-card" id="start-changes" data-track="changes">
+          <span class="dc-name" data-i18n="drill_changes">Зміна акордів за хвилину</span><span class="dc-tags"></span>
+          <span class="dc-meta" data-i18n="drill_changes_meta">Чисті зміни за хвилину · коуч (без оцінки)</span>
+          <span class="dc-last"></span>
+        </button></li>
+        <li><button type="button" class="drill-card" id="start-rhythm-guitar" data-track="rhythm-guitar">
+          <span class="dc-name" data-i18n="drill_rhythm">Ритм-гітара</span><span class="dc-tags"></span>
+          <span class="dc-meta" data-i18n="drill_rhythm_meta">Малюнок або свій ритм · над акордом чи прогресією</span>
+          <span class="dc-last"></span>
+        </button></li>
+        <li><button type="button" class="drill-card" id="start-interval" data-track="interval">
+          <span class="dc-name" data-i18n="ear_intervals">Інтервали на слух</span><span class="dc-tags"></span>
+          <span class="dc-meta" data-i18n="ear_intervals_meta">Почуй дві ноти · назви інтервал</span>
+          <span class="dc-last"></span>
+        </button></li>
+        <li><button type="button" class="drill-card" id="start-chordq" data-track="chordq">
+          <span class="dc-name" data-i18n="ear_chords">Якість акорду на слух</span><span class="dc-tags"></span>
+          <span class="dc-meta" data-i18n="ear_chords_meta">Почуй акорд · визнач його тип</span>
+          <span class="dc-last"></span>
+        </button></li>
+      </ul>
       </div>
     </div>
 
@@ -1056,8 +1036,6 @@
         <div class="row cm-custom" id="cm-custom" hidden></div>
         <div class="row">
           <span class="ctrl-label" data-i18n="cm_dur">Тривалість</span><div class="group" id="cm-durs"></div>
-          <div class="divider"></div>
-          <button type="button" class="btn" id="cm-click" aria-pressed="false"></button>
         </div>
         <div class="cm-best-line" id="cm-setup-best"></div>
         <p class="drill-hint" id="cm-setup-note" data-i18n="cm_setup_note">Перемикайся між акордами якомога чистіше й натискай велику кнопку на кожній чистій зміні. Лічильник рахує твої натискання, а не звук гітари — оцінку з мікрофоном додамо згодом.</p>
@@ -1114,9 +1092,6 @@
       <div class="co-beats" id="sp-beats" hidden></div>
       <p class="scored-status" id="sp-status" role="status" hidden></p>
       <div class="scored-panel" id="sp-score" hidden></div>
-      <div class="drill-bar">
-        <button type="button" class="btn" id="sp-click" aria-pressed="false"></button>
-      </div>
     </div>
 
     <div id="sd-area" hidden>
@@ -1237,7 +1212,7 @@
     </div>
     <div class="kbd-body">
       <div class="kbd-row"><span class="kbd-keys"><kbd>Space</kbd></span><span data-i18n="kbd_play">▶ Грати / Стоп</span></div>
-      <div class="kbd-row"><span class="kbd-keys"><kbd>M</kbd></span><span data-i18n="kbd_metro">Метроном — увімк/вимк</span></div>
+      <div class="kbd-row"><span class="kbd-keys"><kbd>M</kbd></span><span data-i18n="kbd_metro">Клік із ▶ — увімк/вимк</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><span data-i18n="kbd_tabs">Перемкнути розділи</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>K</kbd></span><span data-i18n="kbd_key">Вибір тональності</span></div>
       <div class="kbd-row"><span class="kbd-keys"><kbd>A</kbd>–<kbd>G</kbd></span><span data-i18n="kbd_root">Задати тоніку</span></div>
@@ -1877,7 +1852,7 @@ const I18N = {
   uk: {
     brand:'Euterpe', brand_desc:'гітарна студія',
     tab_scales:'Гами', mode_practice:'Практика',
-    practice_h:'Практика', practice_intro:'Вправи з рахунком, що ведуть облік твого прогресу й повертають те, що варто повторити.',
+    practice_h:'Практика',
     ear_intervals:'Інтервали на слух', ear_intervals_meta:'Почуй дві ноти · назви інтервал',
     ear_chords:'Якість акорду на слух', ear_chords_meta:'Почуй акорд · визнач його тип',
     ear_int_prompt:'Який це інтервал?', ear_chord_prompt:'Який це акорд?',
@@ -1894,14 +1869,13 @@ const I18N = {
     sess_done_h:'Заняття завершено', sess_none:'Цього разу нічого не зараховано — але час на інструменті все одно зарахований.',
     sess_drills:'Вправ', sess_norun:'без результату', sess_will:'Буде: {list} — по {m} хв',
     badge_mic:'Слухає через мікрофон',
-    practice_grp_fretboard:'Гриф', practice_grp_rhythm:'Ритм', practice_grp_ear:'Слух',
     drill_changes:'Зміна акордів за хвилину', drill_changes_meta:'Будь-які два акорди · скільки чистих змін за хвилину',
-    cm_pair:'Пара акордів', cm_dur:'Тривалість', cm_sec:'с', cm_click:'Метроном', cm_start:'Почати', cm_stop:'Завершити',
-    cm_setup_note:'Перемикайся між акордами якомога чистіше й натискай велику кнопку на кожній чистій зміні. Лічильник рахує твої натискання, а не звук гітари — оцінку з мікрофоном додамо згодом.',
+    cm_pair:'Пара акордів', cm_dur:'Тривалість', cm_sec:'с', cm_start:'Почати', cm_stop:'Завершити',
+    cm_setup_note:'Перемикайся між акордами якомога чистіше й натискай велику кнопку на кожній чистій зміні. Лічильник рахує твої натискання, а не звук гітари.',
     cm_changes:'Зміни', cm_cpm:'За хвилину', cm_best:'Рекорд', cm_tap_hint:'Натискай на кожній чистій зміні', cm_undo:'Скасувати', cm_newbest:'Новий рекорд!', cm_yours:'Своя пара',
     drill_rhythm:'Ритм-гітара', drill_rhythm_meta:'Малюнок або свій ритм · над акордом чи прогресією',
     sp_over:'Грати над', sp_free:'Свій ритм', sp_yours:'Твоя (▶)',
-    practice_grp_timing:'Таймінг', drill_timing:'Поділ і таймінг', drill_timing_meta:'Вісімки · тріолі · шістнадцятки',
+    drill_timing:'Поділ і таймінг', drill_timing_meta:'Вісімки · тріолі · шістнадцятки',
     sd_subdiv:'Поділ', sd_notes:'Ноти',
     sd_hint:'Тримайся клацання — акцентований удар це «раз», тихі — поділи долі. Грай підсвічені ноти гами рівно по сітці. Увімкни 🎤 угорі, щоб застосунок слухав і оцінював твій таймінг.',
     sp_pattern:'Малюнок', sp_chord:'Акорд', sp_play:'Грати', sp_stop:'Стоп',
@@ -1914,27 +1888,22 @@ const I18N = {
     prog_accuracy:'Точність', prog_streak:'Найкраща серія', prog_sessions:'Сесій',
     prog_yours:'Твої вправи', prog_best:'рекорд', prog_runs:'спроб', prog_timing:'таймінг', prog_unscored:'без оцінки',
     unit_bars:'тактів', unit_cpm:'/хв',
-    tab_harmony:'Акорди', lbl_view:'Вид', view_chords:'Тони акорду',
+    tab_harmony:'Акорди', lbl_view:'Вид', view_chords:'Тони акорду', view_tones:'Тони',
     view_scale:'Гама', view_notes:'Ноти',
     suggest_title:'Що грати над цим', suggest_arp:'Арпеджіо', suggest_scales:'Гами, що підходять',
-    cof_h:'Коло квінт',
     cof_sig:'Ключові знаки', cof_sig0:'без ключових знаків',
     cof_rel_minor:'Паралельний мінор', cof_rel_major:'Паралельний мажор',
     cof_neighbors:'Сусіди по колу', cof_subdom:'субдомінанта', cof_dom:'домінанта',
     b_cadence:'♪ Прослухати {cad}',
     leg_tonic:'Тоніка', leg_dom:'Домінанта (V)', leg_subdom:'Субдомінанта (IV)', leg_rel:'Паралель',
-    ch_h:'Тони акорду на грифі',
     ch_p:'Вибери тоніку і тип акорду — підсвітяться тоніка, терція, квінта (і септима для септакордів) по всьому грифу. Натисни на ноту, щоб почути її.',
     ch_hint:'Грай гаму вільно, а на зміні акорду влучай у підсвічені ноти — вони звучать найстабільніше.',
     tr_hint:'Тризвук на трьох сусідніх струнах — рухомий блок: кожне обернення повторюється вгору по грифу через 12 ладів. Вивчиш одну форму на одному наборі струн — отримаєш увесь гриф.',
     view_arp:'Арпеджіо', arp_word:'арпеджіо',
-    arp_h:'Арпеджіо на грифі',
-    arp_p:'Ті самі ноти, що й у «Тонах акорду», але як арпеджіо — грай їх одну за одною вгору по грифу. Обери позицію, щоб ізолювати зручний бокс для практики; ▶ з джемом дасть гурт, щоб грати над ним.',
+    arp_p:'Ті самі ноти, що й у «Тонах акорду», але як арпеджіо — грай їх одну за одною вгору по грифу. Обери позицію, щоб ізолювати зручний бокс для практики; ▶ з басом і барабанами дасть гурт, щоб грати над ним.',
     arp_hint:'Арпеджіо — це ноти акорду, зіграні почергово. Влучай у ці ноти в соло на зміні акорду — вони звучать найстабільніше.',
     caged_desc:'бокс мажорної гами навколо цієї рухомої форми акорду',
-    sc_h:'Гами і моди',
-    sc_p:'Вибери тоніку і гаму. Накладай акорд тональності, щоб бачити цільові ноти всередині гами, та ізолюй позицію для практики.',
-    nt_h:'Всі ноти на грифі',
+    sc_p:'Тональність і гама — у смузі над грифом. Покажи акорд поверх гами, щоб бачити цільові ноти всередині неї, та ізолюй позицію для практики.',
     nt_p:'Довідник усіх нот. Натисни ноту в керуванні, щоб підсвітити її скрізь, або клікни по ноті на грифі, щоб почути.',
     lbl_root:'Тоніка', lbl_chord:'Акорд', lbl_quality:'Тип', lbl_scale:'Гама', lbl_pos:'Позиція', lbl_dia:'Акорди тональності',
     lbl_show:'Показати', lbl_display:'Показ', lbl_set:'Набір струн', lbl_inv:'Обернення',
@@ -2007,14 +1976,14 @@ const I18N = {
     wc_tune:'Налаштувати гітару',
     wc_tune_d:'Тюнер за мікрофоном, або еталонний тон для кожної струни.',
     wc_got:'Просто озирнутись',
-    tb_metro_on:'Метроном', tb_metro_off:'Метроном',
+    tb_click:'Клік із ▶', tb_click_tip:'Метроном звучить разом із тим, що запускає ▶ — акордом, прогресією чи вправою',
     tb_bass:'Бас', tb_drums:'Ударні',
     qg_basic:'Базові', qg_seventh:'Септакорди', qg_ext:'Розширені',
     qual_more:'більше', qual_less:'менше',
     seq_loop_tip:'Циклити прогресію як супровід для імпровізації',
     nt_pick_hint:'Підсвічена нота йде за тональністю · «Тільки натуральні» ховає дієзи й бемолі',
     strip_key:'Тональність',
-    pl_h:'Що грає ▶', pl_src:'Грати', pl_chord:'Акорд', pl_prog:'Прогресію', pl_band:'Гурт', pl_jam:'Джем',
+    pl_h:'Що грає ▶', pl_src:'Грати', pl_chord:'Акорд', pl_prog:'Прогресію', pl_band:'Гурт',
     pl_play_chord:'Зациклити акорд', pl_play_prog:'Програти прогресію',
     cl_title:'Що нового', cl_current:'зараз', cl_older:'Повна історія випусків — CHANGELOG.md у репозиторії',
   tbc_instrument:'Інструмент',
@@ -2026,17 +1995,17 @@ const I18N = {
     cd_plays:'▶ Цю грає ▶',
     cd_more:'Більше форм', cd_less:'Менше форм',
     tr_shapes:'Форми тризвуку',
-    shape_full:'Увесь акорд', shape_triads:'Тризвуки', shape_no_triad:'У цього акорду немає тризвуку (немає терції чи квінти).',
+    shape_triads:'Тризвуки', shape_no_triad:'У цього акорду немає тризвуку (немає терції чи квінти).',
     pwa_install:'Встановити', pwa_install_tip:'Встановити Euterpe як застосунок',
     pwa_update:'Доступна нова версія Euterpe.', pwa_update_btn:'Оновити', pwa_dismiss:'Сховати',
-    kbd_title:'Гарячі клавіші', kbd_play:'▶ Грати / Стоп', kbd_key:'Вибір тональності', kbd_metro:'Метроном — увімк/вимк',
+    kbd_title:'Гарячі клавіші', kbd_play:'▶ Грати / Стоп', kbd_key:'Вибір тональності', kbd_metro:'Клік із ▶ — увімк/вимк',
     kbd_tabs:'Перемкнути розділи', kbd_root:'Задати тоніку', kbd_transpose:'Транспонувати на півтон', kbd_hint:'Гарячі клавіші',
     ph_help:'Опис'
   },
   en: {
     brand:'Euterpe', brand_desc:'guitar studio',
     tab_scales:'Scales', mode_practice:'Practice',
-    practice_h:'Practice', practice_intro:'Scored drills that track your progress and resurface what you miss.',
+    practice_h:'Practice',
     ear_intervals:'Intervals by ear', ear_intervals_meta:'Hear two notes · name the interval',
     ear_chords:'Chord quality by ear', ear_chords_meta:'Hear a chord · name its quality',
     ear_int_prompt:'Which interval?', ear_chord_prompt:'Which chord?',
@@ -2053,14 +2022,13 @@ const I18N = {
     sess_done_h:'Session complete', sess_none:'Nothing scored this time — but the time on the instrument still counts.',
     sess_drills:'Drills', sess_norun:'no run recorded', sess_will:'Plan: {list} — {m} min each',
     badge_mic:'Listens through the mic',
-    practice_grp_fretboard:'Fretboard', practice_grp_rhythm:'Rhythm', practice_grp_ear:'Ear',
     drill_changes:'One-minute changes', drill_changes_meta:'Any two chords · how many clean changes in a minute',
-    cm_pair:'Chord pair', cm_dur:'Length', cm_sec:'s', cm_click:'Click', cm_start:'Start', cm_stop:'Finish',
-    cm_setup_note:'Switch between the chords as cleanly as you can and tap the big button on each clean change. The counter counts your taps, not your guitar — mic scoring comes later.',
+    cm_pair:'Chord pair', cm_dur:'Length', cm_sec:'s', cm_start:'Start', cm_stop:'Finish',
+    cm_setup_note:'Switch between the chords as cleanly as you can and tap the big button on each clean change. The counter counts your taps, not your guitar.',
     cm_changes:'Changes', cm_cpm:'Per minute', cm_best:'Best', cm_tap_hint:'Tap on each clean change', cm_undo:'Undo', cm_newbest:'New best!', cm_yours:'Your pair',
     drill_rhythm:'Rhythm guitar', drill_rhythm_meta:'A pattern or your own rhythm · over a chord or a progression',
     sp_over:'Over', sp_free:'Your own', sp_yours:'Yours (▶)',
-    practice_grp_timing:'Timing', drill_timing:'Subdivision & timing', drill_timing_meta:'Eighths · triplets · sixteenths',
+    drill_timing:'Subdivision & timing', drill_timing_meta:'Eighths · triplets · sixteenths',
     sd_subdiv:'Subdivision', sd_notes:'Notes',
     sd_hint:'Lock to the click — the accented tick is beat 1, the soft ticks are the subdivisions. Play the lit scale notes evenly across the grid. Turn on 🎤 above and the app listens and scores your timing.',
     sp_pattern:'Pattern', sp_chord:'Chord', sp_play:'Play', sp_stop:'Stop',
@@ -2073,27 +2041,22 @@ const I18N = {
     prog_accuracy:'Accuracy', prog_streak:'Best streak', prog_sessions:'Sessions',
     prog_yours:'Your drills', prog_best:'best', prog_runs:'runs', prog_timing:'timing', prog_unscored:'unscored',
     unit_bars:'bars', unit_cpm:'/min',
-    tab_harmony:'Chords', lbl_view:'View', view_chords:'Chord tones',
+    tab_harmony:'Chords', lbl_view:'View', view_chords:'Chord tones', view_tones:'Tones',
     view_scale:'Scale', view_notes:'Notes',
     suggest_title:'Play over this', suggest_arp:'Arpeggio', suggest_scales:'Scales that fit',
-    cof_h:'Circle of fifths',
     cof_sig:'Key signature', cof_sig0:'no sharps or flats',
     cof_rel_minor:'Relative minor', cof_rel_major:'Relative major',
     cof_neighbors:'Neighbours on the circle', cof_subdom:'subdominant', cof_dom:'dominant',
     b_cadence:'♪ Hear {cad}',
     leg_tonic:'Tonic', leg_dom:'Dominant (V)', leg_subdom:'Subdominant (IV)', leg_rel:'Relative key',
-    ch_h:'Chord tones across the neck',
     ch_p:'Pick a root and a chord type — the root, third, fifth (and seventh for seventh chords) light up across the whole neck. Tap a note to hear it.',
     ch_hint:'Play freely, and on each chord change aim for the highlighted tones — they sound the most stable.',
     tr_hint:'A triad on three adjacent strings is a movable block: each inversion repeats up the neck every 12 frets. Learn one shape on one string set and you get the whole neck.',
     view_arp:'Arpeggio', arp_word:'arpeggio',
-    arp_h:'Arpeggios across the neck',
-    arp_p:'The same notes as Chord tones, but as an arpeggio — play them one at a time up the neck. Pick a position to isolate a practice box; ▶ with the Jam on gives you a band to play it over.',
+    arp_p:'The same notes as Chord tones, but as an arpeggio — play them one at a time up the neck. Pick a position to isolate a practice box; ▶ with Bass and Drums on gives you a band to play it over.',
     arp_hint:'An arpeggio is the chord played one note at a time. Target these notes in a solo on each chord change — they sound the most stable.',
     caged_desc:'the major-scale box around this movable chord form',
-    sc_h:'Scales and modes',
-    sc_p:'Pick a root and a scale. Overlay a chord from the key to see target tones inside the scale, and isolate a position for practice.',
-    nt_h:'All notes on the neck',
+    sc_p:'The key and its scale are on the strip above the neck. Show the chord over the scale to see its target tones inside it, and isolate a position for practice.',
     nt_p:'A reference for every note. Tap a note in the controls to highlight it everywhere, or tap a note on the neck to hear it.',
     lbl_root:'Root', lbl_chord:'Chord', lbl_quality:'Quality', lbl_scale:'Scale', lbl_pos:'Position', lbl_dia:'Chords in key',
     lbl_show:'Show', lbl_display:'Display', lbl_set:'String set', lbl_inv:'Inversion',
@@ -2166,14 +2129,14 @@ const I18N = {
     wc_tune:'Tune the guitar',
     wc_tune_d:'Mic tuner, or a reference tone for each open string.',
     wc_got:'Just look around',
-    tb_metro_on:'Metronome', tb_metro_off:'Metronome',
+    tb_click:'Click with ▶', tb_click_tip:'The metronome sounds with whatever ▶ starts — the chord, the progression or a drill',
     tb_bass:'Bass', tb_drums:'Drums',
     qg_basic:'Basic', qg_seventh:'Sevenths', qg_ext:'Extended',
     qual_more:'more', qual_less:'less',
     seq_loop_tip:'Loop the progression as a backing to play over',
     nt_pick_hint:'The highlighted note follows the key · "Naturals only" hides sharps and flats',
     strip_key:'Key',
-    pl_h:'What ▶ plays', pl_src:'Play', pl_chord:'The chord', pl_prog:'The progression', pl_band:'Band', pl_jam:'Jam',
+    pl_h:'What ▶ plays', pl_src:'Play', pl_chord:'The chord', pl_prog:'The progression', pl_band:'Band',
     pl_play_chord:'Loop the chord', pl_play_prog:'Play the progression',
     cl_title:'What\'s new', cl_current:'current', cl_older:'Full release history — CHANGELOG.md in the repository',
   tbc_instrument:'Instrument',
@@ -2185,10 +2148,10 @@ const I18N = {
     cd_plays:'▶ This one plays',
     cd_more:'More shapes', cd_less:'Fewer shapes',
     tr_shapes:'Triad shapes',
-    shape_full:'Full chord', shape_triads:'Triads', shape_no_triad:'This chord has no triad (no third or no fifth).',
+    shape_triads:'Triads', shape_no_triad:'This chord has no triad (no third or no fifth).',
     pwa_install:'Install', pwa_install_tip:'Install Euterpe as an app',
     pwa_update:'A new version of Euterpe is available.', pwa_update_btn:'Reload', pwa_dismiss:'Dismiss',
-    kbd_title:'Keyboard shortcuts', kbd_play:'▶ Play / Stop', kbd_key:'Key picker', kbd_metro:'Metronome on/off',
+    kbd_title:'Keyboard shortcuts', kbd_play:'▶ Play / Stop', kbd_key:'Key picker', kbd_metro:'Click with ▶ on/off',
     kbd_tabs:'Switch section', kbd_root:'Set the key (root)', kbd_transpose:'Transpose by a semitone', kbd_hint:'Keyboard shortcuts',
     ph_help:'Description'
   }
@@ -2581,7 +2544,7 @@ function scheduleBand(pc, qi, when, force){
   }
 }
 function bandActive(){ return bassOn || grooveOn; }
-let metroClock=null;
+let clickOn=false;
 function metroClick(when, accent){
   const ctx=audio(); if(!ctx) return;
   const o=ctx.createOscillator(), g=ctx.createGain();
@@ -2591,22 +2554,21 @@ function metroClick(when, accent){
   g.gain.exponentialRampToValueAtTime(0.0001, when+0.05);
   o.connect(g).connect(cue); o.start(when); o.stop(when+0.06);
 }
-function metroToggle(){
-  const btn=document.getElementById('tb-metro');
-  if(metroClock){ removeClock(metroClock); metroClock=null; btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); setMetroLabel(); setBackingToggle(); syncWakeLock(); return; }
-  audio();
-  metroClock={ interval:()=>pulseSec(), tick:(time,count)=>metroClick(time, meterGroupStarts().has(count%barBeats())) };
-  addClock(metroClock);
-  btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); setMetroLabel(); setBackingToggle(); syncWakeLock();
+function scheduleClick(when){
+  const p=pulseSec(), starts=meterGroupStarts();
+  for(let k=0;k<barBeats();k++) metroClick(when+k*p, k===0 || starts.has(k));
 }
-function setMetroLabel(){ const b=document.getElementById('tb-metro'); b.innerHTML=(metroClock?'&#9632; ':'&#9654; ')+t(metroClock?'tb_metro_on':'tb_metro_off'); b.setAttribute('aria-label', t('tb_metro_off')); }
+function clickToggle(){ clickOn=!clickOn; setMetroLabel(); setBackingToggle(); renderStrip(); saveState(); }
+function setMetroLabel(){
+  const b=document.getElementById('tb-metro'); if(!b) return;
+  b.innerHTML='&#9833; '+t('tb_click'); b.title=t('tb_click_tip');
+  b.classList.toggle('active', clickOn); b.setAttribute('aria-pressed', clickOn?'true':'false');
+}
 function setBackingToggle(){
   const b=document.getElementById('backing-toggle'); if(b) b.classList.toggle('on', bandActive());
-  const tc=document.getElementById('chip-tempo'); if(tc) tc.classList.toggle('on', !!metroClock);
+  const tc=document.getElementById('chip-tempo'); if(tc) tc.classList.toggle('on', clickOn);
 }
 function setBandLabels(){
-  const jm=document.getElementById('pl-jam');
-  if(jm){ const on=bandActive(); jm.textContent=t('pl_jam'); jm.classList.toggle('active', on); jm.setAttribute('aria-pressed', on?'true':'false'); }
   const bb=document.getElementById('tb-bass');
   if(bb){ bb.innerHTML='&#9834; '+t('tb_bass'); bb.classList.toggle('active', bassOn); bb.setAttribute('aria-pressed', bassOn?'true':'false'); bb.setAttribute('aria-label', t('tb_bass')); }
   const db=document.getElementById('tb-drums');
@@ -2614,7 +2576,6 @@ function setBandLabels(){
 }
 function bassToggle(){ bassOn=!bassOn; setBandLabels(); setBackingToggle(); saveState(); }
 function drumsToggle(){ grooveOn=!grooveOn; setBandLabels(); setBackingToggle(); saveState(); }
-function jamToggle(){ const on=!bandActive(); bassOn=on; grooveOn=on; setBandLabels(); setBackingToggle(); saveState(); }
 let loopClock=null, loopMode='chord';
 function loopStrum(when){
   const ctx=audio(); if(!ctx) return;
@@ -2630,6 +2591,7 @@ function loopStrum(when){
   strumMidi(midis, when, 0.9, 0.026, +1);                 
   if(bandActive()) strumMidi(midis, when+midPulseSec(), 0.55, 0.02, +1);   
   scheduleBand(pc, qi, when);                             
+  if(clickOn) scheduleClick(when);
   enqueueBeats(when);                                     
   enqueueVisual(when, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, true)); updateGlobalTransport(); });
   enqueueVisual(when+bs*0.85, ()=>{ const b=document.getElementById(boardId); if(b) pcs.forEach(p=>setDotPlaying(b, p, false)); });
@@ -2648,7 +2610,6 @@ function stopLoop(){ if(!loopClock) return; removeClock(loopClock); loopClock=nu
 function stopReferenceTransport(){
   if(seqClock) seqStop();
   stopLoop();
-  if(metroClock) metroToggle();
 }
 function pulseTransport(strong){
   const d=document.querySelector('#g-play .strip-pulse'); if(!d) return;
@@ -2662,7 +2623,7 @@ function updateGlobalTransport(){
   syncWakeLock();
 }
 let _wakeLock=null, _wakeReq=false;
-function transportActive(){ return !!(metroClock || loopClock || seqClock); }
+function transportActive(){ return !!(loopClock || seqClock); }
 function syncWakeLock(){
   if(typeof navigator==='undefined' || !navigator.wakeLock) return;
   const want=transportActive();
@@ -2708,6 +2669,7 @@ function seqStrumStep(i, when){
   compStrum(base, ivs, when, 0.9, 0.028);                 
   if(bandActive()) compStrum(base, ivs, when+midPulseSec(), 0.55, 0.022);   
   scheduleBand(st.pc, st.qi, when);                       
+  if(clickOn) scheduleClick(when);
   enqueueBeats(when);                                     
   const pcs=ivs.map(iv=>mod(base+iv,12));
   enqueueVisual(when, ()=>{
@@ -3057,7 +3019,8 @@ function renderChords(){
   const degs=q.lab.join('  ');
   document.getElementById('ch-info').innerHTML=`<div class="big">${noteTxt(chLbl)}${q.short} · ${qName(q)}: ${notes}</div><div class="sub">${t('intervals_word')}: ${degs}</div>`;
   renderChordDiagram();
-  renderChShape();
+  paintHarmonyLens();   
+  { const rows=document.getElementById('ch-triad-rows'); if(rows) rows.hidden=!triadsOn(); }
   if(triadsOn()) renderTriads();
   if(isBoardMode('chords')){
     const map={}; q.iv.forEach((iv,i)=>{ map[(chRoot+iv)%12]={lab:q.lab[i], deg:q.deg[i]}; });
@@ -3070,14 +3033,6 @@ function renderChords(){
     }, chordLegendHTML(), t('ch_hint'), shape && shape.win);
   }
   renderSuggester();
-}
-function renderChShape(){
-  const has=chTriadIdx()>=0, on=triadsOn();
-  segButtons('ch-shape', [{label:t('shape_full')},{label:t('shape_triads')}], on?1:0, i=>{
-    chTriads=!!i; chVoicing=0; renderChords(); applyHarmonyExtras(); renderPlayBtn(); saveState(); });
-  const tb=document.querySelector('#ch-shape .btn:nth-child(2)');
-  if(tb){ tb.disabled=!has; tb.title = has ? '' : t('shape_no_triad'); }
-  const rows=document.getElementById('ch-triad-rows'); if(rows) rows.hidden=!on;
 }
 function buildArpPos(){
   segButtons('arp-pos', [t('pos_all'),'1','2','3','4','5'].map(label=>({label})), arpPos,
@@ -3753,6 +3708,7 @@ function savedFields(){ return [
   ['playSrc',      svOneOf('chord','prog'),               ()=>playSrc,      v=>{ playSrc=v; }],
   ['bassOn',       svBool,                                ()=>bassOn,       v=>{ bassOn=v; }],
   ['grooveOn',     svBool,                                ()=>grooveOn,     v=>{ grooveOn=v; }],
+  ['clickOn',      svBool,                                ()=>clickOn,      v=>{ clickOn=v; }],
   ['calMs',        svNum(0, CAL_MAX_MS),                  ()=>calMs,        v=>{ calMs=v; }],
   ['calKnown',     svBool,                                ()=>calKnown,     v=>{ calKnown=v; }],
   ['drillSeen',    v=>{ if(!v || typeof v!=='object' || Array.isArray(v)) return undefined;
@@ -4031,6 +3987,8 @@ function drillRunStarted(){
   drillSetupOpen=false; drillHintOpen=false;
   applyDrillCtx();
 }
+const SETUP_ICON='<svg class="ico-setup" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">'+
+  '<path d="M3 5h14M3 10h14M3 15h14"/><circle cx="7" cy="5" r="2" fill="var(--bg-panel)"/><circle cx="13" cy="10" r="2" fill="var(--bg-panel)"/><circle cx="9" cy="15" r="2" fill="var(--bg-panel)"/></svg>';
 function applyDrillCtx(){
   const d=activeDrill();
   const q=document.getElementById('drill-ctx-quit');
@@ -4042,7 +4000,8 @@ function applyDrillCtx(){
   if(sb){
     sb.hidden=!hasSetup;
     if(hasSetup){
-      sb.textContent=t('drill_setup')+(drillSetupOpen?' ▴':' ▾');
+      sb.innerHTML=SETUP_ICON;
+      sb.setAttribute('aria-label', t('drill_setup')); sb.title=t('drill_setup');
       sb.classList.toggle('active', drillSetupOpen);
       sb.setAttribute('aria-expanded', drillSetupOpen?'true':'false');
       if(d.setup) sb.setAttribute('aria-controls', d.setup);
@@ -5003,7 +4962,6 @@ const CM_QUALS = [0, 1, 6, 7, 8, 2, 3];
 let cmDurIdx = 1;        
 let cmPairIdx = 0;       
 let cmCustom = [[5,0],[10,0]];   
-let cmClick = false;     
 let cmDrill = null;
 function cmChord(spec, root){ const [pc,qi]=spec, q=QUALITIES[qi]; return { pc, qi, q, short:q.short, lbl:(root||ROOTS[pc])+q.short }; }
 function cmPair(i){ return i<0 ? cmCustom : CM_PAIRS[i]; }
@@ -5053,10 +5011,9 @@ function cmCountIn(){
 }
 function cmStartClocks(){
   cmDrill.ticker=setInterval(cmCountdown, 1000);
-  if(cmClick){ audio();
-    cmDrill.clock={ interval:()=>beat(), tick:(time,count)=>metroClick(time, count%4===0) };
-    addClock(cmDrill.clock);
-  }
+  audio();
+  cmDrill.clock={ interval:()=>beat(), tick:(time,count)=>{ if(clickOn) metroClick(time, count%4===0); } };
+  addClock(cmDrill.clock);
 }
 function cmStopClocks(){
   if(cmDrill && cmDrill.ticker){ clearInterval(cmDrill.ticker); cmDrill.ticker=null; }
@@ -5098,8 +5055,6 @@ function renderCmSetup(){
   }
   const dd=document.getElementById('cm-durs');
   if(dd) dd.innerHTML=CM_DURS.map((d,i)=>`<button type="button" class="btn cm-dur${i===cmDurIdx?' active':''}" data-i="${i}" aria-pressed="${i===cmDurIdx}">${d}${t('cm_sec')}</button>`).join('');
-  const ck=document.getElementById('cm-click');
-  if(ck){ ck.classList.toggle('active', cmClick); ck.setAttribute('aria-pressed', cmClick?'true':'false'); ck.innerHTML='&#9833; '+t('cm_click'); }
   const bl=document.getElementById('cm-setup-best');
   if(bl){ const b=cmPairBest(cmDrill.pairIdx); bl.textContent = b>0 ? (t('cm_best')+' · '+b+' '+t('cm_cpm').toLowerCase()) : ''; }
 }
@@ -5152,7 +5107,6 @@ registerDrill({ id:'changes', area:'cm-area', tempo:true,
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   wire('cm-tally',     cmTap);
   wire('cm-untap',     cmUntap);
-  wire('cm-click',     ()=>{ cmClick=!cmClick; renderCmSetup(); });
   const pp=document.getElementById('cm-pairs');
   if(pp) pp.addEventListener('click', e=>{ const btn=e.target.closest('.cm-pair'); if(btn){ cmPairIdx=+btn.dataset.i; if(cmDrill) cmDrill.pairIdx=cmPairIdx; renderCmSetup(); } });
   const cu=document.getElementById('cm-custom');
@@ -5185,7 +5139,6 @@ let spSwing = 0;
 let spAccent = false;   
 let spMute = false;     
 let spBand = false;     
-let spClick = false;    
 let spDrill = null;
 function spFree(){ return spIdx < 0; }
 const spScore = scoredRun({
@@ -5305,7 +5258,7 @@ function spTick(time, count){
     if(slot===0) bassNote(time, 36+ch.pc, b*1.9, 0.95);
     if(slot===4) bassNote(time, 36+ch.pc+fifthInterval(ch.qi), b*1.7, 0.8);
   }
-  if(spClick && beatPos) metroClick(time, slot===0);              
+  if(clickOn && beatPos) metroClick(time, slot===0);             
   enqueueVisual(time, ()=>{ spHighlightSlot(slot); if(beatPos) spPulseBeat(slot/2); if(slot===0) renderSpStage(ch, nxt); });
 }
 function renderStrum(){
@@ -5338,7 +5291,6 @@ function renderStrum(){
   toggle('sp-accent', spAccent, 'sp_accent');
   toggle('sp-mute',   spMute,   'sp_mute');
   toggle('sp-band',   spBand,   'sp_band');
-  const ck=document.getElementById('sp-click'); if(ck){ ck.classList.toggle('active', spClick); ck.setAttribute('aria-pressed', spClick?'true':'false'); ck.innerHTML='&#9833; '+t('cm_click'); }
   const hint=document.getElementById('sp-hint');
   if(hint) hint.textContent=t(spFree() ? (spScore.on()?'co_hint_scored':'co_hint') : (spScore.on()?'sp_hint_scored':'sp_hint'));
   spScore.render();
@@ -5377,13 +5329,12 @@ registerDrill({ id:'rhythm-guitar', area:'sp-area', tempo:true, setup:'sp-setup'
                 mic:()=>spScore.available(), micOn:()=>spScore.on(),
                 onMic:()=>{ if(spDrill&&spDrill.playing) spStop();
                             spScore.toggle();
-                            if(spScore.on() && !spClick && !spBand) spClick=true;
+                            if(spScore.on() && !clickOn && !spBand) clickToggle();
                             renderStrum(); },
                 onKey:()=>{ if(!spDrill) return; spSet(()=>{}); } });
 (function initStrum(){
   const area=document.getElementById('sp-area'); if(!area) return;
   const wire=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  wire('sp-click',  ()=>{ spClick=!spClick;   renderStrum(); });
   wire('sp-accent', ()=>{ spAccent=!spAccent; renderStrum(); });
   wire('sp-mute',   ()=>{ spMute=!spMute;     renderStrum(); });
   wire('sp-band',   ()=>{ spBand=!spBand;     renderStrum(); });
@@ -6145,6 +6096,7 @@ function renderKeySheet(){
 function renderChordSheet(){ renderDegrees(); buildChQuals(); }
 function renderPlaySheet(){
   segButtons('pl-src', [{label:t('pl_chord')},{label:t('pl_prog')}], playSrc==='prog'?1:0, i=>setPlaySrc(i?'prog':'chord'));
+  const ed=document.getElementById('ch-seq'); if(ed) ed.hidden = playSrc!=='prog';
   setBandLabels();
 }
 function setPlaySrc(v){
@@ -6164,7 +6116,7 @@ function renderStrip(){
   const show=(id,on)=>{ const el=document.getElementById(id); if(el) el.hidden=!on; };
   ['key','chord','tempo','play'].forEach(k=>show(SHEET_CHIPS[k], chipOffered(k)));
   show('chip-play', !pr || !!(d && d.play));
-  show('tb-metro', !pr);
+  show('strip-row', !pr || ['key','chord','tempo'].some(chipOffered) || !!(d && d.play));
   const kn=noteTxt(keyLbl)+' '+sKeyName(SCALES[scIdx]);
   const ck=document.getElementById('chip-key');
   if(ck){ ck.innerHTML=chipHTML(kn); ck.setAttribute('aria-label', t('strip_key')+': '+kn); ck.title=t('strip_key'); }
@@ -6211,7 +6163,6 @@ function placeStrip(){
   Object.keys(SHEET_CHIPS).forEach(k=>wire(SHEET_CHIPS[k], ()=>toggleSheet(k)));
   wire('g-play', stripPlay);
   wire('cof-cadence', playCadence);
-  wire('pl-jam', jamToggle);
   const host=document.getElementById('sheets');
   if(host) host.addEventListener('click', e=>{
     const x=e.target.closest('[data-close]'); if(!x) return;
@@ -6226,7 +6177,7 @@ function placeStrip(){
 function renderActiveContext(){
   if(currentMode!=='reference') return;
   if(currentTab==='harmony'){
-    if(hView==='arp'){ buildArpPos(); renderArp(); }
+    if(hView==='arp'){ buildArpPos(); renderArp(); paintHarmonyLens(); }
     else renderChords();
   }
   else if(currentTab==='scales'){
@@ -6277,21 +6228,33 @@ let hView='chords';
 function setHView(v){ hView = v==='arp' ? 'arp' : 'chords'; v=hView;
   document.getElementById('sub-chords').hidden = v!=='chords';
   document.getElementById('sub-arp').hidden = v!=='arp';
-  ['chords','arp'].forEach(k=>{ const b=document.getElementById('hv-'+k); if(b){ b.classList.toggle('active', k===v); b.setAttribute('aria-pressed', k===v?'true':'false'); } });
-  const head = v==='arp'?'arp':'ch';
-  document.getElementById('harmony-h').textContent = t(head+'_h');
-  document.getElementById('harmony-p').textContent = t(head+'_p');
+  paintHarmonyLens(); paintViewDesc();
   applyHarmonyExtras();
   renderActiveContext(); saveState();
 }
-document.getElementById('hv-chords').onclick=()=>setHView('chords');
-document.getElementById('hv-arp').onclick=()=>setHView('arp');
+function harmonyLens(){ return hView==='arp' ? 'arp' : triadsOn() ? 'triads' : 'chords'; }
+function setHarmonyLens(k){
+  if(k==='triads' && chTriadIdx()<0) return;
+  if(k!=='arp'){ const on=k==='triads'; if(chTriads!==on){ chTriads=on; chVoicing=0; } }
+  setHView(k==='arp' ? 'arp' : 'chords');
+  renderPlayBtn();
+}
+function paintHarmonyLens(){
+  const cur=harmonyLens();
+  ['chords','triads','arp'].forEach(k=>{ const b=document.getElementById('hv-'+k); if(b){ b.classList.toggle('active', k===cur); b.setAttribute('aria-pressed', k===cur?'true':'false'); } });
+  const tb=document.getElementById('hv-triads');
+  if(tb){ const has=chTriadIdx()>=0; tb.disabled=!has; tb.title = has ? '' : t('shape_no_triad'); }
+}
+['chords','triads','arp'].forEach(k=>{ document.getElementById('hv-'+k).onclick=()=>setHarmonyLens(k); });
+function paintViewDesc(){
+  const el=document.getElementById('view-desc'); if(!el) return;
+  el.textContent = t(currentTab==='scales' ? (scView==='notes'?'nt_p':'sc_p') : (hView==='arp'?'arp_p':'ch_p'));
+}
 function setScView(v){ scView=v;
   document.getElementById('sub-scale').hidden = v!=='scale';
   document.getElementById('sub-notes').hidden = v!=='notes';
   ['scale','notes'].forEach(k=>{ const b=document.getElementById('sv-'+k); b.classList.toggle('active', k===v); b.setAttribute('aria-pressed', k===v?'true':'false'); });
-  document.getElementById('scales-h').textContent = t(v==='notes'?'nt_h':'sc_h');
-  document.getElementById('scales-p').textContent = t(v==='notes'?'nt_p':'sc_p');
+  paintViewDesc();
   applyBoardRegion();   
   renderActiveContext(); saveState();
 }
@@ -6301,8 +6264,7 @@ function applyBoardRegion(){
   const vh=document.getElementById('ctx-view-harmony'); if(vh) vh.hidden = currentTab!=='harmony';
   const vs=document.getElementById('ctx-view-scales');  if(vs) vs.hidden = currentTab!=='scales';
   const cd=document.getElementById('ctx-display');      if(cd) cd.hidden = currentTab==='scales' && scView==='notes';
-  document.getElementById('vh-harmony').hidden = currentTab!=='harmony';
-  document.getElementById('vh-scales').hidden  = currentTab!=='scales';
+  paintViewDesc();
 }
 function applyHarmonyExtras(){
   const on = currentTab==='harmony' && hView==='chords';
@@ -6516,7 +6478,7 @@ document.getElementById('tb-tempo').onchange=function(){ saveState(); };
 { const step=d=>{ setTempo(tempo+d); saveState(); };
   const sl=document.getElementById('tb-slower'); if(sl) sl.onclick=()=>step(-5);
   const fa=document.getElementById('tb-faster'); if(fa) fa.onclick=()=>step(5); }
-document.getElementById('tb-metro').onclick=metroToggle;
+document.getElementById('tb-metro').onclick=clickToggle;
 document.getElementById('tb-bass').onclick=bassToggle;
 document.getElementById('tb-drums').onclick=drumsToggle;
 { const a=document.getElementById('ch-quals-toggle'); if(a) a.onclick=()=>{ chQualsAdv=!chQualsAdv; buildChQuals(); markScrollables(); }; }
@@ -6567,7 +6529,6 @@ document.addEventListener('keydown',e=>{
   if(!document.getElementById('cl-overlay').hidden || !document.getElementById('kbd-overlay').hidden) return;
   { const mo=document.getElementById('mic-overlay'); if(mo && !mo.hidden) return; }
   const k=e.key;
-  const refTransport = currentMode!=='practice';
   if(k===' '||k==='Spacebar'){
     if(tg && tg.closest && tg.closest('button,a,[role="button"],[tabindex]')) return;   
     const gp=document.getElementById('g-play');
@@ -6584,7 +6545,7 @@ document.addEventListener('keydown',e=>{
   if(k===']'){ transposeKey(1); return; }
   const lk = k.length===1 ? k.toLowerCase() : '';
   if(lk==='k'){ if(chipOffered('key')) toggleSheet('key'); return; }
-  if(lk==='m'){ const mb=document.getElementById('tb-metro'); if(refTransport && mb && !mb.disabled) metroToggle(); return; }
+  if(lk==='m'){ const mb=document.getElementById('tb-metro'); if(chipOffered('tempo') && mb && !mb.disabled) clickToggle(); return; }
   if(lk && NOTE_KEY[lk]!==undefined){ const pc=NOTE_KEY[lk]; setKey(pc, ROOTS[pc]); return; }
 });
 const hadState = loadState();
@@ -6631,7 +6592,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     fifthInterval, spellNote, rootParts, simpleName,
     diatonicTriads, isMajorFamily, ctxCofSel, ctxCofMinor, setKey, noteTxt, keyDegrees, keyCadence,
     renderStrip, toggleSheet, closeSheets, sheetShown, chipOffered, placeStrip, stripPlay, refPlayToggle,
-    setScale, setChordQual, setPlaySrc, playCadence, jamToggle, bandActive, bassToggle, drumsToggle,
+    setScale, setChordQual, setPlaySrc, playCadence, clickToggle, getClickOn:()=>clickOn, bandActive, bassToggle, drumsToggle,
     getPlaySrc:()=>playSrc,
     scalesOverChord, triadQi, currentHarmonyChord,
     chordVoicings, voicingMidi, currentChordVoicing, currentTriadVoicing, STD_LOW6_MIDI, TRI_TO_QUAL,

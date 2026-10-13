@@ -1,9 +1,11 @@
-/* ===================== THE CONTEXT STRIP: key · chord · tempo · ▶ · tuner · ⚙ ===================== */
+/* ===================== THE CONTEXT STRIP: key · chord · tempo · ▶ ===================== */
 /* One row directly above the neck in Reference and above the drill stage in Practice.
    It is one element, moved between the two slots (placeStrip), so both layers share one
    layout grammar and one set of listeners. Each chip opens a sheet under the row, one
    sheet at a time. What the row offers is derived: Reference shows every chip; a drill
-   shows the ones its registry entry declares (key, chord, tempo, play). */
+   shows the ones its registry entry declares (key, chord, tempo, play), and one that
+   declares none has no row at all. The tuner and ⚙ live in the app header; Settings is
+   still one of the strip's sheets, so it opens where the others do. */
 
 const SHEET_IDS   = { key:'sheet-key', chord:'sheet-chord', tempo:'sheet-tempo', play:'backing-panel', settings:'toolbar' };
 const SHEET_CHIPS = { key:'chip-key',  chord:'chip-chord',  tempo:'chip-tempo',  play:'backing-toggle', settings:'tb-toggle' };
@@ -80,6 +82,7 @@ function renderKeySheet(){
 function renderChordSheet(){ renderDegrees(); buildChQuals(); }
 function renderPlaySheet(){
   segButtons('pl-src', [{label:t('pl_chord')},{label:t('pl_prog')}], playSrc==='prog'?1:0, i=>setPlaySrc(i?'prog':'chord'));
+  const ed=document.getElementById('ch-seq'); if(ed) ed.hidden = playSrc!=='prog';
   setBandLabels();
 }
 /* what ▶ plays; switching while it sounds switches what is sounding */
@@ -102,8 +105,7 @@ function renderStrip(){
   const show=(id,on)=>{ const el=document.getElementById(id); if(el) el.hidden=!on; };
   ['key','chord','tempo','play'].forEach(k=>show(SHEET_CHIPS[k], chipOffered(k)));
   show('chip-play', !pr || !!(d && d.play));
-  // the tempo sheet's Metronome is the reference transport's: a drill brings its own click
-  show('tb-metro', !pr);
+  show('strip-row', !pr || ['key','chord','tempo'].some(chipOffered) || !!(d && d.play));
   const kn=noteTxt(keyLbl)+' '+sKeyName(SCALES[scIdx]);
   const ck=document.getElementById('chip-key');
   if(ck){ ck.innerHTML=chipHTML(kn); ck.setAttribute('aria-label', t('strip_key')+': '+kn); ck.title=t('strip_key'); }
@@ -156,7 +158,6 @@ function placeStrip(){
   Object.keys(SHEET_CHIPS).forEach(k=>wire(SHEET_CHIPS[k], ()=>toggleSheet(k)));
   wire('g-play', stripPlay);
   wire('cof-cadence', playCadence);
-  wire('pl-jam', jamToggle);
   // every sheet's ✕: shut it and hand focus back to its chip
   const host=document.getElementById('sheets');
   if(host) host.addEventListener('click', e=>{

@@ -183,6 +183,9 @@ function drillRunStarted(){
   applyDrillCtx();
 }
 
+/* the setup handle's sliders */
+const SETUP_ICON='<svg class="ico-setup" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">'+
+  '<path d="M3 5h14M3 10h14M3 15h14"/><circle cx="7" cy="5" r="2" fill="var(--bg-panel)"/><circle cx="13" cy="10" r="2" fill="var(--bg-panel)"/><circle cx="9" cy="15" r="2" fill="var(--bg-panel)"/></svg>';
 /* The header and the strip are derived from the running drill: the strip's key, chord
    and tempo chips and its ▶ from what the entry declares, the mic only when mic() says
    so. A drill declares what it needs and never touches this markup. */
@@ -196,13 +199,15 @@ function applyDrillCtx(){
   if(nm){ const tr=curTrackObj(); nm.textContent = tr && tr.label ? t(tr.label) : ''; }
 
   /* the setup handle, only for a drill that HAS a setup — a disclosure over an empty
-     box is worse than none */
+     box is worse than none. An icon (sliders), so a long drill name keeps its room on a
+     phone; its name is the label and the tooltip. */
   const hasSetup=!!(d && d.setup && document.getElementById(d.setup));
   const sb=document.getElementById('drill-ctx-setup');
   if(sb){
     sb.hidden=!hasSetup;
     if(hasSetup){
-      sb.textContent=t('drill_setup')+(drillSetupOpen?' ▴':' ▾');
+      sb.innerHTML=SETUP_ICON;
+      sb.setAttribute('aria-label', t('drill_setup')); sb.title=t('drill_setup');
       sb.classList.toggle('active', drillSetupOpen);
       sb.setAttribute('aria-expanded', drillSetupOpen?'true':'false');
       if(d.setup) sb.setAttribute('aria-controls', d.setup);
