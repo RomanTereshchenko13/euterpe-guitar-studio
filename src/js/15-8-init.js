@@ -33,19 +33,7 @@ applyA11y();   // apply restored accessibility prefs (palette / shapes) on load
   wire('drill-ctx-setup', drillSetupToggle);
   wire('drill-ctx-help',  drillHintToggle);
   wire('drill-ctx-mic',   drillMicToggle);
-  wire('drill-ctx-cal',   calBoxToggle);
-  // end the block early, keep the session
-  wire('drill-ctx-skip',  ()=>sessionAdvance()); }
-/* the session's length chips and the report's Done are painted by the session
-   module, so both are delegated */
-{ const m=document.getElementById('sess-mins');
-  if(m) m.addEventListener('click', e=>{
-    const b=e.target.closest('[data-mins]'); if(!b) return;
-    sessMins=+b.dataset.mins; renderSessionCard(); saveState();
-  });
-  const s=document.getElementById('sess-start'); if(s) s.onclick=()=>sessionStart(sessMins);
-  const r=document.getElementById('session-report');
-  if(r) r.addEventListener('click', e=>{ if(e.target.closest('#sess-close')) sessionDismiss(); }); }
+  wire('drill-ctx-cal',   calBoxToggle); }
 clearOldShareHash();
 document.getElementById('app-ver').textContent = 'v' + APP_VERSION;
 // only a genuinely first visit leaves welcomeSeen false (see loadState)
@@ -72,7 +60,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     getOpenMidi:()=>OPEN_MIDI.slice(), getCustomTuning:()=>customTuning.slice(),
     setCustomTuning:(arr)=>{ customTuning=arr.slice(); }, setTuningIdx:(i)=>{ tuningIdx=i; applyTuning(); },
     // learner review + activity
-    learnerReview, learnerActivity, startReview,
+    learnerReview, learnerActivity, nextUp, renderNextUp,
     clearOldShareHash,
     // drill registry
     DRILLS, activeDrill, showDrillHome, drillOpen, drillDone, drillById, renderDrillSummary, exitAllDrills, refreshDrillsLang, drillKeyChanged, applyDrillCtx,
@@ -81,11 +69,7 @@ if (typeof window!=='undefined' && window.__GS_ALLOW_TEST__) {
     getCurTrack:()=>curTrack, getDrillSeen:()=>drillSeen, setDrillSeen:(o)=>{ drillSeen=o||{}; },
     // the practice model
     drillTracks, trackById, trackBySess, trackByItems, sessNs, startTrack, learnerTrend, learnerBest, scoredErr,
-    /* the timed session + the seams; every step takes `now`, so no timers are needed */
-    SESSION_MINS, sessionPlan, sessionQueue, sessionStart, sessionAdvance, sessionTick,
-    sessionEnd, sessionActive, sessionDismiss, sessionClock, renderSessionCard,
-    getSession:()=>psess, getSessReport:()=>sessLast,
-    getSessMins:()=>sessMins, setSessMins:(m)=>{ sessMins=m; },
+    // the seams
     SEAM_TRACKS,
     // progress narrative + card badges
     trackMic, paintDrillCards, renderProgressInto, renderPractice, trendScore, sessFamily,

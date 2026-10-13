@@ -16,14 +16,24 @@ function renderActiveContext(){
   }
   markScrollables();
 }
-/* The Practice home, painted from the model in one pass: progress from the learner
-   model, the cards and the session queue from the registry. Re-run on a mode switch and
-   a language change. */
+/* The Practice home, painted from the model in one pass: Next up and progress from the
+   learner model, the cards from the registry. Re-run on a mode switch and a language
+   change. */
 function renderPractice(){
+  renderNextUp();
   renderProgressInto('practice-progress');
-  renderSessionCard();
-  applySessionViews();
   paintDrillCards();
+}
+/* Next up: the drill the review queue puts first, and why — one press away. Its button
+   carries data-track, so the home's one listener opens it like a card. */
+function renderNextUp(){
+  const host=document.getElementById('next-up'); if(!host) return;
+  const nx=nextUp(), tr=nx ? trackById(nx.track) : null;
+  host.hidden=!tr; if(!tr){ host.innerHTML=''; return; }
+  const why = nx.reason==='due' ? t('next_due').replace('{n}', nx.n) : t('next_'+nx.reason);
+  host.innerHTML='<div class="pp-title">'+t('prog_next')+'</div>'+
+    '<button type="button" class="btn play next-go" data-track="'+tr.id+'">'+t(tr.label)+' →</button>'+
+    '<p class="next-why">'+why+'</p>';
 }
 /* Each card says, from the model and never from markup: whether the drill listens (one
    🎤), whether it is due (a dot — overdue items, gone cold, or slipping; not merely

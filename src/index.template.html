@@ -331,9 +331,6 @@
          while a drill runs (body.drill-running). -->
     <div class="drill-ctx" id="drill-ctx">
       <span class="drill-name" id="drill-ctx-name" tabindex="-1"></span>
-      <!-- a running session's block counter and Next (painted by sessionPaint) -->
-      <span class="drill-sess" id="drill-ctx-sess" hidden></span>
-      <button type="button" class="btn" id="drill-ctx-skip" hidden></button>
       <!-- The hint's ?: opens by itself the first time you run a track (drillSeen).
            Deliberately not .ph-help — that class drives the reference panels' shared
            helpOpen, and this state is per drill. -->
@@ -365,25 +362,17 @@
     </div>
     <!-- the practice home, swapped for the drill's area while one runs -->
     <div id="practice-home">
-      <!-- "What should I do now?" first: the session starter and progress, side by side on
+      <!-- "What should I do now?" first: the next drill and progress, side by side on
            desktop, stacked below 940px -->
       <div id="ph-top-block">
-        <div class="practice-session-card">
-          <div class="pp-title" data-i18n="sess_title">Заняття</div>
-          <p class="ps-lead" data-i18n="sess_lead">Скажи, скільки маєш часу — застосунок збере вправи, які варто повторити, відлічить час і підсумує.</p>
-          <div class="row"><span class="ctrl-label" data-i18n="sess_len">Тривалість</span><div class="group" id="sess-mins"></div></div>
-          <!-- what the session will run, from the plan it would start (renderSessionCard) -->
-          <p class="ps-plan" id="sess-plan"></p>
-          <div class="drill-bar"><button type="button" class="btn play" id="sess-start">Почати заняття</button></div>
-        </div>
-        <!-- progress: what's next, a row per drill you have run, then the aggregates -->
+        <!-- Next up: the most due drill, one press away (renderNextUp) -->
+        <div class="practice-next-card" id="next-up"></div>
+        <!-- progress: a row per drill you have run, then the aggregates -->
         <div class="practice-progress-card">
           <div class="pp-title" data-i18n="prog_title">Прогрес</div>
           <div id="practice-progress"></div>
         </div>
       </div>
-      <!-- a session's closing screen; applySessionViews() hides the home blocks while it is up -->
-      <div class="session-report" id="session-report" hidden></div>
       <div class="ph-drills">
       <!-- the drills, one list -->
       <ul class="practice-list">

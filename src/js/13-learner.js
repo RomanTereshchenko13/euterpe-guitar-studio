@@ -208,19 +208,27 @@ function learnerReview(now){
   });
   return { total, by, top, due };
 }
+/* What to practise next: the head of the review queue (overdue recall first, then an
+   untried, cold or slipping performance track); with nothing due, the first drill. */
+function nextUp(now){
+  const d=(learnerReview(now).due||[]).find(x=>trackById(x.track));
+  if(d) return { track:d.track, reason:d.reason, n:d.n };
+  const tr=drillTracks()[0];
+  return tr ? { track:tr.id, reason:'any', n:0 } : null;
+}
 /* Open a track by id, via the registry's own `start`. */
 function startTrack(id){
   const tr = trackById(id);
   if(!tr) return false;
-  /* The ONE door into a drill (cards, Review, seams, the session), so the header can
+  /* The ONE door into a drill (cards, Next up, progress rows, seams), so the header can
      name what was opened. */
   setCurTrack(tr.id);
   drillOpen(tr.drill, tr.arg);
   return true;
 }
 /* ---- the progress readout ----
-   In order: WHAT'S NEXT (the queue), a row per track you have run — latest, direction,
-   best, and the timing error for mic tiers — then the aggregates as a footer. */
+   A row per track you have run — latest, direction, best, and the timing error for mic
+   tiers — then the aggregates as a footer. What to do next is the Next-up card's. */
 
 // a track's latest score, in its own unit
 function trendScore(tn){
@@ -245,21 +253,6 @@ function renderProgressInto(hostId){
   if(empty){ host.innerHTML=''; return; }
   const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   let html='';
-
-  /* WHAT'S NEXT: overdue items lead with a Review button; with none due, the first
-     cold or slipping performance track takes the row. */
-  const rev=learnerReview();
-  if(rev.total>0 && rev.top){
-    html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_due')+' · '+rev.total+'</span>'+
-      '<button type="button" class="btn play pp-review-btn" data-review="'+esc(rev.top)+'">'+t('prog_review')+'</button></div>';
-  } else {
-    const nxt=(rev.due||[]).find(d=>d.kind==='perf');
-    const tr=nxt ? trackById(nxt.track) : null;
-    if(tr && tr.label){
-      html+='<div class="pp-review"><span class="pp-review-n">'+t('prog_next')+' · '+esc(t(tr.label))+'</span>'+
-        '<button type="button" class="btn play pp-review-btn" data-review="'+esc(tr.id)+'">'+t('prog_start')+'</button></div>';
-    }
-  }
 
   /* a row per track you have run, most recent first; untouched tracks are left to the
      cards below */

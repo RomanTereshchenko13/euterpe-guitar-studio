@@ -110,11 +110,3 @@ function openReference(tab, sub){
   if(tab==='harmony') setHView(sub); else setScView(sub);
   (document.scrollingElement || document.documentElement).scrollTop = 0;
 }
-/* ---- review routing: the progress card's Review opens the track the queue named;
-   the drills already prefer due items. */
-function startReview(track){
-  setMode('practice');
-  startTrack(track);
-}
-{ const h=document.getElementById('practice-progress');
-  if(h) h.addEventListener('click', e=>{ const b=e.target.closest('[data-review]'); if(b) startReview(b.dataset.review); }); }

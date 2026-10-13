@@ -87,7 +87,7 @@ foundation work makes that work smaller.
 | Rhythm ear | — | **Cut (v2.17.0)** |
 | Chord-tone targeting (tap, answer lit) | — | **Cut (v2.17.0)** — the lit version is Harmony ▸ Arpeggio + Jam |
 | Call & response (tap, call lit) | — | **Cut (v2.17.0)** |
-| Sessions · SRS learner · progress card | — | **Freeze** — no new work until fewer, better drills feed them; the timed session may give way to a "Next up" card (step 12, open) |
+| SRS learner · progress card | — | **Keep** — the timed session became a "Next up" card (step 12) |
 | Latency calibration | heard | **Keep** — in the mic flow since step 8 |
 | Export / import · persistent storage | — | **Keep** — data safety |
 | Share links | — | **Cut (v2.17.0)** — an old link opens the app, hash ignored and cleared |
@@ -253,7 +253,7 @@ findings are bugs.
     uses short labels (Тони · Тризвуки · Арпеджіо, A / ♭3) to stay one row: neck at ~156px on
     360×740. The view descriptions fold under the neck behind the lens's ?.
 
-- [ ] **12. Smaller seams** (patch or minor, with 11 or after)
+- [x] **12. Smaller seams** (patch or minor, with 11 or after; done 2026-10-13)
   - Rhythm guitar's own "Гурт" follows the drawer's Bass/Drums instead of keeping its own flag.
   - Key sheet on a phone: the root row stays, the circle sits behind a "Circle of fifths" toggle
     (today both pick the root and the circle is below the fold). Desktop unchanged.
@@ -263,12 +263,17 @@ findings are bugs.
     one-line hint instead of the modal.
   - Note naming on a phone shows frets 0–7 of a "find all" board: fit the drill board to the
     screen, or limit it to frets 0–12.
-  - **Open question — the timed session.** Six drills don't need a planner, countdown, block
+  - **The timed session** (settled 2026-10-13: the Next-up card). Six drills don't need a planner, countdown, block
     chaining and report; on a fresh profile it proposes "Changes + Rhythm guitar, 5 min each".
     Proposal: one "Next up: ⟨most due drill⟩ →" card (`sessionQueue()` already finds it) and
     retire `14-session.js`, the header's block counter + Next, and the report. Stored session
     history stays and is ignored. Lifts the "Freeze" on sessions in the verdicts table either way.
   - _Data:_ the session cut retires `sessMins`; `seqLoopOn` only if progressions always loop.
+  - _As built:_ `nextUp()` (13-learner) is the head of `learnerReview().due`, else the first
+    drill; the card says why (due · new · cold · slipping). The progress card's own "what's
+    next" row went with it. `sessMins` is in `RETIRED`; compat skips the old `sessionMins`
+    reading (`RETIRED_SEEN`). `seqLoopOn` stays (progressions can still play once). Note naming
+    is capped at frets 0–12 (`withFretCap`) rather than fitted to the screen.
 
 - [ ] **13. Project overhead + the real phone**
   - `tests/smoke.js` is 210 KB (186 KB at step 2) — larger than any app module. Split by area and

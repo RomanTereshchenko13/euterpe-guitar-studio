@@ -46,7 +46,12 @@ const RETIRED = {
   trQual: 'Triads became a toggle (v2.17.0): folded into chQual when the save was on Triads',
   cofSel: 'the circle reads its selection from the key (gRoot + scIdx)',
   cofMinor: 'the circle reads its selection from the key (gRoot + scIdx)',
-  scOverlay: 'Scales shows the strip\x27s chord with one unsaved toggle (PLAN step 10); the scale opens plain'
+  scOverlay: 'Scales shows the strip\x27s chord with one unsaved toggle (PLAN step 10); the scale opens plain',
+  sessMins: 'the timed session became a Next-up card (PLAN step 12); there is no length to choose'
+};
+/* What old builds showed that the current one has no screen for: [seen field]: why. */
+const RETIRED_SEEN = {
+  sessionMins: 'the timed session was cut (PLAN step 12)'
 };
 /* Fields a build before them didn't save: what a returning player must get instead. */
 const ABSENT_DEFAULT = {
@@ -99,6 +104,7 @@ for (const fx of fixtures) {
   const now = readVisible(a.win);
   for (const k of Object.keys(fx.seen)) {
     const old = fx.seen[k];
+    if (RETIRED_SEEN[k]) continue;
     if (old === null) {
       if (ABSENT_DEFAULT[k]) ok(L + ': ' + k + ' (absent then) defaults for a returning player',
                                 same(now[k], ABSENT_DEFAULT[k](now)), JSON.stringify(now[k]));

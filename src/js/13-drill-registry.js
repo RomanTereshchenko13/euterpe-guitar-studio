@@ -54,13 +54,12 @@ function activeDrill(){
   return DRILLS.find(drillIsActive) || null;
 }
 
-// end every running drill (leaving Practice, or the session changing block)
+// end every running drill (leaving Practice)
 function exitAllDrills(){
   DRILLS.forEach(d=>{ if(drillIsActive(d)) drillClose(d); });
   drillShellLeft();
 }
-/* The header's Quit: the player abandons the drill (and a timed session with it). Both
-   ways out (this and exitAllDrills) end in drillShellLeft(), so the header never keeps
+/* The header's Quit: the player abandons the drill. Both ways out (this and exitAllDrills) end in drillShellLeft(), so the header never keeps
    naming a drill that isn't running. Focus goes back to the card that opened it. */
 function quitDrill(){
   const d=activeDrill(), tr=curTrack;
@@ -68,11 +67,8 @@ function quitDrill(){
   drillShellLeft();
   focusTrackCard(tr);
 }
-/* Quit and a mode switch are the two ways a player abandons a timed session, so this
-   is where the session learns it is over. sessionInterrupt() is a no-op while the
-   session itself is chaining from one block to the next. */
+/* Quit and a mode switch: the header stops naming a drill */
 function drillShellLeft(){
-  sessionInterrupt();
   setCurTrack(null); applyDrillCtx();
 }
 
@@ -96,8 +92,7 @@ function drillClose(d){
   const home=document.getElementById('practice-home'); if(home) home.hidden=false;
   renderPractice();
 }
-/* A finished drill's Done: closes it like Quit but leaves a timed session running —
-   the session moves on to its next block by itself. */
+/* A finished drill's Done: closes it like Quit, back to its card */
 function drillDone(d){
   d = d || activeDrill(); if(!d) return;
   const tr=curTrack;
@@ -165,8 +160,6 @@ let drillSeen = {};
 
 // every drill's start(): the setup opens, the hint opens only if this track is new
 function drillShellEnter(){
-  // a drill is starting, so whatever the last timed session reported has been read
-  sessionClearReport();
   drillSetupOpen = true;
   const tr = curTrack;
   drillHintOpen = !(tr && drillSeen[tr]);
@@ -232,8 +225,6 @@ function applyDrillCtx(){
   }
   // the latency, in the mic flow: its button while the mic is on, its box when offered
   applyCalBox(drillMicOn());
-  // the timed session's block counter and Next, painted by the session module
-  sessionPaint();
   renderStrip();
 }
 /* is the running drill's scored tier switched on? */

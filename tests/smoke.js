@@ -108,7 +108,7 @@ const html = fs.readFileSync(htmlPath, 'utf8');
     ['no header transport rules are left behind', /\.tb-bar\b|\.tb-transport\b|\.context-bar\b/, false],
     ['.main clears the neck above it', /\.main\s*\{[^}]*margin-top:\s*22px/, true],
     ['...and Practice takes that clearance back', /body\.mode-practice\s+\.main\s*\{[^}]*margin-top:\s*0/, true],
-    ['progress and the session starter share a row on desktop', /@media \(min-width: 941px\) \{\s*#ph-top-block \{[^}]*grid-template-columns: 340px minmax\(0,1fr\)/, true],
+    ['Next up and progress share a row on desktop', /@media \(min-width: 941px\) \{\s*#ph-top-block \{[^}]*grid-template-columns: 340px minmax\(0,1fr\)/, true],
     ['landscape Practice keeps one column (no empty neck gutter)', /body\.mode-practice \.layout:has\(#board-region:not\(\[hidden\]\)\) \{[^}]*grid-template-areas: "main"/, true],
     ['drill cards wrap into a grid', /\.practice-list \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(auto-fill, minmax\(250px, 1fr\)\)/, true],
     ['the card list li is a bare flex cell', /\.practice-list li \{ display: flex; \}/, true],
@@ -196,10 +196,9 @@ if (T) {
    'mode_practice','practice_h','drill_notes','drill_notes_meta',
    'drill_quit','drill_find_pre','drill_find_sub','drill_complete','drill_score','drill_clean',
    'drill_misses','drill_time','drill_again','drill_done','seam_drill',
-   'sess_title','sess_lead','sess_len','sess_min','sess_start','sess_next',
-   'sess_done_h','sess_none','sess_drills','sess_norun',
+   'next_due','next_new','next_stale','next_slipping','next_any',
    'badge_mic','unit_bars','unit_cpm','drill_rhythm','drill_rhythm_meta','sp_over','sp_free','sp_yours',
-   'cm_yours','ear_level','ear_dir_down','ear_dir_harm','prog_unscored','sess_will',
+   'cm_yours','ear_level','ear_dir_down','ear_dir_harm','prog_unscored',
    'prog_title','prog_accuracy','prog_streak','prog_sessions',
    'prog_yours','prog_best','prog_runs','prog_timing',
    'ear_intervals','ear_intervals_meta','ear_chords','ear_chords_meta',
@@ -217,7 +216,7 @@ if (T) {
    'a11y_palette','a11y_shapes',
    'wc_title','wc_lead','wc_drill','wc_drill_d','wc_tune','wc_tune_d','wc_got',
    'tun_custom','cl_older',
-   'prog_active','prog_due','prog_review',
+   'prog_active','prog_due','prog_next',
    'mic_title','mic_start','mic_stop','mic_cents','mic_string','mic_play_hint',
    'mic_intune','mic_hint','mic_asking','mic_denied','mic_nodev','mic_busy','mic_err',
    'mic_unsupported',
@@ -452,18 +451,15 @@ if (T) {
     // routing goes through the registry, so a track is openable the moment it is declared
     ok('B1: every track in the queue can actually be opened',
        T.learnerReview(NOW).due.every(d => !!T.trackById(d.track)));
-    /* And the queue reaches the screen. With nothing due for review this row used to
+    /* And the queue reaches the screen. With nothing due for review the "next" used to
        be blank — which is what anyone practising rhythm or lead saw, forever, no
-       matter how much history the app held on them. */
+       matter how much history the app held on them. Since step 12 it is the Next-up card. */
     T.resetLearner();
     T.recordSession('strum:common', 8, Date.now());
     T.setMode('practice');
-    const card = win.document.getElementById('practice-progress').innerHTML;
-    ok('B1: with nothing due, the card names a performance track instead of going blank',
-       card.indexOf('data-review=') >= 0
-       && [T.I18N.uk.prog_next, T.I18N.en.prog_next].some(s => card.indexOf(s) >= 0), card.slice(-220));
-    const btn = win.document.querySelector('#practice-progress [data-review]');
-    ok('B1: ...and its button routes to a real track', !!btn && !!T.trackById(btn.dataset.review));
+    const btn = win.document.querySelector('#next-up [data-track]');
+    ok('B1: with nothing due, Next up names a performance track instead of going blank',
+       !!btn && T.trackById(btn.dataset.track).kind === 'perf', btn && btn.outerHTML);
     T.setMode('reference');
 
     /* --- the trend: the ring buffer read as the time series it always was --- */
@@ -679,118 +675,46 @@ if (T) {
 
   })();
 
-  /* ---- Phase 10/B3: THE SESSION, AND THE SEAM -------------------------------
-     "I have fifteen minutes — what do I do?" was a question with no answer: every
-     drill is an infinite loop exited by hand, with no notion of today. The session
-     is the ritual — pick a length, the app chains what's due, runs the clock, ENDS,
-     and reports. What is asserted is that it owns none of that itself: the queue is
-     B1's, the door is B2's startTrack, and the report is read back off the learner
-     model rather than tallied a second time.
-     Every step takes `now`, so the whole flow runs with no timers at all. --------- */
-  (function timedSession() {
+  /* ---- NEXT UP, AND THE SEAM ----------------------------------------------------
+     B3's timed session (a planner, a countdown, block chaining and a report for six
+     drills) became one card in PLAN step 12: "Next up: ⟨the most due drill⟩ →". What is
+     asserted is that it owns nothing itself: the queue is learnerReview's, and the door
+     is startTrack, through the home's one data-track listener. --------------------- */
+  (function nextUpAndSeam() {
     const doc = win.document;
-    const vis = id => { const e = doc.getElementById(id); return !!e && !e.hidden; };
-    const T0 = 1700000000000;
+    const vis = id => { const e = doc.getElementById(id); return !!e && !e.hidden && !e.closest('[hidden]'); };
+    const T0 = 1700000000000, L = T.I18N[T.state().lang];
 
-    /* --- the plan is pure: minutes in, blocks out --- */
-    ok('B3: five minutes is one drill', T.sessionPlan(5, T0).length === 1);
-    ok('B3: fifteen minutes is three', T.sessionPlan(15, T0).length === 3);
-    ok('B3: twenty is four', T.sessionPlan(20, T0).length === 4);
-    const plan = T.sessionPlan(15, T0);
-    ok('B3: the whole length is spent', plan.reduce((s, b) => s + b.secs, 0) === 15 * 60);
-    ok('B3: every block names a real track', plan.every(b => !!T.trackById(b.track)));
-    ok('B3: ...and no drill comes round twice',
-       new Set(plan.map(b => b.track)).size === plan.length);
-    /* The queue is B1's, not a second ranking: whatever learnerReview puts at the head
-       of the due list is what the session opens with. */
+    /* --- the timed session is gone, with its header counter, Next and report --- */
+    ok('step 12: no timed session left', T.sessionStart === undefined && !doc.getElementById('sess-start')
+       && !doc.getElementById('session-report') && !doc.getElementById('drill-ctx-sess') && !doc.getElementById('drill-ctx-skip'));
+    ok('step 12: ...and no session length saved', !('sessMins' in T.snapshotState()));
+
+    /* --- the queue is learnerReview's, not a second ranking --- */
     T.resetLearner();
     T.recordAttempt('interval:P5', false, T0);        // one overdue recall item
     const due = T.learnerReview(T0 + 120000).due;
-    ok('B3: the session opens with whatever the review queue ranked first',
-       due.length > 0 && T.sessionQueue(T0 + 120000)[0] === due[0].track);
-    /* ...and it pads from the registry, so a player with an empty queue still gets a
-       full session rather than a short one. */
-    ok('B3: a session is filled out from the registry when nothing is due',
-       T.sessionQueue(T0).length === T.drillTracks().length);
-
-    /* --- running one: the header says where you are, and the clock moves it on --- */
-    T.setMode('practice');
-    const started = T.sessionStart(10, T0);
-    const s0 = T.getSession();
-    ok('B3: a session starts', started && T.sessionActive() && !!s0);
-    ok('B3: ...and opens its first drill through the one door',
-       T.getCurTrack() === s0.plan[0].track && !!T.activeDrill());
-    ok('B3: the header counts the blocks', vis('drill-ctx-sess')
-       && /^1\/2 · \d+:\d\d$/.test(doc.getElementById('drill-ctx-sess').textContent),
-       doc.getElementById('drill-ctx-sess').textContent);
-    ok('B3: ...and offers the way past one', vis('drill-ctx-skip'));
-    /* a block ends on its own clock. The next one opens with the header renamed — which
-       only works because the session goes through startTrack() like a card press. */
-    const second = s0.plan[1].track;
-    T.sessionTick(T0 + s0.plan[0].secs * 1000 + 1);
-    ok('B3: the clock moves the session on', T.getCurTrack() === second);
-    ok('B3: ...and the drill header renames itself',
-       doc.getElementById('drill-ctx-name').textContent === T.I18N[T.state().lang][T.trackById(second).label]);
-    ok('B3: the counter follows', /^2\/2/.test(doc.getElementById('drill-ctx-sess').textContent));
-    /* ...and the last block ENDS it. That is the whole point: the app had no notion of
-       a practice session finishing, only of a drill being quit. */
-    T.sessionTick(T0 + 10 * 60000 + 1);
-    ok('B3: the session ends itself', !T.sessionActive() && !T.activeDrill());
-    ok('B3: ...and leaves a report', !!T.getSessReport() && vis('session-report'));
-    ok('B3: the report is exclusive — it is a closing screen, not a sidebar',
-       !vis('ph-top-block') && doc.querySelector('#practice-home .ph-drills').hidden);
-    ok('B3: it names the blocks that were actually reached',
-       doc.querySelectorAll('#session-report .sr-row').length === T.getSessReport().blocks.length);
-    ok('B3: ...and the header stops counting', !vis('drill-ctx-sess') && !vis('drill-ctx-skip'));
-    doc.getElementById('sess-close').click();
-    ok('B3: Done puts the picker back', !vis('session-report') && vis('ph-top-block'));
-
-    /* --- the report reads the learner model, it does not keep a second tally --- */
+    const nx = T.nextUp(T0 + 120000);
+    ok('step 12: Next up is whatever the review queue ranked first',
+       due.length > 0 && nx.track === due[0].track && nx.reason === 'due' && nx.n === 1, JSON.stringify(nx));
     T.resetLearner();
-    T.sessionStart(10, T0);
-    const s1 = T.getSession(), tr1 = T.trackById(s1.plan[0].track);
-    T.recordSession(tr1.sess + ':x', 42, T0 + 1000);
-    T.sessionEnd('quit', T0 + 60000);
-    ok('B3: a run inside the window is reported',
-       /42/.test(doc.querySelector('#session-report .sr-val').textContent),
-       doc.querySelector('#session-report .sr-val').textContent);
-    ok('B3: ...and only the blocks reached are listed, not the whole plan',
-       T.getSessReport().blocks.length === 1 && s1.plan.length === 2);
-    T.sessionDismiss();
+    ok('step 12: on a fresh profile it offers a drill you have not tried',
+       T.nextUp(T0).reason === 'new' && !!T.trackById(T.nextUp(T0).track));
 
-    /* --- the two ways to abandon one both end it. Both run through drillShellLeft(),
-       which is why the session hooks there rather than asking every door to remember. */
-    T.sessionStart(10, T0);
-    T.quitDrill();
-    ok('B3: Quit ends the session, not just the drill', !T.sessionActive());
-    T.sessionDismiss();
-    T.sessionStart(10, T0);
-    T.setMode('reference');
-    ok('B3: leaving Practice ends it too', !T.sessionActive());
+    /* --- the card: the drill's name, why, and one press in --- */
     T.setMode('practice');
-    T.sessionDismiss();
-    /* ...but the session chaining from one drill to the next walks that same path, and
-       must NOT end itself doing it — a session of exactly one drill is not a session. */
-    T.sessionStart(20, T0);
-    const n0 = T.getSession().plan.length;
-    T.sessionAdvance(T0 + 1000);
-    ok('B3: chaining to the next drill does not abandon the session',
-       T.sessionActive() && T.getSession().idx === 1 && T.getSession().plan.length === n0);
-    /* the header's Next is the same move, by hand */
-    doc.getElementById('drill-ctx-skip').click();
-    ok('B3: Next skips a block and keeps the session', T.sessionActive() && T.getSession().idx === 2);
-    T.sessionEnd('quit', T0 + 2000);
-    T.sessionDismiss();
-    /* a finite drill that ends by itself hands the block back early, rather than
-       leaving the player staring at the practice home with a session still running */
-    T.sessionStart(10, T0);
-    const s2 = T.getSession();
-    T.drillDone();                           // pressing Done on its summary
-    T.sessionTick(T0 + 1000);
-    ok('B3: a drill that finishes early moves the session on',
-       T.sessionActive() && T.getSession().idx === 1 && s2.plan.length === 2);
-    T.sessionEnd('quit', T0 + 2000);
-    T.sessionDismiss();
+    T.recordAttempt('interval:P5', false, Date.now() - 600000);
+    T.renderPractice();
+    const go = doc.querySelector('#next-up .next-go');
+    ok('step 12: the home leads with the Next-up card', vis('next-up') && !!go
+       && doc.getElementById('ph-top-block').firstElementChild.id === 'next-up');
+    ok('step 12: ...naming the drill', go.textContent.includes(L.ear_intervals), go.textContent);
+    ok('step 12: ...and why', doc.querySelector('#next-up .next-why').textContent === L.next_due.replace('{n}', 1));
+    ok('step 12: the progress card no longer repeats what is next', !doc.querySelector('#practice-progress .pp-review'));
+    go.click();
+    ok('step 12: one press opens it through the one door', T.getCurTrack() === 'interval' && !!T.activeDrill());
+    T.quitDrill();
+    T.resetLearner();
     T.setMode('reference');
 
     /* --- THE SEAM: "drill this" from the reference views that have a drill --- */
@@ -1365,11 +1289,6 @@ if (T) {
     T.renderPractice();
     ok('step 9: a due dot on a drill with overdue items, and on one gone cold',
        !!card('interval').querySelector('.dc-due') && !!card('changes').querySelector('.dc-due') && !card('timing').querySelector('.dc-due'));
-    /* --- the session card says what it will do --- */
-    T.setSessMins(10); T.renderSessionCard();
-    const plan = doc.getElementById('sess-plan').textContent, p = T.sessionPlan(10);
-    ok('step 9: the session card names the drills it will run, and for how long',
-       p.every(b => plan.includes(T.I18N[T.state().lang][T.trackById(b.track).label])) && plan.includes(String(p[0].secs / 60)), plan);
 
     /* --- one-minute changes: any two chords, barre chords included --- */
     T.startChanges();
@@ -1454,8 +1373,7 @@ if (T) {
     const rev = T.learnerReview(NOW);
     ok('step 1: an overdue item of a cut track is not offered for review',
        rev.total === 0 && !rev.due.some(d => /^(rhythm|target|callresp)$/.test(d.track)), JSON.stringify(rev.due));
-    ok('step 1: the session planner only plans registered tracks',
-       T.sessionPlan(20, NOW).every(b => !!T.trackById(b.track)));
+    ok('step 1: Next up only offers registered tracks', !!T.trackById(T.nextUp(NOW).track));
     T.setMode('practice');
     const rows = [...doc.querySelectorAll('#practice-progress .pp-row')].map(r => r.dataset.track);
     ok('step 1: the progress card has rows only for registered tracks',
@@ -2912,6 +2830,61 @@ if (T) {
     ok('step 11: ...and it is saved', T.snapshotState().clickOn === true);
     ok('step 11: an older save has the click off', T.migrateSave({}).clickOn === undefined);
     T.clickToggle();
+
+    T.setKey(st0.keyRoot, st0.keyLbl, st0.scIdx);
+    T.setChord(st0.chRoot, st0.chLbl, st0.chQual);
+  })();
+
+  /* ---- PLAN step 12: smaller seams ----
+     Rhythm guitar's band is the drawer's Bass and Drums; the circle's colours mean what
+     they mean on the neck; a phone's key sheet folds the circle; note naming stops at
+     the 12th fret. (Next up, which replaced the timed session, is tested with the seam.) */
+  (function smallerSeams() {
+    const doc = win.document, st0 = T.state();
+    T.setMode('reference'); T.closeSheets();
+
+    /* --- the circle: tonic green, V the fifth's blue, IV and the relative key a ring --- */
+    T.setKey(0, 'C', 0); T.toggleSheet('key');
+    const node = (i, type) => doc.querySelector('#cof-svg .cof-node[data-i="' + i + '"][data-type="' + type + '"] circle');
+    ok('step 12: the tonic is the root\'s green', node(0, 'maj').getAttribute('fill') === 'var(--root)');
+    ok('step 12: V (G) is the fifth\'s blue, as the 5th is on the neck', node(1, 'maj').getAttribute('fill') === 'var(--fifth)');
+    ok('step 12: IV (F) takes no colour, only a ring',
+       node(11, 'maj').getAttribute('fill') === 'var(--bg-panel-2)' && +node(11, 'maj').getAttribute('stroke-width') > 2);
+    ok('step 12: ...and so does the relative key (Am)',
+       node(0, 'min').getAttribute('fill') === 'var(--bg-panel)' && +node(0, 'min').getAttribute('stroke-width') > 2);
+    ok('step 12: no circle node reuses the third or seventh colour',
+       ![...doc.querySelectorAll('#cof-svg circle')].some(c => /--third|--seventh/.test(c.getAttribute('fill'))));
+    /* --- a phone's key sheet folds the circle behind a toggle (CSS-only; pinned by rule) --- */
+    const tog = doc.getElementById('cof-toggle');
+    ok('step 12: the key sheet has a Circle of fifths toggle', !!tog && tog.getAttribute('aria-controls') === 'cof-wrap');
+    tog.click();
+    ok('step 12: ...which unfolds the circle', doc.querySelector('#sheet-key .key-layout').classList.contains('cof-open') && tog.getAttribute('aria-expanded') === 'true');
+    tog.click();
+    ok('step 12: on a phone the circle is folded until asked for (desktop shows the toggle not at all)',
+       /@media \(max-width: 940px\) \{[^@]*\.cof-toggle \{ display: inline-flex; \}\s*\.key-layout:not\(\.cof-open\) \.cof-wrap \{ display: none; \}/.test(html)
+       && /\.cof-toggle \{ display: none; \}/.test(html));
+    T.closeSheets();
+
+    /* --- note naming: frets 0–12 whatever the range --- */
+    const fr0 = T.snapshotState().fretRangeIdx;
+    T.setFret(0);                                   // All frets
+    T.setMode('practice'); T.startDrill();
+    const frets =[...doc.querySelectorAll('#drill-board .dot.quiz')].map(d => +d.dataset.f);
+    ok('step 12: note naming stops at the 12th fret', frets.length > 0 && Math.max.apply(null, frets) === 12, String(Math.max.apply(null, frets)));
+    ok('step 12: ...and its targets do too', [...T.drillTargetsFor(4)].every(k => +k.split(':')[1] <= 12));
+    ok('step 12: ...without touching the reference neck\'s range', T.FRET_HI() === 22);
+    T.exitDrill(); T.setFret(fr0);
+
+    /* --- rhythm guitar's band is the drawer's --- */
+    T.startRhythm();
+    const was = [T.state().bassOn, T.state().grooveOn];
+    doc.getElementById('sp-bass').click();
+    ok('step 12: Rhythm guitar\'s Bass is the drawer\'s Bass', T.state().bassOn === !was[0] && doc.getElementById('sp-bass').getAttribute('aria-pressed') === String(!was[0]));
+    doc.getElementById('sp-drums').click();
+    ok('step 12: ...and its Drums the drawer\'s Drums', T.state().grooveOn === !was[1]);
+    doc.getElementById('sp-bass').click(); doc.getElementById('sp-drums').click();
+    ok('step 12: no band flag of its own', !doc.getElementById('sp-band'));
+    T.exitRhythm(); T.setMode('reference');
 
     T.setKey(st0.keyRoot, st0.keyLbl, st0.scIdx);
     T.setChord(st0.chRoot, st0.chLbl, st0.chQual);

@@ -18,11 +18,6 @@ const I18N = {
     sum_review:'Повтори на грифі',
     // one "drill this" label for every reference view
     seam_drill:'Тренувати це →',
-    // the timed practice session
-    sess_title:'Заняття', sess_lead:'Скажи, скільки маєш часу — застосунок збере вправи, які варто повторити, відлічить час і підсумує.',
-    sess_len:'Тривалість', sess_min:'хв', sess_start:'Почати заняття', sess_next:'Далі →',
-    sess_done_h:'Заняття завершено', sess_none:'Цього разу нічого не зараховано — але час на інструменті все одно зарахований.',
-    sess_drills:'Вправ', sess_norun:'без результату', sess_will:'Буде: {list} — по {m} хв',
     // the card's 🎤: this drill listens
     badge_mic:'Слухає через мікрофон',
     drill_changes:'Зміна акордів за хвилину', drill_changes_meta:'Будь-які два акорди · скільки чистих змін за хвилину',
@@ -115,9 +110,9 @@ const I18N = {
     on_selfheard:'Схоже, мікрофон чув сам застосунок, а не тебе: так рівно людина не грає. Увімкни навушники — або прибери гучність — і спробуй ще раз.',
     a11y_palette:'Палітра для дальтоніків', a11y_shapes:'Форми на нотах',
     tun_custom:'Власний стрій',
-      prog_active:'Активних днів', prog_due:'До повтору', prog_review:'Повторити',
-      // with nothing due, the queue names a cold or slipping drill
-      prog_next:'Наступне', prog_start:'Почати',
+      prog_active:'Активних днів', prog_due:'До повтору',
+      // the Next-up card: its title, and why that drill
+      prog_next:'Наступне', next_due:'{n} до повтору', next_new:'нова для тебе', next_stale:'давно не повторювалась', next_slipping:'результат знижується останнім часом', next_any:'усе повторено — тримай форму',
     // progress backup (13-backup.js)
     tbc_progress:'Прогрес', bk_export:'Експорт', bk_import:'Імпорт…',
     bk_exported:'Збережено:', bk_err_export:'Не вдалося створити файл.',
@@ -128,8 +123,6 @@ const I18N = {
     bk_save_fail:'Цей браузер не зберігає ваш прогрес (приватний режим або забракло місця). Експортуйте його, щоб не втратити.',
     wc_title:'Вітаємо в Euterpe',
     wc_lead:'Що хочеш зробити зараз?',
-   
-   
     wc_drill:'Повправлятися',
     wc_drill_d:'Вправи з рахунком — гриф, таймінг, ритм і слух.',
     wc_tune:'Налаштувати гітару',
@@ -177,10 +170,6 @@ const I18N = {
     drill_complete:'Session complete', drill_score:'Score', drill_clean:'Clean', drill_misses:'Wrong taps', drill_time:'Time', drill_again:'Again', drill_done:'Done',
     sum_review:'Review on the neck',
     seam_drill:'Drill this →',
-    sess_title:'Practice session', sess_lead:'Say how long you have — the app lines up what is due, runs the clock, and tells you how it went.',
-    sess_len:'Length', sess_min:'min', sess_start:'Start session', sess_next:'Next →',
-    sess_done_h:'Session complete', sess_none:'Nothing scored this time — but the time on the instrument still counts.',
-    sess_drills:'Drills', sess_norun:'no run recorded', sess_will:'Plan: {list} — {m} min each',
     badge_mic:'Listens through the mic',
     drill_changes:'One-minute changes', drill_changes_meta:'Any two chords · how many clean changes in a minute',
     cm_pair:'Chord pair', cm_dur:'Length', cm_sec:'s', cm_start:'Start', cm_stop:'Finish',
@@ -271,8 +260,8 @@ const I18N = {
     on_selfheard:'That reading looks like the mic hearing the app rather than you — nobody plays that evenly. Switch to headphones (or turn the volume down) and run it again.',
     a11y_palette:'Colour-blind palette', a11y_shapes:'Shapes on dots',
     tun_custom:'Custom tuning',
-      prog_active:'Active days', prog_due:'Due to review', prog_review:'Review',
-      prog_next:'Practise next', prog_start:'Start',
+      prog_active:'Active days', prog_due:'Due to review',
+      prog_next:'Practise next', next_due:'{n} due to review', next_new:'new to you', next_stale:'not practised for a while', next_slipping:'slipping lately', next_any:'all caught up — keep it going',
     // progress backup (13-backup.js)
     tbc_progress:'Progress', bk_export:'Export', bk_import:'Import…',
     bk_exported:'Saved:', bk_err_export:'Could not create the file.',
@@ -283,8 +272,6 @@ const I18N = {
     bk_save_fail:"This browser isn't saving your progress (private mode or storage full). Export it to keep a copy.",
     wc_title:'Welcome to Euterpe',
     wc_lead:'What do you want to do right now?',
-   
-   
     wc_drill:'Practise something',
     wc_drill_d:'Scored drills — fretboard, timing, rhythm and ear.',
     wc_tune:'Tune the guitar',
@@ -319,4 +306,3 @@ const I18N = {
 };
 let lang = 'uk';
 function t(k){ return I18N[lang][k]; }
-

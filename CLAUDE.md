@@ -60,11 +60,10 @@ Skills: `release`, `preflight` (every gate), `visual-review`, `add-i18n-string`,
 | `12-toolbar-state` | settings; `savedFields()` (every saved field, one row each), `migrateSave`, save/load; progress under its own key; old share-link cleanup |
 | `13-backup` | progress export/import, storage persistence, failed-save notice |
 | `13-drill-registry` | `DRILLS`/`registerDrill`, the drill lifecycle (`drillOpen`/`drillDone`/`quitDrill`), header, summary, `drillRecord` |
-| `13-learner` | learner model (SRS items, sessions, bests), progress card |
+| `13-learner` | learner model (SRS items, sessions, bests), `nextUp`, progress card |
 | `13-mic` · `13-scored` | shared mic (refcounted) · shared scored-run layer |
 | `14-calibration` · `14-onset` · `14-mic-tuner` | latency, onset detection, tuner |
 | `14-drill-*` | the drills (each self-registers) |
-| `14-session` | timed practice session |
 | `15-0-strip` | the context strip (key · chord · tempo · ▶ · tuner · ⚙), its sheets, `placeStrip`, the one ▶ |
 | `15-1-context` | `setKey` (the key), sub-views, `renderActiveContext` (only the view on screen paints) |
 | `15-2-panels` · `15-3-nav` · `15-4-play` | reference panel wiring, progression drawer · tabs, mode, seams · the reference ▶, no-audio fallback |

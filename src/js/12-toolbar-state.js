@@ -215,7 +215,6 @@ function savedFields(){ return [
                         const out={}; let n=0;
                         for(const k of Object.keys(v)){ if(!k.length || k.length>32 || ++n>64) continue; if(v[k]) out[k]=1; }
                         return out; },                    ()=>drillSeen,    v=>{ drillSeen=v; }],
-  ['sessMins',     v=>SESSION_MINS.includes(v) ? v : undefined, ()=>sessMins, v=>{ sessMins=v; }],
   // one-minute changes: your own pair, two [root, quality] (a quality the picker offers)
   ['cmCustom',     v=>Array.isArray(v) && v.length===2 && v.every(c=>Array.isArray(c) && svInt(0, 11)(c[0])!==undefined && CM_QUALS.includes(c[1]))
                        ? v.map(c=>[c[0], c[1]]) : undefined, ()=>cmCustom, v=>{ cmCustom=v; }]
